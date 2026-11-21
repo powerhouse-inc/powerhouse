@@ -4,7 +4,7 @@ import {
   garbageCollect,
   sortOperations,
 } from "@powerhousedao/shared/document-model";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { ConnectTooltipProvider } from "../tooltip/tooltip.js";
 import { Header } from "./header/header.js";
 import { Timeline } from "./timeline/timeline.js";
@@ -22,8 +22,7 @@ type CommonProps = {
   readonly onPageChange?: (page: number) => void;
 };
 
-/** The current, scoped props. */
-export type RevisionHistoryScopedProps = CommonProps & {
+export type RevisionHistoryProps = CommonProps & {
   /** The operations of the selected scope loaded so far, in any order. */
   readonly operations: readonly Operation[];
   /** A page of operations is being fetched. */
@@ -49,20 +48,6 @@ export type RevisionHistoryScopedProps = CommonProps & {
 };
 
 /**
- * Legacy props: the whole global and local history, toggled inside the
- * component.
- * @deprecated Pass one scope's `operations` with `scopes`/`scope`/`onScopeChange` and the loading props. Removed in the next major.
- */
-export type RevisionHistoryLegacyProps = CommonProps & {
-  readonly globalOperations: readonly Operation[];
-  readonly localOperations: readonly Operation[];
-};
-
-export type RevisionHistoryProps =
-  | RevisionHistoryScopedProps
-  | RevisionHistoryLegacyProps;
-
-/**
  * The revision history panel. Pages arrive oldest first while the timeline
  * renders newest first, so rendering progressively would show operations in
  * the wrong order until the last page landed and would repaint the whole
@@ -70,7 +55,7 @@ export type RevisionHistoryProps =
  * the next page, showing "Loading operations…" and a running count, until
  * the walk completes, then renders the pagination and timeline once.
  */
-function ScopedRevisionHistory(props: RevisionHistoryScopedProps) {
+export function RevisionHistory(props: RevisionHistoryProps) {
   const {
     documentTitle,
     documentId,
@@ -214,45 +199,5 @@ function ScopedRevisionHistory(props: RevisionHistoryScopedProps) {
         )}
       </div>
     </ConnectTooltipProvider>
-  );
-}
-
-const LEGACY_SCOPES = ["global", "local"] as const;
-const noop = () => {
-  /* the legacy form has already loaded the whole history */
-};
-
-/** Toggles between the whole global and local history loaded up front. */
-function LegacyRevisionHistory(props: RevisionHistoryLegacyProps) {
-  const { globalOperations, localOperations, ...common } = props;
-  const [scope, setScope] = useState<string>("global");
-  return (
-    <ScopedRevisionHistory
-      {...common}
-      operations={scope === "local" ? localOperations : globalOperations}
-      isLoading={false}
-      hasNextPage={false}
-      onLoadNextPage={noop}
-      scopes={LEGACY_SCOPES}
-      scope={scope}
-      onScopeChange={setScope}
-    />
-  );
-}
-
-/**
- * The revision history panel. Pages arrive oldest first while the timeline
- * renders newest first, so it waits for the whole history to load before
- * rendering the timeline, showing "Loading operations…" and a running count
- * in the meantime.
- *
- * Also accepts the deprecated `globalOperations`/`localOperations` pair
- * (see `RevisionHistoryLegacyProps`), toggling between them internally.
- */
-export function RevisionHistory(props: RevisionHistoryProps) {
-  return "globalOperations" in props ? (
-    <LegacyRevisionHistory {...props} />
-  ) : (
-    <ScopedRevisionHistory {...props} />
   );
 }

@@ -143,16 +143,13 @@ const telemetrySchema = z.object({
 
 /**
  * `ACCESS`. A string refined rather than an enum, so an unknown value is
- * refused by name, and `members` points at what replaces it.
+ * refused by name.
  */
 const accessModeSchema = z.string().superRefine((mode, ctx) => {
   if (mode === "open" || mode === "licensed") return;
   ctx.addIssue({
     code: "custom",
-    message:
-      mode === "members"
-        ? "ACCESS=members is not supported; use ACCESS=licensed with Vetra's gate"
-        : `ACCESS=${mode} is not supported: use ACCESS=open (the default) or ACCESS=licensed`,
+    message: `ACCESS=${mode} is not supported: use ACCESS=open (the default) or ACCESS=licensed`,
   });
 });
 
@@ -243,13 +240,9 @@ const privacySchema = z.object({
 const featuresSchema = z.object({
   /** Unset: on unless a plugin composition leaves it out. */
   mcp: z.boolean().optional(),
-  /** Unset: the config file's `workflows.enabled`, then off. */
+  /** Unset: off unless a plugin composition lists it. */
   workflows: z.boolean().optional(),
   documentModelSubgraphs: z.boolean().default(true),
-  /** Unset: the plugin host runs the default composition, the subsystems the
-   * switches above turn on. `true`: it runs the declared composition, where a
-   * plugin's presence is the switch. `false`: the deprecated inline boot. */
-  pluginHost: z.boolean().optional(),
   privacy: privacySchema.prefault({}),
 });
 

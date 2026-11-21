@@ -35,13 +35,11 @@ async function withSwitchboard(
     // resolution): under a declared one the mcp plugin owns options.mcp and
     // an MCP_ENABLED true is deliberately inert (presence in the composition
     // is the switch — rewire plan R2.2).
-    "FEATURE_PLUGIN_HOST_ENABLED",
     ...Object.keys(env),
   ];
   const previous = names.map((name) => [name, process.env[name]] as const);
   process.env.PH_REACTOR_DATABASE_URL = join(tempRoot, "reactor-storage");
   delete process.env.MCP_ENABLED;
-  delete process.env.FEATURE_PLUGIN_HOST_ENABLED;
   Object.assign(process.env, env);
   let switchboard: Awaited<ReturnType<typeof startSwitchboard>> | undefined;
 

@@ -238,6 +238,12 @@ export function createCliRuntime(deps: CliRuntimeDeps): CliRuntime {
       log.debug("Stopping routine...");
       await routine.stop();
     }
+    // Services are this process's children and end with it: stop them
+    // gracefully before the switchboard and reactor they may talk to.
+    if (context.services) {
+      log.debug("Stopping services...");
+      await context.services.stopAll();
+    }
     if (switchboardInstance) {
       log.debug("Stopping Switchboard...");
       await switchboardInstance.shutdown();
@@ -258,6 +264,7 @@ export function createCliRuntime(deps: CliRuntimeDeps): CliRuntime {
     }
   }
 
+  /** Name the running services teardown is about to stop. */
   function reportActiveServices(output: (msg: string) => void): void {
     if (!context.services) return;
     const dim = "\x1b[2m";
@@ -268,9 +275,7 @@ export function createCliRuntime(deps: CliRuntimeDeps): CliRuntime {
     for (let i = 0; i < active.length; i++) {
       const svc = active[i];
       const where = svc.workdir ? ` ${dim}\`${svc.workdir}\`${reset}` : "";
-      output(
-        `${i === 0 ? "\n\n" : ""}${svc.name} still active${where}\n  ${dim}Run \`${cliName} ${svc.serviceId}-stop\` to shut it down${reset}`,
-      );
+      output(`${i === 0 ? "\n\n" : ""}Stopping ${svc.name}${where}`);
     }
   }
 

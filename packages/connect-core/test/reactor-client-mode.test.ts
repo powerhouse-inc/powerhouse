@@ -9,6 +9,8 @@ import {
 const config = vi.hoisted(() => ({
   reactorClient: undefined as string | undefined,
   newDrives: undefined as string | undefined,
+  reactorWorker: undefined as boolean | undefined,
+  multiReactor: undefined as boolean | undefined,
 }));
 
 vi.mock("../src/runtime/runtime-config.js", () => ({
@@ -16,6 +18,8 @@ vi.mock("../src/runtime/runtime-config.js", () => ({
     connect: {
       instance: {
         reactorClient: config.reactorClient,
+        reactorWorker: config.reactorWorker,
+        multiReactor: config.multiReactor,
         router: config.newDrives ? { newDrives: config.newDrives } : undefined,
       },
     },
@@ -42,6 +46,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
   config.reactorClient = undefined;
   config.newDrives = undefined;
+  config.reactorWorker = undefined;
+  config.multiReactor = undefined;
 });
 
 describe("resolveReactorClientMode", () => {
@@ -49,6 +55,49 @@ describe("resolveReactorClientMode", () => {
     tab("");
     config.reactorClient = "remote";
     expect(resolveReactorClientMode()).toBe("remote");
+  });
+
+  it("runs in-process when nothing selects a client", () => {
+    tab("");
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    expect(resolveReactorClientMode()).toBe("in-process");
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("no longer takes a client from the reactorWorker or multiReactor booleans, and says so", () => {
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    const said = (flag: string) =>
+      expect(warn).toHaveBeenLastCalledWith(
+        expect.stringContaining("no longer selects the reactor client"),
+        flag,
+      );
+
+    tab("");
+    config.reactorWorker = true;
+    expect(resolveReactorClientMode()).toBe("in-process");
+    said("reactorWorker");
+
+    config.multiReactor = true;
+    expect(resolveReactorClientMode()).toBe("in-process");
+    said("multiReactor");
+
+    config.reactorWorker = undefined;
+    config.multiReactor = undefined;
+    tab("?reactorWorker=true");
+    expect(resolveReactorClientMode()).toBe("in-process");
+    said("reactorWorker");
+    warn.mockRestore();
+  });
+
+  it("stays silent about the booleans when reactorClient is set", () => {
+    tab("");
+    config.reactorClient = "worker";
+    config.reactorWorker = true;
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    expect(resolveReactorClientMode()).toBe("worker");
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it("takes a query override over the config, and keeps it for a reload", () => {

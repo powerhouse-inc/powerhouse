@@ -19,7 +19,6 @@ import {
   DRIVES_PRESERVE_STRATEGIES,
   LOG_LEVELS,
 } from "../constants.js";
-import { getConfig } from "../file-system/get-config.js";
 
 export const AGENTS: Agent[] = _AGENTS;
 
@@ -126,38 +125,18 @@ export const httpsKeyFile = option({
   type: optional(string),
   long: "https-key-file",
   description: "path to the ssl key file",
-  defaultValue: () => {
-    const baseConfig = getConfig();
-    const https = baseConfig.reactor?.https;
-    if (https === undefined) return undefined;
-    if (typeof https === "boolean") return undefined;
-    return https.keyPath;
-  },
 });
 
 export const httpsCertFile = option({
   type: optional(string),
   long: "https-cert-file",
   description: "path to the ssl cert file",
-  defaultValue: () => {
-    const baseConfig = getConfig();
-    const https = baseConfig.reactor?.https;
-    if (https === undefined) return undefined;
-    if (typeof https === "boolean") return undefined;
-    return https.certPath;
-  },
 });
 
 export const https = flag({
   type: optional(boolean),
   long: "https",
   description: "Use https",
-  defaultValue: () => {
-    const baseConfig = getConfig();
-    const https = baseConfig.reactor?.https;
-    if (typeof https === "boolean") return https;
-    return undefined;
-  },
 });
 
 export const vetraSwitchboardArgs = {

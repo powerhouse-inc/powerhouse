@@ -341,8 +341,28 @@ export interface ReactorContext<R extends DocumentRegistry = AnyRegistry> {
   attachments?: IAttachmentService;
   /** Internal: the ReactorClientModule, passed to startSwitchboard(). */
   _module?: ReactorClientModule;
+  /**
+   * Whether the agent may write a document right now (see
+   * `createReactorWrites`). Triggers that write on the agent's behalf skip a
+   * document this refuses and look again on `powerhouse:writes:ready`.
+   */
+  writes?: ReactorWrites;
   /** Teardown — called by the framework on CLI exit. */
   shutdown(): Promise<void>;
+}
+
+/** See `ReactorContext.writes`. */
+export interface ReactorWrites {
+  /** The agent's signer can sign as a user. */
+  ready(): boolean;
+  /** The agent may write this document now (its policy, readiness and the host's rules). */
+  canWrite(document: {
+    header: {
+      id: string;
+      documentType?: string;
+      protocolVersions?: Record<string, number> | null;
+    };
+  }): boolean;
 }
 
 /**
@@ -360,6 +380,22 @@ export interface DriveConfig {
    *  drive in. Stored on `header.meta.preferredEditor` at creation time. Has
    *  no effect on drives that already exist. */
   preferredEditor?: string;
+  /**
+   * Resolve the drive's id before anything else (for example from a pointer
+   * the host keeps for a drive whose id it cannot fix in advance). An id that
+   * resolves wins; undefined falls through to `id` and the name match.
+   */
+  resolveId?: (client: IReactorClient) => Promise<string | undefined>;
+  /** Match an existing drive by name when no id resolves. Default: true. */
+  matchByName?: boolean;
+  /**
+   * Whether the drive may be created now. When this returns false and no
+   * drive resolves, none is created: the reactor starts without it (its id
+   * is '') and the host creates it later.
+   */
+  canCreate?: () => boolean;
+  /** Called with the id of a drive that was just created. */
+  onCreated?: (id: string) => Promise<void> | void;
 }
 
 /**

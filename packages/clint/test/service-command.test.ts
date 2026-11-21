@@ -801,7 +801,7 @@ describe("auto-injected service commands in CLI", () => {
     expect(cap.output.join("")).toContain("idle");
   });
 
-  it("test-svc-start + test-svc-stop via run()", async () => {
+  it("test-svc-start via run() stops the service when the run ends", async () => {
     const cli = defineCli({
       name: "svc",
       version: "1.0.0",
@@ -812,14 +812,29 @@ describe("auto-injected service commands in CLI", () => {
 
     const cap = capture();
     await cli.run(["node", "svc", "test-svc-start"], cap.options);
-    expect(cap.output.join("")).toContain("ready");
+    const started = cap.output.join("");
+    expect(started).toContain("ready");
+    const pid = Number(/pid (\d+)/.exec(started)?.[1]);
+    expect(pid).toBeGreaterThan(0);
+    trackedPids.push(pid);
 
-    const svcDir = path.join(tmpDir, ".ph", "svc", "services");
-    trackedPids.push(...collectPids(svcDir));
+    // The one-shot run tore down what it started: nothing outlives it.
+    let alive = true;
+    try {
+      process.kill(pid, 0);
+    } catch {
+      alive = false;
+    }
+    expect(alive).toBe(false);
 
+    // A later run sees the history, not a running service to adopt.
     const cap2 = capture();
-    await cli.run(["node", "svc", "test-svc-stop"], cap2.options);
-    expect(cap2.output.join("")).not.toContain("✗");
+    await cli.run(["node", "svc", "test-svc-ps"], cap2.options);
+    expect(cap2.output.join("")).toContain("stopped");
+
+    const cap3 = capture();
+    await cli.run(["node", "svc", "test-svc-stop"], cap3.options);
+    expect(cap3.output.join("")).not.toContain("✗");
   });
 
   it("/test-svc-ps works in headless interactive mode", async () => {

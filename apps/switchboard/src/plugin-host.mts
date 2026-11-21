@@ -19,11 +19,8 @@ import type { SwitchboardConfig } from "./config/schema.js";
  * uniform-runners-plan/rewire/r2-carve-map.md). Every switchboard boots
  * through it: the carved subsystems (mcp, attachments, privacy, workflows) run
  * as built-in plugins through these hook moments. A declared composition
- * (`features.pluginHost: true`, FEATURE_PLUGIN_HOST_ENABLED=1) runs the
- * plugins it lists; without one the default composition runs
- * (defaultSwitchboardPlugins). Only an explicit `features.pluginHost: false`
- * (FEATURE_PLUGIN_HOST_ENABLED=false) still takes startSwitchboard's inline
- * path, which is deprecated.
+ * (the caller's `pluginComposition`) runs the plugins it lists; without one
+ * the default composition runs (defaultSwitchboardPlugins).
  *
  * Hook vocabulary (SwitchboardHooks), anchored to the boot spine:
  * - transformServerOptions   — after option/flag resolution, before anything opens
@@ -34,12 +31,6 @@ import type { SwitchboardConfig } from "./config/schema.js";
  * - onDrivesReady            — after core drive seeding / remote attachment
  * - onShutdown               — first in the subsystem-ordered teardown
  */
-
-export {
-  isPluginHostEnabled,
-  PLUGIN_HOST_FLAG,
-  pluginHostFromEnv,
-} from "./plugin-host-flag.mjs";
 
 /**
  * The context plugins receive. Fields are populated as the boot spine reaches
@@ -137,11 +128,11 @@ export function builtinSwitchboardPlugins(): ResolvedPlugin[] {
 }
 
 /** The classic resolution of the two switches a composition can leave out
- * (startSwitchboard: the env, the caller, then powerhouse.config.json). */
+ * (startSwitchboard: the env, then the caller). */
 export interface DefaultSwitchboardSwitches {
   /** MCP mounts: on unless MCP_ENABLED or the caller says false. */
   mcp: boolean;
-  /** Workflows run: PH_WORKFLOWS_ENABLED, the caller or the config file. */
+  /** Workflows run: PH_WORKFLOWS_ENABLED or the caller. */
   workflows: boolean;
 }
 
@@ -158,6 +149,31 @@ export function defaultSwitchboardPlugins(
     if (plugin.name === workflowsPlugin.name) return switches.workflows;
     return true;
   });
+}
+
+/**
+ * The notice for a boot that `workflows.enabled` in powerhouse.config.json
+ * switched workflows on before 6.4: no declared composition, and neither
+ * PH_WORKFLOWS_ENABLED nor the caller says anything. The key no longer does.
+ */
+export function configFileWorkflowsNotice(boot: {
+  declaredComposition: boolean;
+  /** `features.workflows`: what the env or the caller resolved to. */
+  workflows: boolean | undefined;
+  /** `workflows.enabled` in powerhouse.config.json. */
+  configFileEnabled: boolean | undefined;
+}): string | undefined {
+  if (
+    boot.declaredComposition ||
+    boot.workflows !== undefined ||
+    boot.configFileEnabled !== true
+  ) {
+    return undefined;
+  }
+  return (
+    "powerhouse.config.json workflows.enabled no longer switches workflows on in Switchboard since 6.4, so they stay off. " +
+    'Set PH_WORKFLOWS_ENABLED=1, or list "@powerhousedao/switchboard/plugins/workflows" under runner.plugins in hosts/switchboard/host.js.'
+  );
 }
 
 export function createSwitchboardPluginHost(

@@ -13,6 +13,7 @@ import {
 } from "../src/config/schema.js";
 import {
   builtinSwitchboardPlugins,
+  configFileWorkflowsNotice,
   defaultSwitchboardPlugins,
 } from "../src/plugin-host.mjs";
 import type { startSwitchboard } from "../src/server.mjs";
@@ -74,46 +75,71 @@ describe("defaultSwitchboardPlugins", () => {
   });
 });
 
-describe("features.pluginHost is tri-state", () => {
-  it("stays unset in the schema, and keeps an explicit true or false", () => {
-    expect(switchboardConfigSchema.parse({}).features.pluginHost).toBe(
-      undefined,
+describe("the retired plugin-host switch", () => {
+  it("is no config key: the schema drops it", () => {
+    expect(
+      switchboardConfigSchema.parse({ features: { pluginHost: false } })
+        .features,
+    ).not.toHaveProperty("pluginHost");
+  });
+
+  it.each(["1", "true", "false", "0"])(
+    "FEATURE_PLUGIN_HOST_ENABLED=%j changes nothing in the config",
+    (value) => {
+      expect(resolved({ FEATURE_PLUGIN_HOST_ENABLED: value }, {})).toEqual(
+        resolved({}, {}),
+      );
+    },
+  );
+});
+
+describe("workflows.enabled in powerhouse.config.json", () => {
+  const boot = {
+    declaredComposition: false,
+    workflows: undefined,
+    configFileEnabled: true,
+  };
+
+  it("warns that the key no longer switches workflows on, and names both ways", () => {
+    expect(configFileWorkflowsNotice(boot)).toBe(
+      "powerhouse.config.json workflows.enabled no longer switches workflows on in Switchboard since 6.4, so they stay off. " +
+        'Set PH_WORKFLOWS_ENABLED=1, or list "@powerhousedao/switchboard/plugins/workflows" under runner.plugins in hosts/switchboard/host.js.',
     );
-    for (const pluginHost of [true, false]) {
-      expect(
-        switchboardConfigSchema.parse({ features: { pluginHost } }).features
-          .pluginHost,
-      ).toBe(pluginHost);
-    }
   });
 
-  it.each([
-    [undefined, undefined],
-    ["", undefined],
-    ["  ", undefined],
-    ["1", true],
-    ["true", true],
-    ["false", false],
-    ["0", false],
-    ["off", false],
-    ["no", false],
-    // Neither a yes nor a no: the default composition, as when unset.
-    ["on", undefined],
-    ["yes", undefined],
-  ])("FEATURE_PLUGIN_HOST_ENABLED=%j maps to %s", (value, expected) => {
+  it("stays silent under a declared composition", () => {
     expect(
-      resolved({ FEATURE_PLUGIN_HOST_ENABLED: value }, {}).features.pluginHost,
-    ).toBe(expected);
+      configFileWorkflowsNotice({ ...boot, declaredComposition: true }),
+    ).toBe(undefined);
   });
 
-  it("a caller's explicit false selects the classic boot over the env", () => {
-    expect(
-      resolved(
-        { FEATURE_PLUGIN_HOST_ENABLED: "1" },
-        { features: { pluginHost: false } },
-      ).features.pluginHost,
-    ).toBe(false);
-  });
+  it.each([true, false])(
+    "stays silent when the env or the caller says %j",
+    (workflows) => {
+      expect(configFileWorkflowsNotice({ ...boot, workflows })).toBe(undefined);
+    },
+  );
+
+  it.each([false, undefined])(
+    "stays silent when the key is %j",
+    (configFileEnabled) => {
+      expect(configFileWorkflowsNotice({ ...boot, configFileEnabled })).toBe(
+        undefined,
+      );
+    },
+  );
+
+  it.each(["1", "0", "true", "false"])(
+    "PH_WORKFLOWS_ENABLED=%j resolves the switch, so nothing is warned",
+    (value) => {
+      const { workflows } = resolved(
+        { PH_WORKFLOWS_ENABLED: value },
+        {},
+      ).features;
+      expect(workflows).not.toBe(undefined);
+      expect(configFileWorkflowsNotice({ ...boot, workflows })).toBe(undefined);
+    },
+  );
 });
 
 describe("the switches without a declared composition", () => {
@@ -122,7 +148,6 @@ describe("the switches without a declared composition", () => {
       { MCP_ENABLED: "true", PH_WORKFLOWS_ENABLED: "true" },
       {},
     );
-    expect(config.features.pluginHost).toBeUndefined();
     expect(config.features.mcp).toBe(true);
     expect(config.features.workflows).toBe(true);
   });
@@ -143,7 +168,6 @@ describe("the switches without a declared composition", () => {
         { migratePglite: false, logger: silent },
       ),
     );
-    expect(config.features.pluginHost).toBeUndefined();
     expect(config.features.mcp).toBe(false);
   });
 
@@ -151,7 +175,6 @@ describe("the switches without a declared composition", () => {
     const config = switchboardConfigSchema.parse(
       binSwitchboardConfig({}, { migratePglite: false, logger: silent }),
     );
-    expect(config.features.pluginHost).toBeUndefined();
     expect(config.features.mcp).toBe(true);
   });
 });
@@ -159,7 +182,7 @@ describe("the switches without a declared composition", () => {
 const PLUGIN_LOG = "[switchboard:plugins]";
 
 /** Boots with the env sandboxed like plugin-presence.test.ts, and hands back
- * the plugin host's console lines: none means the classic inline boot ran. */
+ * the plugin host's console lines. */
 async function withSwitchboard(
   env: Env,
   features: NonNullable<SwitchboardConfigInput["features"]>,
@@ -175,7 +198,6 @@ async function withSwitchboard(
     "PH_REACTOR_DATABASE_URL",
     "MCP_ENABLED",
     "PH_WORKFLOWS_ENABLED",
-    "FEATURE_PLUGIN_HOST_ENABLED",
   ];
   const previous = touched.map((name) => [name, process.env[name]] as const);
   for (const name of touched) delete process.env[name];
@@ -255,32 +277,6 @@ describe("a boot without a declared composition", () => {
         expect(pluginLines[0]).toContain(
           `composition: 2 plugin(s) in order — ${ATTACHMENTS}, ${PRIVACY}`,
         );
-        expect(switchboard.mcpEnabled).toBe(false);
-        expect(await postMcp(switchboard.port)).toBe(404);
-        expect(switchboard.attachmentService).toBeDefined();
-      },
-    );
-  }, 60_000);
-
-  it("an explicit features.pluginHost: false still boots the classic path", async () => {
-    await withSwitchboard(
-      {},
-      { pluginHost: false },
-      async (switchboard, pluginLines) => {
-        expect(pluginLines).toEqual([]);
-        expect(switchboard.mcpEnabled).toBe(true);
-        expect(await postMcp(switchboard.port)).not.toBe(404);
-        expect(switchboard.attachmentService).toBeDefined();
-      },
-    );
-  }, 60_000);
-
-  it("FEATURE_PLUGIN_HOST_ENABLED=false still boots the classic path", async () => {
-    await withSwitchboard(
-      { FEATURE_PLUGIN_HOST_ENABLED: "false", MCP_ENABLED: "false" },
-      {},
-      async (switchboard, pluginLines) => {
-        expect(pluginLines).toEqual([]);
         expect(switchboard.mcpEnabled).toBe(false);
         expect(await postMcp(switchboard.port)).toBe(404);
         expect(switchboard.attachmentService).toBeDefined();

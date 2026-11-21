@@ -1,5 +1,12 @@
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  ISigner,
+} from "@powerhousedao/shared/document-model";
 import type { ReactorProtocol } from "@powerhousedao/host-core";
+import type {
+  BearerTokenProvider,
+  GraphQLReactorClientOptions,
+} from "@powerhousedao/reactor-browser/graphql-client";
 
 /**
  * P5.5 — the agent host's reactor is a REMOTE attach: a running switchboard,
@@ -29,6 +36,19 @@ export interface AttachRemoteReactorOptions {
   expectedProtocol?: ReactorProtocol;
   /** Bearer for authenticated switchboards; omitted = unauthenticated. */
   token?: string;
+  /**
+   * Resolves the bearer per request, for a token that expires (a Renown
+   * token). Takes precedence over `token`. Returning undefined sends the
+   * request unauthenticated.
+   */
+  tokenProvider?: BearerTokenProvider;
+  /**
+   * Signs the actions the client pushes. A function is called per push (see
+   * `createReactorWrites`, whose `signer` refuses while the identity has no
+   * user). Omitted, the client falls back to the ambient Renown signer, which
+   * does not exist in Node: actions then go out unsigned.
+   */
+  signer?: ISigner | (() => ISigner | undefined);
   /** Reachability probe budget. */
   timeoutMs?: number;
 }
@@ -83,10 +103,11 @@ async function probeEndpoint(
  * under the OPEN policy serve it); absence is not an attach failure. */
 async function readRemoteInfo(
   endpoint: string,
-  token: string | undefined,
+  tokenProvider: BearerTokenProvider | undefined,
   timeoutMs: number,
 ): Promise<Record<string, unknown> | undefined> {
   try {
+    const token = await tokenProvider?.();
     const res = await fetch(`${endpoint}/inspection`, {
       method: "POST",
       headers: {
@@ -114,18 +135,23 @@ export async function attachRemoteReactor(
   const timeoutMs = options.timeoutMs ?? 10_000;
   const endpoint = deriveGraphqlEndpoint(options.url);
 
+  const token = options.token;
+  const tokenProvider =
+    options.tokenProvider ??
+    (token ? () => Promise.resolve<string | undefined>(token) : undefined);
+
   await probeEndpoint(endpoint, timeoutMs);
-  const remoteInfo = await readRemoteInfo(endpoint, options.token, timeoutMs);
+  const remoteInfo = await readRemoteInfo(endpoint, tokenProvider, timeoutMs);
 
   const { GraphQLReactorClient } =
     await import("@powerhousedao/reactor-browser/graphql-client");
-  const client = new GraphQLReactorClient({
+  const clientOptions: GraphQLReactorClientOptions = {
     url: endpoint,
     documentModels: options.documentModels,
-    ...(options.token
-      ? { tokenProvider: () => Promise.resolve(options.token) }
-      : {}),
-  } as never);
+    ...(tokenProvider ? { tokenProvider } : {}),
+    ...(options.signer ? { signer: options.signer } : {}),
+  };
+  const client = new GraphQLReactorClient(clientOptions);
 
   return { endpoint, client, remoteInfo };
 }

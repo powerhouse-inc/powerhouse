@@ -14,7 +14,7 @@ const modules = [
   reactorDriveDocumentModelModule,
 ] as unknown as DocumentModelModule[];
 import { describe, expect, it } from "vitest";
-import { addDefaultDrive, addDefaultReactorDrive } from "../src/utils.mjs";
+import { ensureDrive } from "../src/utils.mjs";
 
 function client(): { client: IReactorClient; created: PHDocument[] } {
   const created: PHDocument[] = [];
@@ -54,13 +54,20 @@ function client(): { client: IReactorClient; created: PHDocument[] } {
 }
 
 describe.each([
-  ["addDefaultDrive", addDefaultDrive],
-  ["addDefaultReactorDrive", addDefaultReactorDrive],
-])("%s", (_name, add) => {
+  "powerhouse/document-drive",
+  "powerhouse/reactor-drive",
+] as const)("ensureDrive of a %s", (documentType) => {
+  const add = (
+    reactor: IReactorClient,
+    drive: object,
+    port: number,
+  ): Promise<string | undefined> =>
+    ensureDrive(reactor, { ...drive, documentType } as never, port);
+
   it("heads the drive with the client's newDocument", async () => {
     const { client: reactor, created } = client();
 
-    await add(reactor, { slug: "main", global: { name: "Main" } } as never, 1);
+    await add(reactor, { slug: "main", global: { name: "Main" } }, 1);
 
     expect(created[0].header.protocolVersions).toEqual({
       "base-reducer": 3,
@@ -71,7 +78,7 @@ describe.each([
   it("heads a drive with a configured id as legacy at the same versions", async () => {
     const { client: reactor, created } = client();
 
-    await add(reactor, { id: "fixed", global: { name: "Main" } } as never, 1);
+    await add(reactor, { id: "fixed", global: { name: "Main" } }, 1);
 
     expect(created[0].header.id).toBe("fixed");
     expect(created[0].header.protocolVersions).toEqual({ "base-reducer": 3 });

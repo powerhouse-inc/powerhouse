@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { RunnerContext } from "@powerhousedao/host-core";
 import {
   appJsonSchema,
+  findRemovedAppJsonKeys,
   loadAppJson,
   appSlug,
   updateEndpoints,
@@ -292,35 +293,85 @@ describe("shell projection", () => {
     ).toBe(true);
   });
 
-  it("shows the app.json splash on the loading page instead of the logo", () => {
-    const dir = tempDir("ph-proj-splash-");
-    writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
-    const splash = solidPng(64, [9, 9, 9, 255]);
-    mkdirSync(path.join(dir, "art"), { recursive: true });
-    writeFileSync(path.join(dir, "art", "splash.png"), splash);
-    const app = appJsonSchema.parse({
+  it("refuses the removed splash and art keys, naming the background form", () => {
+    const removed = {
       ...validApp,
       splash: "./art/splash.png",
-    });
+      splashDark: null,
+      loading: {
+        background: "#f7f1e8",
+        art: "./art/mark.svg",
+        artDark: "./art/mark-dark.svg",
+      },
+    };
+    expect(findRemovedAppJsonKeys(removed).map((key) => key.path)).toEqual([
+      "splash",
+      "splashDark",
+      "loading.art",
+      "loading.artDark",
+    ]);
+    expect(findRemovedAppJsonKeys(validApp)).toEqual([]);
+    expect(appJsonSchema.safeParse(removed).success).toBe(false);
+
+    const dir = tempDir("ph-appjson-removed-");
+    writeFileSync(path.join(dir, "app.json"), JSON.stringify(removed));
+    let message = "";
+    try {
+      loadAppJson(dir);
+    } catch (error) {
+      message = String(error);
+    }
+    expect(message).toContain("app.json: removed key:");
+    expect(message).toContain(
+      'splash was removed in 6.4; use a background layer, which shows the image above the status line: background: { layers: [{ src: "<image>", position: { bottom: "calc(50% + 32px)" }, width: "min(720px, 80vw)", maxHeight: "65vh" }] }.',
+    );
+    expect(message).toContain(
+      'splashDark was removed in 6.4; name the dark image in the background layer that shows the splash: src: { light: "<image>", dark: "<dark image>" }.',
+    );
+    expect(message).toContain(
+      'loading.art was removed in 6.4; use the top-level background: background: "<image>" pins the image to the bottom-right corner at its own size, and background: { layers: [{ src: "<image>", position: { bottom: 0, right: 0 }, width: "clamp(220px, 30vw, 520px)" }] } keeps the width it had.',
+    );
+    expect(message).toContain(
+      "loading.artDark was removed in 6.4; name the dark image in the background layer that shows the art:",
+    );
+
+    // with a background set the keys were already unread: only removal is left
+    expect(
+      findRemovedAppJsonKeys({
+        ...validApp,
+        background: "./art/mark.svg",
+        splash: "./art/splash.png",
+      }),
+    ).toEqual([
+      {
+        path: "splash",
+        message:
+          "splash was removed in 6.4; this file sets background, which already replaced it. Remove the key.",
+      },
+    ]);
+  });
+
+  it("removes the splash and art images an earlier version staged", () => {
+    const dir = tempDir("ph-proj-stale-art-");
+    writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
+    const app = appJsonSchema.parse(validApp);
     const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
-    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
-    expect(html).toContain('<img class="splash" src="./splash.png"');
-    expect(html).not.toContain('class="logo"');
-    expect(
-      readFileSync(path.join(res.shellDir, "ui/splash.png")).equals(splash),
-    ).toBe(true);
-    expect(
-      readFileSync(path.join(res.shellDir, ".gitignore"), "utf8"),
-    ).toContain("/ui/splash.png");
-    // a missing splash file falls back to the logo
-    const fallback = projectShell({
-      hostDir: dir,
-      app: appJsonSchema.parse({ ...validApp, splash: "./art/none.png" }),
-      connectPort: 6494,
-    });
-    expect(
-      readFileSync(path.join(fallback.shellDir, "ui/index.html"), "utf8"),
-    ).toContain('class="logo"');
+    const ui = path.join(res.shellDir, "ui");
+    for (const file of ["splash.png", "splash-dark.png", "art.svg"]) {
+      writeFileSync(path.join(ui, file), "stale");
+    }
+    writeFileSync(path.join(ui, "art-dark.webp"), "stale");
+    expect(projectShell({ hostDir: dir, app, connectPort: 6494 }).changed).toBe(
+      true,
+    );
+    for (const file of ["splash.png", "splash-dark.png", "art.svg"]) {
+      expect(existsSync(path.join(ui, file))).toBe(false);
+    }
+    expect(existsSync(path.join(ui, "art-dark.webp"))).toBe(false);
+    expect(existsSync(path.join(ui, "logo.png"))).toBe(true);
+    expect(projectShell({ hostDir: dir, app, connectPort: 6494 }).changed).toBe(
+      false,
+    );
   });
 
   it("themes the loading page and bounds the window from app.json", () => {
@@ -367,9 +418,8 @@ describe("shell projection", () => {
     writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
     const app = appJsonSchema.parse({
       ...validApp,
-      splash: null,
-      splashDark: null,
-      loading: { background: null, message: null, dark: null, art: null },
+      background: null,
+      loading: { background: null, message: null, dark: null },
     });
     const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
     const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
@@ -377,32 +427,19 @@ describe("shell projection", () => {
     expect(html).toContain('<img class="logo" src="./logo.png"');
     expect(html).toContain("Starting Taco Tent");
     expect(html).not.toContain("prefers-color-scheme: dark) {");
-    expect(html).not.toContain('class="corner"');
     expect(
       appJsonSchema.safeParse({ ...validApp, loading: null }).success,
     ).toBe(true);
   });
 
-  it("swaps splash, corner art and colors for the dark color scheme", () => {
+  it("swaps the colors for the dark color scheme", () => {
     const dir = tempDir("ph-proj-dark-");
     writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
-    mkdirSync(path.join(dir, "art"), { recursive: true });
-    const light = solidPng(64, [9, 9, 9, 255]);
-    const dark = solidPng(64, [200, 200, 200, 255]);
-    const svg = Buffer.from("<svg xmlns='http://www.w3.org/2000/svg'/>");
-    writeFileSync(path.join(dir, "art", "splash.png"), light);
-    writeFileSync(path.join(dir, "art", "splash-dark.png"), dark);
-    writeFileSync(path.join(dir, "art", "mark.svg"), svg);
-    writeFileSync(path.join(dir, "art", "mark-dark.svg"), svg);
     const app = appJsonSchema.parse({
       ...validApp,
-      splash: "./art/splash.png",
-      splashDark: "./art/splash-dark.png",
       loading: {
         background: "#f7f1e8",
         dark: { background: "#121212", accent: "#ffcc00" },
-        art: "./art/mark.svg",
-        artDark: "./art/mark-dark.svg",
       },
     });
     const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
@@ -412,25 +449,9 @@ describe("shell projection", () => {
     expect(html).toMatch(
       /prefers-color-scheme: dark\) \{\s*:root \{\s*--bg: #121212;\s*--fg: #e6e8eb;\s*--accent: #ffcc00;/,
     );
-    // <picture> swaps the splash and the corner art by scheme
-    expect(html).toContain(
-      '<source srcset="./splash-dark.png" media="(prefers-color-scheme: dark)" />',
-    );
-    expect(html).toContain('<img class="splash" src="./splash.png"');
-    expect(html).toContain('<div class="corner" aria-hidden="true">');
-    expect(html).toContain(
-      '<source srcset="./art-dark.svg" media="(prefers-color-scheme: dark)" />',
-    );
-    expect(html).toContain('<img class="art" src="./art.svg"');
-    // the files travel beside the page under their extension, out of git
-    expect(
-      readFileSync(path.join(res.shellDir, "ui/splash-dark.png")).equals(dark),
-    ).toBe(true);
-    expect(existsSync(path.join(res.shellDir, "ui/art.svg"))).toBe(true);
-    expect(existsSync(path.join(res.shellDir, "ui/art-dark.svg"))).toBe(true);
-    const ignore = readFileSync(path.join(res.shellDir, ".gitignore"), "utf8");
-    expect(ignore).toContain("/ui/splash-dark.png");
-    expect(ignore).toContain("/ui/art.*");
+    // the logo is one file for both schemes
+    expect(html).toContain('<img class="logo" src="./logo.png"');
+    expect(html).not.toContain("<picture>");
   });
 
   it("renders the loading page without a logo when the icon file is missing", () => {
@@ -654,7 +675,7 @@ describe("background layers on the loading page", () => {
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"/>',
   );
 
-  it("places each layer by the shared style, swaps it by scheme, and drops the splash and corner art", () => {
+  it("places each layer by the shared style, swaps it by scheme, and drops the logo", () => {
     const dir = tempDir("ph-proj-layers-");
     writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
     mkdirSync(path.join(dir, "brand"), { recursive: true });
@@ -664,9 +685,7 @@ describe("background layers on the loading page", () => {
     writeFileSync(path.join(dir, "brand", "growth.png"), growth);
     const app = appJsonSchema.parse({
       ...validApp,
-      // the deprecated fields are ignored once a background is set
-      splash: "./brand/growth.png",
-      loading: { background: "#ffffff", art: "./brand/growth.png" },
+      loading: { background: "#ffffff" },
       background: {
         color: { light: "#f7f5f0", dark: "#14161a" },
         layers: [
@@ -710,8 +729,6 @@ describe("background layers on the loading page", () => {
     // a URL is used as given; a missing file drops its layer
     expect(html).toContain('<img src="https://cdn.example/x.webp" alt=""');
     expect(html).not.toContain("missing");
-    expect(html).not.toContain('class="splash"');
-    expect(html).not.toContain('class="corner"');
     expect(html).not.toContain('class="logo"');
     // staged beside the page, out of git
     expect(existsSync(path.join(res.shellDir, "ui/bg-0.svg"))).toBe(true);

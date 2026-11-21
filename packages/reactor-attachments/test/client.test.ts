@@ -109,51 +109,6 @@ describe("createAttachmentClient", () => {
       expect(result.options.fileName).toBe("doc.txt");
     });
 
-    it("data is a freshly readable stream yielding the original bytes", async () => {
-      const client = createAttachmentClient(makeMockService());
-      const result = await client.preprocess(new Blob([BYTES]));
-      const reader = result.data.getReader();
-      const chunks: Uint8Array[] = [];
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-      }
-      const totalLength = chunks.reduce((acc, c) => acc + c.byteLength, 0);
-      const combined = new Uint8Array(totalLength);
-      let off = 0;
-      for (const c of chunks) {
-        combined.set(c, off);
-        off += c.byteLength;
-      }
-      expect(combined).toEqual(BYTES);
-    });
-
-    it("stream() returns a fresh stream on each call and both yield the original bytes", async () => {
-      const client = createAttachmentClient(makeMockService());
-      const result = await client.preprocess(new Blob([BYTES]));
-      const s1 = result.stream();
-      const s2 = result.stream();
-      expect(s1).not.toBe(s2);
-
-      async function drain(
-        s: ReadableStream<Uint8Array>,
-      ): Promise<Uint8Array[]> {
-        const r = s.getReader();
-        const out: Uint8Array[] = [];
-        for (;;) {
-          const { done, value } = await r.read();
-          if (done) break;
-          out.push(value);
-        }
-        return out;
-      }
-
-      const chunks1 = await drain(s1);
-      const chunks2 = await drain(s2);
-      expect(chunks1).toEqual(chunks2);
-    });
-
     it("hashes in slices, never reading the whole file into one buffer", async () => {
       const client = createAttachmentClient(makeMockService());
       const file = new Blob([BYTES]);

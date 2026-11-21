@@ -19,7 +19,6 @@ export const phCliCommandNames = [
   "migrate",
   "model",
   "switchboard",
-  "reactor",
   "login",
   "logout",
   "install",

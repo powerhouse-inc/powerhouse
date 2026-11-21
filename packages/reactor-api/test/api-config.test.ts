@@ -13,7 +13,6 @@ import {
   reactorApiConfigFromEnv,
   type ReactorApiConfig,
 } from "../src/api-config.js";
-import { ADMIN_USERS } from "../src/graphql/system/env/index.js";
 import { initializeAndStartAPI } from "../src/server.js";
 import { DEFAULT_PERMISSION_CACHE_TTL_MS } from "../src/services/permission-cache.js";
 
@@ -259,21 +258,6 @@ describe("reactorApiConfigFromEnv", () => {
         PH_ATTACHMENT_S3_BUCKET: undefined,
       } as Record<string, string | undefined>),
     ).toThrow(/PH_ATTACHMENT_S3_BUCKET/);
-  });
-});
-
-describe("ADMIN_USERS", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it("reads the env on access, not at import", () => {
-    vi.stubEnv("ADMIN_USERS", " 0xAA ,0xbb");
-    expect([...ADMIN_USERS]).toEqual(["0xaa", "0xbb"]);
-    expect(ADMIN_USERS.length).toBe(2);
-    expect(Array.isArray(ADMIN_USERS)).toBe(true);
-    vi.stubEnv("ADMIN_USERS", undefined);
-    expect([...ADMIN_USERS]).toEqual([]);
   });
 });
 

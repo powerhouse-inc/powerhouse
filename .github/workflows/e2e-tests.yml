@@ -51,13 +51,6 @@ jobs:
             name-suffix: " (SharedWorker reactor)"
             test-script: test:e2e:vetra:worker
             artifact-prefix: vetra-worker
-          # The classic commands smoke: one boot spec against `ph vetra --watch`
-          # started the classic way. It proves the classic commands still work
-          # in this release, and goes away with them.
-          - mode: classic
-            name-suffix: " (classic commands smoke)"
-            test-script: test:e2e:vetra:classic
-            artifact-prefix: vetra-classic
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -260,12 +253,11 @@ jobs:
         run: pnpm rebuild --recursive
 
       # The UI suite runs against Connect's production build, which bundles
-      # the workflow package's dist. Still the classic command: --workflows
-      # has no `ph run` argument, and the fixture's connect host does not
-      # compose the workflows plugin.
+      # the workflow package's dist. The fixture's connect-workflows host is
+      # its connect host with the workflows plugin composed.
       - name: Build Connect for the workflow UI tests
         if: steps.workflow-ui.outputs.run == 'true'
-        run: node ../../clis/ph-cli/dist/cli.mjs connect build --workflows true
+        run: node ../../clis/ph-cli/dist/cli.mjs run connect-workflows build
         working-directory: ./test/test-consumer-project
 
       # No browser: the suite drives switchboard's GraphQL directly, and names
@@ -454,6 +446,9 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: powerhouse-inc/recipes
+          # The recipes on the 6.4 host forms; back to the default branch
+          # once that branch is merged there.
+          ref: next/6.4
           path: recipes-checkout
 
       - name: Install pnpm

@@ -124,10 +124,6 @@ export interface RequestOptions extends RequestTaps {
   hostCallTimeoutMs?: number;
 }
 
-/** @deprecated Named for the one request that had it; every request takes it
- * now. Kept because the old name is on main, in this package's public types. */
-export type RunActionOptions = RequestOptions;
-
 // The child's marks, plus when the host sent the request and got the reply.
 export type OnWorkerTimings = (
   timings: WorkerTimings,

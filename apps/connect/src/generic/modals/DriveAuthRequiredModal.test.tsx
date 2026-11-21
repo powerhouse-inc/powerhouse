@@ -104,7 +104,7 @@ describe("DriveAuthRequiredModal", () => {
   });
 
   it("renders nothing and ignores Escape when another modal is open", () => {
-    mocks.phModal = { type: "settings" };
+    mocks.phModal = { type: "inspector" };
     render(<DriveAuthRequiredModal />);
     expect(screen.queryByTestId("drive-auth-gate")).toBeNull();
     fireEvent.keyDown(window, { key: "Escape" });

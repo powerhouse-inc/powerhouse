@@ -77,8 +77,7 @@ const LoginModal = lazy(() =>
   })),
 );
 
-/** The generic plugin's modals: its chrome's, and core's in its style.
- * "settings" is a page; showPHModal navigates to it. */
+/** The generic plugin's modals: its chrome's, and core's in its style. */
 export const genericModals: ConnectModals = {
   addDrive: AddDriveModal,
   clearStorage: ClearStorageModal,

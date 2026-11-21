@@ -1058,19 +1058,8 @@ export function defineCli<
       bus.on("service:failed", (data: any) => {
         if (data?.id) proxyInstance.removeRoutesBySource(`service:${data.id}`);
       });
-
-      // Wire proxy routes for services that are already running from a previous session
-      if (context.services) {
-        for (const inst of context.services.list()) {
-          if (inst.status !== "ready" || !inst.endpoints) continue;
-          const def = context.services.getDefinition(inst.serviceId);
-          if (!def) continue;
-          const routes = buildServiceRoutes(def, inst, implicitRoot, log);
-          for (const route of routes) {
-            proxyInstance.addRoute(route);
-          }
-        }
-      }
+      // No routes for services found running at boot: a service of an
+      // earlier run is never adopted (every service is this process's own).
     }
   }
 
@@ -1594,6 +1583,12 @@ export function defineCli<
       try {
         await program.parseAsync(argv);
       } catch (err: any) {
+        // A failed command still stops what it started.
+        try {
+          await runtime.teardown();
+        } catch {
+          // the command's own error is the one to report
+        }
         if (err.exitCode === 0) {
           exit(0);
           return;
@@ -1708,7 +1703,7 @@ export function defineCli<
             if (result.text) stdout(result.text);
           }
 
-          // EOF without /exit — show exit message (active services, resume hint)
+          // EOF without /exit — show exit message (services stopping, resume hint)
           if (!exitedViaCommand) {
             stdout(session!.exitMessage);
           }

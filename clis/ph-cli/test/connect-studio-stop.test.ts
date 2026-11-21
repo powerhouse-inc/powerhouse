@@ -54,8 +54,8 @@ async function startStudio(reloadOnConfigChange: boolean) {
   const { createServer } = await import("vite");
   const { runConnectStudio } =
     await import("../src/services/connect-studio.js");
-  const { classicConnectStudioArgs } =
-    await import("../src/services/classic-args.js");
+  const { connectStudioServiceArgs } =
+    await import("../src/services/service-args.js");
   const servers: ReturnType<typeof fakeServer>[] = [];
   vi.mocked(createServer).mockReset();
   vi.mocked(createServer).mockImplementation(() => {
@@ -67,7 +67,7 @@ async function startStudio(reloadOnConfigChange: boolean) {
   const studio: { stop?: () => Promise<void> } = {};
   await runConnectStudio(
     {
-      ...(await classicConnectStudioArgs()),
+      ...(await connectStudioServiceArgs()),
       printUrls: false,
       bindCLIShortcuts: false,
     },

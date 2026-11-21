@@ -63,7 +63,6 @@ export async function buildPowerhouseConfigTemplate(
     connectPort: ports.vetraConnectPort,
   };
   if (args.remoteDrive) {
-    vetra.driveId = args.remoteDrive.split("/").pop() ?? "";
     vetra.driveUrl = args.remoteDrive;
   }
   config.vetra = vetra;

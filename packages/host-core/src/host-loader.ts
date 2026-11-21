@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { Worker } from "node:worker_threads";
 import { z } from "zod";
 import type { HostDefinition } from "./host-schemas.js";
 import type { PluginEntryData } from "./plugins.js";
@@ -43,9 +44,9 @@ export type HostsFolderStatus =
   | { kind: "empty"; dir: string }
   | { kind: "present"; dir: string; hosts: string[] };
 
-/** A `hosts/` folder with no `<name>/host.js` inside is "empty" — the guard
- * state: callers warn loudly and fall back to legacy rather than activating
- * the new architecture off a stray `mkdir hosts`. */
+/** A `hosts/` folder with no `<name>/host.js` inside is "empty": it defines
+ * no host, so nothing runs from it, as from an absent one
+ * ({@link withoutHostsMessage}). */
 export function probeHostsFolder(projectRoot: string): HostsFolderStatus {
   const dir = path.join(projectRoot, "hosts");
   if (!existsSync(dir) || !statSync(dir).isDirectory()) {
@@ -62,6 +63,22 @@ export function probeHostsFolder(projectRoot: string): HostsFolderStatus {
   return hosts.length === 0
     ? { kind: "empty", dir }
     : { kind: "present", dir, hosts };
+}
+
+/**
+ * Why `subject` cannot run in a project whose hosts/ folder is absent or
+ * empty, and what adds the host files. One wording, for `ph run <host>` and
+ * for the `ph vetra`, `ph connect` and `ph switchboard` sugar.
+ */
+export function withoutHostsMessage(
+  probe: Exclude<HostsFolderStatus, { kind: "present" }>,
+  subject: string,
+): string {
+  const found =
+    probe.kind === "empty"
+      ? `hosts/ exists at ${probe.dir} but contains no <name>/host.js`
+      : "This project has no hosts/ folder";
+  return `${found}, so ${subject} cannot run. Run \`ph migrate\` to add the host files.`;
 }
 
 /** Sibling imports: `../<host>/host.js` — source material for derived
@@ -391,22 +408,64 @@ export async function loadHost(
   return importHost(projectRoot, hostName, true);
 }
 
+/**
+ * `loadHost`, evaluated again: the host file and what it imports are read as
+ * they are on disk now. A process keeps the first evaluation of a module, so
+ * `loadHost` returns the host as it was when the process first loaded it; a
+ * dev server that follows powerhouse.config.json asks for this one.
+ */
+export async function loadHostFresh(
+  projectRoot: string,
+  hostName: string,
+): Promise<LoadedHost> {
+  return importHost(projectRoot, hostName, true, true);
+}
+
+const FRESH_IMPORT_WORKER = `
+const { parentPort, workerData } = require("node:worker_threads");
+import(workerData.url).then(
+  (module) => {
+    try {
+      parentPort.postMessage({ host: module.default });
+    } catch (error) {
+      parentPort.postMessage({ error: String(error) });
+    }
+  },
+  (error) => parentPort.postMessage({ error: String(error) }),
+);
+`;
+
+/** The default export of a module, evaluated in a worker: a worker has its
+ * own module graph, so the file and its imports are read again. Host files
+ * export data, which is what reaches this thread. */
+function importDefaultFresh(url: string, file: string): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(FRESH_IMPORT_WORKER, {
+      eval: true,
+      workerData: { url },
+    });
+    const fail = (reason: string) =>
+      reject(new HostLoadError(`${file} could not be read again: ${reason}`));
+    worker.once("message", (message: { host?: unknown; error?: string }) => {
+      if (message.error !== undefined) fail(message.error);
+      else resolve(message.host);
+      void worker.terminate();
+    });
+    worker.once("error", (error) => fail(String(error)));
+    worker.once("exit", () => fail("its worker exited without an answer"));
+  });
+}
+
 async function importHost(
   projectRoot: string,
   hostName: string,
   checkOutputs: boolean,
+  fresh = false,
 ): Promise<LoadedHost> {
   const probe = probeHostsFolder(projectRoot);
-  if (probe.kind === "absent") {
+  if (probe.kind !== "present") {
     throw new HostLoadError(
-      `No hosts/ folder found in ${projectRoot}.`,
-      "New projects get one from `ph init`; in an existing project, create hosts/<name>/host.js.",
-    );
-  }
-  if (probe.kind === "empty") {
-    throw new HostLoadError(
-      `hosts/ exists at ${probe.dir} but contains no <name>/host.js.`,
-      "An empty hosts/ folder defines no hosts; add a host definition or remove the folder.",
+      withoutHostsMessage(probe, `the host "${hostName}"`),
     );
   }
   if (!probe.hosts.includes(hostName)) {
@@ -425,10 +484,10 @@ async function importHost(
     }
   }
 
-  const module = (await import(pathToFileURL(file).href)) as {
-    default?: unknown;
-  };
-  const host = module.default;
+  const url = pathToFileURL(file).href;
+  const host = fresh
+    ? await importDefaultFresh(url, file)
+    : ((await import(url)) as { default?: unknown }).default;
   if (host === null || typeof host !== "object" || Array.isArray(host)) {
     throw new HostLoadError(
       `${file} must default-export the host object (\`export default { name, runner, ... }\`).`,

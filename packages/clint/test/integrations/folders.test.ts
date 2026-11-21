@@ -32,7 +32,9 @@ beforeAll(async () => {
     storagePath: join(testDir, "reactor-storage"),
     enableSync: false,
   });
-  const drive = await ensureDrive(reactorModule, { name: "folder-test-drive" });
+  const drive = await ensureDrive(reactorModule.client, {
+    name: "folder-test-drive",
+  });
   driveId = drive.id;
 }, 30_000);
 

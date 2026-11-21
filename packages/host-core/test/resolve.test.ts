@@ -523,6 +523,37 @@ describe("declared validation", () => {
     );
   });
 
+  it("names the workflows plugin for a removed reactor.workflows", () => {
+    const message =
+      "reactor.workflows was removed in 6.4; the workflows plugin under runner.plugins decides: list it to run workflows, leave it out to run none. " +
+      "On a switchboard, PH_WORKFLOWS_ENABLED=0 still switches them off.";
+    expect(
+      findRemovedForms({
+        name: "switchboard",
+        runner: { module: "s" },
+        reactor: { workflows: false },
+      }),
+    ).toEqual([{ path: "reactor.workflows", message }]);
+    expect(
+      findRemovedForms({
+        name: "desktop",
+        runner: { module: "c" },
+        children: {
+          "desktop-connect": { host: "connect", reactor: { workflows: true } },
+        },
+      }),
+    ).toEqual([
+      { path: "children.desktop-connect.reactor.workflows", message },
+    ]);
+    expect(
+      findRemovedForms({
+        name: "switchboard",
+        runner: { module: "s" },
+        reactor: { namespace: "lab" },
+      }),
+    ).toEqual([]);
+  });
+
   it("validateDeclaredHost runs the runner's declaredHostSchema; validateHost its resolved one", () => {
     const { declaredHostSchema, hostSchema } = defineHostSchemas(
       (s) => s.reactorHostSchema,

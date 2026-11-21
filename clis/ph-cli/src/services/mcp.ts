@@ -27,11 +27,11 @@ import { getVersion } from "../get-version.js";
 import {
   ensureVetra,
   restartVetra,
-  vetraCommandFor,
+  currentPhCliRunVetraCommand,
   VetraStartError,
   type EnsureVetraOptions,
   type VetraCommand,
-} from "../utils/vetra-launch.js";
+} from "../utils/vetra-launcher.js";
 import {
   readVetraRuntime,
   type VetraRuntimeRecord,
@@ -43,7 +43,7 @@ const CONFIG_FILE = "powerhouse.config.json";
 export type McpLauncherOptions = {
   projectDir?: string;
   startTimeoutSeconds: number;
-  /** Test seam: what starts Vetra; defaults to {@link vetraCommandFor}. */
+  /** Test seam: what starts Vetra; defaults to {@link currentPhCliRunVetraCommand}. */
   vetraCommand?: VetraCommand;
 };
 
@@ -218,7 +218,7 @@ class Upstream {
       projectDir,
       projectName: name,
       switchboardPort: resolveSwitchboardPortDefault(),
-      command: this.options.vetraCommand ?? vetraCommandFor(projectDir),
+      command: this.options.vetraCommand ?? currentPhCliRunVetraCommand(),
       timeoutMs: this.options.startTimeoutSeconds * 1000,
       onProgress: this.#report,
     });
@@ -262,7 +262,7 @@ export async function startMcpLauncher(options: McpLauncherOptions) {
   const projectDir = findProjectDir(
     options.projectDir ?? process.env.PH_CALLER_CWD ?? process.cwd(),
   );
-  // Port resolution and `ph vetra` both read the project from the cwd.
+  // Port resolution and `ph run vetra` both read the project from the cwd.
   if (projectDir) process.chdir(projectDir);
 
   const local = await connectLocalReactorMcp();

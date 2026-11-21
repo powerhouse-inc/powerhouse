@@ -8,6 +8,7 @@ import {
 } from "./retired-flags.js";
 
 const UNIFORM_RUNNERS = "FEATURE_UNIFORM_RUNNERS_ENABLED";
+const PLUGIN_HOST = "FEATURE_PLUGIN_HOST_ENABLED";
 
 function collect(
   env: Record<string, string | undefined>,
@@ -18,60 +19,97 @@ function collect(
   return warnings;
 }
 
-describe("retired flags: FEATURE_UNIFORM_RUNNERS_ENABLED in 6.3", () => {
-  it("is in the table as a warning, refused from 6.4", () => {
+describe("retired flags: FEATURE_UNIFORM_RUNNERS_ENABLED in 6.4", () => {
+  it("is in the table as a refusal, retired in 6.3", () => {
     expect(retiredFlags.find((f) => f.name === UNIFORM_RUNNERS)).toMatchObject({
       retiredIn: "6.3",
       refusedIn: "6.4",
       when: "false",
-      action: "warn",
+      action: "refuse",
     });
   });
 
   it.each(["false", "0", "off", "no", "FALSE", "Off", " no "])(
-    "warns once for %j",
+    "refuses to start for %j",
     (value) => {
-      const warnings = collect({ [UNIFORM_RUNNERS]: value });
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toContain(UNIFORM_RUNNERS);
-      expect(warnings[0]).toContain("Hosts and `ph run` are always on now.");
-      expect(warnings[0]).toContain("has no effect");
-      expect(warnings[0]).toContain(
-        "6.4 will refuse to start with it set to false",
+      let message = "";
+      try {
+        collect({ [UNIFORM_RUNNERS]: value });
+      } catch (error) {
+        message = (error as Error).message;
+      }
+      expect(message).toContain(
+        `${UNIFORM_RUNNERS}=${value} has no effect since 6.3.`,
+      );
+      expect(message).toContain("Hosts and `ph run` are always on now.");
+      expect(message).toContain(
+        "since 6.4 the CLI refuses to start with it set to false.",
       );
     },
   );
 
   it.each(["1", "true", "TRUE", "on", "yes", ""])(
-    "stays silent for %j",
+    "passes silently for %j",
     (value) => {
       expect(collect({ [UNIFORM_RUNNERS]: value })).toEqual([]);
     },
   );
 
-  it("stays silent when the variable is unset", () => {
+  it("passes silently when the variable is unset", () => {
     expect(collect({})).toEqual([]);
   });
 
-  it("warns once per invocation: a child that inherits the env is silent", () => {
-    const env: Record<string, string | undefined> = {
-      [UNIFORM_RUNNERS]: "false",
-    };
-    expect(collect(env)).toHaveLength(1);
-    expect(env[RETIRED_FLAGS_WARNED_ENV]).toBe("1");
-    expect(collect({ ...env })).toEqual([]);
+  it("refuses even when an earlier process already warned", () => {
+    expect(() =>
+      collect({ [UNIFORM_RUNNERS]: "false", [RETIRED_FLAGS_WARNED_ENV]: "1" }),
+    ).toThrow(/FEATURE_UNIFORM_RUNNERS_ENABLED=false/);
+  });
+});
+
+describe("retired flags: FEATURE_PLUGIN_HOST_ENABLED in 6.4", () => {
+  it("is in the table as a refusal", () => {
+    expect(retiredFlags.find((f) => f.name === PLUGIN_HOST)).toMatchObject({
+      retiredIn: "6.4",
+      refusedIn: "6.4",
+      when: "false",
+      action: "refuse",
+    });
   });
 
-  it("writes the warning to stderr by default", () => {
-    const calls: unknown[][] = [];
-    const original = console.warn;
-    console.warn = (...args: unknown[]) => calls.push(args);
-    try {
-      checkRetiredFlags({ [UNIFORM_RUNNERS]: "false" });
-    } finally {
-      console.warn = original;
-    }
-    expect(calls).toHaveLength(1);
+  it.each(["false", "0", "off", "no", "FALSE", " no "])(
+    "refuses to start for %j",
+    (value) => {
+      let message = "";
+      try {
+        collect({ [PLUGIN_HOST]: value });
+      } catch (error) {
+        message = (error as Error).message;
+      }
+      expect(message).toContain(
+        `${PLUGIN_HOST}=${value} has no effect since 6.4.`,
+      );
+      expect(message).toContain(
+        "Switchboard always boots through the plugin host now",
+      );
+      expect(message).toContain("`runner.plugins`");
+      expect(message).toContain("hosts/switchboard/host.js");
+      expect(message).toContain(
+        "since 6.4 the CLI refuses to start with it set to false.",
+      );
+    },
+  );
+
+  it.each(["1", "true", "TRUE", "on", "yes", ""])(
+    "passes silently for %j",
+    (value) => {
+      expect(collect({ [PLUGIN_HOST]: value })).toEqual([]);
+    },
+  );
+
+  it("refuses even when an earlier process already warned", () => {
+    expect(() =>
+      collect({ [PLUGIN_HOST]: "false", [RETIRED_FLAGS_WARNED_ENV]: "1" }),
+    ).toThrow(/FEATURE_PLUGIN_HOST_ENABLED=false/);
   });
 });
 
@@ -115,5 +153,24 @@ describe("retired flags: the table", () => {
     const other = { ...flag, name: "FEATURE_ALSO_GONE" };
     const env = { FEATURE_GONE: "no", FEATURE_ALSO_GONE: "off" };
     expect(collect(env, [flag, other])).toHaveLength(2);
+  });
+
+  it("warns once per invocation: a child that inherits the env is silent", () => {
+    const env: Record<string, string | undefined> = { FEATURE_GONE: "false" };
+    expect(collect(env, [flag])).toHaveLength(1);
+    expect(env[RETIRED_FLAGS_WARNED_ENV]).toBe("1");
+    expect(collect({ ...env }, [flag])).toEqual([]);
+  });
+
+  it("writes the warning to stderr by default", () => {
+    const calls: unknown[][] = [];
+    const original = console.warn;
+    console.warn = (...args: unknown[]) => calls.push(args);
+    try {
+      checkRetiredFlags({ FEATURE_GONE: "false" }, [flag]);
+    } finally {
+      console.warn = original;
+    }
+    expect(calls).toHaveLength(1);
   });
 });

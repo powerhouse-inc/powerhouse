@@ -33,26 +33,24 @@ import {
 import type { ParsedCmdResult } from "@powerhousedao/shared/clis";
 import {
   commonServerArgs,
+  connectBuildArgs,
   connectStudioArgs,
 } from "@powerhousedao/shared/clis/args";
 import { command, runSafely } from "cmd-ts";
 import { z } from "zod";
-import {
-  connectChromeDeprecation,
-  reactorWorkflowsDeprecation,
-} from "./host-deprecations.js";
+import { connectChromeDeprecation } from "./host-deprecations.js";
 import { onlyPassed, runnerArgsSchemaOf } from "./runner-args.js";
 import {
-  classicConnectPreviewArgs,
+  connectPreviewServiceArgs,
   type ConnectPreviewArgs,
-} from "../services/classic-args.js";
+} from "../services/service-args.js";
 import type { ConnectServeOverride } from "../services/connect-serve.js";
 
 /**
- * BRIDGE runner for Connect hosts (uniform-runners phase 0): maps a
- * hosts/connect/host.js definition onto the SAME service the classic
- * `ph connect studio` (dev/run), `ph connect build` and `ph connect preview`
- * (serve) commands call — no forked behavior.
+ * The runner for Connect hosts: maps a hosts/connect/host.js definition
+ * onto the Connect services — the studio (dev/run), the build and the
+ * preview (serve). `ph connect studio|build|preview` are sugar for these
+ * verbs.
  */
 
 export const kind = "reactor";
@@ -269,11 +267,6 @@ function callerOverrideRaw(
       entries !== undefined,
       `hosts/${host.name}/host.js`,
     ),
-    reactorWorkflowsDeprecation(
-      reactor,
-      `hosts/${host.name}/host.js`,
-      "@powerhousedao/connect/plugins/workflows",
-    ),
   ]) {
     if (deprecation) console.warn(deprecation);
   }
@@ -306,13 +299,12 @@ function callerOverrideRaw(
   if (unserved)
     console.warn(`[connect] hosts/${host.name}/host.js: ${unserved}`);
   const structural = isStructuralMultiReactor(reactor);
-  if (!connect.reactor && !connect.instance && !connect.app && !structural) {
+  if (!connect.reactor && !connect.instance && !structural) {
     // `base` IS host.config when the host has one; a host without a config
     // block still carries its composition, drives, Renown and namespace (set
-    // on `base` above). With none of them, there is no override: a classic
-    // build. `dev` and `serve` add the default composition to whatever this
-    // returns, so only `build` still hands a service no composition; the
-    // next release removes that.
+    // on `base` above). With none of them, there is no override. `dev` and
+    // `serve` add the default composition to whatever this returns; a build
+    // bakes none, and Connect works the same one out when it boots.
     return host.config !== undefined ||
       composition ||
       declaredDefaults ||
@@ -348,7 +340,7 @@ function callerOverrideRaw(
     ...base,
     reactor: { ...connect.reactor, ...base.reactor },
     instance: instance as never,
-    app: { ...connect.app, ...base.app },
+    app: { ...base.app },
     ...(drives ? { drives: { ...base.drives, ...drives } } : {}),
   };
 }
@@ -464,13 +456,36 @@ const invocation = command({
 
 export type ConnectInvocationArgs = Partial<ParsedCmdResult<typeof invocation>>;
 
+/** What the `build` verb accepts instead: the `ph connect build` definitions
+ * of the same names. A container image sets these per build (its Docker
+ * build arguments), so they are arguments and not host file keys. */
+const buildInvocationArgs = {
+  connectBasePath: connectBuildArgs.connectBasePath,
+  packagesRegistry: connectBuildArgs.packagesRegistry,
+};
+
+const buildInvocation = command({
+  name: "connect build",
+  args: buildInvocationArgs,
+  handler: (args) => args,
+});
+
+export type ConnectBuildInvocationArgs = Partial<
+  ParsedCmdResult<typeof buildInvocation>
+>;
+
 const WATCH_RETIRED = "it is no longer needed.";
 
-export const argsSchema = runnerArgsSchemaOf(invocationArgs, {
-  // `ph vetra --connect-port`
-  memberOptions: { "--connect-port": "--port" },
-  retired: { "--watch": WATCH_RETIRED, "-w": WATCH_RETIRED },
-});
+// One schema for the runner: each verb parses its own arguments, and so
+// refuses the ones of another verb (`--base` on dev, `--port` on build).
+export const argsSchema = runnerArgsSchemaOf(
+  { ...invocationArgs, ...buildInvocationArgs },
+  {
+    // `ph vetra --connect-port`
+    memberOptions: { "--connect-port": "--port" },
+    retired: { "--watch": WATCH_RETIRED, "-w": WATCH_RETIRED },
+  },
+);
 
 /** This invocation's arguments (`ctx.argv`), parsed by the classic
  * definitions; only the ones passed. They win over the host file. */
@@ -487,6 +502,23 @@ export async function connectInvocationArgs(
     );
   }
   return onlyPassed(result.value, invocationArgs, argv);
+}
+
+/** The `build` verb's arguments (`ctx.argv`), parsed by the classic
+ * definitions; only the ones passed. They win over the host file. */
+export async function connectBuildInvocationArgs(
+  host: ConnectHostParsed,
+  ctx: RunnerContext,
+): Promise<ConnectBuildInvocationArgs> {
+  const argv = [...(ctx.argv ?? [])];
+  if (argv.length === 0) return {};
+  const result = await runSafely(buildInvocation, argv);
+  if (result._tag === "error") {
+    throw new RunnerError(
+      `hosts/${host.name}/host.js: ${result.error.config.message}`,
+    );
+  }
+  return onlyPassed(result.value, buildInvocationArgs, argv);
 }
 
 /** A server for a built Connect, given what to serve and how. */
@@ -517,7 +549,7 @@ export async function serveWith(
   const bind = passed.host ?? runner.host ?? "127.0.0.1";
   // The classic `ph connect preview` arguments, with the keys this host and
   // this invocation own laid over them.
-  const classic = await classicConnectPreviewArgs();
+  const classic = await connectPreviewServiceArgs();
   const args: ConnectPreviewArgs = {
     ...classic,
     port,

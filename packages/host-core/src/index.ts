@@ -12,8 +12,10 @@ export {
   HostLoadError,
   lintHostImports,
   loadHost,
+  loadHostFresh,
   probeHostsFolder,
   stripComments,
+  withoutHostsMessage,
   type HostsFolderStatus,
   type LoadedHost,
 } from "./host-loader.js";

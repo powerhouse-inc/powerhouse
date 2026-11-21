@@ -1,9 +1,5 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type {
-  IReactorClient,
-  IRelationalDb,
-  ISyncManager,
-} from "@powerhousedao/reactor";
+import type { IRelationalDb, ISyncManager } from "@powerhousedao/reactor";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type http from "node:http";
@@ -23,6 +19,7 @@ import {
   AuthorizationPolicy,
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
+import { managerClientsOf } from "./utils/client-halves.js";
 
 const REFUSAL =
   "Refusing every version of document model @documentType from the GraphQL schema: @reason";
@@ -120,12 +117,12 @@ function makeHarness(models: DocumentModelModule[]) {
       close: vi.fn((cb?: () => void) => cb?.()),
       setMaxListeners: vi.fn(),
     } as unknown as WebSocketServer,
-    reactorClient: {
+    ...managerClientsOf({
       getDocumentModelModules: vi.fn().mockResolvedValue({ results: models }),
       find: vi
         .fn()
         .mockResolvedValue({ results: [], options: { cursor: "", limit: 1 } }),
-    } as unknown as IReactorClient,
+    }),
     relationalDb: {} as IRelationalDb,
     analyticsStore: {} as IAnalyticsStore,
     syncManager: {} as ISyncManager,

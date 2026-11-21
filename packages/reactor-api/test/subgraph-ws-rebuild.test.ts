@@ -22,6 +22,7 @@ import {
   AuthorizationPolicy,
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
+import { managerClientsOf } from "./utils/client-halves.js";
 
 const WS_PATH = "/graphql/subscriptions";
 
@@ -136,7 +137,7 @@ async function startServer(core: SubgraphClass[] = [CoreFeed]) {
     path: "/",
     httpServer: server,
     wsServer: new WebSocketServer({ server, path: WS_PATH }),
-    reactorClient,
+    ...managerClientsOf(reactorClient),
     relationalDb: {} as IRelationalDb,
     analyticsStore: {} as IAnalyticsStore,
     syncManager: {} as ISyncManager,

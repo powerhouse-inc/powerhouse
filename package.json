@@ -10,7 +10,6 @@
     "test:codegen": "pnpm --filter=test-codegen run test",
     "test:e2e:vetra": "pnpm --filter=test-package-vetra run test",
     "test:e2e:vetra:worker": "pnpm --filter=test-package-vetra run test:worker",
-    "test:e2e:vetra:classic": "pnpm --filter=test-package-vetra run test:classic",
     "test:e2e:package": "pnpm --filter=test-package-e2e run test",
     "test:e2e:workflow-piece": "pnpm --filter=test-workflow-piece-e2e run test",
     "test:e2e:recipes": "pnpm --filter=test-recipes-e2e run recipes",

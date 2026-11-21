@@ -215,7 +215,7 @@ const objectUrl = URL.createObjectURL(blob);
 const attachments = createAttachmentClient(service);
 
 const results = await attachments.preprocess(file);
-// results: { ref, hash, sizeBytes, options, data, stream, blob }
+// results: { ref, hash, sizeBytes, options, blob }
 ```
 
 `preprocess` is async because it reads the entire file to hash it. In Node it hashes natively in 8 MiB slices at any size. In a browser, a file up to 256 MiB is read whole into one native WebCrypto call; a larger one is read in 8 MiB slices and hashed in JavaScript, which is slower but keeps memory bounded and works past the browser's ~2 GB limit on a single read. No copy is kept: `results.blob` is the file itself. `data` and `stream()` are deprecated; they read `blob` again as a stream. The file must not change before it is uploaded: the server rejects bytes that no longer match the hash with `HashMismatch`.
@@ -352,7 +352,7 @@ setAgentImageOperation(state, action) {
 | `ReserveAttachmentOptions`            | `UploadFirstReserveAttachmentOptions \| HashFirstReserveAttachmentOptions` — discriminated on `clientHash`.                                                                               |
 | `UploadFirstReserveAttachmentOptions` | `{ mimeType: string; fileName: string; extension?: string \| null }` — no `clientHash`; ref known only after `send()`.                                                                    |
 | `HashFirstReserveAttachmentOptions`   | `{ mimeType: string; fileName: string; extension?: string \| null; clientHash: AttachmentHash; sizeBytes: number }` — ref known at reserve time.                                          |
-| `PreprocessResult`                    | `{ ref: AttachmentRef; hash: AttachmentHash; sizeBytes: number; options: HashFirstReserveAttachmentOptions; blob: Blob; data: ReadableStream<Uint8Array>; stream: () => ReadableStream<Uint8Array> }` — `data` and `stream` are deprecated aliases of `blob.stream()` |
+| `PreprocessResult`                    | `{ ref: AttachmentRef; hash: AttachmentHash; sizeBytes: number; options: HashFirstReserveAttachmentOptions; blob: Blob }` |
 | `AttachmentUploadResult`              | `{ hash: AttachmentHash; ref: AttachmentRef; header: AttachmentHeader }`                                                                                                                  |
 | `AttachmentStatus`                    | `"available" \| "evicted" \| "pending"` — `pending` is synthesized at query time from a live hash-first reservation; the bytes are not uploaded yet.                                       |
 | `AttachmentHeader`                    | `{ hash; mimeType; fileName; sizeBytes; extension; status: AttachmentStatus; source; createdAtUtc; lastAccessedAtUtc; expiresAtUtc: string \| null }` — `expiresAtUtc` is `null` for committed attachments and carries the reservation expiry while `pending`. |

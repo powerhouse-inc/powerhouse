@@ -7,6 +7,7 @@ import {
   HostLoadError,
   lintHostImports,
   loadHost,
+  loadHostFresh,
   probeHostsFolder,
   stripComments,
 } from "../src/host-loader.js";
@@ -50,6 +51,41 @@ export default {
   config: { runtimeRecord: true },
 };
 `;
+
+describe("loadHostFresh", () => {
+  it("reads the host and the config it imports as they are now", async () => {
+    const project = makeProject();
+    writeHost(project, "vetra", VALID_HOST);
+    const port = async (load: typeof loadHost) =>
+      (await load(project, "vetra")).host.children?.studio;
+    expect(await port(loadHost)).toMatchObject({ runner: { port: 2599 } });
+
+    writeFileSync(
+      path.join(project, "powerhouse.config.json"),
+      JSON.stringify({ vetra: { connectPort: 2600 } }),
+    );
+    // The process keeps its first evaluation of the host file.
+    expect(await port(loadHost)).toMatchObject({ runner: { port: 2599 } });
+    expect(await port(loadHostFresh)).toMatchObject({ runner: { port: 2600 } });
+  });
+
+  it("rejects by the file's name when the file no longer evaluates", async () => {
+    const project = makeProject();
+    writeHost(project, "vetra", VALID_HOST);
+    writeFileSync(path.join(project, "powerhouse.config.json"), "{ not json");
+    await expect(loadHostFresh(project, "vetra")).rejects.toThrow(
+      /host.js could not be read again/,
+    );
+  });
+
+  it("applies the same checks to what it read", async () => {
+    const project = makeProject();
+    writeHost(project, "vetra", `export default { name: "x", runner: {} };`);
+    await expect(loadHostFresh(project, "vetra")).rejects.toThrow(
+      HostLoadError,
+    );
+  });
+});
 
 describe("probeHostsFolder", () => {
   it("reports absent when there is no hosts/ folder", () => {
@@ -96,9 +132,10 @@ describe("loadHost", () => {
     );
   });
 
-  it("errors on an absent hosts/ folder with the scaffold hint", async () => {
+  it("errors on an absent hosts/ folder, naming `ph migrate`", async () => {
     await expect(loadHost(makeProject(), "vetra")).rejects.toThrow(
-      /No hosts\/ folder/,
+      'This project has no hosts/ folder, so the host "vetra" cannot run. ' +
+        "Run `ph migrate` to add the host files.",
     );
   });
 
@@ -106,7 +143,7 @@ describe("loadHost", () => {
     const project = makeProject();
     mkdirSync(path.join(project, "hosts"), { recursive: true });
     await expect(loadHost(project, "vetra")).rejects.toThrow(
-      /contains no <name>\/host\.js/,
+      /contains no <name>\/host\.js, so the host "vetra" cannot run\. Run `ph migrate`/,
     );
   });
 

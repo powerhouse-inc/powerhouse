@@ -237,7 +237,7 @@ describe("connect bridge runner", () => {
       );
       expect(warn).not.toHaveBeenCalled();
 
-      // A classic host (no plugins) still serves the value, until 6.4.
+      // A host without plugins still serves the value, by the default composition.
       await runner.dev(
         connect(connectHost({ config: { drives: { allowAddDrive: true } } })),
         { ...ctx, verb: "dev" },
@@ -245,7 +245,7 @@ describe("connect bridge runner", () => {
       const deprecations = warn.mock.calls.map((call) => String(call[0]));
       expect(deprecations).toHaveLength(1);
       expect(deprecations[0]).toContain(
-        "hosts/lab-connect/host.js: config.drives.allowAddDrive is only read by the classic Connect boot, which 6.4 removes.",
+        "hosts/lab-connect/host.js: config.drives.allowAddDrive is only read while the host has no runner.plugins, by the default composition.",
       );
     } finally {
       warn.mockRestore();
@@ -309,13 +309,12 @@ describe("switchboard bridge runner", () => {
       },
     });
 
-    const { classicSwitchboardArgs } =
-      await import("@powerhousedao/ph-run/classic-args");
-    const classic = await classicSwitchboardArgs();
+    const { switchboardServiceArgs } =
+      await import("@powerhousedao/ph-run/service-args");
+    const classic = await switchboardServiceArgs();
     // sanity on the classic shape this gate compares against
     expect(classic).toMatchObject({
       mcp: true,
-      useVetraDrive: false,
       remoteDrives: [],
     });
 
@@ -664,42 +663,10 @@ describe("switchboard bridge runner", () => {
     });
   });
 
-  it("turns the plugin host on in the member's config, not the env", async () => {
-    const runner = await import("../src/runners/switchboard.js");
-    const { startSwitchboard } =
-      await import("@powerhousedao/ph-run/switchboard");
-    vi.mocked(startSwitchboard).mockClear();
-    await runner.run(
-      switchboard({
-        name: "lab-switchboard",
-        runner: { module: "m", plugins: [] },
-      }),
-      { ...ctx, env: { FEATURE_PLUGIN_HOST_ENABLED: "0" } },
-    );
-    expect(process.env.FEATURE_PLUGIN_HOST_ENABLED).toBeUndefined();
-    expect(vi.mocked(startSwitchboard).mock.calls[0][2]).toMatchObject({
-      features: { pluginHost: true },
-    });
-  });
-
-  it("refuses a config.switchboard key the reactor block sets", () => {
-    const parsed = switchboardHostSchema.safeParse({
-      name: "lab-switchboard",
-      runner: { module: "m" },
-      reactor: { workflows: true },
-      config: { switchboard: { features: { workflows: false } } },
-    });
-    expect(parsed.success).toBe(false);
-    expect(parsed.error?.issues.map((i) => i.message)).toEqual([
-      "config.switchboard.features.workflows is also set by the reactor block; set it in one place.",
-    ]);
-  });
-
   it("refuses a config.switchboard key the runner or the reactor block owns", () => {
     for (const config of [
       { server: { port: 1 } },
       { drive: {} },
-      { features: { pluginHost: true } },
       { auth: { unknown: true } },
       { protocol: { featureFlags: { authEnforcement: true } } },
       { storage: { reactor: { url: "postgres://host/db" } } },
@@ -716,7 +683,7 @@ describe("switchboard bridge runner", () => {
     }
   });
 
-  it("keeps a readModel-only block's reactor store on readModel.url, with a warning", async () => {
+  it("refuses a readModel-only block: readModel.url no longer holds the reactor store", async () => {
     const runner = await import("../src/runners/switchboard.js");
     const { startSwitchboard } =
       await import("@powerhousedao/ph-run/switchboard");
@@ -735,20 +702,12 @@ describe("switchboard bridge runner", () => {
     });
     try {
       vi.mocked(startSwitchboard).mockClear();
-      await runner.run(readModelOnly, ctx);
-      expect(vi.mocked(startSwitchboard).mock.calls[0][2]).toMatchObject({
-        storage: {
-          reactor: { url: "postgres://host/db" },
-          readModel: { url: "postgres://host/db" },
-        },
-      });
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringMatching(
-          /readModel\.url .*also holds the reactor store.*deprecated/,
-        ),
+      await expect(runner.run(readModelOnly, ctx)).rejects.toThrow(
+        "readModel.url (postgres://host/db) is the only store this host names",
       );
+      expect(startSwitchboard).not.toHaveBeenCalled();
 
-      // An env var that names the store takes it, and nothing is deprecated.
+      // An env var that names the store takes it.
       warn.mockClear();
       vi.mocked(startSwitchboard).mockClear();
       await runner.run(readModelOnly, {
@@ -1011,6 +970,35 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
     expect(log.mock.calls.flat()).toContain(
       "[connect] hosts/lab-connect/host.js declares no runner.plugins: serving Connect's default composition.",
     );
+    log.mockRestore();
+  });
+
+  it("serves the host as it reads at each restart of Studio", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    vi.mocked(runConnectStudio).mockClear();
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const declared = (appName: string) =>
+      connect(
+        connectHost({
+          runner: {
+            module: "@powerhousedao/ph-cli/runners/connect",
+            port: 6599,
+            plugins: [],
+          },
+          config: { branding: { appName } },
+        }),
+      );
+    await runner.dev(declared("Before"), {
+      ...ctx,
+      reloadHost: () => Promise.resolve(declared("After")),
+    });
+    const [, , served, options] = vi.mocked(runConnectStudio).mock.calls[0];
+    const serving = () => (typeof served === "function" ? served() : served);
+    expect(serving()).toMatchObject({ branding: { appName: "Before" } });
+    await options?.beforeRestart?.();
+    expect(serving()).toMatchObject({ branding: { appName: "After" } });
     log.mockRestore();
   });
 
@@ -1442,7 +1430,7 @@ describe("connect bridge runner — reactor projection (P2.5)", () => {
     expect(override).toMatchObject({ instance: { namespace: "copy-1" } });
   });
 
-  it("merges protocol → connect.reactor and workflows into the caller override", async () => {
+  it("merges protocol → connect.reactor into the caller override", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =
       await import("../src/services/connect-studio.js");
@@ -1454,7 +1442,6 @@ describe("connect bridge runner — reactor projection (P2.5)", () => {
         config: { branding: { appName: "Lab" } },
         reactor: {
           backends: { local: { kind: "worker" } },
-          workflows: true,
           protocol: { createSignaturePolicy: "legacy" },
         },
       }),
@@ -1465,7 +1452,6 @@ describe("connect bridge runner — reactor projection (P2.5)", () => {
       branding: { appName: "Lab" },
       reactor: { createSignaturePolicy: "legacy" },
       instance: { reactorWorker: true },
-      app: { workflowsEnabled: true },
     });
   });
 });
@@ -1497,7 +1483,7 @@ describe("runner arguments (ctx.argv) win over the host file", () => {
   it("the connect runner declares the classic flags it accepts", async () => {
     const runner = await import("../src/runners/connect.js");
     expect(runner.argsSchema).toEqual({
-      options: ["--port", "--host"],
+      options: ["--port", "--host", "--base", "--packages-registry"],
       flags: ["--open", "--cors", "--strictPort"],
       memberOptions: { "--connect-port": "--port" },
       retired: {
@@ -1628,6 +1614,39 @@ describe("runner arguments (ctx.argv) win over the host file", () => {
       open: true,
     });
   });
+
+  it("connect build: --base and --packages-registry reach the build service", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectBuild } =
+      await import("../src/services/connect-build.js");
+    vi.mocked(runConnectBuild).mockClear();
+    await runner.build(
+      connect({ name: "lab-connect", runner: { module: "m" } }),
+      withArgv("--base", "/app", "--packages-registry=https://registry.test"),
+    );
+    const [args, override] = vi.mocked(runConnectBuild).mock.calls[0];
+    expect(args).toMatchObject({
+      connectBasePath: "/app",
+      packagesRegistry: "https://registry.test",
+      outDir: ".ph/connect-build/dist/",
+    });
+    // Over the host's config, as the flag was over powerhouse.config.json.
+    expect(override).toEqual({ app: { basePath: "/app" } });
+  });
+
+  it("each connect verb refuses the arguments of another", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const host = connect({ name: "lab-connect", runner: { module: "m" } });
+    await expect(
+      runner.build(host, withArgv("--port", "4100")),
+    ).rejects.toThrow(/hosts\/lab-connect\/host\.js: /);
+    await expect(runner.dev(host, withArgv("--base", "/app"))).rejects.toThrow(
+      /hosts\/lab-connect\/host\.js: /,
+    );
+    await expect(
+      runner.serve(host, withArgv("--packages-registry", "x")),
+    ).rejects.toThrow(/hosts\/lab-connect\/host\.js: /);
+  });
 });
 
 /** THE PARITY GATE for the Connect runner and the switchboard's `build`, as
@@ -1641,9 +1660,9 @@ describe("the runners hand the services the classic argument shape", () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =
       await import("../src/services/connect-studio.js");
-    const { classicConnectStudioArgs } =
-      await import("../src/services/classic-args.js");
-    const classic = await classicConnectStudioArgs();
+    const { connectStudioServiceArgs } =
+      await import("../src/services/service-args.js");
+    const classic = await connectStudioServiceArgs();
     // sanity on the classic shape this gate compares against
     expect(classic).toMatchObject({
       port: 3000,
@@ -1678,15 +1697,15 @@ describe("the runners hand the services the classic argument shape", () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =
       await import("../src/services/connect-studio.js");
-    const { classicConnectStudioArgs } =
-      await import("../src/services/classic-args.js");
+    const { connectStudioServiceArgs } =
+      await import("../src/services/service-args.js");
     vi.mocked(runConnectStudio).mockClear();
     await runner.dev(
       connect(connectHost()),
       withArgv("--port", "4100", "--host", "0.0.0.0", "--cors"),
     );
     expect(vi.mocked(runConnectStudio).mock.calls[0][0]).toStrictEqual({
-      ...(await classicConnectStudioArgs()),
+      ...(await connectStudioServiceArgs()),
       port: 4100,
       host: "0.0.0.0",
       open: false,
@@ -1760,9 +1779,9 @@ describe("the runners hand the services the classic argument shape", () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectBuild } =
       await import("../src/services/connect-build.js");
-    const { classicConnectBuildArgs } =
-      await import("../src/services/classic-args.js");
-    const classic = await classicConnectBuildArgs();
+    const { connectBuildServiceArgs } =
+      await import("../src/services/service-args.js");
+    const classic = await connectBuildServiceArgs();
     expect(classic).toMatchObject({ outDir: ".ph/connect-build/dist/" });
 
     vi.mocked(runConnectBuild).mockClear();
@@ -1788,9 +1807,9 @@ describe("the runners hand the services the classic argument shape", () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectServer } =
       await import("@powerhousedao/ph-run/connect-server");
-    const { classicConnectPreviewArgs } =
-      await import("@powerhousedao/ph-run/classic-args");
-    const classic = await classicConnectPreviewArgs();
+    const { connectPreviewServiceArgs } =
+      await import("@powerhousedao/ph-run/service-args");
+    const classic = await connectPreviewServiceArgs();
     expect(classic).toMatchObject({
       port: 4173,
       outDir: ".ph/connect-build/dist/",
@@ -1834,9 +1853,9 @@ describe("the runners hand the services the classic argument shape", () => {
   it("switchboard build: the classic `ph build` args, with the host's outDir over them", async () => {
     const runner = await import("../src/runners/switchboard.js");
     const { runBuild } = await import("../src/services/build.js");
-    const { classicBuildArgs } =
-      await import("../src/services/classic-args.js");
-    const classic = await classicBuildArgs();
+    const { buildServiceArgs } =
+      await import("../src/services/service-args.js");
+    const classic = await buildServiceArgs();
     expect(classic).toMatchObject({ outDir: "dist", release: false });
 
     vi.mocked(runBuild).mockClear();

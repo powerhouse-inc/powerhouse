@@ -86,7 +86,6 @@ export interface SwitchboardReactorLayer {
   storage?: { reactor?: { url: string }; readModel?: { url: string } };
   protocol?: ReactorProtocol;
   packages?: { dynamic: true };
-  features?: { workflows: boolean };
 }
 
 /** The reactor block as a switchboard config layer. The reactor store and the
@@ -108,9 +107,6 @@ export function reactorBlockToSwitchboardConfig(
   }
   if (reactor?.protocol) layer.protocol = reactor.protocol;
   if (backend?.packages?.dynamic) layer.packages = { dynamic: true };
-  if (reactor?.workflows !== undefined) {
-    layer.features = { workflows: reactor.workflows };
-  }
   return layer;
 }
 
@@ -139,8 +135,7 @@ export function browserBackend(
  *  - remote backend(s) only                        -> `remote`
  *  - a worker backend                              -> `worker`
  *  - anything else local                           -> `in-process`
- * `undefined` when no backends are declared — the caller then keeps the
- * legacy reactorWorker/multiReactor behaviour untouched.
+ * `undefined` when no backends are declared: Connect then runs `in-process`.
  */
 export function reactorClientMode(
   reactor: ReactorConfig | undefined,
@@ -215,7 +210,6 @@ export interface ConnectReactorProjection {
       remoteBackends?: ServedRemoteBackend[];
       router?: ConnectRouterSettings;
     };
-    app?: { workflowsEnabled?: boolean };
   };
 }
 
@@ -223,8 +217,7 @@ export interface ConnectReactorProjection {
  * connect.reactor (same shape), backend topology → instance.reactorWorker
  * (the browser reactor's kind), instance.reactorClient, instance.storage
  * (the browser reactor's store), and with a
- * switchboard instance.remoteBackends and instance.router, workflows →
- * app.workflowsEnabled. */
+ * switchboard instance.remoteBackends and instance.router. */
 export function projectReactorToConnect(
   reactor: ReactorConfig | undefined,
 ): ConnectReactorProjection {
@@ -244,9 +237,6 @@ export function projectReactorToConnect(
       ...(routed ? { remoteBackends: served } : {}),
       ...(router ? { router } : {}),
     };
-  }
-  if (reactor?.workflows !== undefined) {
-    connect.app = { workflowsEnabled: reactor.workflows };
   }
   return { connect };
 }

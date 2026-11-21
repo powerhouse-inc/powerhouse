@@ -45,7 +45,6 @@ const ENV_KEYS = [
   "PH_REACTOR_DATABASE_URL",
   "PH_WORKFLOWS_SECRETS_MASTER_KEY",
   "MCP_ENABLED",
-  "FEATURE_PLUGIN_HOST_ENABLED",
   "AUTH_ENABLED",
   "ADMINS",
   "RESOLVE_CALLER_IDENTITY",
@@ -178,7 +177,6 @@ beforeAll(async () => {
   for (const name of ENV_KEYS) delete process.env[name];
   process.env.PH_REACTOR_DATABASE_URL = join(tempRoot, "reactor-storage");
   process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY = randomBytes(32).toString("hex");
-  process.env.FEATURE_PLUGIN_HOST_ENABLED = "1";
   const configFile = join(tempRoot, "powerhouse.config.json");
   await writeFile(
     configFile,

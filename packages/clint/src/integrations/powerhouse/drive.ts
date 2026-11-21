@@ -2,6 +2,8 @@
  * Drive management — find or create drives on startup.
  */
 
+import type { IReactorClient } from "@powerhousedao/reactor";
+import type { PHBaseState, PHDocument } from "document-model";
 import type { DriveConfig, ReactorClientModule } from "./types.js";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive" as const;
@@ -10,69 +12,94 @@ const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive" as const;
  * Ensure a drive exists, matching by name. On first run, creates a new drive.
  * On subsequent runs, finds the existing one by name.
  *
- * The Reactor client has no `getDrives()` — drives are documents of type
- * `powerhouse/document-drive`. We use `reactor.findByType()` to locate
- * existing ones and `client.write.createEmpty()` + `client.write.rename()`
- * to create.
+ * Works on a client alone, embedded or remote: drives are documents of type
+ * `powerhouse/document-drive`, listed with `client.find({ type })`, built
+ * with `client.newDocument()` and created, already named, with one
+ * `client.write.create()`. Those three are what both the embedded
+ * `IReactorClient` and `GraphQLReactorClient` (which has no
+ * `write.createEmpty` or `write.rename`) offer.
  *
- * @param reactorModule - The full ReactorClientModule (needs .client and .reactor)
- * @param driveConfig - Optional drive name/icon configuration
- * @returns The drive ID and name
+ * @param client - The reactor client the drive is looked up and created with
+ * @param driveConfig - Optional drive name/icon configuration and hooks
+ * @returns The drive ID and name; `deferred` (and id '') when `canCreate`
+ *   held back a drive that does not exist yet
  */
 export async function ensureDrive(
-  reactorModule: ReactorClientModule,
+  client: IReactorClient,
   driveConfig?: DriveConfig,
-): Promise<{ id: string; name: string }> {
-  const { client, reactor } = reactorModule;
+): Promise<{ id: string; name: string; deferred?: boolean }> {
   const driveName = driveConfig?.name ?? "default";
   const wantedId = driveConfig?.id;
   const preferredEditor = driveConfig?.preferredEditor;
 
-  // Find existing document-drive documents
-  const existing = await reactor.findByType(DRIVE_DOCUMENT_TYPE);
-  if (existing?.results?.length) {
+  // A host-resolved id (e.g. a pointer to a drive created earlier) wins.
+  const resolved = await driveConfig?.resolveId?.(client);
+  if (resolved) return { id: resolved, name: driveName };
+
+  const matchByName = driveConfig?.matchByName !== false;
+  const existing =
+    wantedId || matchByName ? await findDrives(client) : ([] as PHDocument[]);
+  if (existing.length) {
     // If a deterministic ID was requested, check if it already exists
     if (wantedId) {
-      const match = existing.results.find((r) => r.header.id === wantedId);
+      const match = existing.find((doc) => doc.header.id === wantedId);
       if (match) return { id: wantedId, name: driveName };
     }
 
-    // Match by name — load each to check
-    for (const result of existing.results) {
-      const doc = (await client.get(result.header.id)) as any;
-      const docName = doc.name ?? doc.header?.name ?? doc.state?.global?.name;
+    // Match by name
+    for (const doc of matchByName ? existing : []) {
+      const named = doc as unknown as {
+        name?: string;
+        header?: { name?: string };
+        state?: { global?: { name?: string } };
+      };
+      const docName =
+        named.name ?? named.header?.name ?? named.state?.global?.name;
       if (docName === driveName) {
-        return { id: result.header.id, name: driveName };
+        return { id: doc.header.id, name: driveName };
       }
     }
     // No name match — if default name and single drive, use it
-    if (driveName === "default" && existing.results.length === 1) {
-      return { id: existing.results[0].header.id, name: driveName };
+    if (matchByName && driveName === "default" && existing.length === 1) {
+      return { id: existing[0].header.id, name: driveName };
     }
   }
 
-  // Create a new drive document. Goes through the doc-build path when a
-  // deterministic id or preferredEditor is set so we can populate the
-  // header before persistence; falls back to createEmpty otherwise.
-  let driveId: string;
-  if (wantedId || preferredEditor) {
-    // Only a legacy drive can take a chosen id.
-    const doc = await client.newDocument(
-      DRIVE_DOCUMENT_TYPE,
-      wantedId ? { signaturePolicy: "legacy", id: wantedId } : undefined,
-    );
-    if (preferredEditor) doc.header.meta = { preferredEditor };
-    const handle = await client.write.create(doc);
-    const created = await handle.document();
-    driveId = (created as any).header.id;
-  } else {
-    const handle = await client.write.createEmpty(DRIVE_DOCUMENT_TYPE);
-    const drive = await handle.document();
-    driveId = drive.header.id;
+  if (driveConfig?.canCreate && !driveConfig.canCreate()) {
+    return { id: "", name: driveName, deferred: true };
   }
 
-  await (await client.write.rename(driveId, driveName)).document();
+  // Create the drive in one write, named in its global state and on its
+  // header, as the switchboard's default drives
+  // (apps/switchboard/src/utils.mts:181-201) and Connect's addDrive
+  // (packages/reactor-browser/src/actions/drive.ts:143-184) are. `name` and
+  // `meta` are mutable header fields, outside the derived id and header
+  // signature of a v2-required drive. Only a legacy drive can take a chosen id.
+  const doc = await client.newDocument(DRIVE_DOCUMENT_TYPE, {
+    initialState: { global: { name: driveName } } as Partial<PHBaseState>,
+    ...(wantedId ? { signaturePolicy: "legacy" as const, id: wantedId } : {}),
+  });
+  doc.header.name = driveName;
+  if (preferredEditor) {
+    doc.header.meta = { ...doc.header.meta, preferredEditor };
+  }
+  const created = await (await client.write.create(doc)).document();
+  const driveId = created.header.id;
+
+  await driveConfig?.onCreated?.(driveId);
   return { id: driveId, name: driveName };
+}
+
+/** Every drive document the client serves, across result pages. */
+async function findDrives(client: IReactorClient): Promise<PHDocument[]> {
+  const drives: PHDocument[] = [];
+  let page = await client.find({ type: DRIVE_DOCUMENT_TYPE });
+  drives.push(...page.results);
+  while (page.next) {
+    page = await page.next();
+    drives.push(...page.results);
+  }
+  return drives;
 }
 
 /**

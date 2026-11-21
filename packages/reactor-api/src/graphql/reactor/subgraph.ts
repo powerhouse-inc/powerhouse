@@ -877,7 +877,6 @@ export class ReactorSubgraph extends BaseSubgraph {
           const result = await resolvers.createDocument(
             this.clientsOf(ctx),
             { document: args.document, parentIdOrSlug },
-            this.graphqlManager.reactorDriveClient,
             this.viewSubject(ctx),
           );
 
@@ -929,7 +928,6 @@ export class ReactorSubgraph extends BaseSubgraph {
           const result = await resolvers.createEmptyDocument(
             this.clientsOf(ctx),
             { documentType: args.documentType, parentIdOrSlug },
-            this.graphqlManager.reactorDriveClient,
             this.viewSubject(ctx),
           );
 
@@ -1350,11 +1348,10 @@ export class ReactorSubgraph extends BaseSubgraph {
           // catch.
           const driveIdToInvalidate = await this.#resolveDriveId(idOrSlug, ctx);
 
-          const result = await resolvers.deleteDocument(
-            this.clientsOf(ctx),
-            { idOrSlug, propagate: args.propagate },
-            this.graphqlManager.reactorDriveClient,
-          );
+          const result = await resolvers.deleteDocument(this.clientsOf(ctx), {
+            idOrSlug,
+            propagate: args.propagate,
+          });
 
           if (result && driveIdToInvalidate) {
             this.graphqlManager.driveOwnershipCache.remove(driveIdToInvalidate);

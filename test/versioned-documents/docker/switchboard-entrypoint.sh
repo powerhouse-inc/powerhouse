@@ -10,7 +10,7 @@ if [ -n "$DATABASE_URL" ] && echo "$DATABASE_URL" | grep -q "^postgres" && [ "$S
     echo "[entrypoint] Running Prisma db push..."
     prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma --skip-generate
     echo "[entrypoint] Running migrations..."
-    ph switchboard --migrate
+    ph run switchboard migrate
 fi
 
 echo "[entrypoint] Starting switchboard on port ${PORT:-3000}..."

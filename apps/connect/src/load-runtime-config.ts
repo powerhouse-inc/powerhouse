@@ -1,7 +1,6 @@
 import { loadRuntimeConfig as loadCoreRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
 
-// The built-ins: a declared composition's transform the config, and the active
-// ones' UI loads (every one's without a composition).
+// The built-ins: the composition's transform the config, and their UI loads.
 const connectPlugins = () =>
   import("./plugins/index.js").then((m) => m.connectPlugins);
 

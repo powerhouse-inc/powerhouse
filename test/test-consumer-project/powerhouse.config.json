@@ -7,8 +7,7 @@
     "port": 5556
   },
   "reactor": {
-    "port": 5557,
-    "storage": "memory"
+    "port": 5557
   },
   "packages": [],
   "packageRegistryUrl": "http://localhost:8080"

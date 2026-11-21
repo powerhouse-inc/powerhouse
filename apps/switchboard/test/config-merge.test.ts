@@ -14,10 +14,21 @@ type Env = Record<string, string | undefined>;
 
 const silent = { warn: () => undefined } as unknown as ILogger;
 
-function resolved(env: Env, caller: SwitchboardConfigInput): SwitchboardConfig {
+function resolved(
+  env: Env,
+  caller: SwitchboardConfigInput,
+  declaredComposition = false,
+): SwitchboardConfig {
   return switchboardConfigSchema.parse(
-    callerOverEnv(switchboardConfigFromEnv(env, { logger: silent }), caller),
+    callerOverEnv(switchboardConfigFromEnv(env, { logger: silent }), caller, {
+      declaredComposition,
+    }),
   );
+}
+
+/** As `resolved`, for a caller that boots a declared plugin composition. */
+function declared(env: Env, caller: SwitchboardConfigInput): SwitchboardConfig {
+  return resolved(env, caller, true);
 }
 
 describe("mergeSwitchboardConfig", () => {
@@ -215,85 +226,78 @@ describe("callerOverEnv keeps each key's precedence", () => {
     },
   );
 
-  it("lets PH_WORKFLOWS_ENABLED switch workflows off under the plugin host", () => {
-    const env = {
-      FEATURE_PLUGIN_HOST_ENABLED: "1",
-      PH_WORKFLOWS_ENABLED: "false",
-    };
-    expect(resolved(env, {}).features.workflows).toBe(false);
+  it("lets PH_WORKFLOWS_ENABLED switch workflows off under a declared composition", () => {
+    const env = { PH_WORKFLOWS_ENABLED: "false" };
+    expect(declared(env, {}).features.workflows).toBe(false);
     expect(
-      resolved(env, { features: { workflows: true } }).features.workflows,
+      declared(env, { features: { workflows: true } }).features.workflows,
     ).toBe(false);
   });
 
-  it("ignores an env true for MCP_ENABLED and PH_WORKFLOWS_ENABLED under the plugin host", () => {
+  it("ignores an env true for MCP_ENABLED and PH_WORKFLOWS_ENABLED under a declared composition", () => {
+    const env = { MCP_ENABLED: "true", PH_WORKFLOWS_ENABLED: "true" };
+    const host = declared(env, {});
+    expect(host.features.mcp).toBeUndefined();
+    expect(host.features.workflows).toBeUndefined();
+    const withCaller = declared(env, {
+      features: { mcp: false, workflows: true },
+    });
+    expect(withCaller.features.mcp).toBe(false);
+    expect(withCaller.features.workflows).toBe(true);
+    // Not carved: the same under both compositions.
+    expect(
+      declared({ ...env, INSPECTION_ENABLED: "false" }, {}).inspection.enabled,
+    ).toBe(false);
+  });
+
+  it("FEATURE_PLUGIN_HOST_ENABLED declares nothing any more", () => {
     const env = {
       FEATURE_PLUGIN_HOST_ENABLED: "1",
       MCP_ENABLED: "true",
       PH_WORKFLOWS_ENABLED: "true",
     };
-    const host = resolved(env, {});
-    expect(host.features.pluginHost).toBe(true);
-    expect(host.features.mcp).toBeUndefined();
-    expect(host.features.workflows).toBeUndefined();
-    const withCaller = resolved(env, {
-      features: { mcp: false, workflows: true },
-    });
-    expect(withCaller.features.mcp).toBe(false);
-    expect(withCaller.features.workflows).toBe(true);
-    // Not carved: classic on both paths.
-    expect(
-      resolved({ ...env, INSPECTION_ENABLED: "false" }, {}).inspection.enabled,
-    ).toBe(false);
+    const config = resolved(env, {});
+    expect(config.features.mcp).toBe(true);
+    expect(config.features.workflows).toBe(true);
   });
 });
 
 describe("an env false always wins", () => {
-  const host = { FEATURE_PLUGIN_HOST_ENABLED: "1" };
-
-  it("MCP_ENABLED=false beats a caller's mcp, classic and plugin host", () => {
+  it("MCP_ENABLED=false beats a caller's mcp, default and declared composition", () => {
     const caller = { features: { mcp: true } };
     expect(resolved({ MCP_ENABLED: "false" }, caller).features.mcp).toBe(false);
-    expect(
-      resolved({ ...host, MCP_ENABLED: "false" }, caller).features.mcp,
-    ).toBe(false);
-    expect(resolved({ ...host, MCP_ENABLED: "false" }, {}).features.mcp).toBe(
-      false,
-    );
+    expect(declared({ MCP_ENABLED: "false" }, caller).features.mcp).toBe(false);
+    expect(declared({ MCP_ENABLED: "false" }, {}).features.mcp).toBe(false);
   });
 
-  it("MCP_ENABLED=false beats the bin's own features.mcp under the plugin host", () => {
+  it("MCP_ENABLED=false beats the bin's own features.mcp", () => {
     const config = switchboardConfigSchema.parse(
       binSwitchboardConfig(
-        { ...host, MCP_ENABLED: "false" },
+        { MCP_ENABLED: "false" },
         { migratePglite: false, logger: silent },
       ),
     );
-    expect(config.features.pluginHost).toBe(true);
     expect(config.features.mcp).toBe(false);
   });
 
-  it("DOCUMENT_MODEL_SUBGRAPHS_ENABLED=false beats a caller's, classic and plugin host", () => {
+  it("DOCUMENT_MODEL_SUBGRAPHS_ENABLED=false beats a caller's, default and declared composition", () => {
     const caller = { features: { documentModelSubgraphs: true } };
     const env = { DOCUMENT_MODEL_SUBGRAPHS_ENABLED: "false" };
     expect(resolved(env, caller).features.documentModelSubgraphs).toBe(false);
-    expect(
-      resolved({ ...host, ...env }, caller).features.documentModelSubgraphs,
-    ).toBe(false);
+    expect(declared(env, caller).features.documentModelSubgraphs).toBe(false);
   });
 
-  it("PH_WORKFLOWS_ENABLED=false beats a caller's, classic and plugin host", () => {
+  it("PH_WORKFLOWS_ENABLED=false beats a caller's, default and declared composition", () => {
     const caller = { features: { workflows: true } };
     expect(
       resolved({ PH_WORKFLOWS_ENABLED: "false" }, caller).features.workflows,
     ).toBe(false);
     expect(
-      resolved({ ...host, PH_WORKFLOWS_ENABLED: "false" }, caller).features
-        .workflows,
+      declared({ PH_WORKFLOWS_ENABLED: "false" }, caller).features.workflows,
     ).toBe(false);
   });
 
-  it("PH_PRIVACY_ENABLED=false beats a caller's, classic and plugin host", () => {
+  it("PH_PRIVACY_ENABLED=false beats a caller's, default and declared composition", () => {
     const caller = {
       features: {
         privacy: { enabled: true, deploymentSecret: "x".repeat(32) },
@@ -301,21 +305,17 @@ describe("an env false always wins", () => {
     };
     const env = { PH_PRIVACY_ENABLED: "false" };
     expect(resolved(env, caller).features.privacy.enabled).toBe(false);
-    expect(resolved({ ...host, ...env }, caller).features.privacy.enabled).toBe(
-      false,
-    );
+    expect(declared(env, caller).features.privacy.enabled).toBe(false);
     expect(
       resolved({ PH_PRIVACY_ENABLED: "true" }, caller).features.privacy.enabled,
     ).toBe(true);
   });
 
-  it("INSPECTION_ENABLED=false beats a caller's, classic and plugin host", () => {
+  it("INSPECTION_ENABLED=false beats a caller's, default and declared composition", () => {
     const caller = { inspection: { enabled: true } };
     const env = { INSPECTION_ENABLED: "false" };
     expect(resolved(env, caller).inspection.enabled).toBe(false);
-    expect(resolved({ ...host, ...env }, caller).inspection.enabled).toBe(
-      false,
-    );
+    expect(declared(env, caller).inspection.enabled).toBe(false);
   });
 });
 

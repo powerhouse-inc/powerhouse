@@ -84,7 +84,6 @@ You could then add the specific remote Vetra drive to your Powerhouse configurat
 
 ```json
 "vetra": {
-    "driveId": "bai-specifications",
     "driveUrl": "https://switchboard.staging.vetra.io/d/bai-specifications"
   }
 ```

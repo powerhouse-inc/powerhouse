@@ -63,7 +63,7 @@ import {
   type PGliteLike,
 } from "@powerhousedao/reactor-api/pglite-node";
 import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
-import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
+import type { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
 import { createAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import {
   createReactorDriveWriteStrategy,
@@ -96,7 +96,6 @@ import net from "node:net";
 import path from "path";
 import { Pool } from "pg";
 import type { ViteDevServer } from "vite";
-import { registerAttachmentRoutes } from "./attachments/index.js";
 import {
   parseOAuthApps,
   type OAuthAppConfig,
@@ -106,17 +105,12 @@ import {
   registerAttachmentReferenceReadModelOnModule,
 } from "./attachment-reference-read-model.mjs";
 import { installFatalErrorShutdown, raiseSigterm } from "./fatal-shutdown.mjs";
-import {
-  resolvePrivacy,
-  startPrivacy,
-  type ResolvedPrivacy,
-  type RunningPrivacy,
-} from "./privacy.mjs";
+import type { RunningPrivacy } from "./privacy.mjs";
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import {
+  configFileWorkflowsNotice,
   createSwitchboardPluginHost,
   defaultSwitchboardPlugins,
-  type SwitchboardPluginHost,
 } from "./plugin-host.mjs";
 import {
   assertProjectionWorkerSupported,
@@ -143,8 +137,6 @@ import {
   composeWorkflowRuntime,
   modelManifestSource,
   assertWorkflowPackageLoadable,
-  isWorkflowSingletonConflict,
-  retryWorkflowSingleton,
   workflowSingletonLossHandler,
   type WorkflowSingletonRetry,
   type ComposedWorkflowRuntime,
@@ -310,8 +302,6 @@ function readConfigOAuthApps(
   );
 }
 
-// An unreadable config file means "not configured", not a boot failure:
-// workflows are opt-in.
 /** `PH_KEYFRAMES` (or a caller's layer) wins whole over the project config. */
 export function resolveKeyframes(
   configured: SwitchboardConfig["storage"]["keyframes"],
@@ -322,14 +312,6 @@ export function resolveKeyframes(
   return fromFile === undefined
     ? undefined
     : parseKeyframeSettings(fromFile, `${configPath} reactor.keyframes`);
-}
-
-function readConfigWorkflowsEnabled(configPath: string): boolean {
-  try {
-    return getConfig(configPath).workflows?.enabled ?? false;
-  } catch {
-    return false;
-  }
 }
 
 async function resolveServerPort(
@@ -558,40 +540,32 @@ async function initServer(
   } = options;
 
   // R2 plugin pipeline: the carved subsystems run as built-in plugins through
-  // the hook moments marked along this function. `features.pluginHost: true`
-  // boots the declared composition; unset boots the default one, built from
-  // the switches startSwitchboard resolved, so the same subsystems run as on
-  // the inline path. Only an explicit false (FEATURE_PLUGIN_HOST_ENABLED=false)
-  // still runs the inline path below, which is deprecated.
-  const pluginHost: SwitchboardPluginHost | null =
-    config.features.pluginHost === false
-      ? null
-      : createSwitchboardPluginHost(
-          {
-            logger,
-            options: options as unknown as Record<string, unknown>,
-            config,
-            renown,
-          },
-          config.features.pluginHost === true
-            ? options.pluginComposition
-            : defaultSwitchboardPlugins({
-                mcp: options.mcp !== false,
-                workflows: options.workflows?.enabled === true,
-              }),
-        );
-  if (pluginHost) {
-    options = await pluginHost.transformOptions(options);
-    // Presence is activation: whatever no plugin (or explicit option) set
-    // stays OFF. The mcp/workflows plugins set these true at
-    // transformServerOptions; their absence must actually deactivate. The
-    // default composition arrives with both already resolved.
-    options.mcp ??= false;
-    options.workflows = {
-      ...options.workflows,
-      enabled: options.workflows?.enabled === true,
-    };
-  }
+  // the hook moments marked along this function. A caller's
+  // `pluginComposition` is the declared composition; without one the default
+  // composition boots, built from the switches startSwitchboard resolved.
+  const pluginHost = createSwitchboardPluginHost(
+    {
+      logger,
+      options: options as unknown as Record<string, unknown>,
+      config,
+      renown,
+    },
+    options.pluginComposition ??
+      defaultSwitchboardPlugins({
+        mcp: options.mcp !== false,
+        workflows: options.workflows?.enabled === true,
+      }),
+  );
+  options = await pluginHost.transformOptions(options);
+  // Presence is activation: whatever no plugin (or explicit option) set
+  // stays OFF. The mcp/workflows plugins set these true at
+  // transformServerOptions; their absence must actually deactivate. The
+  // default composition arrives with both already resolved.
+  options.mcp ??= false;
+  options.workflows = {
+    ...options.workflows,
+    enabled: options.workflows?.enabled === true,
+  };
   logger.level = config.logLevel;
   const dbPath = config.storage.readModel.url;
   const reactorDbUrl = config.storage.reactor.url;
@@ -770,12 +744,8 @@ async function initServer(
   // Resolved in startSwitchboard, which owns the flag mechanism; initServer
   // only reads the answer.
   const workflowsEnabled = options.workflows?.enabled === true;
-  // Resolved before the reactor is built: a bad secret fails the boot early.
-  // Under the plugin host the privacy plugin owns this resolve (same
-  // fail-fast timing, in transformServerOptions above).
-  const privacyConfig = pluginHost
-    ? ({ enabled: false } as ResolvedPrivacy)
-    : resolvePrivacy(options.privacy, {});
+  // The privacy plugin resolved its config in transformServerOptions above,
+  // before the reactor is built: a bad secret fails the boot early.
 
   // Through the package manager like any other, so one route carries the
   // models, the subgraphs and the piece.
@@ -1425,23 +1395,13 @@ async function initServer(
   }
 
   // R2.3: the attachments plugin owns the route mount + service creation at
-  // onHttpMounting; the deprecated inline boot runs them here.
-  let attachmentService:
+  // onHttpMounting.
+  pluginHost.ctx.api = api;
+  pluginHost.ctx.serverPort = serverPort;
+  await pluginHost.observe("onHttpMounting");
+  const attachmentService = pluginHost.ctx.attachmentService as
     | ReturnType<typeof createRemoteAttachmentService>
     | undefined;
-  if (pluginHost) {
-    pluginHost.ctx.api = api;
-    pluginHost.ctx.serverPort = serverPort;
-    await pluginHost.observe("onHttpMounting");
-    attachmentService = pluginHost.ctx.attachmentService as
-      | ReturnType<typeof createRemoteAttachmentService>
-      | undefined;
-  } else {
-    registerAttachmentRoutes(api, { config: config.attachments });
-    attachmentService = createRemoteAttachmentService(
-      deriveAttachmentServiceConfig(options, serverPort, renown),
-    );
-  }
 
   if (process.env.SENTRY_DSN) {
     // Register Sentry error handler after all routes are established.
@@ -1454,20 +1414,17 @@ async function initServer(
   const { client, read, write, graphqlManager, documentModelRegistry } = api;
 
   const lateSubgraphs: Promise<unknown>[] = [];
-  if (pluginHost) {
-    pluginHost.ctx.client = client;
-    pluginHost.ctx.read = read;
-    pluginHost.ctx.write = write;
-    pluginHost.ctx.graphqlManager = graphqlManager;
-    pluginHost.ctx.lateSubgraphs = lateSubgraphs;
-    pluginHost.ctx.reactorClientModule = options.reactor ?? ownedReactorModule;
-    await pluginHost.observe("onReactorReady");
-  }
+  pluginHost.ctx.client = client;
+  pluginHost.ctx.read = read;
+  pluginHost.ctx.write = write;
+  pluginHost.ctx.graphqlManager = graphqlManager;
+  pluginHost.ctx.lateSubgraphs = lateSubgraphs;
+  pluginHost.ctx.reactorClientModule = options.reactor ?? ownedReactorModule;
+  await pluginHost.observe("onReactorReady");
 
   // The workflow runtime is a switchboard component: composed from what the
-  // api handed back, registered like any other late subgraph.
-  let workflows: ComposedWorkflowRuntime | undefined;
-  let workflowsRetry: WorkflowSingletonRetry | undefined;
+  // api handed back, registered like any other late subgraph. The workflows
+  // plugin drives both closures at onSubgraphsRegistering.
   const composeWorkflows = () =>
     composeWorkflowRuntime({
       reactorClient: client,
@@ -1536,127 +1493,37 @@ async function initServer(
         );
       });
   };
-  if (!pluginHost && workflowsEnabled) {
-    try {
-      workflows = await composeWorkflows();
-    } catch (error) {
-      // Without the claim this host must not run workflows, but everything
-      // else it serves still works, so it boots without the runtime.
-      if (!isWorkflowSingletonConflict(error)) throw error;
-      logger.warn(
-        `Workflows are enabled but another live process ("${error.owner ?? "unknown"}") ` +
-          `holds the workflow singleton until ${error.expiresAt ?? "unknown"}. ` +
-          "This Switchboard has booted WITHOUT the workflow runtime: no " +
-          "trigger of any kind fires here, and the workflow GraphQL face is " +
-          "absent. Everything else serves normally. Stop the other owner, or " +
-          "set PH_WORKFLOWS_SINGLETON_OWNER to the same stable name on the " +
-          "slot that owns workflows. This Switchboard retries the claim and " +
-          "starts workflows once the lease comes free.",
-      );
-      workflowsRetry = retryWorkflowSingleton({
-        compose: composeWorkflows,
-        onComposed: async (composed) => {
-          try {
-            await composed.start();
-          } catch (error) {
-            // Hands the lease back so a retry or another replica can claim it.
-            try {
-              await composed.stop();
-            } catch (stopError) {
-              logger.error(
-                "Stopping the late workflow runtime failed: @error",
-                stopError,
-              );
-            }
-            throw error;
-          }
-          logger.info("Workflow runtime started");
-          workflows = composed;
-          await registerWorkflowSubgraph(composed);
-          // Past boot nothing else rebuilds the router, so a subgraph
-          // registered now is not served until this runs.
-          try {
-            await graphqlManager.updateRouter(true);
-          } catch (error) {
-            reportFailure(
-              reporting,
-              error,
-              "Mounting the late workflow-runtime subgraph failed: @error",
-            );
-          }
-        },
-        logger,
-      });
-    }
-  }
-  if (workflows) {
-    lateSubgraphs.push(registerWorkflowSubgraph(workflows));
-    const runtime = workflows;
-    await withProgressHeartbeat(
-      { logger, label: "Starting the workflow runtime" },
-      () => runtime.start(),
-    );
-    logger.info("Workflow runtime started");
-    api.inspection?.facts.setWorkflows(true);
-  }
 
   // Plugins register their subgraphs here (push into lateSubgraphs, or mount
-  // directly like privacy). The call site carries the inline privacy block's
-  // failure semantics: stop workflows, abort the partial boot, rethrow.
-  if (pluginHost) {
-    pluginHost.ctx.workflowsOrchestration = {
-      enabled: options.workflows?.enabled === true,
-      composeWorkflows,
-      registerWorkflowSubgraph,
-      updateRouter: () => graphqlManager.updateRouter(true),
-      reportMountFailure: (error: unknown) =>
-        reportFailure(
-          reporting,
-          error,
-          "Mounting the late workflow-runtime subgraph failed: @error",
-        ),
-      setWorkflowsFact: () => api.inspection?.facts.setWorkflows(true),
-    };
-    try {
-      await pluginHost.observe("onSubgraphsRegistering");
-    } catch (error) {
-      await (
-        pluginHost.ctx.workflowsRetry as WorkflowSingletonRetry | undefined
-      )?.stop();
-      await (
-        pluginHost.ctx.workflows as ComposedWorkflowRuntime | undefined
-      )?.stop();
-      // Privacy starts ahead of workflows here, so a workflows failure finds
-      // it running.
-      await (pluginHost.ctx.privacy as RunningPrivacy | undefined)?.stop();
-      await abortBoot(api);
-      throw error;
-    }
-  }
-
-  let privacy: RunningPrivacy | undefined;
-  if (!pluginHost && privacyConfig.enabled) {
-    // The caller's reactor signs with a signer only the caller knows.
-    const signer = options.reactor
-      ? options.privacy?.signer
-      : (options.privacy?.signer ?? renown?.signer);
-    try {
-      privacy = await startPrivacy({
-        config: privacyConfig,
-        reactorModule: (options.reactor ?? ownedReactorModule)?.reactorModule,
-        signer,
-        authorizationService: api.authorizationService,
-        documentPermissionService: api.documentPermissionService,
-        graphqlManager,
-        readClient: read,
-        logger: logger.child(["privacy"]),
-      });
-    } catch (error) {
-      await workflowsRetry?.stop();
-      await workflows?.stop();
-      await abortBoot(api);
-      throw error;
-    }
+  // directly like privacy). A failure stops what already started, aborts the
+  // partial boot and rethrows.
+  pluginHost.ctx.workflowsOrchestration = {
+    enabled: options.workflows?.enabled === true,
+    composeWorkflows,
+    registerWorkflowSubgraph,
+    updateRouter: () => graphqlManager.updateRouter(true),
+    reportMountFailure: (error: unknown) =>
+      reportFailure(
+        reporting,
+        error,
+        "Mounting the late workflow-runtime subgraph failed: @error",
+      ),
+    setWorkflowsFact: () => api.inspection?.facts.setWorkflows(true),
+  };
+  try {
+    await pluginHost.observe("onSubgraphsRegistering");
+  } catch (error) {
+    await (
+      pluginHost.ctx.workflowsRetry as WorkflowSingletonRetry | undefined
+    )?.stop();
+    await (
+      pluginHost.ctx.workflows as ComposedWorkflowRuntime | undefined
+    )?.stop();
+    // Privacy starts ahead of workflows here, so a workflows failure finds
+    // it running.
+    await (pluginHost.ctx.privacy as RunningPrivacy | undefined)?.stop();
+    await abortBoot(api);
+    throw error;
   }
 
   // Ahead of the api: the runtime's store lives in the read-model database
@@ -1680,10 +1547,7 @@ async function initServer(
       stopCatchUpLoad();
       stopTimingLog();
       memoryTelemetry.stop();
-      if (pluginHost) await pluginHost.observe("onShutdown");
-      await privacy?.stop();
-      await workflowsRetry?.stop();
-      await workflows?.stop();
+      await pluginHost.observe("onShutdown");
       await api.dispose();
     })());
   apiRef.current = { dispose: drainApi };
@@ -1869,7 +1733,7 @@ async function initServer(
 
   // Drives exist (default created, remotes attached) — the barrier after the
   // future core drive seeding (R2 step 2 replaces the two blocks above).
-  if (pluginHost) await pluginHost.observe("onDrivesReady");
+  await pluginHost.observe("onDrivesReady");
 
   return {
     defaultDriveUrl,
@@ -1879,16 +1743,13 @@ async function initServer(
     attachmentReferenceProjection: api.attachmentReferenceProjection,
     // Read live: losing the singleton turns it unavailable.
     get workflowTriggers() {
-      return (
-        workflows ??
-        (pluginHost?.ctx.workflows as ComposedWorkflowRuntime | undefined)
-      )?.triggers;
+      return (pluginHost.ctx.workflows as ComposedWorkflowRuntime | undefined)
+        ?.triggers;
     },
     workflowsEnabled,
     modelManifest: () => workerModels?.modelManifest() ?? [],
     privacy: (() => {
-      const running =
-        privacy ?? (pluginHost?.ctx.privacy as RunningPrivacy | undefined);
+      const running = pluginHost.ctx.privacy as RunningPrivacy | undefined;
       return running ? { erasure: running.erasure } : undefined;
     })(),
     mcpEnabled: options.mcp !== false,
@@ -1954,20 +1815,23 @@ export const startSwitchboard = async (
   );
 
   const options = serverOptionsOf(config, deps);
-  // CLASSIC resolution of the carved subsystems' switches, for the inline
-  // path and for the default composition, which lists the plugins these turn
-  // on (initServer). Under a declared composition the plugins own them
+  // CLASSIC resolution of the carved subsystems' switches, for the default
+  // composition, which lists the plugins these turn on (initServer). Under a
+  // declared composition (`deps.pluginComposition`) the plugins own them
   // (presence is activation): an ABSENT plugin can actually deactivate its
   // subsystem (initServer normalizes unset values to off after
   // transformServerOptions). An explicit config value always wins on every
   // path. The inspection switch is a core capability (not carved).
-  if (config.features.pluginHost !== true) {
+  if (options.pluginComposition === undefined) {
     options.mcp = config.features.mcp ?? true;
-    options.workflows = {
-      enabled:
-        config.features.workflows ?? readConfigWorkflowsEnabled(configPath),
-    };
+    options.workflows = { enabled: config.features.workflows ?? false };
   }
+  const workflowsNotice = configFileWorkflowsNotice({
+    declaredComposition: options.pluginComposition !== undefined,
+    workflows: config.features.workflows,
+    configFileEnabled: fileConfig.workflows?.enabled,
+  });
+  if (workflowsNotice) logger.warn(workflowsNotice);
   // This switchboard's own identity authenticates against the same Renown
   // instance it verifies incoming credentials against, unless told otherwise.
   const renownConfig = resolveRenownConfig(

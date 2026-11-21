@@ -18,12 +18,9 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Migration File](#migration-file)
 - [Connect Routes](#connect-routes)
 - [Hosts](#hosts)
-- [Vetra](#vetra)
 - [Build](#build)
 - [Connect](#connect)
-- [Connect Studio](#connect-studio)
-- [Connect Build](#connect-build)
-- [Connect Preview](#connect-preview)
+- [Connect Config](#connect-config)
 - [Access Token](#access-token)
 - [Inspect](#inspect)
 - [Keyframes](#keyframes)
@@ -32,7 +29,6 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Migrate](#migrate)
 - [Model Check](#model-check)
 - [Model Inspect](#model-inspect)
-- [Switchboard](#switchboard)
 - [Login](#login)
 - [Install](#install)
 - [Uninstall](#uninstall)
@@ -519,182 +515,6 @@ show help<br><br>
 **usage:** `--help, -h`<br>
 
 
-## Vetra
-
-The vetra command sets up a Vetra development environment for working with Vetra projects.
-It starts a Vetra Switchboard and optionally Connect Studio, enabling document collaboration 
-and real-time processing with a "Vetra" drive or connection to remote drives.
-
-This command:
-1. Starts a Vetra Switchboard with a "Vetra" drive for document storage
-2. Optionally connects to remote drives instead of creating a local drive
-3. Starts Connect Studio pointing to the Switchboard for user interaction (unless disabled)
-4. Enables real-time updates, collaboration, and code generation
-
-Default drives:
-Connect's default drives resolve to the Vetra drive (and the preview drive
-when using --watch), plus any drives configured under
-connect.drives.defaultDrives in powerhouse.config.json - de-duplicated by
-URL, so configuring project drives does not cost you the Vetra drive.
-An explicit --default-drives-url is appended to that list (de-duplicated);
-it never replaces the Vetra drive.
-
-Every drive on the local Switchboard:
-Studio has no reactor of its own: it reads and writes on the local
-Switchboard (connect.instance.reactorClient "remote"), so it lists every
-drive there, such as one an agent adds through MCP, and a drive created in
-Studio lands there too. Not with --remote-drive, or when the project sets
-connect.instance.multiReactor or reactorClient itself.
-
-Preview drive app:
-Set vetra.previewDrive.app in powerhouse.config.json to the id of a drive
-app, and ph vetra --watch opens the Vetra Preview drive in that app: it sets
-the drive's app when it creates the drive and each time it starts. Without
-the field the drive keeps the app it has.
-
-One Vetra per project:
-A running Vetra is recorded in .ph/vetra-runtime.json (its pid and the
-Connect, Switchboard and MCP URLs); a second `ph vetra` prints those and
-exits. --restart stops the recorded Vetra first, then starts this one; the
-`ph mcp` launcher reconnects to it on its next tool call. Studio restarts
-by itself when powerhouse.config.json changes.
-
-### options
-#### Switchboard Port <br>
-port to use for the Vetra Switchboard<br><br>
-**usage:** `--switchboard-port <number>`<br>
-
-#### Connect Port <br>
-port to use for the Vetra Connect<br><br>
-**usage:** `--connect-port <number>`<br>
-
-#### Remote Drive <br>
-URL of remote drive to connect to (skips switchboard initialization)<br><br>
-**usage:** `--remote-drive <str>`<br>
-
-#### Drives Public Base <br>
-public base URL for the drive URLs advertised to Connect; each drive is exposed as <base>/d/<slug> instead of http://localhost:<switchboard-port>/d/<slug>. Use when the switchboard is reachable through a reverse proxy.<br><br>
-**usage:** `--drives-public-base <str>`<br>
-
-#### Db Path <br>
-Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite.<br><br>
-**usage:** `--db-path <str>`<br>
-
-#### Renown Namespace <br>
-Renown localStorage namespace; share it across Connects to share login.<br><br>
-**usage:** `--renown-namespace <str>`<br>
-
-#### Base <br>
-Base path for the app<br><br>
-**usage:** `--base <str>`<br>
-
-#### Log Level <br>
-Log level for the application<br><br>
-**usage:** `--log-level <value>`<br>
-**env**: `PH_CONNECT_LOG_LEVEL`<br>**default**: `info`
-#### Packages <br>
-Comma-separated list of package names to load<br><br>
-**usage:** `--packages <str>`<br>
-**env**: `PH_PACKAGES`
-#### Local Package <br>
-Path to local package to load during development<br><br>
-**usage:** `--local-package <str>`<br>
-**env**: `PH_LOCAL_PACKAGE`
-#### Default Drives Url <br>
-Comma-separated drive URLs to use as Connect's default drives.<br><br>
-**usage:** `--default-drives-url <str>`<br>
-
-#### Drive Preserve Strategy <br>
-The preservation strategy to use on default drives<br><br>
-**usage:** `--drive-preserve-strategy <value>`<br>
-**default**: `preserve-by-url-and-detach`
-#### Host <br>
-Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address.<br><br>
-**usage:** `--host <str>`<br>
-
-#### Watch Timeout <br>
-Amount of time to wait before a file is considered changed<br><br>
-**usage:** `--watch-timeout <number>`<br>
-**default**: `300`
-#### Https Key File <br>
-path to the ssl key file<br><br>
-**usage:** `--https-key-file <str>`<br>
-
-#### Https Cert File <br>
-path to the ssl cert file<br><br>
-**usage:** `--https-cert-file <str>`<br>
-
-#### Remote Drives <br>
-Specify remote drive URLs to use<br><br>
-**usage:** `--remote-drives <str>`<br>
-
-
-### flags
-#### Watch <br>
-Enable dynamic loading for document-models and editors in connect-studio and switchboard<br><br>
-**usage:** `--watch, -w`<br>
-**default**: `false`
-#### Logs <br>
-Show additional logs<br><br>
-**usage:** `--logs`<br>
-**default**: `false`
-#### Restart <br>
-Stop this project's running Vetra first (the pid in .ph/vetra-runtime.json), then start<br><br>
-**usage:** `--restart`<br>
-**default**: `false`
-#### Disable Connect <br>
-Skip Connect initialization (only start switchboard and reactor)<br><br>
-**usage:** `--disable-connect`<br>
-**default**: `false`
-#### Interactive <br>
-Enable interactive mode for code generation (requires user confirmation before generating code)<br><br>
-**usage:** `--interactive`<br>
-**default**: `false`
-#### Ignore Local <br>
-Do not load local packages from this project<br><br>
-**usage:** `--ignore-local`<br>
-
-#### Force <br>
-Force dep pre-optimization regardless of whether deps have changed.<br><br>
-**usage:** `--force`<br>
-
-#### Debug <br>
-Log arguments passed to this command<br><br>
-**usage:** `--debug`<br>
-
-#### Open <br>
-Open browser on startup<br><br>
-**usage:** `--open`<br>
-
-#### Cors <br>
-Enable CORS<br><br>
-**usage:** `--cors`<br>
-
-#### Strict Port <br>
-Exit if specified port is already in use<br><br>
-**usage:** `--strictPort`<br>
-
-#### Print Urls <br>
-Print server urls<br><br>
-**usage:** `--print-urls`<br>
-**default**: `true`
-#### Bind Cli Shortcuts <br>
-Bind CLI shortcuts<br><br>
-**usage:** `--bind-cli-shortcuts`<br>
-**default**: `true`
-#### Https <br>
-Use https<br><br>
-**usage:** `--https`<br>
-
-#### Dev <br>
-enable development mode to load local packages<br><br>
-**usage:** `--dev`<br>
-
-#### Help <br>
-show help<br><br>
-**usage:** `--help, -h`<br>
-
-
 ## Build
 
 Build a Powerhouse package for publishing: a browser bundle and a node bundle of its
@@ -740,117 +560,33 @@ show help<br><br>
 
 
 ## Connect
-Powerhouse Connect commands. Use with `studio`, `build`, `preview`, or `config`. Defaults to `studio` if not specified.
-## Connect Studio
-The studio command starts the Connect Studio, a development environment for building
-and testing Powerhouse applications. It provides a visual interface for working with
-your project.
+Powerhouse Connect. `ph connect` runs the project's connect host: it is `ph run connect dev`, as is `ph connect studio`; `ph connect build` is `ph run connect build` and `ph connect preview` is `ph run connect serve`. `ph connect config` reads and writes Connect's runtime configuration.
+## Connect Config
+Read or update Connect's runtime configuration (powerhouse.config.json).
 
-This command:
-1. Starts a local Connect Studio server
-2. Provides a web interface for development
-3. Allows you to interact with your project components
-4. Supports various configuration options for customization
+Modes (mutually exclusive — positional, --get, --json, and field flags cannot be combined):
+  ph connect config                       List the effective connect.* block (defaults < source).
+  ph connect config <key>                 Get the value at the dotted path (e.g. ph connect config connect.renown.url).
+  ph connect config --get <dotted.path>   Same as positional <key> (kept for backward compat).
+  ph connect config <key> <value>         Set a single field and dual-write to source + dist (positional).
+  ph connect config --<field> <value>     Set a single field via per-field flag (e.g. --renown-url https://renown.id).
+  ph connect config --json '{"renown":{"url":"…"}}'
+                                          Bulk-set multiple fields and dual-write. The payload is the connect.*
+                                          block without the "connect" wrapper; unknown keys are rejected.
 
-### options
-#### Port <br>
-Port to run the dev server on.<br><br>
-**usage:** `--port <number>`<br>
-**default**: `3000`
-#### Renown Namespace <br>
-Renown localStorage namespace; share it across Connects to share login.<br><br>
-**usage:** `--renown-namespace <str>`<br>
-
-#### Base <br>
-Base path for the app<br><br>
-**usage:** `--base <str>`<br>
-
-#### Log Level <br>
-Log level for the application<br><br>
-**usage:** `--log-level <value>`<br>
-**env**: `PH_CONNECT_LOG_LEVEL`<br>**default**: `info`
-#### Packages <br>
-Comma-separated list of package names to load<br><br>
-**usage:** `--packages <str>`<br>
-**env**: `PH_PACKAGES`
-#### Local Package <br>
-Path to local package to load during development<br><br>
-**usage:** `--local-package <str>`<br>
-**env**: `PH_LOCAL_PACKAGE`
-#### Default Drives Url <br>
-Comma-separated drive URLs to use as Connect's default drives.<br><br>
-**usage:** `--default-drives-url <str>`<br>
-
-#### Drive Preserve Strategy <br>
-The preservation strategy to use on default drives<br><br>
-**usage:** `--drive-preserve-strategy <value>`<br>
-**default**: `preserve-by-url-and-detach`
-#### Host <br>
-Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address.<br><br>
-**usage:** `--host <str>`<br>
-
-#### Watch Timeout <br>
-Amount of time to wait before a file is considered changed<br><br>
-**usage:** `--watch-timeout <number>`<br>
-**default**: `300`
-
-### flags
-#### Ignore Local <br>
-Do not load local packages from this project<br><br>
-**usage:** `--ignore-local`<br>
-
-#### Force <br>
-Force dep pre-optimization regardless of whether deps have changed.<br><br>
-**usage:** `--force`<br>
-
-#### Debug <br>
-Log arguments passed to this command<br><br>
-**usage:** `--debug`<br>
-
-#### Open <br>
-Open browser on startup<br><br>
-**usage:** `--open`<br>
-
-#### Cors <br>
-Enable CORS<br><br>
-**usage:** `--cors`<br>
-
-#### Strict Port <br>
-Exit if specified port is already in use<br><br>
-**usage:** `--strictPort`<br>
-
-#### Print Urls <br>
-Print server urls<br><br>
-**usage:** `--print-urls`<br>
-**default**: `true`
-#### Bind Cli Shortcuts <br>
-Bind CLI shortcuts<br><br>
-**usage:** `--bind-cli-shortcuts`<br>
-**default**: `true`
-#### Help <br>
-show help<br><br>
-**usage:** `--help, -h`<br>
-
-
-## Connect Build
-The Connect build command creates a production build with the project's local and
-external packages included.
-
-Runtime-config overrides (all combinable — last wins on collision):
-  ph connect build                                    Build with the current source config.
-  ph connect build <key> <value>                      Build with a positional override applied (e.g. ph connect build connect.renown.url https://renown.staging).
-  ph connect build --<field> <value>                  Build with a per-field flag override (e.g. --renown-url https://renown.staging).
-  ph connect build --json '{"app":{"workflowsEnabled":true}}'
-                                                      Build with a bulk override. The payload is the connect.* block
-                                                      without the "connect" wrapper; unknown keys are rejected.
-
-Build has no read mode; passing only <key> without <value> errors out (use `ph connect config <key>` to read).
+Writes go to:
+  - <project>/powerhouse.config.json (source — picked up by the next build)
+  - <dist-dir>/powerhouse.config.json (if it exists — the currently-served SPA picks it up on refresh)
 
 ### options
-#### Out Dir <br>
-Output directory<br><br>
-**usage:** `--outDir <str>`<br>
-**default**: `.ph/connect-build/dist/`
+#### Get <br>
+Dotted path inside connect.* (e.g. "connect.renown.url") to read the effective value. Mutually exclusive with the set modes. Equivalent to `ph connect config <key>` (positional).<br><br>
+**usage:** `--get <str>`<br>
+
+#### Dist Dir <br>
+Path to the directory containing the dist powerhouse.config.json. Defaults to the PH_CONNECT_OUTDIR env or `.ph/connect-build/dist/`.<br><br>
+**usage:** `--dist-dir <str>`<br>
+
 #### Json <br>
 Inline JSON override for the runtime connect.* block, without the "connect" wrapper, e.g. '{"app":{"workflowsEnabled":true},"renown":{"url":"..."}}'. A top-level packageRegistryUrl is also accepted. Validated against the runtime schema (unknown keys fail); deep-merged on top of source powerhouse.config.json. Individual --flag values beat --json on collision.<br><br>
 **usage:** `--json <str>`<br>
@@ -935,10 +671,6 @@ Override connect.sentry.env (Sentry environment label).<br><br>
 Override connect.sentry.tracing (Sentry performance tracing).<br><br>
 **usage:** `--sentry-tracing-enabled <value>`<br>
 
-#### Favicon <br>
-Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico, or icon.svg/icon.png for those types; resolved relative to the build cwd.<br><br>
-**usage:** `--favicon <str>`<br>
-
 #### Base <br>
 Base path for the app<br><br>
 **usage:** `--base <str>`<br>
@@ -947,14 +679,6 @@ Base path for the app<br><br>
 Log level for the application<br><br>
 **usage:** `--log-level <value>`<br>
 **env**: `PH_CONNECT_LOG_LEVEL`<br>**default**: `info`
-#### Packages <br>
-Comma-separated list of package names to load<br><br>
-**usage:** `--packages <str>`<br>
-**env**: `PH_PACKAGES`
-#### Local Package <br>
-Path to local package to load during development<br><br>
-**usage:** `--local-package <str>`<br>
-**env**: `PH_LOCAL_PACKAGE`
 #### Default Drives Url <br>
 Comma-separated drive URLs to use as Connect's default drives.<br><br>
 **usage:** `--default-drives-url <str>`<br>
@@ -975,106 +699,6 @@ Value to set at <key>. Coerced against the runtime schema (string, bool, number,
 
 
 ### flags
-#### Dynamic Base <br>
-Build one bundle that serves under any subpath; base resolved at serve time from a runtime global. Overrides --base.<br><br>
-**usage:** `--dynamic-base`<br>
-
-#### Ignore Local <br>
-Do not load local packages from this project<br><br>
-**usage:** `--ignore-local`<br>
-
-#### Force <br>
-Force dep pre-optimization regardless of whether deps have changed.<br><br>
-**usage:** `--force`<br>
-
-#### Debug <br>
-Log arguments passed to this command<br><br>
-**usage:** `--debug`<br>
-
-#### Help <br>
-show help<br><br>
-**usage:** `--help, -h`<br>
-
-
-## Connect Preview
-The Connect preview command previews a built Connect project.
-NOTE: You must run `ph connect build` first
-
-### options
-#### Port <br>
-Port to run the preview server on.<br><br>
-**usage:** `--port <number>`<br>
-**default**: `4173`
-#### Out Dir <br>
-Output directory<br><br>
-**usage:** `--outDir <str>`<br>
-**default**: `.ph/connect-build/dist/`
-#### Base <br>
-Base path for the app<br><br>
-**usage:** `--base <str>`<br>
-
-#### Log Level <br>
-Log level for the application<br><br>
-**usage:** `--log-level <value>`<br>
-**env**: `PH_CONNECT_LOG_LEVEL`<br>**default**: `info`
-#### Packages <br>
-Comma-separated list of package names to load<br><br>
-**usage:** `--packages <str>`<br>
-**env**: `PH_PACKAGES`
-#### Local Package <br>
-Path to local package to load during development<br><br>
-**usage:** `--local-package <str>`<br>
-**env**: `PH_LOCAL_PACKAGE`
-#### Default Drives Url <br>
-Comma-separated drive URLs to use as Connect's default drives.<br><br>
-**usage:** `--default-drives-url <str>`<br>
-
-#### Drive Preserve Strategy <br>
-The preservation strategy to use on default drives<br><br>
-**usage:** `--drive-preserve-strategy <value>`<br>
-**default**: `preserve-by-url-and-detach`
-#### Host <br>
-Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address.<br><br>
-**usage:** `--host <str>`<br>
-
-#### Watch Timeout <br>
-Amount of time to wait before a file is considered changed<br><br>
-**usage:** `--watch-timeout <number>`<br>
-**default**: `300`
-
-### flags
-#### Ignore Local <br>
-Do not load local packages from this project<br><br>
-**usage:** `--ignore-local`<br>
-
-#### Force <br>
-Force dep pre-optimization regardless of whether deps have changed.<br><br>
-**usage:** `--force`<br>
-
-#### Debug <br>
-Log arguments passed to this command<br><br>
-**usage:** `--debug`<br>
-
-#### Open <br>
-Open browser on startup<br><br>
-**usage:** `--open`<br>
-
-#### Cors <br>
-Enable CORS<br><br>
-**usage:** `--cors`<br>
-
-#### Strict Port <br>
-Exit if specified port is already in use<br><br>
-**usage:** `--strictPort`<br>
-
-#### Print Urls <br>
-Print server urls<br><br>
-**usage:** `--print-urls`<br>
-**default**: `true`
-#### Bind Cli Shortcuts <br>
-Bind CLI shortcuts<br><br>
-**usage:** `--bind-cli-shortcuts`<br>
-**default**: `true`
 #### Help <br>
 show help<br><br>
 **usage:** `--help, -h`<br>
@@ -1257,17 +881,15 @@ Use it as the MCP server command in .mcp.json, .cursor/mcp.json and
 .gemini/settings.json. Tools are listed at once, without waiting for Vetra.
 The first tool call connects to the project's running Vetra (found through
 .ph/vetra-runtime.json), or starts one in the background and waits for it to
-be ready: `ph run vetra --strictPort` when the project has a hosts/vetra
-host, else `ph vetra --strictPort --watch`. How the start goes is reported
-as MCP progress notifications when the client sent a progressToken, else on
+be ready: `ph run vetra --strictPort`, the project's hosts/vetra host. How
+the start goes is reported as MCP progress notifications when the client sent a progressToken, else on
 stderr.
 Startup failures come back as tool errors carrying Vetra's output, which is
 also written to .ph/vetra.log.
 
 Beside reactor-mcp's tools it serves restartVetra, which stops the project's
 Vetra, starts it again and returns its URLs. When Vetra restarts some other
-way (stopped and started again, or `ph vetra --restart` in a project
-without a hosts/vetra host), the next tool call connects to the new one.
+way (stopped and started again), the next tool call connects to the new one.
 
 ### options
 #### Project Dir <br>
@@ -1442,110 +1064,6 @@ Log arguments passed to this command<br><br>
 #### Help <br>
 show help<br><br>
 **usage:** `--help, -h`<br>
-
-
-## Switchboard
-
-The switchboard command starts a local Switchboard instance, which acts as the document
-processing engine for Powerhouse projects. It provides the infrastructure for document
-models, processors, and real-time updates.
-
-This command:
-1. Starts a local switchboard server
-2. Loads document models and processors
-3. Provides an API for document operations
-4. Enables real-time document processing
-5. Can authenticate with remote services using your identity from 'ph login'
-### flags
-#### Https <br>
-Use https<br><br>
-**usage:** `--https`<br>
-
-#### Dev <br>
-enable development mode to load local packages<br><br>
-**usage:** `--dev`<br>
-
-#### Ignore Local <br>
-Do not load local packages from this project<br><br>
-**usage:** `--ignore-local`<br>
-
-#### Debug <br>
-Log arguments passed to this command<br><br>
-**usage:** `--debug`<br>
-
-#### Use Identity <br>
-enable identity using keypair from ph login (uses ~/.ph/keypair.json)<br><br>
-**usage:** `--use-identity`<br>
-
-#### Require Identity <br>
-require existing keypair, fail if not found (implies --use-identity)<br><br>
-**usage:** `--require-identity`<br>
-
-#### Migrate <br>
-Run database migrations and exit<br><br>
-**usage:** `--migrate`<br>
-
-#### Migrate Status <br>
-Show migration status and exit<br><br>
-**usage:** `--migrate-status`<br>
-
-#### Reset <br>
-Wipe the local PGlite switchboard storage after confirmation, then exit<br><br>
-**usage:** `--reset`<br>
-
-#### Yes <br>
-Skip the interactive confirmation prompt for --reset (required for non-interactive use)<br><br>
-**usage:** `--yes, -y`<br>
-
-#### Mcp <br>
-enable Mcp route at /mcp<br><br>
-**usage:** `--mcp`<br>
-**default**: `true`
-#### Use Vetra Drive <br>
-Use a Vetra drive<br><br>
-**usage:** `--use-vetra-drive`<br>
-**default**: `false`
-#### Help <br>
-show help<br><br>
-**usage:** `--help, -h`<br>
-
-
-### options
-#### Https Key File <br>
-path to the ssl key file<br><br>
-**usage:** `--https-key-file <str>`<br>
-
-#### Https Cert File <br>
-path to the ssl cert file<br><br>
-**usage:** `--https-cert-file <str>`<br>
-
-#### Remote Drives <br>
-Specify remote drive URLs to use<br><br>
-**usage:** `--remote-drives <str>`<br>
-
-#### Packages <br>
-Comma-separated list of package names to load<br><br>
-**usage:** `--packages <str>`<br>
-**env**: `PH_PACKAGES`
-#### Port <br>
-Port to host the api<br><br>
-**usage:** `--port <number>`<br>
-**default**: `4001`
-#### Base Path <br>
-base path for the API endpoints (overrides BASE_PATH)<br><br>
-**usage:** `--base-path <str>`<br>
-
-#### Keypair Path <br>
-path to custom keypair file for identity<br><br>
-**usage:** `--keypair-path <str>`<br>
-
-#### Vetra Drive Id <br>
-Specify a Vetra drive ID<br><br>
-**usage:** `--vetra-drive-id <str>`<br>
-**default**: `vetra`
-#### Db Path <br>
-path to the database<br><br>
-**usage:** `--db-path <str>`<br>
 
 
 ## Login

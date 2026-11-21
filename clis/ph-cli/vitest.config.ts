@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     // Its source rather than its build, so a test can mock what it's made of.
     alias: {
-      "@powerhousedao/ph-run/classic-args": phRun("services/classic-args.ts"),
+      "@powerhousedao/ph-run/service-args": phRun("services/service-args.ts"),
       "@powerhousedao/ph-run/connect-serve": phRun("services/connect-serve.ts"),
       "@powerhousedao/ph-run/connect-server": phRun(
         "services/connect-server.ts",

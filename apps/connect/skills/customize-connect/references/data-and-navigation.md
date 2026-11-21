@@ -310,6 +310,5 @@ export function TabSwitch() {
 
 - `useLinkProps(target)` returns `href`, `onClick`, `aria-current` and preload handlers for an `<a>`.
 - `openTarget(target)` and `store.navigation.open(target)` navigate from code.
-- `showPHModal({ type: "settings" })` is deprecated. In Connect it opens `/settings`.
 - A project route can use the same API, but the router's `Link` and `useNavigate` are typed and reach the project's own routes.
 

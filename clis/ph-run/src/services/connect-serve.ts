@@ -22,7 +22,7 @@ import { existsSync, readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
 import sirv from "sirv";
-import type { ConnectPreviewArgs } from "./classic-args.js";
+import type { ConnectPreviewArgs } from "./service-args.js";
 
 /**
  * Runtime shaping for a served (built) Connect, desktop shape: the compound

@@ -3,9 +3,7 @@ import {
   ab2hex,
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
-  hex2ab,
 } from "./crypto.js";
-import type { PHDocument } from "./documents.js";
 import {
   InvalidActionInputError,
   InvalidActionInputZodError,
@@ -67,11 +65,9 @@ import type {
   Signature,
   UserActionSigner,
 } from "./signatures.js";
-import type { PHBaseState } from "./state.js";
 import type {
   ActionSignatureContext,
   ActionSigningHandler,
-  ActionVerificationHandler,
   AddChangeLogItemAction,
   AddChangeLogItemInput,
   AddModuleAction,
@@ -101,7 +97,6 @@ import type {
   NOOPAction,
   RetractAction,
   RedoAction,
-  Reducer,
   ReleaseNewVersionAction,
   ReorderChangeLogItemsAction,
   ReorderChangeLogItemsInput,
@@ -373,63 +368,6 @@ export async function buildOperationSignature(
   const message = buildOperationSignatureMessage(params);
   const signature = await signMethod(message);
   return [...params, `0x${ab2hex(signature)}`];
-}
-
-/** @deprecated Emits a legacy SHA-1 tuple; sign through `ISigner.signAction`. */
-export async function buildSignedAction<
-  TState extends PHBaseState = PHBaseState,
->(
-  action: Action,
-  reducer: Reducer<TState>,
-  document: PHDocument<TState>,
-  signer: ActionSigner,
-  signHandler: ActionSigningHandler,
-) {
-  const result = reducer(document, action, undefined, {
-    //reuseHash: true,
-    reuseOperationResultingState: true,
-  });
-  const scopeOperations = result.operations[action.scope];
-  if (!scopeOperations) {
-    throw new Error(`No operations found for scope: ${action.scope}`);
-  }
-  const operation = scopeOperations.at(-1);
-  if (!operation) {
-    throw new Error("Action was not applied");
-  }
-
-  const previousStateHash = scopeOperations.at(-2)?.hash ?? "";
-  const signature = await buildOperationSignature(
-    {
-      documentId: document.header.id,
-      signer,
-      action,
-      previousStateHash,
-    },
-    signHandler,
-  );
-
-  const actionContext: ActionContext = {
-    signer: actionSigner(signer.user, signer.app, [
-      ...signer.signatures,
-      signature,
-    ]),
-  };
-
-  return operationWithContext(operation, actionContext);
-}
-
-/** @deprecated Use `verifyActionSignature` from `@powerhousedao/reactor`. */
-export async function verifyOperationSignature(
-  signature: Signature,
-  signer: Omit<ActionSigner, "signatures">,
-  verifyHandler: ActionVerificationHandler,
-) {
-  const publicKey = signer.app.key;
-  const params = signature.slice(0, 4) as [string, string, string, string];
-  const signatureBytes = hex2ab(signature[4]);
-  const expectedMessage = buildOperationSignatureMessage(params);
-  return verifyHandler(publicKey, signatureBytes, expectedMessage);
 }
 
 /**

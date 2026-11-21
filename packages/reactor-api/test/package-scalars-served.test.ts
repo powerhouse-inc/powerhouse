@@ -37,6 +37,7 @@ import {
   AuthorizationPolicy,
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
+import { managerClientsOf } from "./utils/client-halves.js";
 
 const VALID = "DE89370400440532013000";
 const INVALID = "not-an-iban";
@@ -190,7 +191,7 @@ async function makeFederatedHost(logger: ILogger, models = [DRIVE, LEDGER]) {
     path: "/",
     httpServer: server,
     wsServer: new WebSocketServer({ noServer: true }),
-    reactorClient: makeReactorClient(models, []),
+    ...managerClientsOf(makeReactorClient(models, [])),
     relationalDb: {} as IRelationalDb,
     analyticsStore: {} as IAnalyticsStore,
     syncManager: {} as ISyncManager,
@@ -257,7 +258,7 @@ function makeHost(
       close: (cb?: () => void) => cb?.(),
       setMaxListeners: vi.fn(),
     } as unknown as WebSocketServer,
-    reactorClient,
+    ...managerClientsOf(reactorClient),
     relationalDb: {} as IRelationalDb,
     analyticsStore: {} as IAnalyticsStore,
     syncManager: {} as ISyncManager,

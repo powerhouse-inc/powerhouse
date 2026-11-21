@@ -152,7 +152,7 @@ describe("buildPowerhouseConfigTemplate", () => {
     });
   });
 
-  test("emits drive coordinates alongside the port when remoteDrive is provided", async () => {
+  test("emits the drive url alongside the port when remoteDrive is provided", async () => {
     const remoteDrive = "https://reactor.example.com/d/vetra-abc123";
     const out = await buildPowerhouseConfigTemplate({
       name: NAME,
@@ -161,7 +161,6 @@ describe("buildPowerhouseConfigTemplate", () => {
     const parsed = JSON.parse(out) as Plain;
     expect(parsed.vetra).toEqual({
       connectPort: deriveProjectPorts(NAME).vetraConnectPort,
-      driveId: "vetra-abc123",
       driveUrl: remoteDrive,
     });
   });

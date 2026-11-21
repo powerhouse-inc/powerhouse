@@ -218,7 +218,7 @@ export const run = dev;
     `export default {
       name: "worker-host",
       runner: { module: "fake-runner", defaultVerb: "dev", plugins: ["base-plugin"] },
-      reactor: { namespace: "base", workflows: true },
+      reactor: { namespace: "base", renown: { url: "https://renown.example" } },
       config: { a: 1 },
     };`,
   );
@@ -285,7 +285,7 @@ describe("resolveMemberHost full-statement semantics (via runCompound)", () => {
       port: 9999,
     });
     // reactor: full statement — the wrapper's reactor REPLACES the base's,
-    // not merges with it (base's workflows key must be gone).
+    // not merges with it (base's renown key must be gone).
     expect(call.reactor).toEqual({ namespace: "wrapper" });
     // config: wrapper did not declare one, so base's config carries through.
     expect(call.config).toEqual({ a: 1 });
@@ -312,7 +312,10 @@ describe("resolveMemberHost full-statement semantics (via runCompound)", () => {
       installSignalHandlers: false,
     });
     const [call] = readCalls(sink);
-    expect(call.reactor).toEqual({ namespace: "base", workflows: true });
+    expect(call.reactor).toEqual({
+      namespace: "base",
+      renown: { url: "https://renown.example" },
+    });
     expect(call.config).toEqual({ a: 1 });
     expect(call.runner).toEqual({
       module: "fake-runner",

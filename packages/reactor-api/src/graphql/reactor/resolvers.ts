@@ -12,7 +12,6 @@ import {
   DriveCollectionId,
   envelopesToSyncOperations,
   type ExecutionJobPlan,
-  type IDriveClient,
   type IReactorReadClient,
   type IReactorWriteClient,
   type ISyncManager,
@@ -945,8 +944,6 @@ export async function createDocument(
     document: unknown;
     parentIdOrSlug?: string | null;
   },
-  /** @deprecated Unused: drive writes go through `clients.write.drives`. */
-  _reactorDriveClient?: IDriveClient,
   subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   // Validate that document is a PHDocument
@@ -1009,8 +1006,6 @@ export async function createEmptyDocument(
     parentIdOrSlug?: string | null;
     name?: string | null;
   },
-  /** @deprecated Unused: drive writes go through `clients.write.drives`. */
-  _reactorDriveClient?: IDriveClient,
   subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const parentIdOrSlug = fromInputMaybe(args.parentIdOrSlug);
@@ -1066,8 +1061,6 @@ export async function createDocumentWithInitialState(
     preferredEditor?: string | null;
     initialState: Record<string, Record<string, unknown>>;
   },
-  /** @deprecated Unused: drive writes go through `clients.write.drives`. */
-  _reactorDriveClient?: IDriveClient,
   subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const parentIdOrSlug = fromInputMaybe(args.parentIdOrSlug);
@@ -1761,8 +1754,6 @@ export async function deleteDocument(
     idOrSlug: string;
     propagate?: GqlPropagationMode | null;
   },
-  /** @deprecated Unused: drive writes go through `clients.write.drives`. */
-  _reactorDriveClient?: IDriveClient,
 ): Promise<boolean> {
   const propagate = toReactorPropagationMode(args.propagate);
 

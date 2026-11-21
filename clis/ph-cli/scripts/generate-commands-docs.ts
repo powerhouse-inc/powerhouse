@@ -1,7 +1,7 @@
 import { writeCliDocsMarkdownFile } from "@powerhousedao/codegen/file-builders";
 import { accessToken } from "../src/commands/access-token.js";
 import { build as buildCmd } from "../src/commands/build.js";
-import { build, connect, preview, studio } from "../src/commands/connect.js";
+import { config as connectConfig, connect } from "../src/commands/connect.js";
 import { generateAllCmd } from "../src/commands/generate-all.js";
 import { generateAppCmd } from "../src/commands/generate-app.js";
 import { generateConnectRoutesCmd } from "../src/commands/generate-connect-routes.js";
@@ -29,9 +29,7 @@ import { migrate } from "../src/commands/migrate.js";
 import { modelCheck, modelInspect } from "../src/commands/model.js";
 import { phCli } from "../src/commands/ph-cli.js";
 import { runHost } from "../src/commands/run.js";
-import { switchboard } from "../src/commands/switchboard.js";
 import { uninstall } from "../src/commands/uninstall.js";
-import { vetra } from "../src/commands/vetra.js";
 
 const commands = [
   { name: "run", command: runHost },
@@ -50,12 +48,9 @@ const commands = [
   { name: "migration-file", command: generateMigrationFileCmd },
   { name: "connect-routes", command: generateConnectRoutesCmd },
   { name: "hosts", command: generateHostsCmd },
-  { name: "vetra", command: vetra },
   { name: "build", command: buildCmd },
   { name: "connect", command: connect },
-  { name: "connect studio", command: studio },
-  { name: "connect build", command: build },
-  { name: "connect preview", command: preview },
+  { name: "connect config", command: connectConfig },
   { name: "access token", command: accessToken },
   { name: "inspect", command: inspect },
   { name: "keyframes", command: keyframes },
@@ -64,7 +59,6 @@ const commands = [
   { name: "migrate", command: migrate },
   { name: "model check", command: modelCheck },
   { name: "model inspect", command: modelInspect },
-  { name: "switchboard", command: switchboard },
   { name: "login", command: login },
   { name: "install", command: install },
   { name: "uninstall", command: uninstall },

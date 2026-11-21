@@ -62,18 +62,16 @@ describe("switchboardConfigSchema", () => {
       documentModelSubgraphs: true,
       privacy: { enabled: false },
     });
-    // Unset is its own state: the plugin host with the default composition.
-    expect(config.features.pluginHost).toBeUndefined();
     expect(config.attachments).toEqual({ storage: { kind: "filesystem" } });
     expect(config.auth.documentPermissions).toEqual({ enabled: false });
     expect(config.auth.access).toEqual({ mode: "open" });
   });
 
-  it("refuses ACCESS=members, pointing at licensed", () => {
+  it("refuses ACCESS=members like any other unknown value", () => {
     expect(() =>
       switchboardConfigSchema.parse({ auth: { access: { mode: "members" } } }),
     ).toThrow(
-      "ACCESS=members is not supported; use ACCESS=licensed with Vetra's gate",
+      "ACCESS=members is not supported: use ACCESS=open (the default) or ACCESS=licensed",
     );
   });
 

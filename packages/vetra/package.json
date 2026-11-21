@@ -71,11 +71,7 @@
     "build": "pnpm run build:bundle",
     "build:bundle": "tsdown",
     "generate": "ph-cli generate",
-    "reactor": "ph-cli reactor",
-    "service": "ph-cli service",
-    "migrate": "ph-cli migrate",
-    "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
-    "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
+    "migrate": "ph-cli migrate"
   },
   "dependencies": {
     "@powerhousedao/codegen": "workspace:*",

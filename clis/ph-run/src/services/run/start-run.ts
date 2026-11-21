@@ -6,6 +6,7 @@ import {
   installStopChannel,
   isSchemaLike,
   loadHost,
+  loadHostFresh,
   loadProducers,
   ONE_SHOT_VERBS,
   outputRefsOf,
@@ -75,8 +76,8 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   }
   const projectRoot = args.projectRoot ?? process.cwd();
   const loaded = await loadHost(projectRoot, args.host);
-  const { warnSupersededConfigKeys } = await import("./superseded-config.js");
-  warnSupersededConfigKeys(projectRoot);
+  const { refuseSupersededConfigKeys } = await import("./superseded-config.js");
+  refuseSupersededConfigKeys(projectRoot);
   const specifier = loaded.host.runner.module;
   const runner = await resolveRunnerModule(projectRoot, specifier);
   const verb = args.verb ?? "run";
@@ -144,17 +145,27 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   if (publishes && (!storeVerb || verb === "reset")) {
     assertNotRunning(projectRoot, loaded.host.name, projectName);
   }
-  const resolved = resolveHostOutputs(loaded.host, {
-    outputs: runRecordOutputSource(projectRoot, {
-      consumer: args.host,
-      producers,
-      projectName,
-    }),
-    ...processResolveEnv(projectRoot),
-    where: `hosts/${args.host}/host.js`,
+  const resolveAndValidate = (definition: typeof loaded.host) =>
+    validateHost(
+      runner,
+      specifier,
+      resolveHostOutputs(definition, {
+        outputs: runRecordOutputSource(projectRoot, {
+          consumer: args.host,
+          producers,
+          projectName,
+        }),
+        ...processResolveEnv(projectRoot),
+        where: `hosts/${args.host}/host.js`,
+      }),
+      file,
+    );
+  const host = resolveAndValidate(loaded.host);
+  const result = await fn(host, {
+    ...ctx,
+    reloadHost: async () =>
+      resolveAndValidate((await loadHostFresh(projectRoot, args.host)).host),
   });
-  const host = validateHost(runner, specifier, resolved, file);
-  const result = await fn(host, ctx);
   if (publishes && result !== undefined && result !== null) {
     await publishOutputs(runner, result, {
       projectRoot,

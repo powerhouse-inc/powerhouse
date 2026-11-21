@@ -18,14 +18,13 @@ import {
   preloadDrive,
   setSelectedDrive,
 } from "../src/hooks/selected-drive.js";
-import { addSetSelectedDriveOnPopStateEventHandler } from "../src/hooks/sync-selection.js";
 import { browserNavigation, targetPathname } from "../src/hooks/navigation.js";
 import {
   addResetSelectedNodeEventHandler,
-  addSelectedNodeIdEventHandler,
   preloadNode,
   setSelectedNode,
 } from "../src/hooks/selected-node.js";
+import { addSelectedNodeIdEventHandler } from "../src/hooks/set-selected-node.js";
 import { addSyncSelectionOnPopStateEventHandler } from "../src/hooks/sync-selection.js";
 
 function makeDrive(slug: string, id: string): DocumentDriveDocument {
@@ -373,7 +372,7 @@ describe("back and forward within a drive", () => {
   beforeAll(() => {
     addDrivesEventHandler();
     addSelectedDriveIdEventHandler();
-    addSetSelectedDriveOnPopStateEventHandler();
+    addSyncSelectionOnPopStateEventHandler();
   });
 
   afterEach(() => {

@@ -8,8 +8,7 @@
     "port": 3001
   },
   "reactor": {
-    "port": 4002,
-    "storage": "memory"
+    "port": 4002
   },
   "packages": [],
   "packageRegistryUrl": "http://localhost:8080",

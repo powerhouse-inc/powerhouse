@@ -9,7 +9,7 @@ import {
   ensureVetra,
   VetraStartError,
   type VetraCommand,
-} from "../src/utils/vetra-launch.js";
+} from "../src/utils/vetra-launcher.js";
 import { probeVetraRuntime } from "../src/utils/vetra-runtime.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));

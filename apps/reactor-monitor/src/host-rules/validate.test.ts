@@ -812,18 +812,6 @@ describe("validateDraft", () => {
       ]);
     });
 
-    it("refuses workflows turned on or off in two places", () => {
-      const envelope = draft({
-        [`${AT}.features.workflows`]: true,
-        [`${SB_REACTOR}.workflows`]: false,
-      });
-      expect(issues(envelope)).toContainEqual([
-        "config",
-        `${AT}.features.workflows`,
-        REASONS.workflowsTwice,
-      ]);
-    });
-
     it("says only a switchboard reads them", () => {
       const envelope = draft({
         "members.connect.config.switchboard.inspection.admin": true,

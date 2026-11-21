@@ -20,6 +20,7 @@ import {
   AuthorizationPolicy,
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
+import { managerClientsOf } from "./utils/client-halves.js";
 
 /**
  * End-to-end tests for the drive info endpoint's authorization gate.
@@ -170,7 +171,7 @@ async function startServer(
       close: vi.fn((cb?: () => void) => cb?.()),
       setMaxListeners: vi.fn(),
     } as unknown as WebSocketServer,
-    reactorClient: makeReactorClient(),
+    ...managerClientsOf(makeReactorClient()),
     relationalDb: {} as IRelationalDb,
     analyticsStore: {} as IAnalyticsStore,
     syncManager: {} as ISyncManager,

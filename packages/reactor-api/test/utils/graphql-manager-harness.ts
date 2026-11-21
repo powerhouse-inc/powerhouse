@@ -28,6 +28,7 @@ import {
   type IAuthorizationService,
 } from "../../src/services/authorization.service.js";
 import type { IAttachmentClientProvider } from "../../src/services/authorized-attachment.service.js";
+import { managerClientsOf } from "./client-halves.js";
 
 /** An ILogger whose methods are spies, for asserting on log calls. */
 export function makeHarnessLogger(): ILogger {
@@ -178,7 +179,7 @@ export function makeHarness(options: HarnessOptions = {}) {
     wsServer,
     ...(options.clients
       ? { readClient: options.clients.read, writeClient: options.clients.write }
-      : { reactorClient }),
+      : managerClientsOf(reactorClient)),
     relationalDb: {} as IRelationalDb,
     analyticsStore: {} as IAnalyticsStore,
     syncManager: {} as ISyncManager,

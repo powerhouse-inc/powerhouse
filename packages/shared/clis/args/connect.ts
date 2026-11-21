@@ -288,10 +288,3 @@ export const connectConfigArgs = {
   defaultDrivesUrl,
   drivesPreserveStrategy,
 };
-
-export const connectArgs = {
-  ...connectStudioArgs,
-  ...connectBuildArgs,
-  ...connectPreviewArgs,
-  ...connectConfigArgs,
-};

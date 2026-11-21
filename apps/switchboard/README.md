@@ -102,18 +102,19 @@ pnpm add -g @powerhousedao/switchboard
 
 | Variable                         | Description                                                                    | Default               |
 | -------------------------------- | ------------------------------------------------------------------------------ | --------------------- |
-| `PORT`                           | Server port                                                                    | `4001`                |
-| `DATABASE_URL`                   | Database connection string                                                     | `./.ph/drive-storage` |
-| `PH_REACTOR_DATABASE_URL`        | PostgreSQL URL (takes precedence)                                              | -                     |
+| `PORT`                           | Server port. The bare `switchboard` bin reads `PH_SWITCHBOARD_PORT` instead    | `4001`                |
+| `DATABASE_URL`                   | Postgres URL of the read model                                                 | `./.ph/read-storage`  |
+| `PH_REACTOR_DATABASE_URL`        | Postgres URL of the reactor store                                              | PGlite                |
 | `REACTOR_DB_POOL_SIZE_HOST`      | Reactor host Postgres pool size                                                | `16`                  |
 | `REDIS_URL`                      | Redis connection URL                                                           | -                     |
 | `REDIS_TLS_URL`                  | Redis TLS connection URL                                                       | -                     |
 | `PYROSCOPE_SERVER_ADDRESS`       | Pyroscope server address                                                       | -                     |
-| `FEATURE_REACTORV2_ENABLED`      | Enable Reactor v2 subgraph feature                                             | `false`               |
 | `MCP_ENABLED`                    | `false` keeps `/mcp` unmounted                                                 | `true`                |
 | `INSPECTION_ENABLED`             | `false` keeps inspection unmounted                                             | `true`                |
 | `PH_INSPECTION_CALLS_PER_MINUTE` | `validateDocument`/`driveIntegrity` calls per caller per minute; admins exempt | `6`                   |
 | `PH_HOST_VALIDATION`             | `refuse` leaves out a model host validation flags; `log` serves it             | `log`                 |
+
+`PH_SWITCHBOARD_DATABASE_URL` is an older name that is still read: the reactor store falls back to it when `PH_REACTOR_DATABASE_URL` is unset, and the read model when `DATABASE_URL` is unset. The public URL is `PUBLIC_URL`; `PH_SWITCHBOARD_PUBLIC_URL` is a different setting, the address of the attachment service.
 
 See [Observability](#observability) below for Sentry and OpenTelemetry variables.
 
@@ -334,6 +335,7 @@ What runs depends on which environment variables are set:
 - `ENABLE_TRACING=true` or `NODE_ENV=production`, **and** at least one trace destination is configured (`TEMPO_ENDPOINT` or `SENTRY_DSN`) → OpenTelemetry tracing is initialized. Spans go to Tempo over OTLP HTTP if `TEMPO_ENDPOINT` is set, and/or to Sentry via `SentrySpanProcessor` if `SENTRY_DSN` is set. When both are set, the same trace IDs appear in Tempo and Sentry and cross-link in Grafana.
 - Tracing requested (prod or `ENABLE_TRACING=true`) but no destination configured → a warning is logged and tracing is **not** started. This avoids the cost of patching `http`/`express`/`pg`/`graphql` and generating spans only to drop them. Set `TEMPO_ENDPOINT` and/or `SENTRY_DSN` to enable.
 - `OTEL_EXPORTER_OTLP_ENDPOINT` set → metrics export to that OTLP HTTP endpoint via a periodic reader. Reactor metrics emitted by `@powerhousedao/opentelemetry-instrumentation-reactor` flow through the same global meter provider.
+- `SENTRY_TRACING_ENABLED=false` → spans are kept out of Sentry while errors still go there and traces still go to Tempo. It does not switch tracing on or off; `ENABLE_TRACING` does.
 
 If neither Sentry nor a tracing destination is configured, the module is a no-op and no exporters or instrumentations are registered.
 
@@ -345,7 +347,7 @@ If neither Sentry nor a tracing destination is configured, the module is a no-op
 | `SENTRY_ENV`                  | `environment` tag passed to `Sentry.init`.                                                                                                                                   | -                                                   |
 | `SENTRY_RELEASE`              | Release tag (must match the version uploaded by CI for source maps to resolve).                                                                                              | `v${npm_package_version}` if available              |
 | `SENTRY_TRACES_SAMPLE_RATE`   | APM sampling rate (0.0–1.0).                                                                                                                                                 | `0.1`                                               |
-| `ENABLE_TRACING`              | Set to `true` to request tracing outside production. Tracing only starts when a destination is also set.                                                                     | `false` (also requested when `NODE_ENV=production`) |
+| `ENABLE_TRACING`              | The tracing switch: `true` requests tracing outside production. Tracing only starts when a destination is also set.                                                          | `false` (also requested when `NODE_ENV=production`) |
 | `NODE_ENV`                    | When `production`, tracing is requested automatically. Also exported as `deployment.environment` attribute.                                                                  | `development`                                       |
 | `OTEL_SERVICE_NAME`           | `service.name` resource attribute.                                                                                                                                           | `switchboard`                                       |
 | `TENANT_ID`                   | `tenant.id` resource attribute (used to slice traces by tenant in Grafana).                                                                                                  | `default`                                           |
@@ -473,11 +475,11 @@ ph switchboard --db-path postgresql://user:pass@localhost:5432/db --migrate-stat
 
 The migration commands check for a PostgreSQL URL in this order:
 
-1. `PH_REACTOR_DATABASE_URL`
-2. `DATABASE_URL`
-3. Config file (`powerhouse.config.json` -> `switchboard.database.url`)
+1. `PH_SWITCHBOARD_DATABASE_URL`
+2. `PH_REACTOR_DATABASE_URL`
+3. `DATABASE_URL`
 
-If no PostgreSQL URL is found, migrations are skipped with a message (PGlite handles migrations automatically).
+If no PostgreSQL URL is found, migrations are skipped with a message (PGlite handles migrations automatically). `powerhouse.config.json` -> `switchboard.database.url` was removed in 6.4: when it is set and none of the variables is, `pnpm migrate` stops with an error instead of skipping.
 
 #### CI/CD Integration
 

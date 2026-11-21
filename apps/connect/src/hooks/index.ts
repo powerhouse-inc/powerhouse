@@ -1,5 +1,4 @@
 export * from "./useCheckLatestVersion.js";
-export * from "./useClientErrorHandler.js";
 export * from "./useFailedInstallations.js";
 export * from "./useInitSentry.js";
 export * from "./useOpenPanelAnalytics.js";

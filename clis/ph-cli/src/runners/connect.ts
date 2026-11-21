@@ -1,5 +1,6 @@
 import {
   callerOverride,
+  connectBuildInvocationArgs,
   connectHandle,
   connectInvocationArgs,
   serve as serveBuilt,
@@ -14,6 +15,7 @@ import {
 } from "@powerhousedao/ph-run/runners/connect";
 import type { RunnerContext, RunnerHandle } from "@powerhousedao/host-core";
 import { getConfig } from "@powerhousedao/shared/clis";
+import { deepMerge } from "@powerhousedao/shared/connect";
 import { join } from "node:path";
 import type { ConnectStudioArgs } from "../types.js";
 
@@ -21,16 +23,16 @@ export * from "@powerhousedao/ph-run/runners/connect";
 
 export const verbs = ["run", "dev", "build", "serve"];
 
-/** The classic `ph connect studio` arguments, with the keys this host and
+/** The Connect studio arguments, with the keys this host and
  * this invocation own laid over them. An argument of this invocation
  * (`passed`) wins over the host file. */
 async function toStudioArgs(
   host: ConnectHostParsed,
   passed: ConnectInvocationArgs,
 ): Promise<ConnectStudioArgs> {
-  const { classicConnectStudioArgs } =
-    await import("../services/classic-args.js");
-  const classic = await classicConnectStudioArgs();
+  const { connectStudioServiceArgs } =
+    await import("../services/service-args.js");
+  const classic = await connectStudioServiceArgs();
   const runner = host.runner;
   return {
     ...classic,
@@ -60,7 +62,11 @@ export async function dev(
   const { runConnectStudio } = await import("../services/connect-studio.js");
   const args = await toStudioArgs(host, await connectInvocationArgs(host, ctx));
   const studio: { stop?: () => Promise<void> } = {};
-  const override = callerOverride(host, ctx, ctx.verb);
+  // A host file projects powerhouse.config.json, so a change of that file
+  // changes the host: each restart of Studio serves the host as it reads
+  // then. Its port, routes and proxy stay those of the start.
+  let override = callerOverride(host, ctx, ctx.verb);
+  const { reloadHost } = ctx;
   // Without `runner.plugins`, the default composition: worked out at each
   // start of Studio from the powerhouse.config.json it reads, with the
   // studio mode it always switches on.
@@ -71,7 +77,9 @@ export async function dev(
           getConfig(join(process.cwd(), "powerhouse.config.json")),
           { app: { studioMode: true } },
         )
-    : override;
+    : reloadHost
+      ? () => override
+      : override;
   const server = await startUnderSupervisor(ctx, () =>
     runConnectStudio(args, undefined, served, {
       routes: host.runner.routes,
@@ -79,6 +87,14 @@ export async function dev(
       proxy: host.runner.proxy?.target,
       // As `ph connect studio` and `ph vetra` start it.
       reloadOnConfigChange: true,
+      ...(reloadHost
+        ? {
+            beforeRestart: async () => {
+              const reread = (await reloadHost()) as ConnectHostParsed;
+              override = callerOverride(reread, ctx, ctx.verb);
+            },
+          }
+        : {}),
       // A restart's server is started as the first is.
       restartWith: (start) => startUnderSupervisor(ctx, start),
       exposeStop: (stop) => {
@@ -100,23 +116,37 @@ export async function dev(
  * runtime; `serve` (below) is the static production server. */
 export const run = dev;
 
-/** P3.3 — `build`: the SAME service as classic `ph connect build`. */
+/** `build`: the Connect build service (`ph connect build` is sugar for it). */
 export async function build(
   host: ConnectHostParsed,
   ctx: RunnerContext,
 ): Promise<void> {
   await validateComposition(host, ctx);
   const { runConnectBuild } = await import("../services/connect-build.js");
-  const { classicConnectBuildArgs } =
-    await import("../services/classic-args.js");
-  const classic = await classicConnectBuildArgs();
+  const { connectBuildServiceArgs } =
+    await import("../services/service-args.js");
+  const classic = await connectBuildServiceArgs();
+  const passed = await connectBuildInvocationArgs(host, ctx);
   const args = {
     ...classic,
-    // Classic `ph connect`'s default: `dist/` is the package `ph build` writes.
+    // The default of the build arguments: `dist/` is the package `ph build` writes.
     outDir: host.runner.outDir ?? classic.outDir,
+    // `--packages-registry`: the top-level packageRegistryUrl of the build.
+    packagesRegistry: passed.packagesRegistry ?? classic.packagesRegistry,
+    connectBasePath: passed.connectBasePath ?? classic.connectBasePath,
   };
   // The host's config bakes in: its title, favicon, manifest, base path and loading shell.
-  await runConnectBuild(args, callerOverride(host, ctx, ctx.verb), {
+  const hostConfig = callerOverride(host, ctx, ctx.verb);
+  // `--base` wins over the host file, as an argument does: connect.app.basePath,
+  // where `ph connect build --base` put it. Laid over the host's config here
+  // too, as the service reads the flag off the command line of the process.
+  const override =
+    passed.connectBasePath === undefined
+      ? hostConfig
+      : deepMerge(hostConfig ?? {}, {
+          app: { basePath: passed.connectBasePath },
+        });
+  await runConnectBuild(args, override, {
     routes: host.runner.routes,
   });
 }

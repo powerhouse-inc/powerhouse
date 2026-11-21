@@ -118,7 +118,7 @@ describe("booting Switchboard with auth", () => {
     await expect(
       bootsWithAuth({ file: {}, env: { ACCESS: "members" } }),
     ).rejects.toThrow(
-      "ACCESS=members is not supported; use ACCESS=licensed with Vetra's gate",
+      "ACCESS=members is not supported: use ACCESS=open (the default) or ACCESS=licensed",
     );
   }, 60_000);
 

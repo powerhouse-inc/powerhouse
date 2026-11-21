@@ -2,7 +2,6 @@ import type {
   CopyNodeOptions,
   IDriveClient,
   IDriveWriteStrategy,
-  IReactorClient,
   IReactorReadClient,
   IReactorWriteClient,
   PagedResults,
@@ -36,24 +35,11 @@ import type {
 import { createReactorDriveWriteStrategy } from "./reactor-drive-write-strategy.js";
 
 /** The client halves the drive client reads and writes through. */
-export interface ReactorDriveClientHalvesArgs {
+export interface ReactorDriveClientArgs {
   read: IReactorReadClient;
   write: IReactorWriteClient;
   readModel: IDriveReadModel;
 }
-
-/**
- * @deprecated Pass `read` and `write` ({@link ReactorDriveClientHalvesArgs}).
- * A facade is accepted for one release; its halves are used.
- */
-export interface ReactorDriveClientFacadeArgs {
-  reactor: IReactorClient;
-  readModel: IDriveReadModel;
-}
-
-export type ReactorDriveClientArgs =
-  | ReactorDriveClientHalvesArgs
-  | ReactorDriveClientFacadeArgs;
 
 /**
  * Implementation of {@link IDriveClient} backed by the reactor's relationship
@@ -69,13 +55,8 @@ export class ReactorDriveClient implements IDriveClient {
   private readonly strategy: IDriveWriteStrategy;
 
   constructor(args: ReactorDriveClientArgs) {
-    if ("reactor" in args) {
-      this.read = args.reactor.read;
-      this.write = args.reactor.write;
-    } else {
-      this.read = args.read;
-      this.write = args.write;
-    }
+    this.read = args.read;
+    this.write = args.write;
     this.readModel = args.readModel;
     this.strategy = createReactorDriveWriteStrategy({
       read: this.read,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LOG_LEVELS } from "./constants.js";
+import { supersededConfigKeys } from "./deprecations.js";
 import { sourceConfigSchema } from "./source-config-schema.js";
 
 // Drift guard: ensures the JSON Schema in source-config-schema.ts stays in
@@ -136,39 +137,18 @@ describe("source-config schema", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("reactor.https accepts boolean OR keyPath/certPath object", () => {
+  it("declares none of the keys the host files supersede", () => {
     const props = sourceConfigSchema.properties as unknown as Record<
       string,
-      {
-        properties?: Record<
-          string,
-          { oneOf?: Array<{ type?: string; required?: readonly string[] }> }
-        >;
-      }
+      { required?: readonly string[]; properties?: Record<string, unknown> }
     >;
-    const variants = props.reactor.properties?.https.oneOf ?? [];
-    expect(variants.find((v) => v.type === "boolean")).toBeDefined();
-    expect(
-      variants.find((v) => v.required && v.required.includes("keyPath")),
-    ).toBeDefined();
-  });
-
-  it("reactor.storage.type enum covers all four backends", () => {
-    const props = sourceConfigSchema.properties as unknown as Record<
-      string,
-      {
-        properties?: Record<
-          string,
-          { properties?: Record<string, { enum?: readonly string[] }> }
-        >;
-      }
-    >;
-    expect(props.reactor.properties?.storage.properties?.type.enum).toEqual([
-      "filesystem",
-      "memory",
-      "postgres",
-      "browser",
-    ]);
+    for (const key of Object.keys(supersededConfigKeys)) {
+      const [section, field] = key.split(".");
+      expect(props[section].properties?.[field], key).toBeUndefined();
+    }
+    expect(props.studio.required).toBeUndefined();
+    expect(props.reactor.properties?.port).toBeDefined();
+    expect(props.switchboard.properties?.port).toBeDefined();
   });
 
   it("vetra recognises connectPort and requires no field", () => {
@@ -180,10 +160,10 @@ describe("source-config schema", () => {
       }
     >;
     // A project with no remote drive still needs somewhere to carry its
-    // assigned Connect port, so driveId/driveUrl cannot be required.
+    // assigned Connect port, so driveUrl cannot be required.
     expect(props.vetra.required).toBeUndefined();
     expect(props.vetra.properties?.connectPort.type).toBe("integer");
-    expect(props.vetra.properties?.driveId.type).toBe("string");
+    expect(props.vetra.properties?.driveId).toBeUndefined();
     expect(props.vetra.properties?.driveUrl.type).toBe("string");
     expect(props.vetra.properties?.previewDrive.type).toBe("object");
   });

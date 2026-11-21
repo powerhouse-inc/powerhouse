@@ -91,7 +91,6 @@ const declaredCliHost = () =>
     name: "cli",
     runner: {
       module: CLINT,
-      lifecycle: "attached",
       proxy: {
         port: 8490,
         routes: {
@@ -262,7 +261,7 @@ describe("mastra-runner host contract", () => {
 describe("clint-runner host contract", () => {
   it("accepts a host using every option the runner reads", () => {
     const parsed = validate.clint(cliHost());
-    expect(parsed.runner.lifecycle).toBe("attached");
+    expect(parsed.runner.proxy?.port).toBe(8490);
     expect(parsed.children.assistant?.config?.readiness?.timeout).toBe(60_000);
     expect(parsed.config?.agents?.main?.url).toBe("http://127.0.0.1:4910/v1");
   });
@@ -366,14 +365,34 @@ describe("clint-runner host contract", () => {
     ).toThrow(/config\.startOrder\.1: startOrder names "asistant"/);
   });
 
-  it("rejects an invalid lifecycle, proxy route, agent or member config", () => {
+  it("rejects the removed lifecycle option, naming why", () => {
     const host = cliHost();
-    expect(() =>
-      validate.clint({
-        ...host,
-        runner: { ...host.runner, lifecycle: "forever" },
-      }),
-    ).toThrow(/runner\.lifecycle/);
+    for (const lifecycle of ["attached", "detached"]) {
+      for (const schema of [
+        clintRunner.hostSchema,
+        clintRunner.declaredHostSchema,
+      ]) {
+        const result = schema.safeParse({
+          ...host,
+          runner: { ...host.runner, lifecycle },
+        });
+        expect(result.error?.issues).toContainEqual(
+          expect.objectContaining({
+            path: ["runner"],
+            message: expect.stringMatching(
+              /`lifecycle` was removed; members always run attached and stop when the shell stops/,
+            ) as unknown,
+          }),
+        );
+      }
+      expect(() =>
+        validate.clint({ ...host, runner: { ...host.runner, lifecycle } }),
+      ).toThrow(/runner: `lifecycle` was removed/);
+    }
+  });
+
+  it("rejects an invalid proxy route, agent or member config", () => {
+    const host = cliHost();
     expect(() =>
       validate.clint({
         ...host,

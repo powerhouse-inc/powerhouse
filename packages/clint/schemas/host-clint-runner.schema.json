@@ -77,10 +77,6 @@
             ]
           }
         },
-        "lifecycle": {
-          "type": "string",
-          "enum": ["attached", "detached"]
-        },
         "proxy": {
           "type": "object",
           "properties": {
@@ -468,9 +464,6 @@
                   }
                 },
                 "additionalProperties": false
-              },
-              "workflows": {
-                "type": "boolean"
               },
               "renown": {
                 "type": "object",

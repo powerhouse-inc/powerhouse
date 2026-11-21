@@ -13,11 +13,15 @@ const runInNode = (script: string) =>
   });
 
 beforeAll(() => {
-  execFileSync("pnpm", ["run", "build:bundle"], {
-    cwd: root,
-    stdio: "pipe",
-    shell: process.platform === "win32",
-  });
+  // The bundle step empties dist/, so the stylesheet is written again after
+  // it: a project linked to this checkout imports dist/style.css.
+  for (const step of ["build:bundle", "build:css"]) {
+    execFileSync("pnpm", ["run", step], {
+      cwd: root,
+      stdio: "pipe",
+      shell: process.platform === "win32",
+    });
+  }
 }, 120_000);
 
 describe("Connect's dist in plain Node", () => {

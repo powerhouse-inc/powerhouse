@@ -532,8 +532,6 @@ function buildHostSchemas(tokenField: FieldWrappers) {
         })
         .optional(),
       protocol: reactorProtocolSchema.optional(),
-      /** DEPRECATED (dies in R2): workflows become a listed plugin. */
-      workflows: z.boolean().optional(),
       // R1 core keys: identity/signing and storage namespace.
       renown: z
         .strictObject({

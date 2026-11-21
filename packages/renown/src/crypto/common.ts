@@ -1,7 +1,6 @@
 // Types
 export type {
   DID,
-  IConnectCrypto,
   IRenownCrypto,
   JsonWebKeyPairStorage,
   JwkKeyPair,
@@ -9,7 +8,7 @@ export type {
 
 // Classes
 export { RenownCryptoBuilder } from "./renown-crypto-builder.js";
-export { ConnectCrypto, RenownCrypto } from "./renown-crypto.js";
+export { RenownCrypto } from "./renown-crypto.js";
 
 // Storage implementations
 export { MemoryKeyStorage } from "./memory-key-storage.js";

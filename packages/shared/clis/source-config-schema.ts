@@ -101,48 +101,6 @@ export const sourceConfigSchema = {
           type: "number",
           description: "Port the reactor HTTP server listens on.",
         },
-        https: {
-          oneOf: [
-            { type: "boolean" },
-            {
-              type: "object",
-              additionalProperties: false,
-              required: ["keyPath", "certPath"],
-              properties: {
-                keyPath: {
-                  type: "string",
-                  description: "Path to TLS private key.",
-                },
-                certPath: {
-                  type: "string",
-                  description: "Path to TLS certificate.",
-                },
-              },
-            },
-          ],
-          description:
-            "Enable HTTPS. `true` for self-signed; object with key/cert paths for custom TLS.",
-        },
-        storage: {
-          type: "object",
-          additionalProperties: false,
-          required: ["type"],
-          description: "Reactor persistent storage backend.",
-          properties: {
-            type: {
-              type: "string",
-              enum: ["filesystem", "memory", "postgres", "browser"],
-            },
-            filesystemPath: {
-              type: "string",
-              description: "Required when `type: filesystem`.",
-            },
-            postgresUrl: {
-              type: "string",
-              description: "Required when `type: postgres`.",
-            },
-          },
-        },
         keyframes: {
           type: "object",
           additionalProperties: false,
@@ -208,16 +166,6 @@ export const sourceConfigSchema = {
       additionalProperties: false,
       description: "Switchboard server configuration.",
       properties: {
-        database: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            url: {
-              type: "string",
-              description: "Database connection URL.",
-            },
-          },
-        },
         port: {
           type: "number",
           description: "Port the switchboard HTTP server listens on.",
@@ -227,24 +175,11 @@ export const sourceConfigSchema = {
     studio: {
       type: "object",
       additionalProperties: false,
-      required: ["https"],
       description: "Connect Studio dev-server configuration.",
       properties: {
         port: {
           type: "number",
           description: "Port the studio dev server listens on.",
-        },
-        host: {
-          type: "string",
-          description: "Host interface to bind.",
-        },
-        https: {
-          type: "boolean",
-          description: "Serve studio over HTTPS.",
-        },
-        openBrowser: {
-          type: "boolean",
-          description: "Open a browser tab on studio start.",
         },
       },
     },
@@ -259,8 +194,11 @@ export const sourceConfigSchema = {
       additionalProperties: false,
       description: "Vetra integration coordinates.",
       properties: {
-        driveId: { type: "string" },
-        driveUrl: { type: "string" },
+        driveUrl: {
+          type: "string",
+          description:
+            "A remote Vetra drive `ph vetra` connects to. Written by `ph init --remote-drive`; overridden by --remote-drive.",
+        },
         connectPort: {
           type: "integer",
           description:

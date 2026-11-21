@@ -144,7 +144,7 @@ describe("switchboard runner checkBoot", () => {
     ]);
   });
 
-  it("reports a readModel-only block, whose reactor store stays on readModel.url", async () => {
+  it("reports a readModel-only block, which names no reactor store", async () => {
     const readModelOnly = host({
       reactor: {
         backends: {
@@ -153,7 +153,7 @@ describe("switchboard runner checkBoot", () => {
       },
     });
     expect(await issuesOf(readModelOnly, { REACTOR_WORKERS: "2" })).toEqual([
-      expect.stringMatching(/also holds the reactor store.*deprecated/),
+      expect.stringMatching(/is the only store this host names/),
     ]);
     expect(
       await issuesOf(readModelOnly, { PH_REACTOR_DATABASE_URL: POSTGRES }),

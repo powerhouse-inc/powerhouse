@@ -21,3 +21,4 @@ storage/
 htpasswd
 .registry-cdn-cache/
 repro-artifacts/
+dist-connect-registry
