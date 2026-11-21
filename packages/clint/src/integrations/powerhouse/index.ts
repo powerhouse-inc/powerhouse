@@ -45,6 +45,7 @@ export { deterministicId } from "./identity.js";
 export { bridgeSubscriptions } from "./subscriptions.js";
 export { ensureDrive, ensureRemoteDrive } from "./drive.js";
 export { buildReactor } from "./reactor.js";
+export { attachRemoteReactor } from "./remote-reactor.js";
 export { startSwitchboard } from "./switchboard.js";
 export type { StartSwitchboardOptions } from "./switchboard.js";
 export { createDocumentChangeTrigger } from "./change-trigger.js";

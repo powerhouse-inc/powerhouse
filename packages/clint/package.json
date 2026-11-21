@@ -33,6 +33,24 @@
       "import": "./dist/runners/mastra-runner.mjs",
       "default": "./dist/runners/mastra-runner.mjs"
     },
+    "./mastra": {
+      "source": "./src/integrations/mastra/index.ts",
+      "types": "./dist/integrations/mastra/index.d.mts",
+      "import": "./dist/integrations/mastra/index.mjs",
+      "default": "./dist/integrations/mastra/index.mjs"
+    },
+    "./powerhouse": {
+      "source": "./src/integrations/powerhouse/index.ts",
+      "types": "./dist/integrations/powerhouse/index.d.mts",
+      "import": "./dist/integrations/powerhouse/index.mjs",
+      "default": "./dist/integrations/powerhouse/index.mjs"
+    },
+    "./testing": {
+      "source": "./src/testing/index.ts",
+      "types": "./dist/testing/index.d.mts",
+      "import": "./dist/testing/index.mjs",
+      "default": "./dist/testing/index.mjs"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
