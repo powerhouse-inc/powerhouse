@@ -147,7 +147,7 @@ export async function build(host) {
     "cli",
     `export default {
       name: "cli",
-      runner: { module: "@powerhousedao/clint/clint-runner", lifecycle: "attached" },
+      runner: { module: "@powerhousedao/clint/clint-runner" },
       children: {${options.siblingFirst ? '\n        web: { host: "web" },' : ""}
         assistant: { host: "assistant"${
           options.readinessTimeout === undefined
@@ -165,17 +165,49 @@ export async function build(host) {
 
 const ctx = (dir: string) => ({ projectRoot: dir, verb: "run", env: {} });
 
+const isAlive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** A live v2 run record for `host`, as `ph run` writes it (`pid` alive). */
+function writeLiveRecord(dir: string, host: string, port = 4919): void {
+  mkdirSync(path.join(dir, ".ph", "run"), { recursive: true });
+  writeFileSync(
+    path.join(dir, ".ph", "run", `${host}.json`),
+    JSON.stringify({
+      version: 2,
+      host,
+      projectName: "cli-lab",
+      kind: "reactor",
+      verb: "run",
+      startedAt: "2026-10-20T00:00:00.000Z",
+      pid: process.pid,
+      outputs: {
+        origin: `http://127.0.0.1:${port}`,
+        endpoints: { openai: `http://127.0.0.1:${port}/v1/` },
+      },
+    }),
+  );
+}
+
 describe("clint-runner (P5.4)", () => {
   it("schedules children as clint services and publishes the resolved agent urls", async () => {
     const { dir } = makeProject();
     const { loadHost } = await import("@powerhousedao/host-core");
     const host = runner.hostSchema.parse((await loadHost(dir, "cli")).host);
     const handle = await runner.run(host, ctx(dir));
+    let pid: number | undefined;
     try {
       const status = handle.services.list("assistant")[0];
       expect(status?.status === "ready" || status?.status === "starting").toBe(
         true,
       );
+      pid = status?.pid;
       // state files live under .ph/services
       expect(existsSync(path.join(dir, ".ph", "services", "assistant"))).toBe(
         true,
@@ -186,6 +218,10 @@ describe("clint-runner (P5.4)", () => {
     } finally {
       await handle.shutdown();
     }
+    // Members end with the shell.
+    expect(pid).toBeGreaterThan(0);
+    expect(isAlive(pid!)).toBe(false);
+    expect(handle.services.list("assistant")[0]?.status).toBe("stopped");
   }, 60_000);
 
   it("forwards build to members via their own runners", async () => {
@@ -300,9 +336,8 @@ describe("clint-runner (P5.4)", () => {
     );
   }, 60_000);
 
-  it("waits for the run record of a member re-attached because its port is already serving", async () => {
-    // A free port, then held: the member "is already serving" there (e.g.
-    // still booting from an earlier detached run) and publishes late.
+  it("fails instead of adopting a member whose port is already in use", async () => {
+    // A free port, then held by something clint did not start.
     const probe = net.createServer();
     await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
     const address = probe.address();
@@ -313,45 +348,48 @@ describe("clint-runner (P5.4)", () => {
       holder.listen(port, "127.0.0.1", resolve),
     );
     try {
-      const { dir } = makeProject({ port, readinessTimeout: 20_000 });
-      const timer = setTimeout(() => {
-        mkdirSync(path.join(dir, ".ph", "run"), { recursive: true });
-        writeFileSync(
-          path.join(dir, ".ph", "run", "cli-assistant.json"),
-          JSON.stringify({
-            version: 2,
-            host: "cli-assistant",
-            projectName: "cli-lab",
-            kind: "reactor",
-            verb: "run",
-            startedAt: "2026-10-20T00:00:00.000Z",
-            pid: process.pid,
-            outputs: {
-              origin: `http://127.0.0.1:${port}`,
-              endpoints: { openai: `http://127.0.0.1:${port}/v1/` },
-            },
-          }),
-        );
-      }, 800);
-      try {
-        const handle = await runner.run(await declaredCli(dir), ctx(dir));
-        try {
-          expect(handle.outputs).toEqual({
-            agents: { main: `http://127.0.0.1:${port}/v1` },
-          });
-          // re-attached: clint never spawned it
-          expect(handle.services.list("assistant")[0]?.status).not.toBe(
-            "ready",
-          );
-        } finally {
-          await handle.shutdown();
-        }
-      } finally {
-        clearTimeout(timer);
-      }
+      const { dir } = makeProject({ port });
+      await expect(
+        runner.run(await declaredCli(dir), ctx(dir)),
+      ).rejects.toThrow(
+        new RegExp(
+          `member "assistant" \\(host cli-assistant\\) cannot start: port ${port} is already in use\\. clint-runner starts its own members and does not adopt a running one`,
+        ),
+      );
+      expect(existsSync(path.join(dir, ".ph", "services", "assistant"))).toBe(
+        false,
+      );
     } finally {
       await new Promise<void>((resolve) => holder.close(() => resolve()));
     }
+  }, 60_000);
+
+  it("fails instead of adopting a member that is already running", async () => {
+    const { dir } = makeProject();
+    writeLiveRecord(dir, "cli-assistant");
+    await expect(runner.run(await declaredCli(dir), ctx(dir))).rejects.toThrow(
+      new RegExp(
+        `member "assistant" \\(host cli-assistant\\) is already running \\(pid ${process.pid}, \\.ph/run/cli-assistant\\.json\\)\\. clint-runner starts its own members and does not adopt a running one`,
+      ),
+    );
+    expect(existsSync(path.join(dir, ".ph", "services", "assistant"))).toBe(
+      false,
+    );
+  }, 60_000);
+
+  it("stops the members it started when a later member is already running", async () => {
+    const { dir } = makeProject({ publish: true, sibling: true });
+    writeLiveRecord(dir, "cli-web");
+    const { loadHost } = await import("@powerhousedao/host-core");
+    const host = runner.hostSchema.parse((await loadHost(dir, "cli")).host);
+    await expect(runner.run(host, ctx(dir))).rejects.toThrow(
+      /member "web" \(host cli-web\) is already running/,
+    );
+    // The assistant was started (it published its record) and stopped again.
+    const record = JSON.parse(
+      readFileSync(path.join(dir, ".ph", "run", "cli-assistant.json"), "utf8"),
+    ) as { pid: number };
+    expect(isAlive(record.pid)).toBe(false);
   }, 60_000);
 
   it("fails naming the member, its timeout and the reading path when the member never publishes", async () => {

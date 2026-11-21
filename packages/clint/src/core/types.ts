@@ -642,8 +642,7 @@ export interface ServiceBuildContext<TConfig = Record<string, unknown>> {
 /**
  * A proxy route declared by a service, relative to its mount. The framework
  * mounts `prefix` under `/{serviceId}/` and manages the route's lifecycle
- * alongside capture-derived routes (added on ready, removed on stop/failure,
- * re-wired for instances adopted at boot).
+ * alongside capture-derived routes (added on ready, removed on stop/failure).
  */
 export interface ServiceProxyRouteSpec {
   /** Path prefix relative to the service mount (leading '/' ignored). */
@@ -654,7 +653,8 @@ export interface ServiceProxyRouteSpec {
 
 /**
  * Definition for a long-running background service.
- * Services are spawned as detached processes that survive CLI exit.
+ * Services are child processes of the CLI: they never outlive the process
+ * that started them.
  */
 export interface ServiceDefinition<TConfig = Record<string, unknown>> {
   id: string;
@@ -729,11 +729,17 @@ export interface ServiceStatus {
 }
 
 /**
- * Manager for long-running background services.
+ * Manager for long-running background services. A manager reports, stops
+ * and restarts only the instances it started; one recorded by another
+ * process (or left over from an earlier run) is never adopted.
  */
 export interface ServiceManager {
   start(id: string, opts?: ServiceStartOptions): Promise<string>;
   stop(id: string, instanceId?: string): Promise<void>;
+  /** Stop every instance this manager started (the CLI runtime's teardown
+   * calls it). Instances still running when the process ends are killed
+   * anyway; this is the graceful path. */
+  stopAll(): Promise<void>;
   list(serviceId?: string): ServiceInstanceStatus[];
   /** Get the static definition for a service. */
   getDefinition(id: string): ServiceDefinition | undefined;

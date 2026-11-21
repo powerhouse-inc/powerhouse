@@ -183,7 +183,7 @@ export function createReplSession(opts: ReplSessionOptions): ReplSession {
   function buildExitMessage(): string {
     const parts: string[] = [];
 
-    // Report any services still running
+    // Name the running services; they stop with the session.
     if (context.services) {
       const dim = "\x1b[2m";
       const reset = "\x1b[0m";
@@ -192,9 +192,7 @@ export function createReplSession(opts: ReplSessionOptions): ReplSession {
         .filter((s) => s.status === "ready" || s.status === "starting");
       for (const svc of active) {
         const where = svc.workdir ? ` ${dim}\`${svc.workdir}\`${reset}` : "";
-        parts.push(
-          `${svc.name} still active${where}\n  ${dim}Run \`${cli.name} ${svc.serviceId}-stop\` to shut it down${reset}\n`,
-        );
+        parts.push(`Stopping ${svc.name}${where}\n`);
       }
     }
 

@@ -1581,7 +1581,7 @@ describe("outputWindow", () => {
     expect(result.text).not.toContain("more lines");
   });
 
-  it("exit message includes active services when services are running", () => {
+  it("exit message names the running services it stops", () => {
     const noop = defineCommand({
       id: "noop",
       description: "noop",
@@ -1627,9 +1627,10 @@ describe("outputWindow", () => {
     });
 
     const sess = createReplSession({ cli: svcCli, context: ctx });
-    expect(sess.exitMessage).toContain("Database still active");
+    expect(sess.exitMessage).toContain("Stopping Database");
     expect(sess.exitMessage).toContain("/app");
-    expect(sess.exitMessage).toContain("svc-exit db-stop");
+    // Services end with the session: no hint to stop leftovers by hand.
+    expect(sess.exitMessage).not.toContain("db-stop");
   });
 
   it("-manage command returns error when service definition is missing", async () => {

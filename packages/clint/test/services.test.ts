@@ -2,14 +2,18 @@
 // (jest ran transpile-only); this file carries pre-existing type drift. Runtime
 // assertions are unchanged. Tighten opportunistically when touching the file.
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import os from "node:os";
+import { pathToFileURL } from "node:url";
 import {
   defineService,
   createServiceManager,
   sanitizeLogText,
 } from "../src/core/services.js";
+import { killTree } from "../src/core/process-platform.js";
 import { createEventBus } from "../src/core/events.js";
 import type { ServiceDefinition, EventBus } from "../src/core/types.js";
 import {
@@ -32,19 +36,77 @@ function makeTmpDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "ph-svc-test-"));
 }
 
-/** Kill a process by PID, ignoring errors. */
+/** Kill a live process and its tree by PID (a tree kill spawns taskkill on
+ * Windows, so dead pids are skipped). */
 function safeKill(pid: number): void {
+  if (isAlive(pid)) killTree(pid, "SIGKILL");
+}
+
+function isAlive(pid: number): boolean {
   try {
-    process.kill(-pid, "SIGKILL");
+    process.kill(pid, 0);
+    return true;
   } catch {
-    /* ignore */
-  }
-  try {
-    process.kill(pid, "SIGKILL");
-  } catch {
-    /* ignore */
+    return false;
   }
 }
+
+/** Wait until every pid is gone; false when one is still alive at the end. */
+async function waitDead(pids: number[], timeout = 5_000): Promise<boolean> {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (pids.every((pid) => !isAlive(pid))) return true;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  return pids.every((pid) => !isAlive(pid));
+}
+
+const OWNER = path.resolve(import.meta.dirname, "fixtures/service-owner.ts");
+const TSX_ESM = pathToFileURL(
+  createRequire(import.meta.url).resolve("tsx/esm"),
+).href;
+
+/** Run the owner fixture (a process owning one service); `pids` resolves
+ * with its service's shell and node pids once the service is ready. */
+function startOwner(servicesDir: string, ending: string) {
+  const owner = spawn(
+    process.execPath,
+    ["--import", TSX_ESM, OWNER, servicesDir, ending],
+    { stdio: ["ignore", "pipe", "pipe"], windowsHide: true },
+  );
+  let out = "";
+  let err = "";
+  owner.stdout.on("data", (d) => (out += String(d)));
+  owner.stderr.on("data", (d) => (err += String(d)));
+  const closed = new Promise<{
+    code: number | null;
+    signal: NodeJS.Signals | null;
+  }>((resolve) =>
+    owner.on("close", (code, signal) => resolve({ code, signal })),
+  );
+  const pids = new Promise<number[]>((resolve, reject) => {
+    const found = () => /pids (\d+) (\d+)/.exec(out);
+    owner.stdout.on("data", () => {
+      const m = found();
+      if (m) resolve([Number(m[1]), Number(m[2])]);
+    });
+    void closed.then(() => {
+      const m = found();
+      if (m) resolve([Number(m[1]), Number(m[2])]);
+      else
+        reject(
+          new Error(
+            `owner ended before its service was ready:\n${out}\n${err}`,
+          ),
+        );
+    });
+  });
+  return { owner, pids, closed, stderr: () => err };
+}
+
+/** A pid that is not running (pids are multiples of 4 on Windows, and
+ * this is above Linux's default pid_max). */
+const DEAD_PID = 2 ** 22 - 1;
 
 /** Collect all PIDs from state files in a services dir (multi-instance layout). */
 function collectPids(servicesDir: string): number[] {
@@ -120,7 +182,7 @@ describe("createServiceManager", () => {
 
   afterEach(() => {
     // Clean up any spawned processes
-    const pids = [...trackedPids, ...collectPids(servicesDir)];
+    const pids = new Set([...trackedPids, ...collectPids(servicesDir)]);
     for (const pid of pids) {
       safeKill(pid);
     }
@@ -466,17 +528,30 @@ describe("createServiceManager", () => {
       expect(statuses[0]!.serviceId).toBe("test-svc");
     });
 
-    it("reconnects to a running service via PID", async () => {
+    it("does not adopt an instance another manager started", async () => {
       const mgr1 = createManager([readyDef]);
       await mgr1.start("test-svc");
       const pid = mgr1.list()[0]!.pid!;
       trackedPids.push(pid);
 
-      // Create a second manager instance (simulates CLI restart)
+      // A second manager on the same services dir (a second CLI process)
       const mgr2 = createManager([readyDef]);
-      const statuses = mgr2.list();
-      expect(statuses[0]!.status).toBe("ready");
-      expect(statuses[0]!.pid).toBe(pid);
+      const [seen] = mgr2.list();
+      expect(seen!.status).toBe("failed");
+      expect(seen!.error).toMatch(
+        /belongs to process \d+, which is still running; this process does not manage it/,
+      );
+      await expect(mgr2.start("test-svc")).rejects.toThrow(
+        /belongs to process/,
+      );
+      await expect(mgr2.stop("test-svc")).rejects.toThrow(/does not manage it/);
+      await mgr2.stopAll();
+      expect(isAlive(pid)).toBe(true);
+
+      // Only its owner stops it.
+      await mgr1.stopAll();
+      expect(isAlive(pid)).toBe(false);
+      expect(mgr1.list()[0]!.status).toBe("stopped");
     });
 
     it(
@@ -924,16 +999,7 @@ describe("createServiceManager", () => {
       trackedPids.push(pid);
 
       // Kill the process externally
-      try {
-        process.kill(-pid, "SIGKILL");
-      } catch {
-        /* ignore */
-      }
-      try {
-        process.kill(pid, "SIGKILL");
-      } catch {
-        /* ignore */
-      }
+      killTree(pid, "SIGKILL");
       // Wait for it to die
       await new Promise((r) => setTimeout(r, PROCESS_CLEANUP_WAIT));
 
@@ -1235,6 +1301,190 @@ describe("createServiceManager", () => {
       const id3 = await mgr.start("multi-stop", { name: "c" });
       trackedPids.push(mgr.list().find((s) => s.instanceId === id3)!.pid!);
     });
+  });
+
+  describe("stopAll()", () => {
+    it("stops every instance this manager started", async () => {
+      const multiDef: ServiceDefinition = {
+        ...readyDef,
+        id: "multi-all",
+        name: "Multi All",
+        maxInstances: 2,
+      };
+      const mgr = createManager([readyDef, multiDef]);
+      await mgr.start("test-svc");
+      await mgr.start("multi-all", { name: "a" });
+      await mgr.start("multi-all", { name: "b" });
+      const pids = mgr.list().map((s) => s.pid!);
+      trackedPids.push(...pids);
+      expect(pids).toHaveLength(3);
+
+      await mgr.stopAll();
+
+      expect(pids.filter(isAlive)).toEqual([]);
+      expect(mgr.list().map((s) => s.status)).toEqual([
+        "stopped",
+        "stopped",
+        "stopped",
+      ]);
+    });
+
+    it(
+      "cancels a pending restart",
+      async () => {
+        const crashDef: ServiceDefinition = {
+          ...readyDef,
+          id: "restart-cancel",
+          name: "Restart Cancel",
+          env: () => ({
+            TEST_SERVICE_MODE: "crash",
+            CRASH_DELAY: String(SERVICE_CRASH_DELAY),
+            TEST_SERVICE_PORT: "4567",
+          }),
+          restart: { enabled: true, maxRetries: 2, delay: 300 },
+        };
+        const mgr = createManager([crashDef]);
+        await mgr.start("restart-cancel");
+        await new Promise((r) => setTimeout(r, SERVICE_CRASH_WAIT));
+        // list() sees the crash and schedules the restart
+        expect(mgr.list()[0]!.status).toBe("starting");
+
+        await mgr.stopAll();
+        // Well past the 300 ms restart delay: a restart would have spawned
+        // (and opened its run log) by now.
+        await new Promise((r) => setTimeout(r, 800));
+
+        expect(mgr.list()[0]!.status).toBe("stopped");
+        const runs = fs
+          .readdirSync(path.join(servicesDir, "restart-cancel"))
+          .filter((f) => f.endsWith(".log"));
+        expect(runs).toHaveLength(1);
+      },
+      SERVICE_TEST_TIMEOUT,
+    );
+  });
+
+  describe("state left by another process", () => {
+    const statePath = () => path.join(servicesDir, "test-svc", "test-svc.json");
+    const readState = () => JSON.parse(fs.readFileSync(statePath(), "utf-8"));
+    function writeState(state: Record<string, unknown>): void {
+      fs.mkdirSync(path.dirname(statePath()), { recursive: true });
+      fs.writeFileSync(
+        statePath(),
+        JSON.stringify({
+          serviceId: "test-svc",
+          instanceId: "test-svc",
+          name: "Test Service",
+          status: "ready",
+          startedAt: new Date().toISOString(),
+          command: "node old-service.js",
+          ...state,
+        }),
+      );
+    }
+
+    /** A live process this manager did not spawn (a fixture, so the suite
+     * sweep in global-teardown.ts also catches it). */
+    function liveStranger(): number {
+      const child = spawn(process.execPath, [TEST_SERVICE], {
+        stdio: "ignore",
+        windowsHide: true,
+        env: { ...process.env, TEST_SERVICE_MODE: "no-ready" },
+      });
+      trackedPids.push(child.pid!);
+      return child.pid!;
+    }
+
+    it("settles stale state from a dead owner as stopped and starts afresh", async () => {
+      writeState({ pid: DEAD_PID, owner: { pid: DEAD_PID, token: "gone" } });
+      const mgr = createManager([readyDef]);
+
+      expect(mgr.list()[0]!.status).toBe("stopped");
+      expect(readState()).toMatchObject({ status: "stopped", pid: 0 });
+
+      await mgr.start("test-svc");
+      const [status] = mgr.list();
+      trackedPids.push(status!.pid!);
+      expect(status!.status).toBe("ready");
+      expect(status!.pid).not.toBe(DEAD_PID);
+    });
+
+    it("reports a live leftover without adopting, stopping or killing it", async () => {
+      const pid = liveStranger();
+      writeState({ pid, owner: { pid: DEAD_PID, token: "gone" } });
+      const mgr = createManager([readyDef]);
+
+      const [status] = mgr.list();
+      expect(status!.status).toBe("failed");
+      expect(status!.pid).toBe(pid);
+      expect(status!.error).toMatch(
+        new RegExp(
+          `pid ${pid}\\) is a leftover from process ${DEAD_PID}, which has exited; this process does not manage it`,
+        ),
+      );
+      await expect(mgr.start("test-svc")).rejects.toThrow(/is a leftover/);
+      await expect(mgr.stop("test-svc")).rejects.toThrow(/does not manage it/);
+      await expect(mgr.stop("test-svc", "test-svc")).rejects.toThrow(
+        /does not manage it/,
+      );
+      await mgr.stopAll();
+
+      expect(isAlive(pid)).toBe(true);
+      expect(readState()).toMatchObject({ status: "ready", pid });
+    });
+
+    it("treats state written before ownership was recorded as a leftover", async () => {
+      const pid = liveStranger();
+      writeState({ pid }); // the detached era: no owner
+      const mgr = createManager([readyDef]);
+
+      const [status] = mgr.list();
+      expect(status!.status).toBe("failed");
+      expect(status!.error).toMatch(/is a leftover from an earlier run/);
+      await expect(mgr.start("test-svc")).rejects.toThrow(/is a leftover/);
+      await mgr.stopAll();
+      expect(isAlive(pid)).toBe(true);
+    });
+  });
+
+  describe("children end with the process that started them", () => {
+    for (const ending of ["return", "exit", "throw"] as const) {
+      it(
+        `the service does not outlive its owner (${ending})`,
+        async () => {
+          const run = startOwner(servicesDir, ending);
+          trackedPids.push(run.owner.pid!);
+          const pids = await run.pids;
+          trackedPids.push(...pids);
+          expect(pids.every((pid) => pid > 0)).toBe(true);
+
+          const { code } = await run.closed;
+          expect(code).toBe(ending === "throw" ? 1 : 0);
+          if (ending === "throw")
+            expect(run.stderr()).toContain("owner crashed");
+          expect(await waitDead(pids)).toBe(true);
+        },
+        SERVICE_TEST_TIMEOUT,
+      );
+    }
+
+    // Windows delivers no signal another process could send to a node
+    // process (process.kill terminates it outright, running no code).
+    it.skipIf(process.platform === "win32")(
+      "a signal nobody handles ends the owner and its service",
+      async () => {
+        const run = startOwner(servicesDir, "wait");
+        trackedPids.push(run.owner.pid!);
+        const pids = await run.pids;
+        trackedPids.push(...pids);
+
+        run.owner.kill("SIGTERM");
+        const { code } = await run.closed;
+        expect(code).toBe(128 + os.constants.signals.SIGTERM);
+        expect(await waitDead(pids)).toBe(true);
+      },
+      SERVICE_TEST_TIMEOUT,
+    );
   });
 
   describe("scanProjects", () => {

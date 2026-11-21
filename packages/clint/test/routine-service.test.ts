@@ -177,6 +177,23 @@ describe("createRoutineServiceAdapter", () => {
     });
   });
 
+  describe("stopAll", () => {
+    it("stops a running routine", async () => {
+      routine = makeRoutine();
+      const adapter = createRoutineServiceAdapter(routine, makeConfig());
+      await adapter.start("watcher");
+      await new Promise((r) => setTimeout(r, TEST_IDLE_INTERVAL));
+      await adapter.stopAll();
+      expect(routine.status).toBe("ready");
+    });
+
+    it("is a no-op when the routine is not running", async () => {
+      routine = makeRoutine();
+      const adapter = createRoutineServiceAdapter(routine, makeConfig());
+      await expect(adapter.stopAll()).resolves.toBeUndefined();
+    });
+  });
+
   describe("logs", () => {
     it("returns empty string when no output", () => {
       routine = makeRoutine();
@@ -353,6 +370,9 @@ describe("createCompositeServiceManager", () => {
         if (id !== serviceId) throw new Error(`Unknown service: ${id}`);
         started.set(id, false);
       },
+      async stopAll() {
+        started.set(serviceId, false);
+      },
       list(sid) {
         if (sid && sid !== serviceId) return [];
         return [
@@ -419,6 +439,28 @@ describe("createCompositeServiceManager", () => {
     await composite.stop("svc-a");
     const statuses = composite.list("svc-a");
     expect(statuses[0]!.status).toBe("idle");
+  });
+
+  it("stopAll stops every manager, even after one fails", async () => {
+    const m1 = makeMockManager("svc-a");
+    const m2 = makeMockManager("svc-b");
+    const failing = {
+      ...m1,
+      async stopAll() {
+        await m1.stopAll();
+        throw new Error("stop failed");
+      },
+    };
+    const routeMap = new Map<string, ServiceManager>([
+      ["svc-a", failing],
+      ["svc-b", m2],
+    ]);
+    const composite = createCompositeServiceManager([failing, m2], routeMap);
+
+    await composite.start("svc-a");
+    await composite.start("svc-b");
+    await expect(composite.stopAll()).rejects.toThrow("stop failed");
+    expect(composite.list().map((s) => s.status)).toEqual(["idle", "idle"]);
   });
 
   it("aggregates list from all managers when no filter", async () => {

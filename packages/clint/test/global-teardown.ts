@@ -2,9 +2,10 @@ import { execSync } from "node:child_process";
 
 /**
  * NOTE(port): service tests spawn long-lived fixture children
- * (test-service.js) through the detached supervision machinery; a worker that
- * dies mid-test (timeout, Ctrl+C, crash) can leave them running — on one
- * Windows session 56 of them had accumulated. Sweep anything running our
+ * (test-service.js). Supervised children end with the worker that started
+ * them, but a worker killed outright (a timeout's hard kill, a crash) runs no
+ * exit code, and tests also spawn unsupervised strangers on purpose — on one
+ * Windows session 56 leftovers had accumulated. Sweep anything running our
  * fixtures when the suite ends.
  */
 export function setup(): void {

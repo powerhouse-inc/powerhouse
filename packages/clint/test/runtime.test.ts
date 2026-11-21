@@ -414,6 +414,46 @@ describe("createCliRuntime()", () => {
       // stop should not be called since routine was never started
       expect(stopFn).not.toHaveBeenCalled();
     });
+
+    it("stops the services before the reactor", async () => {
+      const order: string[] = [];
+      const reactor = createMockReactor({
+        shutdown: async () => {
+          order.push("reactor");
+        },
+      });
+      const context: CommandContext = {
+        workspace: createMemoryWorkdirStore(),
+        config: {},
+        workdir: "/tmp/test",
+        stdout: () => {},
+        runProcess: () => Promise.resolve({ success: true, output: "" }),
+        services: {
+          start: async () => "inst-1",
+          stop: async () => {},
+          stopAll: async () => {
+            order.push("services");
+          },
+          list: () => [],
+          getDefinition: () => undefined,
+          logs: () => "",
+          watchLogs: () => () => {},
+          watchChunks: () => () => {},
+          scanProjects: () => [],
+          purgeStoppedInstances: () => {},
+        },
+      };
+      const runtime = createCliRuntime(
+        createMinimalDeps({
+          context,
+          reactorConfig: { create: async () => reactor },
+        }),
+      );
+
+      await runtime.getReactor();
+      await runtime.teardown();
+      expect(order).toEqual(["services", "reactor"]);
+    });
   });
 
   describe("reportActiveServices()", () => {
@@ -424,7 +464,7 @@ describe("createCliRuntime()", () => {
       expect(lines).toHaveLength(0);
     });
 
-    it("reports active services", () => {
+    it("names the active services teardown is about to stop", () => {
       const lines: string[] = [];
       const context: CommandContext = {
         workspace: createMemoryWorkdirStore(),
@@ -457,9 +497,10 @@ describe("createCliRuntime()", () => {
       const runtime = createCliRuntime(createMinimalDeps({ context }));
       runtime.reportActiveServices((msg) => lines.push(msg));
       expect(lines.length).toBeGreaterThan(0);
-      expect(lines[0]).toContain("My Service still active");
+      expect(lines[0]).toContain("Stopping My Service");
       expect(lines[0]).toContain("/foo/bar");
-      expect(lines[0]).toContain("my-svc-stop");
+      // Services end with the CLI: no hint to stop leftovers by hand.
+      expect(lines[0]).not.toContain("my-svc-stop");
     });
 
     it("reports service without workdir", () => {
@@ -493,7 +534,7 @@ describe("createCliRuntime()", () => {
       };
       const runtime = createCliRuntime(createMinimalDeps({ context }));
       runtime.reportActiveServices((msg) => lines.push(msg));
-      expect(lines[0]).toContain("Background still active");
+      expect(lines[0]).toContain("Stopping Background");
       expect(lines[0]).not.toContain("`/");
     });
 

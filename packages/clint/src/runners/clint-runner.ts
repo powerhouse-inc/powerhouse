@@ -43,11 +43,12 @@ import type { ServiceDefinition, ServiceManager } from "../core/types.js";
 /**
  * clint-runner (P5.4): the clint shell as a compound runner. Each member
  * runs as `ph-cli run <member>` in its own process, scheduled by the ported
- * services manager; `lifecycle: "detached"` (default) leaves members running
- * and re-attaches next run, `"attached"` tears them down. `config.agents`
- * maps names to OpenAI-compatible endpoints (a literal, or a member's
- * `endpoints.openai` token resolved once it is up). `dev` adds a line chat
- * loop against the first agent; the ink REPL stays the library path.
+ * services manager; members are the shell's children and end when it ends
+ * (a member found already running is an error, never adopted).
+ * `config.agents` maps names to OpenAI-compatible endpoints (a literal, or a
+ * member's `endpoints.openai` token resolved once it is up). `dev` adds a
+ * line chat loop against the first agent; the ink REPL stays the library
+ * path.
  */
 
 export const kind = "compound";
@@ -78,17 +79,23 @@ function agentRefSchema<U extends z.ZodType>(url: U) {
  * them after its members are up, then parses them with `ownFieldsSchema`.
  */
 const schemas = defineHostSchemas((base) => {
-  /** clint-runner's own `runner` options, on top of the common base. */
-  const clintRunnerOptionsSchema = base.runnerBaseSchema
-    .extend({
-      /** "detached" (default): children outlive the shell and are
-       * re-attached on the next run. "attached": the shell tears them down
-       * on exit. */
-      lifecycle: z.enum(["attached", "detached"]).optional(),
+  /** clint-runner's own `runner` options, on top of the common base. The
+   * removed `lifecycle` option is rejected by name: members always end with
+   * the shell. */
+  const clintRunnerOptionsSchema = z.strictObject(
+    {
+      ...base.runnerBaseSchema.shape,
       /** One front port routing to upstreams (the clint proxy plugin). */
       proxy: declaredProxyPluginConfigSchema.optional(),
-    })
-    .strict();
+    },
+    {
+      error: removedKeyError(
+        "lifecycle",
+        () =>
+          "members always run attached and stop when the shell stops (detached mode is gone).",
+      ),
+    },
+  );
 
   /** A member's scheduling knobs. Members run as their own `ph-cli run
    * <host>` process, so the wrapper's `config` is read by clint (not passed
@@ -340,7 +347,6 @@ async function startShell(
   const pending = await resolveOwnTokens(host, ctx, projectName);
   const resolved = pending.host;
   const config = resolved.config ?? {};
-  const lifecycle = resolved.runner.lifecycle ?? "detached";
 
   const phCliEntry = resolvePhCliEntry(ctx.projectRoot);
   const children = resolved.children;
@@ -391,15 +397,9 @@ async function startShell(
   for (const edge of plan.edges) {
     addReader(edge.producer, `member "${edge.consumer}"`);
   }
-  /** Wait for a member's live run record when something reads it. With
-   * `managed` (clint's own service state describes it), a failed or stopped
-   * service ends the wait early; a member found serving on its port is not
-   * clint's to watch, so it gets the full timeout. */
-  const waitForRecord = async (
-    id: string,
-    memberHost: string,
-    managed = true,
-  ) => {
+  /** Wait for a member's live run record when something reads it; a failed
+   * or stopped service ends the wait early. */
+  const waitForRecord = async (id: string, memberHost: string) => {
     const read = readers.get(id);
     if (!read) return;
     try {
@@ -408,36 +408,29 @@ async function startShell(
         host: memberHost,
         timeout: children[id].config?.readiness?.timeout ?? READINESS_TIMEOUT,
         readers: read,
-        ...(managed
-          ? {
-              status: () =>
-                services.list(id).find((s) => s.serviceId === id)?.status,
-            }
-          : {}),
+        status: () => services.list(id).find((s) => s.serviceId === id)?.status,
       });
     } catch (error) {
-      if (lifecycle === "attached") await stopAll(services, names);
+      await stopAll(services, names);
       throw error;
     }
   };
 
   const memberHosts: Record<string, string> = {};
   for (const id of ordered) {
-    // Re-attach checks, strongest first. (1) The member's OWN run record —
-    // written with the member process's real pid (mastra-runner, the generic
-    // compound). (2) Port occupancy for record-less bridge members. (3) The
-    // service state file — weakest on Windows, where it records the cmd shim
-    // pid, which dies on console teardown while the node grandchild survives.
+    // Members are this shell's own children. One already running (its live
+    // run record, or its port taken) was not started by this run: fail
+    // rather than adopt it, stopping the members started so far.
     const wrapper = children[id];
     const member =
       loaded.get(id) ?? (await loadHost(ctx.projectRoot, wrapper.host));
     memberHosts[id] = member.host.name;
     const record = probeRun(ctx.projectRoot, member.host.name, projectName);
     if (record.status === "live") {
-      console.log(
-        `[${resolved.name}] ${id}: already running (pid ${record.record.pid}) — re-attached`,
+      await stopAll(services, names);
+      throw new Error(
+        `hosts/${host.name}/host.js: member "${id}" (host ${member.host.name}) is already running (pid ${record.record.pid}, .ph/run/${member.host.name}.json). clint-runner starts its own members and does not adopt a running one; stop it first.`,
       );
-      continue;
     }
     const memberPort =
       typeof wrapper.runner?.port === "number"
@@ -446,27 +439,21 @@ async function startShell(
           ? member.host.runner.port
           : undefined;
     if (memberPort !== undefined && !(await isPortFree(memberPort))) {
-      console.log(
-        `[${resolved.name}] ${id}: port ${memberPort} already serving — re-attached`,
+      await stopAll(services, names);
+      throw new Error(
+        `hosts/${host.name}/host.js: member "${id}" (host ${member.host.name}) cannot start: port ${memberPort} is already in use. clint-runner starts its own members and does not adopt a running one; free the port first.`,
       );
-      // It may still be booting (an earlier detached run, or started by
-      // hand): its readers need its record, as after a fresh start.
-      await waitForRecord(id, member.host.name, false);
-      continue;
-    }
-    const already = services
-      .list(id)
-      .some((s) => s.status === "ready" || s.status === "starting");
-    if (already) {
-      console.log(`[${resolved.name}] ${id}: already running — re-attached`);
-      await waitForRecord(id, member.host.name);
-      continue;
     }
     console.log(`[${resolved.name}] starting ${id}…`);
-    await services.start(id, {
-      workdir: ctx.projectRoot,
-      cwd: ctx.projectRoot,
-    });
+    try {
+      await services.start(id, {
+        workdir: ctx.projectRoot,
+        cwd: ctx.projectRoot,
+      });
+    } catch (error) {
+      await stopAll(services, names);
+      throw error;
+    }
     const status = services.list(id).find((s) => s.serviceId === id);
     if (status) console.log(`  ${formatStatus(status)}`);
     // Before anything reads its outputs (the next member, or the shell's
@@ -494,7 +481,7 @@ async function startShell(
     }
     own = parsedOwn.data;
   } catch (error) {
-    if (lifecycle === "attached") await stopAll(services, names);
+    await stopAll(services, names);
     throw error;
   }
 
@@ -543,14 +530,7 @@ async function startShell(
         compoundCtx,
       );
     }
-    if (lifecycle === "attached") {
-      await stopAll(services, names);
-    } else {
-      console.log(
-        `[${resolved.name}] detached lifecycle: children keep running ` +
-          `(stop them with the ${resolved.name} service commands or taskkill).`,
-      );
-    }
+    await stopAll(services, names);
   };
 
   // Validated before the stack is handed out: an invalid output (e.g. a proxy
@@ -568,13 +548,11 @@ async function startShell(
   }
   const outputs = parsedOutputs.data;
 
-  if (lifecycle === "attached") {
-    const onSignal = () => {
-      void shutdown().finally(() => process.exit(130));
-    };
-    process.once("SIGINT", onSignal);
-    process.once("SIGTERM", onSignal);
-  }
+  const onSignal = () => {
+    void shutdown().finally(() => process.exit(130));
+  };
+  process.once("SIGINT", onSignal);
+  process.once("SIGTERM", onSignal);
 
   // Members were started (and awaited to readiness) above.
   return { outputs, ready: Promise.resolve(), services, shutdown };
@@ -625,11 +603,7 @@ export async function run(
   const handle = await startShell(host, ctx);
   console.log(
     `[${host.name}] services up. ` +
-      `(ph run ${host.name} dev for the chat shell; Ctrl+C ${
-        host.runner.lifecycle === "attached"
-          ? "stops the children"
-          : "leaves children running"
-      }.)`,
+      `(ph run ${host.name} dev for the chat shell; Ctrl+C stops the children.)`,
   );
   return handle;
 }

@@ -1,5 +1,9 @@
 import { spawn } from "node:child_process";
-import { killTree, supervisedSpawnOptions } from "./process-platform.js";
+import {
+  killTree,
+  superviseChild,
+  supervisedSpawnOptions,
+} from "./process-platform.js";
 import type {
   ProcessHandle,
   ProcessManager,
@@ -28,19 +32,16 @@ export function createProcessManager(): ProcessManager {
       const child = spawn(command, {
         shell: true,
         stdio: ["ignore", "pipe", "pipe"],
-        // POSIX: process group for clean tree kill; Windows: attached+hidden,
-        // trees felled via taskkill (see process-platform.ts).
+        // Attached and hidden; it ends with this process at the latest
+        // (see process-platform.ts).
         ...supervisedSpawnOptions(),
         cwd: opts?.cwd,
         env: opts?.env ? { ...process.env, ...opts.env } : undefined,
       });
+      superviseChild(child);
 
       function killProcess() {
-        try {
-          if (child.pid) killTree(child.pid, "SIGTERM");
-        } catch {
-          // Process may already be dead
-        }
+        if (child.pid) killTree(child.pid, "SIGTERM");
       }
 
       const handle: ProcessHandle = {
@@ -70,7 +71,8 @@ export function createProcessManager(): ProcessManager {
       child.stdout?.on("data", handleData);
       child.stderr?.on("data", handleData);
 
-      // Prevent the child from keeping the parent alive if we've already resolved
+      // The child does not keep this process alive; should this process exit
+      // first, the supervision exit hook ends the child.
       child.unref();
 
       function finish(success: boolean, output: string) {

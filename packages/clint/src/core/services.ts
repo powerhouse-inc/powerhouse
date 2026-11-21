@@ -1,5 +1,9 @@
 import { spawn } from "node:child_process";
-import { killTree, supervisedSpawnOptions } from "./process-platform.js";
+import {
+  killTree,
+  superviseChild,
+  supervisedSpawnOptions,
+} from "./process-platform.js";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -38,13 +42,21 @@ export function defineService<TConfig = Record<string, unknown>>(
 }
 
 /**
- * Persisted state for a service instance on disk.
+ * Persisted state for a service instance on disk. The files outlive the run
+ * for the logs lookup, the stopped-instance history (`ps`, the panel's
+ * relaunch, `purgeStoppedInstances`) and for spotting leftovers; they are
+ * never used to adopt an instance another process started.
  */
 interface ServiceStateFile {
   serviceId: string;
   instanceId: string;
   name: string;
   pid: number;
+  /** The manager that spawned the instance: its process and a token unique
+   * to that manager. Only the owner reports the instance as running, stops
+   * or restarts it. Absent in state written before ownership was recorded
+   * (the detached era), which therefore belongs to no live manager. */
+  owner?: { pid: number; token: string };
   status: "starting" | "ready" | "failed" | "stopped";
   endpoints?: Record<string, string>;
   endpointTypes?: Record<string, EndpointType>;
@@ -265,6 +277,33 @@ function isPidAlive(pid: number): boolean {
   }
 }
 
+/** Whether the manager that spawned a recorded instance is still running. */
+function isOwnerAlive(state: ServiceStateFile): boolean {
+  return state.owner !== undefined && isPidAlive(state.owner.pid);
+}
+
+/** Whether a recorded instance's process is still running. */
+function isInstanceAlive(state: ServiceStateFile): boolean {
+  return state.pid > 0 && isPidAlive(state.pid);
+}
+
+/**
+ * Why a live instance this manager did not spawn is not its to manage: it
+ * belongs to another running process, or it is a leftover whose owner is
+ * gone. Either way it is never adopted, stopped or restarted from here (a
+ * recorded pid can also have been reused by an unrelated process).
+ */
+function notOursMessage(state: ServiceStateFile): string {
+  const where = `${state.serviceId} (${state.instanceId}, pid ${state.pid})`;
+  if (state.owner && isOwnerAlive(state)) {
+    return `${where} belongs to process ${state.owner.pid}, which is still running; this process does not manage it. Stop it there.`;
+  }
+  const by = state.owner
+    ? `process ${state.owner.pid}, which has exited`
+    : "an earlier run";
+  return `${where} is a leftover from ${by}; this process does not manage it. End pid ${state.pid} by hand if it is the old service.`;
+}
+
 // isPortFree is imported from ./preflight.js
 
 /**
@@ -381,7 +420,12 @@ function mostRecentLogInstance(
 }
 
 /**
- * Create a ServiceManager for managing long-running detached services.
+ * Create a ServiceManager for long-running services. Every instance is a
+ * child of this process: spawned attached, stopped by `stopAll()` (the CLI
+ * runtime's teardown) and, failing that, felled when the process ends (see
+ * process-platform.ts). The manager reports, stops and restarts only the
+ * instances it spawned itself; state left by another process is never
+ * adopted (see `foreignStatus`).
  */
 export function createServiceManager(
   definitions: ServiceDefinition<any>[],
@@ -391,6 +435,58 @@ export function createServiceManager(
   const defMap = new Map<string, ServiceDefinition<any>>();
   for (const def of definitions) {
     defMap.set(def.id, def);
+  }
+
+  /** This manager's identity in the state files it writes. */
+  const owner = { pid: process.pid, token: crypto.randomUUID() };
+  const isMine = (state: ServiceStateFile) =>
+    state.owner?.token === owner.token;
+  /** Set while `stopAll()` runs: no start or restart may begin. */
+  let closing = false;
+  /** State paths of instances being stopped: never restarted meanwhile. */
+  const stopping = new Set<string>();
+  /** Pending restart-policy timers, cancelled by `stopAll()`. */
+  const restartTimers = new Set<NodeJS.Timeout>();
+
+  /**
+   * The status of a recorded instance this manager did not spawn. One whose
+   * process is gone reads as stopped (and, when its owner is gone too, the
+   * stale state is settled as stopped on disk); one still alive reads as
+   * failed with the reason, so it never counts as running here.
+   */
+  function foreignStatus(
+    def: ServiceDefinition<any>,
+    state: ServiceStateFile,
+  ): ServiceInstanceStatus {
+    if (!isInstanceAlive(state)) {
+      if (!isOwnerAlive(state)) {
+        state.status = "stopped";
+        state.pid = 0;
+        state.stoppedAt ??= new Date().toISOString();
+        writeStateFile(
+          stateFilePath(servicesDir, def.id, state.instanceId),
+          state,
+        );
+      }
+      return {
+        serviceId: def.id,
+        instanceId: state.instanceId,
+        name: state.name,
+        status: "stopped",
+        workdir: state.workdir,
+        params: state.params,
+      };
+    }
+    return {
+      serviceId: def.id,
+      instanceId: state.instanceId,
+      name: resolveServiceName(def),
+      status: "failed",
+      pid: state.pid,
+      error: notOursMessage(state),
+      workdir: state.workdir,
+      params: state.params,
+    };
   }
 
   function ensureServiceDir(serviceId: string): void {
@@ -424,11 +520,12 @@ export function createServiceManager(
     if (existingState && existingState.status === "stopped") {
       // Clean up stopped state — we're restarting this instance
       removeStateFile(stateFilePath(servicesDir, id, instanceId));
-    } else if (
-      existingState &&
-      existingState.pid &&
-      isPidAlive(existingState.pid)
-    ) {
+    } else if (existingState && isInstanceAlive(existingState)) {
+      // Another process's instance (or a leftover) is never adopted, and
+      // a second copy would fight it for its port: refuse.
+      if (!isMine(existingState)) {
+        throw new Error(`Service ${id}: ${notOursMessage(existingState)}`);
+      }
       if (
         existingState.status === "ready" ||
         existingState.status === "starting"
@@ -439,13 +536,13 @@ export function createServiceManager(
       }
     }
 
-    // Check maxInstances limit (exclude stopped instances)
+    // Check maxInstances limit among this manager's running instances
     const running = scanInstances(servicesDir, id).filter(
       (s) =>
         s.instanceId !== instanceId &&
         s.status !== "stopped" &&
-        s.pid &&
-        isPidAlive(s.pid),
+        isMine(s) &&
+        isInstanceAlive(s),
     );
     if (running.length >= maxInstances) {
       throw new Error(
@@ -478,6 +575,12 @@ export function createServiceManager(
       }
     }
 
+    // stopAll() is running: nothing new may start (it would outlive the
+    // teardown). Checked right before the spawn, after the awaits above.
+    if (closing) {
+      throw new Error(`Service ${id}: the service manager is stopping`);
+    }
+
     // Fresh log file per start, so a late write from a dying child can't
     // corrupt the new run's log. Prune older runs to bound accumulation.
     const logFile = newRunLogFile(servicesDir, id, instanceId);
@@ -489,19 +592,26 @@ export function createServiceManager(
 
     const child = spawn(commandStr, {
       shell: true,
-      // POSIX: detached process group; Windows: attached+hidden, trees felled
-      // via taskkill (see process-platform.ts).
+      // Attached and hidden: the child belongs to this process and ends
+      // with it at the latest (see process-platform.ts).
       ...supervisedSpawnOptions(),
       stdio: ["ignore", logFd, logFd],
       env,
       cwd: spawnCwd,
     });
+    superviseChild(child);
 
+    // The child does not keep this process alive; stopAll() or the
+    // supervision exit hook ends it.
     child.unref();
     fs.closeSync(logFd);
 
     const pid = child.pid!;
-    const restartAttempt = existingState?.restartAttempt ?? 0;
+    // A restart attempt counts only within this manager's own lifetime.
+    const restartAttempt =
+      existingState && isMine(existingState)
+        ? (existingState.restartAttempt ?? 0)
+        : 0;
 
     // Write initial state
     const state: ServiceStateFile = {
@@ -509,6 +619,7 @@ export function createServiceManager(
       instanceId,
       name: resolveServiceName(def),
       pid,
+      owner,
       status: "starting",
       startedAt: new Date().toISOString(),
       command: commandStr,
@@ -702,27 +813,11 @@ export function createServiceManager(
   }
 
   /**
-   * Send a signal to a process, trying the process group first, then direct PID.
-   */
-  /* istanbul ignore next -- kill fallbacks depend on OS process group behavior */
-  function killProcess(pid: number, signal: string): void {
-    try {
-      killTree(pid, signal as NodeJS.Signals);
-    } catch {
-      try {
-        process.kill(pid, signal);
-      } catch {
-        // Already dead
-      }
-    }
-  }
-
-  /**
-   * Force-kill a process with SIGKILL, then wait for it to exit.
+   * Force-kill a process tree with SIGKILL, then wait for it to exit.
    */
   /* istanbul ignore next -- force-kill path requires processes that resist SIGTERM */
   async function forceKill(pid: number): Promise<void> {
-    killProcess(pid, "SIGKILL");
+    killTree(pid, "SIGKILL");
     await waitForExit(pid, 2_000);
   }
 
@@ -739,6 +834,13 @@ export function createServiceManager(
       throw new Error(`Service ${serviceId} is not running`);
     }
 
+    if (!isMine(state)) {
+      // Never kill a process this manager did not spawn: settle stale state
+      // (as list() does) or refuse.
+      if (foreignStatus(def, state).status === "stopped") return;
+      throw new Error(`Service ${serviceId}: ${notOursMessage(state)}`);
+    }
+
     if (!isPidAlive(state.pid)) {
       // Process already dead — persist as stopped
       state.status = "stopped";
@@ -751,33 +853,40 @@ export function createServiceManager(
     const signal = def.shutdown?.signal ?? "SIGTERM";
     const timeout = def.shutdown?.timeout ?? 5_000;
 
-    killProcess(state.pid, signal);
+    // Until the stopped state is on disk, list() reports the instance as
+    // stopping and its restart policy cannot bring it back.
+    stopping.add(statePath);
+    try {
+      killTree(state.pid, signal);
 
-    const exited = await waitForExit(state.pid, timeout);
+      const exited = await waitForExit(state.pid, timeout);
 
-    if (!exited) {
-      await forceKill(state.pid);
-    }
+      if (!exited) {
+        await forceKill(state.pid);
+      }
 
-    // Verify port release if endpoints had ports
-    if (state.endpoints?.port) {
-      const port = parseInt(state.endpoints.port, 10);
-      if (!isNaN(port)) {
-        // Wait briefly for port to be released
-        let portFree = false;
-        for (let i = 0; i < 10; i++) {
-          portFree = await isPortFree(port);
-          if (portFree) break;
-          await new Promise((r) => setTimeout(r, 100));
+      // Verify port release if endpoints had ports
+      if (state.endpoints?.port) {
+        const port = parseInt(state.endpoints.port, 10);
+        if (!isNaN(port)) {
+          // Wait briefly for port to be released
+          let portFree = false;
+          for (let i = 0; i < 10; i++) {
+            portFree = await isPortFree(port);
+            if (portFree) break;
+            await new Promise((r) => setTimeout(r, 100));
+          }
         }
       }
-    }
 
-    // Persist stopped state instead of removing
-    state.status = "stopped";
-    state.pid = 0;
-    state.stoppedAt = new Date().toISOString();
-    writeStateFile(statePath, state);
+      // Persist stopped state instead of removing
+      state.status = "stopped";
+      state.pid = 0;
+      state.stoppedAt = new Date().toISOString();
+      writeStateFile(statePath, state);
+    } finally {
+      stopping.delete(statePath);
+    }
     eventBus?.emit("service:stopped", {
       id: serviceId,
       instanceId,
@@ -793,18 +902,52 @@ export function createServiceManager(
       return stopInstance(def, id, instanceId);
     }
 
-    // Stop all instances of this service
+    // Stop all of this manager's instances of this service
     const instances = scanInstances(servicesDir, id);
     if (instances.length === 0) {
       throw new Error(`Service ${id} is not running`);
     }
 
-    for (const inst of instances) {
+    const mine = instances.filter((s) => s.status !== "stopped" && isMine(s));
+    if (mine.length === 0) {
+      // Nothing of ours: a live instance of another process is refused by
+      // name; stopped history (or stale state) leaves nothing to do.
+      const theirs = instances.find(
+        (s) => s.status !== "stopped" && isInstanceAlive(s),
+      );
+      if (theirs) throw new Error(`Service ${id}: ${notOursMessage(theirs)}`);
+      return;
+    }
+
+    for (const inst of mine) {
       try {
         await stopInstance(def, id, inst.instanceId);
       } catch {
         // Instance may already be dead
       }
+    }
+  }
+
+  /** Stop every instance this manager started, gracefully (each service's
+   * shutdown signal and timeout), and cancel pending restarts. Nothing
+   * starts while it runs. */
+  async function stopAll(): Promise<void> {
+    closing = true;
+    for (const timer of restartTimers) clearTimeout(timer);
+    restartTimers.clear();
+    try {
+      for (const def of definitions) {
+        for (const state of scanInstances(servicesDir, def.id)) {
+          if (state.status === "stopped" || !isMine(state)) continue;
+          try {
+            await stopInstance(def, def.id, state.instanceId);
+          } catch {
+            // already gone
+          }
+        }
+      }
+    } finally {
+      closing = false;
     }
   }
 
@@ -842,16 +985,31 @@ export function createServiceManager(
           continue;
         }
 
+        // Another process's instance, or a leftover: never adopted.
+        if (!isMine(state)) {
+          results.push(foreignStatus(def, state));
+          continue;
+        }
+
+        const statePath = stateFilePath(servicesDir, def.id, state.instanceId);
+        if (stopping.has(statePath)) {
+          results.push({
+            serviceId: def.id,
+            instanceId: state.instanceId,
+            name: resolveServiceName(def),
+            status: "stopping",
+            pid: state.pid,
+            params: state.params,
+            workdir: state.workdir,
+          });
+          continue;
+        }
+
         // Verify PID is alive (pid <= 0 means not yet spawned — treat as dead)
         if (!state.pid || !isPidAlive(state.pid)) {
-          const statePath = stateFilePath(
-            servicesDir,
-            def.id,
-            state.instanceId,
-          );
-
-          // Process died — check restart policy
+          // Process died — check restart policy (never while stopAll runs)
           if (
+            !closing &&
             def.restart?.enabled &&
             (state.restartAttempt ?? 0) < def.restart.maxRetries &&
             state.status === "ready"
@@ -877,7 +1035,8 @@ export function createServiceManager(
             const restartName = state.instanceId.includes(":")
               ? state.instanceId.split(":")[1]
               : undefined;
-            setTimeout(async () => {
+            const timer = setTimeout(async () => {
+              restartTimers.delete(timer);
               try {
                 removeStateFile(statePath);
                 // Write a temp state so start() knows the attempt count
@@ -891,6 +1050,7 @@ export function createServiceManager(
                   instanceId: state.instanceId,
                   name: resolveServiceName(def),
                   pid: 0,
+                  owner,
                   status: "failed",
                   startedAt: new Date().toISOString(),
                   command: commandStr,
@@ -908,6 +1068,7 @@ export function createServiceManager(
                 // Restart failed — dir may have been removed (test teardown)
               }
             }, def.restart.delay);
+            restartTimers.add(timer);
 
             results.push({
               serviceId: def.id,
@@ -1138,6 +1299,7 @@ export function createServiceManager(
   return {
     start,
     stop,
+    stopAll,
     list,
     getDefinition,
     logs,

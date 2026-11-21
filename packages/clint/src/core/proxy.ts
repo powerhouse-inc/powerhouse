@@ -435,7 +435,7 @@ export async function createProxyServer(
       // route and a prefix route on the same prefix (e.g. a `'/'` redirect vs
       // Connect's `'/'` catch-all) coexist — matchRoute dispatches exact first.
       // Re-adding from the same source replaces the existing route, so
-      // repeated registration (boot-adoption + service:ready) is idempotent.
+      // repeated registration (e.g. a second service:ready) is idempotent.
       const sameMatch = (r: ProxyRoute) =>
         r.prefix === route.prefix && !!r.exact === !!route.exact;
       const ownIdx = routes.findIndex(
