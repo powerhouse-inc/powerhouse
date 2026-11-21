@@ -178,11 +178,10 @@ export async function memberSwitchboardConfig(
     delete storage.reactor;
   }
   if (block.storage?.readModel) delete storage.readModel;
-  return mergeSwitchboardConfig(
-    block,
-    member.config?.switchboard ?? {},
-    { ...fromEnv, storage },
-  );
+  return mergeSwitchboardConfig(block, member.config?.switchboard ?? {}, {
+    ...fromEnv,
+    storage,
+  });
 }
 
 /** A Postgres store no url names: the server would use a folder instead. */
