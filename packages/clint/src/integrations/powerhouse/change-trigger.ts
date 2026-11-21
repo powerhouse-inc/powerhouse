@@ -148,6 +148,13 @@ export function createDocumentChangeTrigger<
         );
       });
 
+      // Writes became possible (the agent's signer got its user): look at
+      // every matching document again, since one skipped earlier for want of
+      // a signature may be waiting.
+      on("powerhouse:writes:ready", () => {
+        ctx.state.pending += 1;
+      });
+
       if (initialReconcile) ctx.state.pending = 1;
     },
 

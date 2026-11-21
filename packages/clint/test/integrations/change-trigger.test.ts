@@ -128,6 +128,24 @@ describe("createDocumentChangeTrigger", () => {
     expect(ctx.state.pending).toBe(0);
   });
 
+  it("looks at every document again once the agent can write", async () => {
+    const onChange = vi.fn(async () => null);
+    const trigger = createDocumentChangeTrigger({
+      id: "watch",
+      documentType: "test/doc",
+      initialReconcile: false,
+      onChange: onChange as any,
+    });
+
+    const { ctx, emit } = makeContext<{ pending: number }>();
+    initState(trigger, ctx);
+
+    await trigger.setup!(ctx);
+    expect(ctx.state.pending).toBe(0);
+    emit("powerhouse:writes:ready", {});
+    expect(ctx.state.pending).toBe(1);
+  });
+
   it("ignores events whose documentType does not match", async () => {
     const onChange = vi.fn();
     const trigger = createDocumentChangeTrigger({

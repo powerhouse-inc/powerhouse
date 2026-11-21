@@ -28,6 +28,7 @@ export type {
   TypedReactorClient,
   TypedDocumentChangeEvent,
   ReactorClientModule,
+  ReactorWrites,
   IAttachmentService,
   AttachmentRef,
   AttachmentResponse,
@@ -46,6 +47,19 @@ export { bridgeSubscriptions } from "./subscriptions.js";
 export { ensureDrive, ensureRemoteDrive } from "./drive.js";
 export { buildReactor } from "./reactor.js";
 export { attachRemoteReactor } from "./remote-reactor.js";
+export type {
+  AttachRemoteReactorOptions,
+  RemoteReactorAttachment,
+} from "./remote-reactor.js";
+export {
+  SignerNotReadyError,
+  createGatedSigner,
+  signerReady,
+  policyOfHeader,
+} from "./signing.js";
+export type { SignaturePolicy } from "./signing.js";
+export { createReactorWrites } from "./writes.js";
+export type { ReactorWritesOptions, ReactorWritesHandle } from "./writes.js";
 export { startSwitchboard } from "./switchboard.js";
 export type { StartSwitchboardOptions } from "./switchboard.js";
 export { createDocumentChangeTrigger } from "./change-trigger.js";
@@ -131,8 +145,10 @@ export async function buildDefaultReactor<
       );
       drives.push({ ...drive, role: cfg.role, remoteUrl: cfg.remoteUrl });
     } else {
-      const drive = await ensureDrive(reactorModule, cfg);
-      drives.push({ ...drive, role: cfg.role });
+      const drive = await ensureDrive(reactorModule.client, cfg);
+      // A drive the host creates later is not listed yet.
+      if (drive.deferred) continue;
+      drives.push({ id: drive.id, name: drive.name, role: cfg.role });
     }
   }
 
@@ -151,6 +167,11 @@ export async function buildDefaultReactor<
     );
   }
 
+  // The embedded reactor signs with its own LocalSigner, which always has a
+  // user: writes are always ready, so no signer is watched here.
+  const { createReactorWrites } = await import("./writes.js");
+  const { writes } = createReactorWrites();
+
   const result: ReactorContext<R> = {
     client: reactorModule.client as TypedReactorClient<R>,
     driveId,
@@ -158,6 +179,7 @@ export async function buildDefaultReactor<
     drives,
     attachments: ctx.attachments,
     _module: reactorModule,
+    writes,
     async shutdown() {
       unsubscribe?.();
       try {

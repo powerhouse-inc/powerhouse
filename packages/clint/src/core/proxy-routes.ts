@@ -33,6 +33,12 @@ export interface ProxyRoute {
    * with a `'/'` catch-all without shadowing longer prefixes.
    */
   exact?: boolean;
+  /**
+   * The upstream behind this prefix is still starting: matching requests get
+   * 503 + Retry-After instead of being proxied. A 404 would tell clients the
+   * endpoint does not exist, which some treat as permanent.
+   */
+  unavailable?: boolean;
 }
 
 /**

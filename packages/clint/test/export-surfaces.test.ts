@@ -11,6 +11,16 @@ const pkg = JSON.parse(
 };
 
 const SURFACES: Record<string, { source: string; names: string[] }> = {
+  ".": {
+    source: "./src/index.ts",
+    names: [
+      "defineCli",
+      "buildDefaultReactor",
+      "SignerNotReadyError",
+      "signerReady",
+      "policyOfHeader",
+    ],
+  },
   "./mastra": {
     source: "./src/integrations/mastra/index.ts",
     names: [
@@ -18,11 +28,21 @@ const SURFACES: Record<string, { source: string; names: string[] }> = {
       "getMastraPaths",
       "commandsToMastraTools",
       "mapMastraStream",
+      "CLINT_THREAD_ID_KEY",
     ],
   },
   "./powerhouse": {
     source: "./src/integrations/powerhouse/index.ts",
-    names: ["ensureDrive", "createAttachmentCommands", "attachRemoteReactor"],
+    names: [
+      "ensureDrive",
+      "createAttachmentCommands",
+      "attachRemoteReactor",
+      "SignerNotReadyError",
+      "createGatedSigner",
+      "signerReady",
+      "policyOfHeader",
+      "createReactorWrites",
+    ],
   },
   "./testing": {
     source: "./src/testing/index.ts",

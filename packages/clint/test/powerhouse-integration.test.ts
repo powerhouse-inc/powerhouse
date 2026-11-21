@@ -20,6 +20,7 @@ import {
 import { defineRegistry } from "../src/integrations/powerhouse/registry.js";
 import { defineCli, defineCommand, isPortFree } from "../src/index.js";
 import { createMemoryWorkdirStore } from "../src/core/store.js";
+import type { IReactorClient } from "@powerhousedao/reactor";
 import type {
   ReactorContext,
   ReactorClientModule,
@@ -342,134 +343,195 @@ describe("bridgeSubscriptions", () => {
 });
 
 describe("ensureDrive", () => {
-  /** Helper to build a mock ReactorClientModule with only the methods ensureDrive uses. */
-  function mockModule(overrides: {
-    findByType?: ReactorClientModule["reactor"]["findByType"];
-    get?: (
-      id: string,
-    ) => Promise<{ name?: string; state?: { global?: { name?: string } } }>;
-    createEmpty?: (...args: unknown[]) => Promise<{ header: { id: string } }>;
-    rename?: (id: string, name: string) => Promise<void>;
-  }): ReactorClientModule {
-    const createEmpty =
-      overrides.createEmpty ?? (async () => ({ header: { id: "fallback" } }));
-    const rename = overrides.rename ?? (async () => {});
+  type FoundDrive = {
+    header: { id: string; name?: string };
+    name?: string;
+    state?: { global?: { name?: string } };
+  };
+  type FoundPage = { results: FoundDrive[]; next?: () => Promise<FoundPage> };
+  type BuiltDrive = {
+    header: { id: string; name?: string; meta?: Record<string, unknown> };
+    state?: { global?: { name?: string } };
+  };
+  type NewDriveOptions = {
+    id?: string;
+    signaturePolicy?: string;
+    initialState?: { global?: { name?: string } };
+  };
+
+  /**
+   * A stand-in client with only the methods ensureDrive uses. Its write half
+   * has `create` alone, and `writes` records every write submitted.
+   */
+  function mockClient(overrides: {
+    find?: (search: { type?: string }) => Promise<FoundPage>;
+    newDocument?: (
+      type: string,
+      options?: NewDriveOptions,
+    ) => Promise<BuiltDrive>;
+    create?: (doc: BuiltDrive) => Promise<{ header: { id: string } }>;
+  }): IReactorClient & { writes: string[] } {
+    const create =
+      overrides.create ?? (async () => ({ header: { id: "fallback" } }));
+    const writes: string[] = [];
     return {
-      client: {
-        get: overrides.get ?? (async () => ({})),
-        write: {
-          createEmpty: async (...args: unknown[]) => ({
-            document: () => createEmpty(...args),
-          }),
-          rename: async (id: string, name: string) => ({
-            document: () => rename(id, name),
-          }),
+      writes,
+      find: overrides.find ?? (async () => ({ results: [] })),
+      newDocument:
+        overrides.newDocument ??
+        (async (_type: string, options?: NewDriveOptions) => ({
+          header: { id: options?.id ?? "", name: "" },
+          state: { global: { name: "", ...options?.initialState?.global } },
+        })),
+      write: {
+        create: async (doc: BuiltDrive) => {
+          writes.push("create");
+          return { document: () => create(doc) };
         },
       },
-      reactor: {
-        findByType: overrides.findByType ?? (async () => ({ results: [] })),
-        kill: () => ({ completed: Promise.resolve() }),
-      },
-    } as unknown as ReactorClientModule;
+    } as unknown as IReactorClient & { writes: string[] };
   }
 
   it("returns existing drive when name matches", async () => {
-    const mod = mockModule({
-      findByType: async () => ({
-        results: [{ header: { id: "existing-drive-id" } }],
+    const client = mockClient({
+      find: async () => ({
+        results: [{ header: { id: "existing-drive-id" }, name: "My Drive" }],
       }),
-      get: async () => ({ name: "My Drive" }),
     });
 
-    const result = await ensureDrive(mod, { name: "My Drive" });
+    const result = await ensureDrive(client, { name: "My Drive" });
     expect(result).toEqual({ id: "existing-drive-id", name: "My Drive" });
+    expect(client.writes).toEqual([]);
+  });
+
+  it("matches a drive by its header name", async () => {
+    const client = mockClient({
+      find: async () => ({
+        results: [{ header: { id: "drive-h", name: "Header Named" } }],
+      }),
+    });
+
+    const result = await ensureDrive(client, { name: "Header Named" });
+    expect(result).toEqual({ id: "drive-h", name: "Header Named" });
+    expect(client.writes).toEqual([]);
+  });
+
+  it("looks drives up by type through client.find", async () => {
+    const searches: Array<{ type?: string }> = [];
+    const client = mockClient({
+      find: async (search) => {
+        searches.push(search);
+        return { results: [] };
+      },
+      create: async () => ({ header: { id: "new-id" } }),
+    });
+
+    await ensureDrive(client, { name: "My Drive" });
+    expect(searches).toEqual([{ type: "powerhouse/document-drive" }]);
+  });
+
+  it("reads every result page", async () => {
+    const client = mockClient({
+      find: async () => ({
+        results: [{ header: { id: "drive-1" }, name: "One" }],
+        next: async () => ({
+          results: [{ header: { id: "drive-2" }, name: "Two" }],
+        }),
+      }),
+    });
+
+    const result = await ensureDrive(client, { name: "Two" });
+    expect(result).toEqual({ id: "drive-2", name: "Two" });
   });
 
   it("falls back to first drive when default name and single drive exists", async () => {
-    const mod = mockModule({
-      findByType: async () => ({
-        results: [{ header: { id: "existing-drive-id" } }],
+    const client = mockClient({
+      find: async () => ({
+        results: [
+          { header: { id: "existing-drive-id" }, name: "something-else" },
+        ],
       }),
-      get: async () => ({ name: "something-else" }),
     });
 
-    const result = await ensureDrive(mod);
+    const result = await ensureDrive(client);
     expect(result).toEqual({ id: "existing-drive-id", name: "default" });
   });
 
   it("creates a new drive when none exist", async () => {
-    const mod = mockModule({
-      createEmpty: async () => ({ header: { id: "new-drive-id" } }),
+    const client = mockClient({
+      create: async () => ({ header: { id: "new-drive-id" } }),
     });
 
-    const result = await ensureDrive(mod, { name: "Test Drive" });
+    const result = await ensureDrive(client, { name: "Test Drive" });
     expect(result).toEqual({ id: "new-drive-id", name: "Test Drive" });
   });
 
-  it("renames drive with config name", async () => {
-    let renamedWith: { id: string; name: string } | undefined;
-    const mod = mockModule({
-      createEmpty: async () => ({ header: { id: "new-id" } }),
-      rename: async (id: string, name: string) => {
-        renamedWith = { id, name };
+  it("names the new drive on its header and in its global state, in one write", async () => {
+    let created: BuiltDrive | undefined;
+    const client = mockClient({
+      create: async (doc) => {
+        created = doc;
+        return { header: { id: "new-id" } };
       },
     });
 
-    await ensureDrive(mod, { name: "My Agent" });
-    expect(renamedWith?.id).toBe("new-id");
-    expect(renamedWith?.name).toBe("My Agent");
+    await ensureDrive(client, { name: "My Agent" });
+    expect(created?.header.name).toBe("My Agent");
+    expect(created?.state?.global?.name).toBe("My Agent");
+    expect(client.writes).toEqual(["create"]);
   });
 
   it("uses default name when no config provided", async () => {
-    let renamedWith: { id: string; name: string } | undefined;
-    const mod = mockModule({
-      createEmpty: async () => ({ header: { id: "new-id" } }),
-      rename: async (id: string, name: string) => {
-        renamedWith = { id, name };
+    let created: BuiltDrive | undefined;
+    const client = mockClient({
+      create: async (doc) => {
+        created = doc;
+        return { header: { id: "new-id" } };
       },
     });
 
-    await ensureDrive(mod);
-    expect(renamedWith?.name).toBe("default");
+    await ensureDrive(client);
+    expect(created?.header.name).toBe("default");
+    expect(created?.state?.global?.name).toBe("default");
   });
 
-  it("handles empty results from findByType", async () => {
-    const mod = mockModule({
-      createEmpty: async () => ({ header: { id: "new-drive-id" } }),
+  it("handles empty results from find", async () => {
+    const client = mockClient({
+      create: async () => ({ header: { id: "new-drive-id" } }),
     });
 
-    const result = await ensureDrive(mod);
+    const result = await ensureDrive(client);
     expect(result).toEqual({ id: "new-drive-id", name: "default" });
   });
 
   it("creates new drive when name does not match any existing (non-default)", async () => {
-    const mod = mockModule({
-      findByType: async () => ({
-        results: [{ header: { id: "drive-a" } }],
+    const client = mockClient({
+      find: async () => ({
+        results: [{ header: { id: "drive-a" }, name: "Other Drive" }],
       }),
-      get: async () => ({ name: "Other Drive" }),
-      createEmpty: async () => ({ header: { id: "new-id" } }),
+      create: async () => ({ header: { id: "new-id" } }),
     });
 
-    const result = await ensureDrive(mod, { name: "My Drive" });
+    const result = await ensureDrive(client, { name: "My Drive" });
     expect(result).toEqual({ id: "new-id", name: "My Drive" });
   });
 
   it("matches drive by state.global.name", async () => {
-    const mod = mockModule({
-      findByType: async () => ({
-        results: [{ header: { id: "drive-x" } }],
+    const client = mockClient({
+      find: async () => ({
+        results: [
+          { header: { id: "drive-x" }, state: { global: { name: "Clint" } } },
+        ],
       }),
-      get: async () => ({ state: { global: { name: "Clint" } } }),
     });
 
-    const result = await ensureDrive(mod, { name: "Clint" });
+    const result = await ensureDrive(client, { name: "Clint" });
     expect(result).toEqual({ id: "drive-x", name: "Clint" });
   });
 
   it("returns existing drive when deterministic id matches", async () => {
-    const mod = mockModule({
-      findByType: async () => ({
+    const client = mockClient({
+      find: async () => ({
         results: [
           { header: { id: "drive-deterministic" } },
           { header: { id: "drive-other" } },
@@ -477,11 +539,143 @@ describe("ensureDrive", () => {
       }),
     });
 
-    const result = await ensureDrive(mod, {
+    const result = await ensureDrive(client, {
       id: "drive-deterministic",
       name: "Named",
     });
     expect(result).toEqual({ id: "drive-deterministic", name: "Named" });
+  });
+
+  it("creates a deterministic id as a legacy drive and merges preferredEditor into its meta", async () => {
+    let requested: NewDriveOptions | undefined;
+    let created: BuiltDrive | undefined;
+    const client = mockClient({
+      newDocument: async (_type, options) => {
+        requested = options;
+        return { header: { id: options?.id ?? "", meta: { kept: true } } };
+      },
+      create: async (doc) => {
+        created = doc;
+        return { header: { id: doc.header.id } };
+      },
+    });
+
+    const result = await ensureDrive(client, {
+      id: "fixed-id",
+      name: "Fixed",
+      preferredEditor: "test-editor",
+    });
+    expect(result).toEqual({ id: "fixed-id", name: "Fixed" });
+    expect(requested).toEqual({
+      initialState: { global: { name: "Fixed" } },
+      signaturePolicy: "legacy",
+      id: "fixed-id",
+    });
+    expect(created?.header.meta).toEqual({
+      kept: true,
+      preferredEditor: "test-editor",
+    });
+    expect(created?.header.name).toBe("Fixed");
+    expect(client.writes).toEqual(["create"]);
+  });
+
+  it("takes a resolved id before looking anything up", async () => {
+    const client = mockClient({
+      find: async () => {
+        throw new Error("find must not run");
+      },
+    });
+    const seenClients: unknown[] = [];
+
+    const result = await ensureDrive(client, {
+      name: "Pointed",
+      resolveId: async (c) => {
+        seenClients.push(c);
+        return "pointed-id";
+      },
+      canCreate: () => false,
+    });
+    expect(result).toEqual({ id: "pointed-id", name: "Pointed" });
+    expect(seenClients).toEqual([client]);
+  });
+
+  it("falls through when resolveId resolves nothing", async () => {
+    const client = mockClient({
+      find: async () => ({
+        results: [{ header: { id: "by-name" }, name: "Home" }],
+      }),
+    });
+
+    const result = await ensureDrive(client, {
+      name: "Home",
+      resolveId: async () => undefined,
+    });
+    expect(result).toEqual({ id: "by-name", name: "Home" });
+  });
+
+  it("does not match by name with matchByName: false", async () => {
+    let looked = false;
+    const client = mockClient({
+      find: async () => {
+        looked = true;
+        return { results: [{ header: { id: "same-name" }, name: "default" }] };
+      },
+      create: async () => ({ header: { id: "new-id" } }),
+    });
+
+    const result = await ensureDrive(client, {
+      name: "default",
+      matchByName: false,
+    });
+    expect(result).toEqual({ id: "new-id", name: "default" });
+    expect(looked).toBe(false);
+  });
+
+  it("defers a drive it may not create yet", async () => {
+    const client = mockClient({});
+
+    const result = await ensureDrive(client, {
+      name: "Later",
+      matchByName: false,
+      canCreate: () => false,
+    });
+    expect(result).toEqual({ id: "", name: "Later", deferred: true });
+    expect(client.writes).toEqual([]);
+  });
+
+  it("calls onCreated with the new id once the drive is created", async () => {
+    const order: string[] = [];
+    const client = mockClient({
+      create: async () => {
+        order.push("created");
+        return { header: { id: "new-id" } };
+      },
+    });
+
+    await ensureDrive(client, {
+      name: "Home",
+      onCreated: (id) => {
+        order.push(`onCreated:${id}`);
+      },
+    });
+    expect(order).toEqual(["created", "onCreated:new-id"]);
+  });
+
+  it("does not call onCreated for a drive that already exists", async () => {
+    const created: string[] = [];
+    const client = mockClient({
+      find: async () => ({
+        results: [{ header: { id: "existing" }, name: "Home" }],
+      }),
+    });
+
+    await ensureDrive(client, {
+      name: "Home",
+      onCreated: (id) => {
+        created.push(id);
+      },
+    });
+    expect(created).toEqual([]);
   });
 });
 
@@ -689,7 +883,9 @@ describe("Powerhouse real integration", () => {
   });
 
   it("ensureDrive creates a drive on first call", async () => {
-    const result = await ensureDrive(reactorModule, { name: "test-drive" });
+    const result = await ensureDrive(reactorModule.client, {
+      name: "test-drive",
+    });
     driveId = result.id;
     expect(typeof driveId).toBe("string");
     expect(driveId.length).toBeGreaterThan(0);
@@ -697,7 +893,9 @@ describe("Powerhouse real integration", () => {
   });
 
   it("ensureDrive returns the same drive on second call", async () => {
-    const result = await ensureDrive(reactorModule, { name: "test-drive" });
+    const result = await ensureDrive(reactorModule.client, {
+      name: "test-drive",
+    });
     expect(result.id).toBe(driveId);
   });
 
@@ -821,6 +1019,13 @@ describe("buildDefaultReactor (real)", () => {
     expect(typeof reactorCtx.driveId).toBe("string");
     expect(typeof reactorCtx.shutdown).toBe("function");
     expect(events.some((e) => e.event === "powerhouse:ready")).toBe(true);
+    // The embedded reactor signs with its LocalSigner: always ready.
+    expect(reactorCtx.writes?.ready()).toBe(true);
+    expect(
+      reactorCtx.writes?.canWrite({
+        header: { id: "x", protocolVersions: { signature: 2 } },
+      }),
+    ).toBe(true);
   }, 30_000);
 });
 

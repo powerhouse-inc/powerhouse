@@ -71,6 +71,8 @@ export interface PhClintEvents<R extends DocumentRegistry = AnyRegistry> {
     documentType: keyof R & string;
   };
   "powerhouse:document:deleted": { documentId: string };
+  /** The agent's signer can now sign (see `ReactorContext.writes`). */
+  "powerhouse:writes:ready": Record<string, never>;
 }
 
 /**
