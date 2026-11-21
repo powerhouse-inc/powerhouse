@@ -159,8 +159,9 @@ export async function ensureServers(): Promise<ChildProcess[]> {
           "node",
           [
             PH_CLI,
-            "connect",
-            "preview",
+            "run",
+            "connect-workflows",
+            "serve",
             "--port",
             String(CONNECT_PORT),
             "--strictPort",
