@@ -43,8 +43,9 @@ export const kind = "reactor";
  * the foreground member. */
 export const foreground = true;
 
-/** The verbs this runner exports (`runCli` and `loadCli` are helpers). */
-export const verbs = ["run"] as const;
+/** The verbs this runner exports (`runCli`, `loadCli` and `loadOwnCli` are
+ * helpers). */
+export const verbs = ["run", "build"] as const;
 
 /** The Cli parses its own arguments: `ph run` hands them over unchecked. */
 export const argsSchema: RunnerArgsSchema = {
@@ -184,6 +185,27 @@ export async function loadCli(
     );
   }
   return cli;
+}
+
+/**
+ * The project's own `./cli` export, or undefined when its package.json has
+ * none (a package without a Cli). An export that is declared but cannot be
+ * loaded throws, as `loadCli` does.
+ */
+export async function loadOwnCli(
+  projectRoot: string,
+): Promise<Cli | undefined> {
+  let exported: unknown;
+  try {
+    exported = (
+      JSON.parse(
+        fs.readFileSync(path.join(projectRoot, "package.json"), "utf8"),
+      ) as { exports?: Record<string, unknown> }
+    ).exports?.["./cli"];
+  } catch {
+    return undefined;
+  }
+  return exported ? loadCli(projectRoot) : undefined;
 }
 
 /** Whether `argv` opens the Cli's shell: `-i` before the command name, as the
@@ -464,4 +486,21 @@ export async function run(
   });
   await Promise.all([drained(process.stdout), drained(process.stderr)]);
   process.exit(code);
+}
+
+/**
+ * `build`: the package's skill and agent-profile compilation with the Cli's
+ * metadata in the template context. Loading the Cli starts nothing (no
+ * reactor, no services). Source and output are the conventional paths
+ * (`prompts/` or `agents/`, `dist/skills`). Shadows a Cli command named
+ * `build` as the first word after the host; `ph run <host> run build` still
+ * reaches it.
+ */
+export async function build(host: CliHost, ctx: RunnerContext): Promise<void> {
+  const cli = await loadCli(ctx.projectRoot, host.config?.package);
+  const { buildSkills } = await import("../dev/build-skills.js");
+  const result = await buildSkills({ rootDir: ctx.projectRoot, cli });
+  console.log(
+    `[${host.name}] compiled ${result.skills} skill(s), ${result.profiles} profile(s) → ${result.outDir}`,
+  );
 }

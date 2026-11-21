@@ -550,10 +550,13 @@ describe("declared verbs", () => {
       .filter(([, value]) => typeof value === "function")
       .map(([name]) => name);
 
-  it("cli lists exactly its verb functions (not runCli or loadCli)", () => {
+  it("cli lists exactly its verb functions (not its helpers)", () => {
     expect([...cliRunner.verbs].sort()).toEqual(
       functions(cliRun)
-        .filter((name) => name !== "runCli" && name !== "loadCli")
+        .filter(
+          (name) =>
+            name !== "runCli" && name !== "loadCli" && name !== "loadOwnCli",
+        )
         .sort(),
     );
   });

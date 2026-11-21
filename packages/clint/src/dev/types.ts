@@ -1,8 +1,8 @@
 /**
- * Build-pipeline types, ported from ph-clint-dev. The CLI-metadata coupling
- * (BuildConfig.cli.getMetadata) stays in the old repo — in the monorepo the
- * pipeline is driven by paths + an optional agents manifest (see
- * build-skills.ts), which is what the mastra-runner's `build` verb feeds it.
+ * Build-pipeline types, ported from ph-clint-dev. The pipeline is driven by
+ * paths + an optional agents manifest; a package's `Cli` metadata
+ * (BuildConfig.cli.getMetadata) joins as extra context (see build-skills.ts),
+ * which the runners' `build` verbs feed it.
  */
 
 export interface ResolvedBuildConfig {
