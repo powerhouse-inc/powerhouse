@@ -125,7 +125,8 @@ const schemas = defineHostSchemas((base) => {
       runner: clintRunnerOptionsSchema,
       children: z.record(
         z.string(),
-        base.childWrapperSchema.extend({
+        // Its members always run in their own processes.
+        base.childWrapperSchema.omit({ process: true }).extend({
           config: clintMemberConfigSchema.optional(),
         }),
       ),

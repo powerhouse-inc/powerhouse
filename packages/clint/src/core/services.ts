@@ -233,6 +233,56 @@ export function sanitizeLogText(
 }
 
 /**
+ * Watch a log file for the lines appended from now on. Returns the function
+ * that stops watching.
+ */
+export function watchLogFile(
+  logPath: string,
+  onLine: (line: string) => void,
+): () => void {
+  let lastPos = 0;
+
+  // Initialize position to end of file
+  try {
+    const stat = fs.statSync(logPath);
+    lastPos = stat.size;
+  } catch {
+    // File doesn't exist yet
+  }
+
+  let watcher: fs.FSWatcher;
+  try {
+    watcher = fs.watch(logPath, () => {
+      try {
+        // Read as a Buffer and slice by byte offset: lastPos is seeded from
+        // stat.size (bytes), so slicing the decoded string by char index
+        // would drift on any multi-byte UTF-8 content and drop new lines.
+        const buf = fs.readFileSync(logPath);
+        // File shrank (truncated/rotated) — re-read from the start.
+        if (buf.length < lastPos) lastPos = 0;
+        const newContent = buf.toString("utf-8", lastPos);
+        lastPos = buf.length;
+        if (newContent) {
+          const lines = newContent.split("\n").filter((l) => l.length > 0);
+          for (const line of lines) {
+            onLine(line);
+          }
+        }
+      } catch {
+        // File might have been removed
+      }
+    });
+  } catch {
+    onLine("Log file not found");
+    return () => {};
+  }
+
+  return () => {
+    watcher.close();
+  };
+}
+
+/**
  * Read the last N lines from a log file, returning an empty string if unavailable.
  */
 function tailLogFile(filePath: string, lines = 20): string {
@@ -588,7 +638,11 @@ export function createServiceManager(
     const logFd = fs.openSync(logPath, "w");
     pruneRunLogs(servicesDir, id, instanceId);
 
-    const env = { ...process.env, ...(def.env ? def.env(buildCtx) : {}) };
+    // A supervisor's stdin rule is this process's: the child gets no stdin,
+    // and under PH_STOP_ON_STDIN a `ph run` would take that as a stop.
+    const inherited: NodeJS.ProcessEnv = { ...process.env };
+    delete inherited.PH_STOP_ON_STDIN;
+    const env = { ...inherited, ...(def.env ? def.env(buildCtx) : {}) };
 
     const child = spawn(commandStr, {
       shell: true,
@@ -1205,47 +1259,7 @@ export function createServiceManager(
     const def = defMap.get(id);
     if (!def) throw new Error(`Unknown service: ${id}`);
 
-    const logPath = activeLogPath(servicesDir, id, instanceId);
-    let lastPos = 0;
-
-    // Initialize position to end of file
-    try {
-      const stat = fs.statSync(logPath);
-      lastPos = stat.size;
-    } catch {
-      // File doesn't exist yet
-    }
-
-    let watcher: fs.FSWatcher;
-    try {
-      watcher = fs.watch(logPath, () => {
-        try {
-          // Read as a Buffer and slice by byte offset: lastPos is seeded from
-          // stat.size (bytes), so slicing the decoded string by char index
-          // would drift on any multi-byte UTF-8 content and drop new lines.
-          const buf = fs.readFileSync(logPath);
-          // File shrank (truncated/rotated) — re-read from the start.
-          if (buf.length < lastPos) lastPos = 0;
-          const newContent = buf.toString("utf-8", lastPos);
-          lastPos = buf.length;
-          if (newContent) {
-            const lines = newContent.split("\n").filter((l) => l.length > 0);
-            for (const line of lines) {
-              onLine(line);
-            }
-          }
-        } catch {
-          // File might have been removed
-        }
-      });
-    } catch {
-      onLine("Log file not found");
-      return () => {};
-    }
-
-    return () => {
-      watcher.close();
-    };
+    return watchLogFile(activeLogPath(servicesDir, id, instanceId), onLine);
   }
 
   function getDefinition(id: string): ServiceDefinition<any> | undefined {

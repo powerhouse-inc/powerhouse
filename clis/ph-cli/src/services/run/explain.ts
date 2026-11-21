@@ -14,10 +14,12 @@ import {
   loadHost,
   loadProducers,
   memberForRef,
+  memberProcessOf,
   mergeDrivePlan,
   outputRefsOf,
   outputSitesOf,
   planCompound,
+  planForeground,
   probeRun,
   processResolveEnv,
   producerOutputsSchemas,
@@ -26,6 +28,7 @@ import {
   resolveHostOutputs,
   resolvePluginContributions,
   resolveRunnerModule,
+  RunnerError,
   runnerOutputsSchema,
   runRecordOutputSource,
   validateDeclaredHost,
@@ -426,20 +429,58 @@ function explainOutputs(name: string, view: LoadedView): void {
     })),
     startOrder,
   );
+  // The member that owns the terminal starts last, as `ph run` starts it;
+  // a compound that breaks its rules fails here as it would there.
+  const planned = planForeground(
+    members.map((m) => ({
+      key: m.key,
+      specifier: m.specifier,
+      member: m.wrapper,
+      runner: m.runner,
+    })),
+    plan,
+    startOrder ? { startOrder } : {},
+  );
+  const broken = planned.issues.at(0);
+  if (broken) {
+    throw new RunnerError(`hosts/${name}: ${broken.message}`, broken.hint);
+  }
+  const processes = new Map(
+    members.map((m) => [
+      m.key,
+      memberProcessOf(m.wrapper, {
+        foreground: m.key === planned.foreground,
+        besideForeground: planned.foreground !== undefined,
+        oneShot: false,
+      }),
+    ]),
+  );
+  // Where each member runs, once that is not the compound's process alone.
+  const showWhere =
+    planned.foreground !== undefined || [...processes.values()].includes("own");
+  const whereOf = (key: string) => {
+    if (!showWhere) return "";
+    if (key === planned.foreground) {
+      return "  [in front: owns the terminal; its end ends the stack]";
+    }
+    return processes.get(key) === "own"
+      ? "  [own process]"
+      : "  [in the compound's process]";
+  };
   console.log(
     `[${name}] start order (${plan.source === "tokens" ? "from the output tokens" : "config.startOrder, checked against the tokens"}):`,
   );
-  plan.order.forEach((key, index) => {
+  planned.order.forEach((key, index) => {
     const m = members.find((x) => x.key === key);
     const needs = plan.edges
       .filter((e) => e.consumer === key)
       .map((e) => e.producer);
     console.log(
-      `  ${index + 1}. ${key} (${m?.wrapper.host ?? "?"})${needs.length ? `  after ${needs.join(", ")}` : ""}`,
+      `  ${index + 1}. ${key} (${m?.wrapper.host ?? "?"})${needs.length ? `  after ${needs.join(", ")}` : ""}${whereOf(key)}`,
     );
   });
   console.log("  Ctrl-C stops members in reverse order (consumers first).");
-  for (const key of plan.order) {
+  for (const key of planned.order) {
     const m = members.find((x) => x.key === key);
     if (!m) continue;
     console.log(`[${name} › ${key} (${m.wrapper.host})] ${m.specifier}`);

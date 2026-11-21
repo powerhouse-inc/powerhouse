@@ -17,7 +17,11 @@ export const HOST_TYPE_MAP_MODULES: readonly (readonly [string, string[]])[] = [
   ],
   [
     "@powerhousedao/clint",
-    ["@powerhousedao/clint/mastra-runner", "@powerhousedao/clint/clint-runner"],
+    [
+      "@powerhousedao/clint/mastra-runner",
+      "@powerhousedao/clint/clint-runner",
+      "@powerhousedao/clint/cli-runner",
+    ],
   ],
   ["@powerhousedao/desktop", ["@powerhousedao/desktop/runner"]],
   [

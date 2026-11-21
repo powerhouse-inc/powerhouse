@@ -7,6 +7,9 @@ import {
   readRunRecord,
 } from "./run-record.js";
 
+/** Set by a supervisor that holds this process's stdin. */
+export const STOP_ON_STDIN_ENV = "PH_STOP_ON_STDIN";
+
 /**
  * Windows has no SIGTERM: `process.kill(pid, "SIGTERM")` ends the process at
  * once, so no handler runs and a stack's stores are left as a crash leaves

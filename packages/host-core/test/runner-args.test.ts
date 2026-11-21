@@ -260,4 +260,68 @@ describe("splitCompoundArgv", () => {
       ]),
     ).toThrow(/--switchboard-port matches the members a, b\./);
   });
+
+  describe("with a foreground member", () => {
+    const cli: RunnerArgsSchema = { options: [], flags: [], passthrough: true };
+    const stack = [
+      ...members,
+      { key: "cli", runner: "cli-runner", schema: cli },
+    ];
+    const split = (argv: string[]) =>
+      Object.fromEntries(splitCompoundArgv(argv, "studio", stack, "cli"));
+
+    it("gives the members their member-named options at the front, and the foreground the rest as typed", () => {
+      expect(
+        split([
+          "--switchboard-port",
+          "4001",
+          "--connect-port=3001",
+          "hello",
+          "--port",
+          "9",
+          "--switchboard-port",
+          "1",
+        ]),
+      ).toEqual({
+        "vetra-switchboard": ["--port", "4001"],
+        "vetra-studio": ["--port=3001"],
+        cli: ["hello", "--port", "9", "--switchboard-port", "1"],
+      });
+    });
+
+    it("hands a plain option a member also takes to the foreground", () => {
+      expect(split(["--strictPort", "-i"])).toEqual({
+        "vetra-switchboard": [],
+        "vetra-studio": [],
+        cli: ["--strictPort", "-i"],
+      });
+    });
+
+    it("starts the foreground's arguments after a literal `--`", () => {
+      expect(
+        split(["--switchboard-port", "4001", "--", "--connect-port", "1"]),
+      ).toEqual({
+        "vetra-switchboard": ["--port", "4001"],
+        "vetra-studio": [],
+        cli: ["--connect-port", "1"],
+      });
+    });
+
+    it("refuses a member option without its value", () => {
+      expect(() => split(["--switchboard-port"])).toThrow(
+        /hosts\/studio: --switchboard-port needs a value\./,
+      );
+    });
+
+    it("checks the foreground's arguments against its runner's schema", () => {
+      expect(() =>
+        splitCompoundArgv(
+          ["--nope"],
+          "studio",
+          [...members, { key: "fg", runner: "fg-runner", schema: switchboard }],
+          "fg",
+        ),
+      ).toThrow(/its runner fg-runner does not accept --nope/);
+    });
+  });
 });

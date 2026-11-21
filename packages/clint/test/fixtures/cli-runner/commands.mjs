@@ -31,4 +31,24 @@ export const readDocument = defineCommand({
   },
 });
 
-export const commands = [hello, fail, readDocument];
+export const members = defineCommand({
+  id: "members",
+  description: "List the services the Cli sees, its stack's members among them",
+  inputSchema: z.object({}),
+  execute: (_, ctx) =>
+    Promise.resolve(
+      (ctx.services?.list() ?? [])
+        .map((service) =>
+          [
+            service.serviceId,
+            service.status,
+            ...Object.entries(service.endpoints ?? {}).map(
+              ([key, url]) => `${key}=${url}`,
+            ),
+          ].join(" "),
+        )
+        .join("\n") || "no services",
+    ),
+});
+
+export const commands = [hello, fail, readDocument, members];

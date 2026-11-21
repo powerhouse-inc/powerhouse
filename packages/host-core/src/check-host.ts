@@ -5,6 +5,7 @@ import {
 import {
   compoundStartVerb,
   memberVerbOf,
+  planForeground,
   prepareMember,
   takesCspRegistrySync,
   type PreparedMember,
@@ -307,9 +308,11 @@ async function checkCompound(
     key,
     host: m.host,
   }));
+  // The member that owns the terminal, by the rules `ph run` applies.
+  let foreground: string | undefined;
   if (prepared.length === members.length) {
     try {
-      planCompound(
+      const plan = planCompound(
         prepared.map((m) => ({
           key: m.key,
           host: m.member.host,
@@ -320,6 +323,9 @@ async function checkCompound(
         })),
         wiring.startOrder,
       );
+      const planned = planForeground(prepared, plan, wiring);
+      for (const i of planned.issues) issue("declared", i);
+      foreground = planned.foreground;
     } catch (error) {
       issue("declared", "", error);
     }
@@ -341,13 +347,19 @@ async function checkCompound(
       : { error: `names member "${target.key}", which was not prepared.` };
   };
   for (const m of prepared) {
+    // As `ph run` starts it: the foreground member at its own default verb,
+    // and not at all at a one-shot verb.
+    const isForeground = m.key === foreground;
+    if (isForeground && ONE_SHOT_VERBS.has(verb)) continue;
     const csp = wiring.cspRegistrySync === true && takesCspRegistrySync(m);
     await checkSubject(result, options, {
       file: m.file,
       host: m.draft,
       runner: m.runner,
       specifier: m.specifier,
-      verb: memberVerbOf(verb, m.draft.runner),
+      verb: isForeground
+        ? (m.draft.runner.defaultVerb ?? "run")
+        : memberVerbOf(verb, m.draft.runner),
       outputsSchemaOf,
       self: { members },
       ...(csp

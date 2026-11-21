@@ -16,7 +16,7 @@ import {
 } from "@powerhousedao/host-core";
 import { defineHostSchemas } from "@powerhousedao/host-core/schema";
 import { z } from "zod";
-import type { Cli, RunReactor } from "../core/types.js";
+import type { Cli, RunOptions, RunReactor } from "../core/types.js";
 import { attachDefaultReactor } from "../integrations/powerhouse/index.js";
 import type { ReactorContext } from "../integrations/powerhouse/types.js";
 
@@ -28,11 +28,20 @@ import type { ReactorContext } from "../integrations/powerhouse/types.js";
  * the output token `switchboard.drives.<slug>.url`). The runner hands that
  * reactor to the Cli for the run (`RunOptions.reactor`), so whatever the Cli
  * configured in code, no embedded reactor, switchboard or Connect starts.
- * Everything after `ph run <host> --` (or `ph run <host> run`) is the Cli's
- * argv: a one-shot command, `-i` for its shell, or nothing.
+ * Everything after `ph run <host> --` (or `ph run <host> run`, or a first word
+ * that is no verb: `ph run <host> hello`) is the Cli's argv: a one-shot
+ * command, `-i` for its shell, or nothing.
+ *
+ * In a compound it is the foreground member (A6): it runs in the compound's
+ * process with the terminal, after the members next to it, which it sees as
+ * service instances; its end ends the stack with its exit code.
  */
 
 export const kind = "reactor";
+
+/** The Cli owns the terminal: it reads stdin itself, and in a compound it is
+ * the foreground member. */
+export const foreground = true;
 
 /** The verbs this runner exports (`runCli` and `loadCli` are helpers). */
 export const verbs = ["run"] as const;
@@ -219,6 +228,10 @@ export interface RunCliOptions {
   stopStreamLimitMs?: number;
   /** Called when the Cli keeps running (see `RunOptions.onServe`). */
   onServe?: () => void | Promise<void>;
+  /** Stops a Cli that keeps running (see `RunOptions.signal`). */
+  signal?: AbortSignal;
+  /** The compound's other members (see `RunOptions.members`). */
+  members?: RunOptions["members"];
 }
 
 /**
@@ -283,6 +296,8 @@ export async function runCli(
       ...(options.workdir ? { workdir: options.workdir } : {}),
       ...(reactor ? { reactor } : {}),
       ...(options.onServe ? { onServe: options.onServe } : {}),
+      ...(options.signal ? { signal: options.signal } : {}),
+      ...(options.members ? { members: options.members } : {}),
     });
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
@@ -339,19 +354,106 @@ function drained(stream: NodeJS.WriteStream): Promise<void> {
   return new Promise((resolve) => stream.write("", () => resolve()));
 }
 
+/** How long a stop from the compound waits for the Cli before the compound
+ * stops the rest: a command in flight or the line-based shell does not
+ * listen for it. */
+const FOREGROUND_STOP_MS = 10_000;
+
+/** The handle the compound gets from its foreground member. */
+export interface ForegroundHandle {
+  outputs: Record<string, never>;
+  ready: Promise<void>;
+  /** The Cli's end, with its exit code: the stack's. */
+  exited: Promise<number>;
+  /** Asks the Cli to stop (its `RunOptions.signal`) and waits for it, up to
+   * a limit. */
+  shutdown(): Promise<void>;
+}
+
 /**
- * `run`: the Cli in the foreground, with the host's reactor. The process
- * ends with the Cli's exit code: the Cli owns the terminal, so it is never a
- * member of a compound here (own-process members are stage A6).
+ * The Cli as a compound's foreground member: in the compound's process, on
+ * the terminal, after the other members. Returns at once; the compound reads
+ * the Cli's end from `exited`. A supervised compound holds stdin (its stop
+ * stream), so the Cli neither reads it nor opens its shell then. Beside a
+ * running stack it may only run a command that ends.
  */
-export async function run(host: CliHost, ctx: RunnerContext): Promise<void> {
-  if (ctx.parent) {
+function inStack(
+  cli: Cli,
+  host: CliHost,
+  ctx: RunnerContext & { foreground: NonNullable<RunnerContext["foreground"]> },
+  url: string | undefined,
+): ForegroundHandle {
+  const argv = ctx.argv ?? [];
+  const stack = ctx.parent?.host ?? host.name;
+  const done = (exited: Promise<number>): ForegroundHandle => ({
+    outputs: {},
+    ready: Promise.resolve(),
+    exited,
+    shutdown: () => Promise.resolve(),
+  });
+  if (ctx.env[STOP_ON_STDIN_ENV] === "1" && asksInteractive(cli, argv)) {
+    console.error(
+      `${cli.name}: -i reads stdin, and the process that started "${stack}" holds its stdin to ask it to stop (${STOP_ON_STDIN_ENV}=1). ` +
+        `Run the shell from a terminal, or run a command without -i.`,
+    );
+    return done(Promise.resolve(1));
+  }
+  const stop = new AbortController();
+  const exited = runCli(cli, {
+    argv,
+    ...(url ? { url } : {}),
+    workdir: ctx.projectRoot,
+    signal: stop.signal,
+    members: ctx.foreground.members,
+    ...(ctx.foreground.beside
+      ? {
+          onServe: () => {
+            throw new Error(
+              `${stack} is already running: beside it, \`ph run ${stack} -- <command>\` runs a command that ends. The shell and a serving Cli run in the stack itself.`,
+            );
+          },
+        }
+      : {}),
+  }).then(async (code) => {
+    await Promise.all([drained(process.stdout), drained(process.stderr)]);
+    return code;
+  });
+  return {
+    ...done(exited),
+    shutdown: async () => {
+      stop.abort();
+      let timer: NodeJS.Timeout | undefined;
+      await Promise.race([
+        exited,
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, FOREGROUND_STOP_MS);
+        }),
+      ]);
+      clearTimeout(timer);
+    },
+  };
+}
+
+/**
+ * `run`: the Cli in the foreground, with the host's reactor. On its own the
+ * process ends with the Cli's exit code. As a compound's foreground member
+ * it returns a handle whose `exited` the compound ends the stack on; it is
+ * never a compound's other, in-process kind of member.
+ */
+export async function run(
+  host: CliHost,
+  ctx: RunnerContext,
+): Promise<ForegroundHandle | undefined> {
+  if (ctx.parent && !ctx.foreground) {
     throw new Error(
-      `hosts/${host.name}: the cli runner runs its host on its own (\`ph run ${host.name}\`), not as a member of compound "${ctx.parent.host}": the Cli owns the terminal and ends the process.`,
+      `hosts/${host.name}: compound "${ctx.parent.host}" runs the cli runner as an ordinary member, but the Cli owns the terminal and its end is the stack's: it runs on its own (\`ph run ${host.name}\`) or as a compound's foreground member.`,
     );
   }
   const url = remoteUrlOf(host);
   const cli = await loadCli(ctx.projectRoot, host.config?.package);
+  if (ctx.foreground) {
+    return inStack(cli, host, { ...ctx, foreground: ctx.foreground }, url);
+  }
   const stopStream = stopStreamOf(ctx.env, () => process.stdin);
   const code = await runCli(cli, {
     argv: ctx.argv ?? [],

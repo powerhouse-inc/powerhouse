@@ -1165,6 +1165,20 @@ export interface RunOptions {
    * ends the run: its message on stderr, exit code 1.
    */
   onServe?: () => void | Promise<void>;
+  /**
+   * Stops a run that keeps going as SIGINT or SIGTERM would: the headless
+   * keep-alive and the ink shell end, and the CLI tears down. An abort
+   * before then takes effect once it is serving. The line-based shell
+   * (`-i` on a pipe) and a command in flight do not listen.
+   */
+  signal?: AbortSignal;
+  /**
+   * The members of the compound this CLI is the foreground member of, as
+   * service instances next to its own services (`context.services`): the
+   * panel and the log calls show them; start and stop refuse, since the
+   * compound owns their life.
+   */
+  members?: () => readonly import("@powerhousedao/host-core").MemberStatus[];
 }
 
 /** See `RunOptions.reactor`. */

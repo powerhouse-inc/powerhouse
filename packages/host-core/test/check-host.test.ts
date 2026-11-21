@@ -1,6 +1,6 @@
 import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { checkHost, type CheckHostOptions } from "../src/check-host.js";
 import type { HostIssue } from "../src/host-issues.js";
 import type { OutputSource } from "../src/resolve/resolve.js";
@@ -371,6 +371,127 @@ describe("checkHost: one issue per stage", () => {
     expect(result.issues[0].message).toMatch(
       /does not support the verb "start"/,
     );
+  });
+
+  describe("compound: the member that owns the terminal", () => {
+    const COMPOUND = "@powerhousedao/host-core/runners/compound";
+    const writeStack = (folder: string, extra: Record<string, unknown>) =>
+      writeHost("invariants", folder, {
+        name: `inv-${folder}`,
+        runner: { module: COMPOUND },
+        ...extra,
+      });
+    beforeAll(() => {
+      writeHost("invariants", "cli", {
+        name: "inv-cli",
+        runner: { module: "@powerhousedao/clint/cli-runner" },
+        reactor: {
+          backends: {
+            sb: {
+              kind: "remote",
+              remote: {
+                url: {
+                  $output: {
+                    host: "switchboard",
+                    path: ["drives", "inv", "url"],
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    });
+
+    it("is checked as `ph run` starts it: at its own verb, and not at a one-shot verb", async () => {
+      writeStack("fg-ok", {
+        children: { cli: { host: "cli" }, sb: { host: "switchboard" } },
+      });
+      expect((await check("invariants", "fg-ok")).issues).toEqual([]);
+      // the cli runner has only `run`: checked at `dev`, it would fail
+      expect(
+        (await check("invariants", "fg-ok", { verb: "dev" })).issues,
+      ).toEqual([]);
+      expect(
+        (await check("invariants", "fg-ok", { verb: "build" })).issues,
+      ).toEqual([]);
+    });
+
+    it("reports two of them", async () => {
+      writeStack("fg-two", {
+        children: {
+          a: { host: "cli" },
+          b: { host: "cli" },
+          sb: { host: "switchboard" },
+        },
+      });
+      expectOne(
+        (await check("invariants", "fg-two")).issues,
+        { stage: "declared", file: "hosts/fg-two/host.js", path: "children" },
+        /^members "a", "b" each run a runner that owns the terminal; a compound has one\.$/,
+      );
+    });
+
+    it("reports every broken rule at once: its own process, and a startOrder that starts it early", async () => {
+      writeStack("fg-rules", {
+        config: { startOrder: ["sb", "cli", "ui"] },
+        children: {
+          cli: { host: "cli", process: "own" },
+          sb: { host: "switchboard" },
+          ui: { host: "connect" },
+        },
+      });
+      const { issues } = await check("invariants", "fg-rules");
+      expect(issues).toEqual([
+        {
+          stage: "declared",
+          file: "hosts/fg-rules/host.js",
+          path: "children.cli.process",
+          message: `member "cli" (@powerhousedao/clint/cli-runner) owns the terminal, so it runs in the compound's process, not its own.`,
+          hint: "Remove children.cli.process.",
+        },
+        {
+          stage: "declared",
+          file: "hosts/fg-rules/host.js",
+          path: "config.startOrder",
+          message: `config.startOrder starts member "cli" (@powerhousedao/clint/cli-runner) before ui, but it owns the terminal and starts last.`,
+          hint: "Put it last in startOrder, or leave it out.",
+        },
+      ]);
+    });
+
+    it("reports a member that reads its outputs", async () => {
+      writeStack("fg-read", {
+        children: {
+          cli: { host: "cli" },
+          sb: { host: "switchboard" },
+          ui: {
+            host: "connect",
+            config: { from: { $output: { host: "cli", path: ["x"] } } },
+          },
+        },
+      });
+      const { issues } = await check("invariants", "fg-read");
+      expect(issues).toContainEqual(
+        expect.objectContaining({
+          stage: "declared",
+          file: "hosts/fg-read/host.js",
+          path: "children",
+          message: expect.stringMatching(
+            /^ui\.config\.from read the outputs of member "cli" \(@powerhousedao\/clint\/cli-runner\), which owns the terminal and starts last\.$/,
+          ) as string,
+        }),
+      );
+    });
+
+    it("refuses an unknown process", async () => {
+      writeStack("fg-process", {
+        children: { sb: { host: "switchboard", process: "elsewhere" } },
+      });
+      const { issues } = await check("invariants", "fg-process");
+      expect(issues).toHaveLength(1);
+      expect(issues[0].path).toBe("children.sb.process");
+    });
   });
 });
 

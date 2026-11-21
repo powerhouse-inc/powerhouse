@@ -2120,6 +2120,125 @@ describe("defineCli", () => {
       await runPromise;
     });
 
+    describe("a stop from the process the CLI runs in (RunOptions.signal)", () => {
+      const watcher = {
+        id: "watcher",
+        type: "condition" as const,
+        poll: async () => null,
+      };
+
+      it("ends the keep-alive after stdin's end, as a signal does", async () => {
+        const cli = defineCli({
+          name: "eof-abort",
+          version: "0.0.1",
+          description: "EOF keep-alive, aborted",
+          commands: [echo],
+          interactive: { welcome: "Welcome" },
+          triggers: [watcher],
+          routine: { tickInterval: 50, idleInterval: 50 },
+        });
+        const before = process.listenerCount("SIGINT");
+        const stop = new AbortController();
+        const cap = capture();
+        const runPromise = cli.run(["node", "test", "-i"], {
+          ...cap.options,
+          interactiveInput: (async function* () {})(),
+          signal: stop.signal,
+        });
+        await new Promise((r) => setTimeout(r, 200));
+        expect(cap.output).toEqual(
+          expect.arrayContaining([expect.stringContaining("Stdin closed")]),
+        );
+        stop.abort();
+        await runPromise;
+        // Its signal handlers went with it.
+        expect(process.listenerCount("SIGINT")).toBe(before);
+      });
+
+      it("ends a headless CLI that serves, also when it was asked before it served", async () => {
+        const cli = defineCli({
+          name: "headless-abort",
+          version: "0.0.1",
+          description: "Headless keep-alive, aborted",
+          commands: [echo],
+          triggers: [watcher],
+          routine: { tickInterval: 50, idleInterval: 50 },
+        });
+        const before = process.listenerCount("SIGTERM");
+        const stop = new AbortController();
+        stop.abort();
+        const cap = capture();
+        await cli.run(["node", "test"], {
+          ...cap.options,
+          signal: stop.signal,
+        });
+        expect(cap.output).toEqual(
+          expect.arrayContaining([expect.stringContaining("Serving")]),
+        );
+        expect(process.listenerCount("SIGTERM")).toBe(before);
+      });
+    });
+
+    it("shows the compound's members as service instances beside its own services", async () => {
+      const members = [
+        {
+          name: "switchboard",
+          host: "switchboard",
+          process: "own" as const,
+          status: "ready" as const,
+          pid: 4242,
+          endpoints: { "drives.lab.url": "http://localhost:1/d/lab" },
+          logFile: join(tmpdir(), "no-such-member.log"),
+        },
+      ];
+      const list = defineCommand({
+        id: "list-services",
+        description: "List the services",
+        inputSchema: z.object({}),
+        execute: async (_, ctx) =>
+          JSON.stringify(
+            ctx.services?.list().map((s) => [s.serviceId, s.status]),
+          ),
+      });
+      const stopIt = defineCommand({
+        id: "stop-member",
+        description: "Stop the member",
+        inputSchema: z.object({}),
+        execute: async (_, ctx) => {
+          await ctx.services?.stop("switchboard");
+          return "stopped";
+        },
+      });
+      const cli = defineCli({
+        name: "member-view",
+        version: "0.0.1",
+        description: "Members as services",
+        commands: [list, stopIt],
+        services: [defineService({ id: "own-svc", command: "node -v" })],
+      });
+      const cap = capture();
+      await cli.run(["node", "test", "list-services"], {
+        ...cap.options,
+        members: () => members,
+      });
+      expect(cap.output.join("\n")).toContain(
+        JSON.stringify([
+          ["own-svc", "idle"],
+          ["switchboard", "ready"],
+        ]),
+      );
+
+      const refused = capture();
+      await cli.run(["node", "test", "stop-member"], {
+        ...refused.options,
+        members: () => members,
+      });
+      expect(refused.exitCode).toBe(1);
+      expect(refused.errors.join("\n")).toContain(
+        "switchboard is a member of the stack this CLI runs in",
+      );
+    });
+
     it("EOF without routine exits cleanly", async () => {
       const cli = defineCli({
         name: "eof-exit",

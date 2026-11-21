@@ -53,6 +53,7 @@ import { createRoutine } from "./routine.js";
 import { createEventBus } from "./events.js";
 import { createProcessManager } from "./processes.js";
 import { createServiceManager } from "./services.js";
+import { createMemberServiceManager } from "./member-services.js";
 import {
   createRoutineServiceAdapter,
   createCompositeServiceManager,
@@ -87,6 +88,8 @@ interface ResolvedRunOptions {
   logLevel?: import("./types.js").LogLevel;
   reactor?: RunOptions["reactor"];
   onServe?: RunOptions["onServe"];
+  signal?: RunOptions["signal"];
+  members?: RunOptions["members"];
 }
 
 /**
@@ -996,6 +999,7 @@ export function defineCli<
     config: Record<string, unknown>,
     log: import("./types.js").Logger,
     proxyInstance?: ProxyServerInstance,
+    members?: RunOptions["members"],
   ): void {
     const servicesNow = options.services && options.services.length > 0;
     let processServiceManager: import("./types.js").ServiceManager | undefined;
@@ -1022,6 +1026,29 @@ export function defineCli<
       context.services = processServiceManager;
     } else if (routineServiceAdapter) {
       context.services = routineServiceAdapter;
+    }
+
+    // The compound's members, beside the CLI's own services. A member named
+    // like one of those is left out: the CLI's service keeps its name.
+    if (members) {
+      const memberManager = createMemberServiceManager(members);
+      const own = context.services;
+      const routeMap = new Map<string, import("./types.js").ServiceManager>();
+      if (own) {
+        for (const svc of options.services ?? []) routeMap.set(svc.id, own);
+        if (routineServiceAdapter) {
+          routeMap.set(options.routine!.id!, own);
+        }
+      }
+      for (const member of members()) {
+        if (!routeMap.has(member.name)) {
+          routeMap.set(member.name, memberManager);
+        }
+      }
+      context.services = createCompositeServiceManager(
+        own ? [own, memberManager] : [memberManager],
+        routeMap,
+      );
     }
 
     if (_eventBus && options.events) {
@@ -1215,6 +1242,8 @@ export function defineCli<
       logLevel: runOptions?.logLevel,
       reactor: runOptions?.reactor,
       onServe: runOptions?.onServe,
+      signal: runOptions?.signal,
+      members: runOptions?.members,
     };
     return runImpl(argv, resolved);
   }
@@ -1402,7 +1431,7 @@ export function defineCli<
       };
     }
 
-    wireServices(context, config, log, proxyInstance);
+    wireServices(context, config, log, proxyInstance, opts.members);
 
     // Run lifecycle hooks after config resolves, before runtime construction.
     // Identity wraps when no hook is registered; otherwise composed contributions.
@@ -1696,6 +1725,7 @@ export function defineCli<
             onStart: async (append) => {
               await runtime.startupSequence(append);
             },
+            ...(opts.signal ? { signal: opts.signal } : {}),
           });
           /* istanbul ignore next */
           await runtime.teardown();
@@ -1738,7 +1768,11 @@ export function defineCli<
           if (hasKeepAlive) {
             stdout("Stdin closed — still serving. Press Ctrl+C to stop.");
             await new Promise<void>((resolve) => {
+              let stopped = false;
               const onSignal = async () => {
+                if (stopped) return;
+                stopped = true;
+                opts.signal?.removeEventListener("abort", onSignal);
                 const suppress = () => {};
                 process.removeListener("SIGINT", onSignal);
                 process.removeListener("SIGTERM", onSignal);
@@ -1751,6 +1785,9 @@ export function defineCli<
               };
               process.on("SIGINT", onSignal);
               process.on("SIGTERM", onSignal);
+              // A stop from the process this CLI runs in (its compound).
+              opts.signal?.addEventListener("abort", onSignal, { once: true });
+              if (opts.signal?.aborted) void onSignal();
             });
             return; // teardown already called in signal handler
           }
@@ -1773,7 +1810,11 @@ export function defineCli<
 
           stdout("Serving — press Ctrl+C to stop.");
           await new Promise<void>((resolve) => {
+            let stopped = false;
             const onSignal = async () => {
+              if (stopped) return;
+              stopped = true;
+              opts.signal?.removeEventListener("abort", onSignal);
               // Suppress duplicate signals from parent (pnpm) during teardown
               const suppress = () => {};
               process.removeListener("SIGINT", onSignal);
@@ -1788,6 +1829,9 @@ export function defineCli<
             };
             process.on("SIGINT", onSignal);
             process.on("SIGTERM", onSignal);
+            // A stop from the process this CLI runs in (its compound).
+            opts.signal?.addEventListener("abort", onSignal, { once: true });
+            if (opts.signal?.aborted) void onSignal();
           });
           return; // teardown already called in signal handler
         }

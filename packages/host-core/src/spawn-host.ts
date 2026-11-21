@@ -3,7 +3,13 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import {
+  COMPOUND_MEMBER_ENV,
+  encodeCompoundMember,
+  type CompoundMemberHost,
+} from "./compound-member.js";
 import { loadHost } from "./host-loader.js";
+import { killTree } from "./kill-tree.js";
 import { clearRunRecord, listRunRecords } from "./run-record.js";
 import type { RunRecord } from "./run-record-schema.js";
 import {
@@ -12,6 +18,7 @@ import {
   resolveRunnerModule,
   STORE_VERBS,
 } from "./runner-resolver.js";
+import { STOP_ON_STDIN_ENV } from "./stop-channel.js";
 
 export interface SpawnHostOptions {
   projectRoot: string;
@@ -20,8 +27,23 @@ export interface SpawnHostOptions {
   /** The child's PH_USER_DATA_DIR (created if missing). */
   dataDir: string;
   verb?: string;
-  /** Merged over the clean base env; may not set PH_USER_DATA_DIR. */
+  /** What follows `ph run <host> [verb]`: the runner's arguments. */
+  argv?: readonly string[];
+  /** Merged over the base env; may not set PH_USER_DATA_DIR. */
   env?: Record<string, string>;
+  /** The env the child starts from instead of the clean one, as it is: a
+   * compound hands its members its own, so a member sees what it would in
+   * the compound's process. */
+  baseEnv?: Readonly<Record<string, string | undefined>>;
+  /** The host the child runs instead of reading `hosts/<host>/host.js`: a
+   * compound's member, its wrapper applied and its tokens resolved. */
+  definition?: Omit<CompoundMemberHost, "folder">;
+  /** Ask the child to stop through its stdin (it gets a pipe and
+   * PH_STOP_ON_STDIN=1): a request on every platform, which this process
+   * ending makes too; after stopTimeoutMs its whole process tree is killed.
+   * Without it a stop is SIGTERM, on Windows the kill itself, and SIGKILL of
+   * the child follows after stopTimeoutMs. */
+  stopOnStdin?: boolean;
   /** ph-cli entry; default: the project's `@powerhousedao/ph-cli/dist/cli.mjs`. */
   cli?: string;
   readyTimeoutMs?: number;
@@ -48,7 +70,8 @@ export interface SpawnedHost {
   members: RunRecord["members"];
   /** Resolves (never rejects) when the child exits. */
   exited: Promise<HostExit>;
-  /** SIGTERM, SIGKILL after stopTimeoutMs, clear a leftover record. */
+  /** SIGTERM (or the end of its stdin), SIGKILL after stopTimeoutMs, clear
+   * a leftover record. */
   stop(): Promise<HostExit>;
 }
 
@@ -90,15 +113,24 @@ const WIN32_ENV_KEYS = [
   "PATHEXT",
 ];
 
-/** The child's whole env: no other `process.env` key reaches it. */
+/** The child's whole env: without a `baseEnv`, no other `process.env` key
+ * reaches it. */
 function childEnv(
   dataDir: string,
   env: Record<string, string> = {},
+  baseEnv?: Readonly<Record<string, string | undefined>>,
 ): Record<string, string> {
   if ("PH_USER_DATA_DIR" in env) {
     throw new Error(
       "spawnHost: set the data dir with `dataDir`, not env.PH_USER_DATA_DIR.",
     );
+  }
+  if (baseEnv) {
+    const base: Record<string, string> = {};
+    for (const [key, value] of Object.entries(baseEnv)) {
+      if (value !== undefined) base[key] = value;
+    }
+    return { ...base, PH_USER_DATA_DIR: dataDir, ...env };
   }
   const keys =
     process.platform === "win32"
@@ -118,11 +150,21 @@ function childEnv(
   };
 }
 
+/** The project's ph-cli, else its ph-run (a packaged app has only that). */
 function resolvePhCliEntry(projectRoot: string): string {
   const require_ = createRequire(
     pathToFileURL(path.join(projectRoot, "package.json")).href,
   );
-  const pkgPath = require_.resolve("@powerhousedao/ph-cli/package.json");
+  let pkgPath: string;
+  try {
+    pkgPath = require_.resolve("@powerhousedao/ph-cli/package.json");
+  } catch (error) {
+    try {
+      pkgPath = require_.resolve("@powerhousedao/ph-run/package.json");
+    } catch {
+      throw error;
+    }
+  }
   return path.join(path.dirname(pkgPath), "dist", "cli.mjs");
 }
 
@@ -131,6 +173,7 @@ async function assertWritesRecord(
   projectRoot: string,
   host: string,
   verb: string | undefined,
+  definition: Record<string, unknown> | undefined,
 ): Promise<void> {
   if (
     verb !== undefined &&
@@ -140,12 +183,14 @@ async function assertWritesRecord(
       `spawnHost: "${verb}" is a one-shot verb; it writes no run record to wait for.`,
     );
   }
-  const loaded = await loadHost(projectRoot, host);
-  const specifier = loaded.host.runner.module;
+  const declared = (definition ?? (await loadHost(projectRoot, host)).host) as {
+    runner: { module: string };
+    config?: { runtimeRecord?: unknown };
+  };
+  const specifier = declared.runner.module;
   const runner = await resolveRunnerModule(projectRoot, specifier);
   if (runner.kind === "compound") {
-    const config = (loaded.host as { config?: { runtimeRecord?: unknown } })
-      .config;
+    const config = declared.config;
     if (config?.runtimeRecord === false) {
       throw new Error(
         `spawnHost: hosts/${host} sets config.runtimeRecord: false, so it writes no run record to wait for.`,
@@ -166,7 +211,9 @@ const sleep = (ms: number) =>
   });
 
 // Children still running when this process exits get SIGTERM, so a launcher
-// that exits without stop() leaves no host behind.
+// that exits without stop() leaves no host behind. One stopped through its
+// stdin is not tracked: this process ending closes that pipe, which asks it
+// to stop, where SIGTERM would be the kill on Windows.
 const live = new Set<ChildProcess>();
 let exitHookInstalled = false;
 function track(child: ChildProcess): void {
@@ -183,24 +230,42 @@ function track(child: ChildProcess): void {
  * `ph run <host> [verb]` as a child; ready when its run record appears.
  *
  * The child shares this process's group, so a terminal Ctrl-C reaches both.
- * It runs the project's own ph-cli: one older than PH_NO_DOTENV reads the
- * project's `.env` anyway.
+ * It runs the project's own ph-cli (else its ph-run): one older than
+ * PH_NO_DOTENV reads the project's `.env` anyway.
  */
 export async function spawnHost(
   options: SpawnHostOptions,
 ): Promise<SpawnedHost> {
   const projectRoot = path.resolve(options.projectRoot);
   const dataDir = path.resolve(options.dataDir);
-  const env = childEnv(dataDir, options.env);
+  // Before anything else: a host that does not survive JSON, or does not fit
+  // an environment variable, fails here, not as a child that runs another.
+  const member = options.definition
+    ? encodeCompoundMember({ ...options.definition, folder: options.host })
+    : undefined;
+  const env = childEnv(
+    dataDir,
+    {
+      ...options.env,
+      ...(options.stopOnStdin ? { [STOP_ON_STDIN_ENV]: "1" } : {}),
+      ...(member === undefined ? {} : { [COMPOUND_MEMBER_ENV]: member }),
+    },
+    options.baseEnv,
+  );
   const readerEnv = { PH_USER_DATA_DIR: dataDir };
   const readyTimeoutMs = options.readyTimeoutMs ?? READY_TIMEOUT_MS;
   const stopTimeoutMs = options.stopTimeoutMs ?? STOP_TIMEOUT_MS;
-  const { signal } = options;
+  const { signal, stopOnStdin = false } = options;
 
   if (signal?.aborted) {
     throw new SpawnHostError("spawnHost: aborted before start.", "aborted", "");
   }
-  await assertWritesRecord(projectRoot, options.host, options.verb);
+  await assertWritesRecord(
+    projectRoot,
+    options.host,
+    options.verb,
+    options.definition?.host,
+  );
   const cli = options.cli ?? resolvePhCliEntry(projectRoot);
   fs.mkdirSync(dataDir, { recursive: true });
 
@@ -213,13 +278,20 @@ export async function spawnHost(
   });
   const args = [cli, "run", options.host];
   if (options.verb !== undefined) args.push(options.verb);
+  if (options.argv && options.argv.length > 0) {
+    args.push("--", ...options.argv);
+  }
   const child = spawn(process.execPath, args, {
     cwd: projectRoot,
     env,
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: [stopOnStdin ? "pipe" : "ignore", "pipe", "pipe"],
     windowsHide: true,
   });
-  track(child);
+  // A child that is gone takes its end of the pipe with it.
+  child.stdin?.on("error", () => undefined);
+  if (!stopOnStdin) track(child);
+  const { stdout, stderr } = child;
+  if (!stdout || !stderr) throw new Error("spawnHost: the child has no pipes.");
 
   const onChunk = (stream: "stdout" | "stderr") => (chunk: string) => {
     tail = (tail + chunk).slice(-TAIL_BYTES);
@@ -231,8 +303,8 @@ export async function spawnHost(
       tail = (tail + `onOutput: ${message}\n`).slice(-TAIL_BYTES);
     }
   };
-  child.stdout.setEncoding("utf8").on("data", onChunk("stdout"));
-  child.stderr.setEncoding("utf8").on("data", onChunk("stderr"));
+  stdout.setEncoding("utf8").on("data", onChunk("stdout"));
+  stderr.setEncoding("utf8").on("data", onChunk("stderr"));
 
   let forced = false;
   let exit: HostExit | undefined;
@@ -282,7 +354,9 @@ export async function spawnHost(
   const stop = (): Promise<HostExit> => {
     stopping ??= (async () => {
       if (!exit) {
-        kill("SIGTERM");
+        // Its end is the request: the child's `ph run` stops as on SIGTERM.
+        if (stopOnStdin) child.stdin?.end();
+        else kill("SIGTERM");
         let timer: NodeJS.Timeout | undefined;
         const timedOut = await Promise.race([
           exited.then(() => false),
@@ -293,7 +367,10 @@ export async function spawnHost(
         clearTimeout(timer);
         if (timedOut) {
           forced = true;
-          kill("SIGKILL");
+          // A member's processes go with it: a store or server it started
+          // would hold its files and ports otherwise.
+          if (stopOnStdin && pid !== undefined) killTree(pid, "SIGKILL");
+          else kill("SIGKILL");
         }
       }
       const result = await exited;

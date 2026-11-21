@@ -71,6 +71,10 @@ export const reactorProtocolSchema = z.strictObject({
 export const runnerKindSchema = z.enum(["reactor", "compound"]);
 export type RunnerKind = z.infer<typeof runnerKindSchema>;
 
+/** A compound member's process: its own, or the compound's (`shared`). */
+export const memberProcessSchema = z.enum(["own", "shared"]);
+export type MemberProcess = z.infer<typeof memberProcessSchema>;
+
 export const reactorBackendKindSchema = z.enum([
   "in-process",
   "worker",
@@ -594,6 +598,11 @@ function buildHostSchemas(tokenField: FieldWrappers) {
       .optional(),
     config: z.looseObject({}).optional(),
     reactor: reactorSchema.optional(),
+    /** Where the member runs: `own`, a child process of the compound
+     * (`ph run <host>`), stopped through its stdin; `shared`, in the
+     * compound's own process. Default: `own` next to a foreground member
+     * (the Cli runner), `shared` otherwise. */
+    process: memberProcessSchema.optional(),
   });
 
   const childrenSchema = z.record(z.string(), childWrapperSchema);

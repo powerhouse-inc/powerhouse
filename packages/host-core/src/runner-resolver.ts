@@ -46,6 +46,41 @@ export interface RunnerContext {
    * Rejects when the files no longer make a valid host. Not set for a
    * compound member. */
   reloadHost?: () => Promise<unknown>;
+  /** Set when this runner is a compound's foreground member (its module
+   * exports `foreground: true`): it runs in the compound's process, last,
+   * and its handle's `exited` ends the stack. */
+  foreground?: ForegroundContext;
+}
+
+/** What a compound hands its foreground member. */
+export interface ForegroundContext {
+  /** The other members as the stack sees them now. */
+  members(): readonly MemberStatus[];
+  /** The stack already runs in another process: nothing of it was started
+   * for this run, which reads its outputs from the live record and must
+   * end (a command beside the stack). */
+  beside: boolean;
+}
+
+/**
+ * One member of a running compound, in the fields a services manager shows
+ * for a service instance (`ServiceInstanceStatus` in clint): the service id
+ * is the member's name, its endpoints are its URL outputs.
+ */
+export interface MemberStatus {
+  /** The member's key in `children`. */
+  name: string;
+  /** Its host folder. */
+  host: string;
+  process: "own" | "shared";
+  status: "starting" | "ready" | "stopping" | "stopped" | "failed";
+  /** Its process: a child's, or the compound's for a shared member. */
+  pid?: number;
+  /** Every URL among its outputs, by dotted path (`drives.lab.url`). */
+  endpoints: Record<string, string>;
+  /** This run's log file (own-process members). */
+  logFile?: string;
+  error?: string;
 }
 
 /** A verb receives the PARSED host (its runner's hostSchema output), so
@@ -104,6 +139,10 @@ export interface RunnerModule<O = unknown> {
   /** The arguments the runner accepts after `ph run <host> [verb]`
    * (`RunnerArgsSchema`). Absent: it accepts none, and any argument fails. */
   argsSchema?: unknown;
+  /** The runner owns the terminal (the Cli runner): it reads stdin itself,
+   * and in a compound it is the foreground member, whose exit ends the
+   * stack (`RunnerContext.foreground`). */
+  foreground?: boolean;
   /** What the verb would refuse at boot, given the parsed host and an
    * environment (`ph host check`). Starts nothing. */
   checkBoot?: (
@@ -137,6 +176,7 @@ const NON_VERB_EXPORTS = new Set([
   "verbs",
   "argsSchema",
   "kind",
+  "foreground",
   "checkBoot",
   "default",
 ]);
@@ -203,6 +243,14 @@ export async function resolveRunnerModule(
   ) {
     throw new RunnerError(
       `Runner "${specifier}" exports a \`checkBoot\` that is not a function.`,
+    );
+  }
+  if (
+    module.foreground !== undefined &&
+    typeof module.foreground !== "boolean"
+  ) {
+    throw new RunnerError(
+      `Runner "${specifier}" exports a \`foreground\` that is not a boolean.`,
     );
   }
   const verbs = module.verbs;

@@ -27,8 +27,13 @@ const HOST_NAME = "lab-sb";
 const STOP_CODE = process.platform === "win32" ? 1 : 0;
 
 // argv: node cli.mjs run <folder> [verb]. Knobs come from the child's env.
-const FAKE_CLI = `import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+const FAKE_CLI = `import { spawn } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
+// A process of its own, as a server's worker or store would be.
+const grandchild = process.env.FAKE_GRANDCHILD
+  ? spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore", windowsHide: true }).pid
+  : undefined;
 const runDir = path.join(process.env.PH_USER_DATA_DIR ?? process.cwd(), ".ph", "run");
 const file = path.join(runDir, "${HOST_NAME}.json");
 process.on("exit", () => {
@@ -40,6 +45,13 @@ process.on("SIGTERM", () => {
   if (process.env.FAKE_NEVER_READY) console.log("fake: shutting down");
   if (!process.env.FAKE_IGNORE_TERM) process.exit(0);
 });
+if (process.env.PH_STOP_ON_STDIN === "1") {
+  process.stdin.on("end", () => {
+    console.log("fake: stdin ended");
+    if (!process.env.FAKE_IGNORE_TERM) process.exit(0);
+  });
+  process.stdin.resume();
+}
 console.log("fake ph run", process.argv.slice(2).join(" "));
 if (process.env.FAKE_SPLIT_UTF8) {
   const bytes = Buffer.from([0x63, 0x61, 0x66, 0xc3, 0xa9, 0x0a]);
@@ -69,7 +81,7 @@ if (!process.env.FAKE_NEVER_READY) {
       verb: process.argv[4] ?? "run",
       pid: process.pid,
       startedAt: new Date().toISOString(),
-      outputs: { origin: "http://127.0.0.1:1", env: process.env, argv: process.argv.slice(2) },
+      outputs: { origin: "http://127.0.0.1:1", env: process.env, argv: process.argv.slice(2), grandchild },
     }));
   }, Number(process.env.FAKE_DELAY ?? 0));
 }
@@ -431,6 +443,97 @@ describe("spawnHost", () => {
       },
     });
     await expect(host.stop()).resolves.toMatchObject({ code: STOP_CODE });
+  });
+
+  describe("for a compound's member", () => {
+    it("stops through its stdin, without a signal, on every platform", async () => {
+      const projectRoot = makeProject();
+      let text = "";
+      const host = await start({
+        projectRoot,
+        stopOnStdin: true,
+        onOutput: (_stream, chunk) => {
+          text += chunk;
+        },
+      });
+      const env = host.outputs?.env as Record<string, string>;
+      expect(env.PH_STOP_ON_STDIN).toBe("1");
+      const exit = await host.stop();
+      expect(exit).toEqual({ code: 0, signal: null, forced: false });
+      expect(text).toContain("fake: stdin ended");
+      expect(existsSync(recordFile(host.dataDir))).toBe(false);
+    });
+
+    it("kills the tree of a child that does not stop on its stdin, after the limit", async () => {
+      const projectRoot = makeProject();
+      const host = await start({
+        projectRoot,
+        stopOnStdin: true,
+        stopTimeoutMs: 300,
+        env: { FAKE_IGNORE_TERM: "1", FAKE_GRANDCHILD: "1" },
+      });
+      const grandchild = host.outputs?.grandchild as number;
+      hostPids.push(grandchild);
+      expect(isPidAlive(grandchild)).toBe(true);
+      const exit = await host.stop();
+      expect(exit.forced).toBe(true);
+      expect(await waitDead(grandchild)).toBe(true);
+      expect(existsSync(recordFile(host.dataDir))).toBe(false);
+    });
+
+    it("hands the runner's arguments over after a `--`", async () => {
+      const projectRoot = makeProject();
+      const host = await start({
+        projectRoot,
+        verb: "dev",
+        argv: ["--port", "1"],
+      });
+      expect(host.outputs?.argv).toEqual([
+        "run",
+        "sb",
+        "dev",
+        "--",
+        "--port",
+        "1",
+      ]);
+    });
+
+    it("starts from the env it is given, not the clean one", async () => {
+      const projectRoot = makeProject();
+      const host = await start({
+        projectRoot,
+        baseEnv: {
+          PATH: process.env.PATH,
+          SystemRoot: process.env.SystemRoot,
+          FROM_THE_COMPOUND: "x",
+          UNSET: undefined,
+        },
+        env: { FAKE_EXTRA: "y" },
+      });
+      const env = host.outputs?.env as Record<string, string>;
+      expect(env).toMatchObject({
+        FROM_THE_COMPOUND: "x",
+        FAKE_EXTRA: "y",
+        PH_USER_DATA_DIR: host.dataDir,
+      });
+      expect(env.PH_NO_DOTENV).toBeUndefined();
+      expect("UNSET" in env).toBe(false);
+    });
+
+    it("hands over the member's host, for its folder", async () => {
+      const projectRoot = makeProject();
+      const definition = {
+        compound: "app",
+        member: "sb",
+        host: { name: HOST_NAME, runner: { module: "fake-runner", port: 3 } },
+      };
+      const host = await start({ projectRoot, definition });
+      const env = host.outputs?.env as Record<string, string>;
+      expect(JSON.parse(env.PH_COMPOUND_MEMBER)).toEqual({
+        ...definition,
+        folder: "sb",
+      });
+    });
   });
 
   it("forwards output to onOutput and logFile", async () => {

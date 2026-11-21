@@ -351,6 +351,7 @@ describe("typed hosts: ph generate hosts + tsc -p hosts", () => {
       "@powerhousedao/ph-cli/runners/switchboard",
       "@powerhousedao/clint/mastra-runner",
       "@powerhousedao/clint/clint-runner",
+      "@powerhousedao/clint/cli-runner",
       "@powerhousedao/desktop/runner",
       "@powerhousedao/switchboard/plugins/workflows",
       "@powerhousedao/connect/plugin-configs",

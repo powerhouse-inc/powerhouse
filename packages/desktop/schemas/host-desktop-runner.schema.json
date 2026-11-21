@@ -553,6 +553,10 @@
               }
             },
             "additionalProperties": false
+          },
+          "process": {
+            "type": "string",
+            "enum": ["own", "shared"]
           }
         },
         "required": ["host"],

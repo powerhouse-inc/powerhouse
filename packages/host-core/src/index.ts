@@ -36,6 +36,8 @@ export {
   type BootCheckContext,
   type BootIssue,
   type DeclaredHostOptions,
+  type ForegroundContext,
+  type MemberStatus,
   type HostSchemaIssue,
   type HostSchemaIssues,
   type HostSchemaLike,
@@ -77,6 +79,7 @@ export {
   type StopRunOptions,
   type StopRunResult,
 } from "./stop-channel.js";
+export { killTree } from "./kill-tree.js";
 export {
   SPAWN_STOPPING_NOTE,
   spawnHost,
@@ -87,13 +90,24 @@ export {
   type SpawnHostPhase,
 } from "./spawn-host.js";
 export {
+  holdStopRequests,
+  memberProcessOf,
+  planForeground,
   runCompound,
   STOP_ON_STDIN_ENV,
   STOP_STREAM_LIMIT_MS,
   stopStreamOf,
+  type ForegroundCandidate,
+  type ForegroundPlan,
+  type HoldStopOptions,
   type RunCompoundOptions,
   type RunCompoundResult,
 } from "./compound.js";
+export {
+  COMPOUND_MEMBER_ENV,
+  takeCompoundMember,
+  type CompoundMemberHost,
+} from "./compound-member.js";
 export {
   checkHost,
   type CheckDeferred,
@@ -169,6 +183,7 @@ export {
   HOST_NAME_PATTERN,
   hostNameSchema,
   makeHostSchemas,
+  memberProcessSchema,
   placementKeyIssues,
   profileSchema,
   reactorBackendKindSchema,
@@ -187,6 +202,7 @@ export {
   type CompoundWiring,
   type HostDefinition,
   type HostSchemas,
+  type MemberProcess,
   type PlacementKeyIssue,
   type Profile,
   type ReactorBackend,

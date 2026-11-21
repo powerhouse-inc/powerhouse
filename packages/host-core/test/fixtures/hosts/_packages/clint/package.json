@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./mastra-runner": "./mastra-runner.ts"
+    "./mastra-runner": "./mastra-runner.ts",
+    "./cli-runner": "./cli-runner.ts"
   }
 }

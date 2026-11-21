@@ -28,6 +28,8 @@ export interface StartedHandle extends RunnerHandleData {
   outputs: Record<string, unknown>;
   ready?: PromiseLike<unknown>;
   shutdown?: () => unknown;
+  /** A foreground member's end, with its exit code. */
+  exited?: PromiseLike<unknown>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -59,5 +61,6 @@ export function toStartedHandle(value: unknown, where: string): StartedHandle {
     outputs: parsed.data.outputs ?? {},
     ...(isPromiseLike(live.ready) ? { ready: live.ready } : {}),
     ...(isCallable(shutdown) ? { shutdown: () => shutdown.call(value) } : {}),
+    ...(isPromiseLike(live.exited) ? { exited: live.exited } : {}),
   };
 }

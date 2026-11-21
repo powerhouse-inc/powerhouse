@@ -1,10 +1,14 @@
+import path from "node:path";
 import {
   checkRunnerArgv,
   clearRunRecord,
   emptyMaps,
   getVerb,
+  holdStopRequests,
   installStopChannel,
+  isRunnerArgsSchema,
   isSchemaLike,
+  listVerbs,
   loadHost,
   loadHostFresh,
   loadProducers,
@@ -20,11 +24,15 @@ import {
   runRecordOutputSource,
   RunnerError,
   stopRun,
+  stopStreamOf,
   STORE_VERBS,
+  takeCompoundMember,
   toStartedHandle,
   validateDeclaredHost,
   validateHost,
   writeRunRecord,
+  type HostDefinition,
+  type LoadedHost,
   type RunnerModule,
 } from "@powerhousedao/host-core";
 
@@ -58,6 +66,11 @@ export interface StartRunArgs {
  *
  * Store verbs (`migrate`, `migrate-status`, `reset`) resolve like `run`, so
  * they address the stores `run` opens, but take no lock and write no record.
+ *
+ * A compound's own-process member is this command with its host handed over
+ * (COMPOUND_MEMBER_ENV): its wrapper applied and its tokens resolved by the
+ * compound, so the file is not read. A supervisor that holds stdin
+ * (PH_STOP_ON_STDIN) stops a reactor host there, as it stops a compound.
  */
 export async function startRun(args: StartRunArgs): Promise<unknown> {
   // Before the host loads: loading it can import its runner and plugins, and
@@ -75,12 +88,16 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
     process.env.NODE_ENV ??= "production";
   }
   const projectRoot = args.projectRoot ?? process.cwd();
-  const loaded = await loadHost(projectRoot, args.host);
+  const member = takeCompoundMember(process.env, args.host);
+  const loaded: LoadedHost = member
+    ? memberHost(projectRoot, args.host, member.host)
+    : await loadHost(projectRoot, args.host);
   const { refuseSupersededConfigKeys } = await import("./superseded-config.js");
   refuseSupersededConfigKeys(projectRoot);
   const specifier = loaded.host.runner.module;
   const runner = await resolveRunnerModule(projectRoot, specifier);
-  const verb = args.verb ?? "run";
+  const typed = commandOfVerb(runner, args);
+  const verb = typed.verb ?? "run";
   const storeVerb = STORE_VERBS.has(verb);
   if (storeVerb && runner.kind === "compound") {
     throw new RunnerError(
@@ -92,6 +109,15 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   // Before the verb starts anything: `ph run <host> --stop` reaches it from
   // here on, on Windows too.
   if (!ONE_SHOT_VERBS.has(verb) && !storeVerb) installStopChannel();
+  // A compound and a runner that owns the terminal read stdin themselves.
+  const supervisor =
+    !ONE_SHOT_VERBS.has(verb) &&
+    !storeVerb &&
+    runner.kind !== "compound" &&
+    runner.foreground !== true
+      ? stopStreamOf(process.env, () => process.stdin)
+      : undefined;
+  const stops = supervisor ? holdStopRequests(supervisor) : undefined;
   const file = loaded.file;
   if (args.debug) {
     console.log({ host: loaded.host.name, runner: specifier, verb });
@@ -103,7 +129,7 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
       tokens: "allow",
     });
     // Unchecked here: the compound hands each member the ones it accepts.
-    const argv = args.argv ?? [];
+    const argv = typed.argv ?? [];
     return fn(host, {
       projectRoot,
       verb,
@@ -113,7 +139,7 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   }
 
   // Before anything starts: an argument the runner does not accept fails.
-  const argv = checkRunnerArgv(args.argv ?? [], {
+  const argv = checkRunnerArgv(typed.argv ?? [], {
     host: args.host,
     runner: specifier,
     schema: runner.argsSchema,
@@ -163,8 +189,15 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   const host = resolveAndValidate(loaded.host);
   const result = await fn(host, {
     ...ctx,
-    reloadHost: async () =>
-      resolveAndValidate((await loadHostFresh(projectRoot, args.host)).host),
+    // A compound member's host is what the compound made of it, not a file.
+    ...(member
+      ? {}
+      : {
+          reloadHost: async () =>
+            resolveAndValidate(
+              (await loadHostFresh(projectRoot, args.host)).host,
+            ),
+        }),
   });
   if (publishes && result !== undefined && result !== null) {
     await publishOutputs(runner, result, {
@@ -175,7 +208,58 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
       verb,
     });
   }
+  // Started: a stop asked meanwhile takes effect now.
+  stops?.started();
   return result;
+}
+
+/** A compound member's host, handed over, in a loaded host's shape. */
+function memberHost(
+  projectRoot: string,
+  folder: string,
+  host: Record<string, unknown>,
+): LoadedHost {
+  const dir = path.join(projectRoot, "hosts", folder);
+  const definition = host as HostDefinition;
+  return {
+    name: definition.name,
+    dir,
+    file: path.join(dir, "host.js"),
+    host: definition,
+  };
+}
+
+/** Words that are verbs of some runner: never a command's first word. */
+const VERB_NAMES: ReadonlySet<string> = new Set([
+  "run",
+  "dev",
+  "serve",
+  ...ONE_SHOT_VERBS,
+  ...STORE_VERBS,
+]);
+
+/**
+ * `ph run cli hello`: for a runner that hands its host every argument
+ * (`passthrough`) and has one verb, a first word that is not a verb is the
+ * first argument, as if typed after `--`. A word that is a verb of any
+ * runner stays a verb, so nothing a runner might take as one is guessed at.
+ */
+function commandOfVerb(
+  runner: RunnerModule,
+  args: Pick<StartRunArgs, "verb" | "argv">,
+): Pick<StartRunArgs, "verb" | "argv"> {
+  const { verb } = args;
+  if (
+    verb === undefined ||
+    VERB_NAMES.has(verb) ||
+    !isRunnerArgsSchema(runner.argsSchema) ||
+    !runner.argsSchema.passthrough
+  ) {
+    return args;
+  }
+  const verbs = listVerbs(runner);
+  if (verbs.length !== 1 || verbs.includes(verb)) return args;
+  return { verb: undefined, argv: [verb, ...(args.argv ?? [])] };
 }
 
 /**
