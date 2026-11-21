@@ -87,6 +87,20 @@ function makeProject(): string {
       }),
     );
   }
+  const upstream = path.join(modules, "@fixture", "upstream");
+  mkdirSync(upstream, { recursive: true });
+  copyFileSync(
+    path.join(FIXTURES, "upstream-runner.mjs"),
+    path.join(upstream, "runner.mjs"),
+  );
+  writeFileSync(
+    path.join(upstream, "package.json"),
+    JSON.stringify({
+      name: "@fixture/upstream",
+      type: "module",
+      exports: { "./runner": "./runner.mjs" },
+    }),
+  );
   writeHost(root, "switchboard", {
     name: SWITCHBOARD,
     runner: { module: "@powerhousedao/ph-run/runners/switchboard", port: 0 },
@@ -132,6 +146,38 @@ function makeProject(): string {
       children: { switchboard: { host: "switchboard" }, cli: { host: cli } },
     });
   }
+  // The proxy under a generic compound (A7): routes from a sibling's output.
+  writeHost(root, "upstream", {
+    name: "stack-upstream",
+    runner: { module: "@fixture/upstream/runner" },
+  });
+  writeHost(root, "proxy", {
+    name: "stack-proxy",
+    runner: { module: "@powerhousedao/clint/proxy-runner", port: 0 },
+    config: {
+      routes: {
+        "/up": {
+          upstream: {
+            $output: { host: "upstream", path: ["origin"] },
+          },
+        },
+      },
+    },
+  });
+  writeHost(root, "proxy-cli", {
+    name: "proxy-cli",
+    runner: { module: "@powerhousedao/clint/cli-runner" },
+    config: { package: "@fixture/plain-cli" },
+  });
+  writeHost(root, "proxy-stack", {
+    name: "proxy-stack",
+    runner: { module: "@powerhousedao/host-core/runners/compound" },
+    children: {
+      upstream: { host: "upstream" },
+      proxy: { host: "proxy" },
+      cli: { host: "proxy-cli" },
+    },
+  });
   return root;
 }
 
@@ -335,6 +381,39 @@ describe("a stack of a switchboard and a Cli", () => {
     expect(hello.output()).toContain("Hello, Cy!");
     expect(readRunRecord(project, SWITCHBOARD)).toBeUndefined();
     expect(readRunRecord(project, "stack")).toBeUndefined();
+  }, 300_000);
+
+  it("runs the proxy as a member, routed to a sibling's output, and stops it with the stack", async () => {
+    const shell = phRun(["proxy-stack", "--", "-i"]);
+    await waitFor(shell, "fixture-cli shell");
+
+    const upstream = readRunRecord(project, "stack-upstream");
+    const proxy = readRunRecord(project, "stack-proxy");
+    expect(upstream?.pid).toBeDefined();
+    expect(proxy?.pid).toBeDefined();
+    for (const pid of [upstream!.pid, proxy!.pid]) switchboards.add(pid);
+    expect(proxy?.pid).not.toBe(shell.child.pid);
+    const url = (proxy?.outputs as { url: string } | undefined)?.url;
+    expect(url).toMatch(/^http:\/\/[^/]+:\d+$/);
+
+    // The route reaches the member it was taken from, through the proxy.
+    const answer = await fetch(`${url}/up/hello`);
+    expect(answer.status).toBe(200);
+    expect(await answer.text()).toBe("stack-upstream saw /hello");
+
+    // The Cli sees the proxy's address like any member's.
+    shell.child.stdin?.write("/members\n");
+    await waitFor(shell, "proxy ready url=");
+    expect(shell.output()).toContain(`url=${url}`);
+    shell.child.stdin?.write("/exit\n");
+
+    expect(await exitCodeOf(shell)).toBe(0);
+    expect(isPidAlive(proxy!.pid)).toBe(false);
+    expect(isPidAlive(upstream!.pid)).toBe(false);
+    expect(readRunRecord(project, "stack-proxy")).toBeUndefined();
+    expect(readRunRecord(project, "stack-upstream")).toBeUndefined();
+    expect(readRunRecord(project, "proxy-stack")).toBeUndefined();
+    await expect(fetch(`${url}/up/hello`)).rejects.toThrow();
   }, 300_000);
 
   describe("when supervised (PH_STOP_ON_STDIN)", () => {

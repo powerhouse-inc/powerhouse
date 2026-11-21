@@ -54,6 +54,10 @@ const SURFACES: Record<string, { source: string; names: string[] }> = {
     source: "./src/runners/cli-runner.ts",
     names: ["run", "runCli", "loadCli", "hostSchema", "argsSchema"],
   },
+  "./proxy-runner": {
+    source: "./src/runners/proxy-runner.ts",
+    names: ["run", "hostSchema", "outputsSchema"],
+  },
 };
 
 describe("package export surfaces", () => {

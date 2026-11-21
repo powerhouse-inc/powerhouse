@@ -13,6 +13,7 @@ import type {
 } from "@powerhousedao/host-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import * as cliRunner from "../src/runners/cli-runner.js";
+import * as proxyRunner from "../src/runners/proxy-runner.js";
 import * as clintRunner from "../src/runners/clint-runner.js";
 import * as mastraRunner from "../src/runners/mastra-runner.js";
 
@@ -633,6 +634,10 @@ describe("emitted runner host schemas drift", () => {
     "host-cli-runner.schema.json": emitHostJsonSchema(
       "host-cli-runner",
       cliRunner.declaredHostSchema,
+    ),
+    "host-proxy-runner.schema.json": emitHostJsonSchema(
+      "host-proxy-runner",
+      proxyRunner.declaredHostSchema,
     ),
   };
   for (const [file, schema] of Object.entries(emitted)) {

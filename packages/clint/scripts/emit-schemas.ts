@@ -5,6 +5,7 @@ import { emitHostJsonSchema } from "@powerhousedao/host-core";
 import { declaredHostSchema as cliHostSchema } from "../src/runners/cli-runner.js";
 import { declaredHostSchema as clintHostSchema } from "../src/runners/clint-runner.js";
 import { declaredHostSchema as mastraHostSchema } from "../src/runners/mastra-runner.js";
+import { declaredHostSchema as proxyHostSchema } from "../src/runners/proxy-runner.js";
 
 /**
  * Writes the editor JSON schemas for hosts run by the clint runners into
@@ -25,6 +26,10 @@ const emitted = {
   "host-cli-runner.schema.json": emitHostJsonSchema(
     "host-cli-runner",
     cliHostSchema,
+  ),
+  "host-proxy-runner.schema.json": emitHostJsonSchema(
+    "host-proxy-runner",
+    proxyHostSchema,
   ),
 };
 

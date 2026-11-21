@@ -39,6 +39,12 @@
       "import": "./dist/runners/cli-runner.mjs",
       "default": "./dist/runners/cli-runner.mjs"
     },
+    "./proxy-runner": {
+      "source": "./src/runners/proxy-runner.ts",
+      "types": "./dist/runners/proxy-runner.d.mts",
+      "import": "./dist/runners/proxy-runner.mjs",
+      "default": "./dist/runners/proxy-runner.mjs"
+    },
     "./mastra": {
       "source": "./src/integrations/mastra/index.ts",
       "types": "./dist/integrations/mastra/index.d.mts",
