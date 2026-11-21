@@ -1,16 +1,28 @@
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
 import { z } from "zod";
+import {
+  formatHostRef,
+  HostLoadError,
+  hostFileLabel,
+  hostFolders,
+  locateHost,
+  type HostLocation,
+  type HostPackage,
+} from "./host-ref.js";
 import type { HostDefinition } from "./host-schemas.js";
 import type { PluginEntryData } from "./plugins.js";
 import { resolvePluginContributions } from "./plugins-resolve.js";
 import { resolveRunnerModule } from "./runner-resolver.js";
 
+export { HostLoadError } from "./host-ref.js";
+
 /**
- * Loads and pre-validates a `hosts/<name>/host.js` definition.
+ * Loads and pre-validates a `hosts/<name>/host.js` definition: the project's
+ * own, or one an installed package supplies (`<package>/<host>`, host-ref.ts).
  *
  * A host file is a static PROJECTION of powerhouse.config.json: plain ESM,
  * default-exporting a data object. Three gates run before any runner sees it:
@@ -32,13 +44,6 @@ import { resolveRunnerModule } from "./runner-resolver.js";
 const HOST_FILE = "host.js";
 const CONFIG_IMPORT_SUFFIX = "powerhouse.config.json";
 
-export class HostLoadError extends Error {
-  constructor(message: string, hint?: string) {
-    super(hint ? `${message}\n  Hint: ${hint}` : message);
-    this.name = "HostLoadError";
-  }
-}
-
 export type HostsFolderStatus =
   | { kind: "absent" }
   | { kind: "empty"; dir: string }
@@ -49,17 +54,8 @@ export type HostsFolderStatus =
  * ({@link withoutHostsMessage}). */
 export function probeHostsFolder(projectRoot: string): HostsFolderStatus {
   const dir = path.join(projectRoot, "hosts");
-  if (!existsSync(dir) || !statSync(dir).isDirectory()) {
-    return { kind: "absent" };
-  }
-  const hosts = readdirSync(dir, { withFileTypes: true })
-    .filter(
-      (entry) =>
-        entry.isDirectory() &&
-        existsSync(path.join(dir, entry.name, HOST_FILE)),
-    )
-    .map((entry) => entry.name)
-    .sort();
+  const hosts = hostFolders(projectRoot);
+  if (hosts === undefined) return { kind: "absent" };
   return hosts.length === 0
     ? { kind: "empty", dir }
     : { kind: "present", dir, hosts };
@@ -371,10 +367,32 @@ export function findNonStaticValue(
 export type { HostDefinition } from "./host-schemas.js";
 
 export interface LoadedHost {
+  /** Its folder under `hosts/`. */
   name: string;
   dir: string;
   file: string;
   host: HostDefinition;
+  /** How it is addressed from anywhere in the project: its folder for the
+   * project's own host, `<package>/<host>` for a package's. */
+  ref?: string;
+  /** The package that supplies it; absent for the project's own. Its
+   * runner and plugin specifiers resolve from `package.root`. */
+  package?: HostPackage;
+}
+
+export interface LoadHostOptions {
+  /** The package whose compound names this host: a bare name looks in its
+   * `hosts/` first, then in the project's. */
+  scope?: HostPackage;
+}
+
+/** Where a loaded host's module specifiers resolve from: its package's
+ * folder, else the project root. */
+export function moduleRootOf(
+  projectRoot: string,
+  loaded: Pick<LoadedHost, "package">,
+): string {
+  return loaded.package?.root ?? projectRoot;
 }
 
 function assertHostShape(
@@ -401,11 +419,13 @@ function assertHostShape(
   }
 }
 
+/** `hostName` is a ref: the project's folder name, or `<package>/<host>`. */
 export async function loadHost(
   projectRoot: string,
   hostName: string,
+  options: LoadHostOptions = {},
 ): Promise<LoadedHost> {
-  return importHost(projectRoot, hostName, true);
+  return importHost(projectRoot, hostName, true, false, options.scope);
 }
 
 /**
@@ -417,8 +437,9 @@ export async function loadHost(
 export async function loadHostFresh(
   projectRoot: string,
   hostName: string,
+  options: LoadHostOptions = {},
 ): Promise<LoadedHost> {
-  return importHost(projectRoot, hostName, true, true);
+  return importHost(projectRoot, hostName, true, true, options.scope);
 }
 
 const FRESH_IMPORT_WORKER = `
@@ -456,31 +477,44 @@ function importDefaultFresh(url: string, file: string): Promise<unknown> {
   });
 }
 
+/** Where `ref` is; for the project's own host, the loader's messages when
+ * its hosts/ folder lacks it. */
+function locateLoadable(
+  projectRoot: string,
+  ref: string,
+  scope?: HostPackage,
+): HostLocation {
+  const location = locateHost(projectRoot, ref, scope);
+  if (location.package) return location;
+  const probe = probeHostsFolder(projectRoot);
+  if (probe.kind !== "present") {
+    throw new HostLoadError(withoutHostsMessage(probe, `the host "${ref}"`));
+  }
+  if (!probe.hosts.includes(location.folder)) {
+    throw new HostLoadError(
+      `Unknown host "${ref}". Available hosts: ${probe.hosts.join(", ")}.`,
+    );
+  }
+  return location;
+}
+
 async function importHost(
   projectRoot: string,
   hostName: string,
   checkOutputs: boolean,
   fresh = false,
+  scope?: HostPackage,
 ): Promise<LoadedHost> {
-  const probe = probeHostsFolder(projectRoot);
-  if (probe.kind !== "present") {
-    throw new HostLoadError(
-      withoutHostsMessage(probe, `the host "${hostName}"`),
-    );
-  }
-  if (!probe.hosts.includes(hostName)) {
-    throw new HostLoadError(
-      `Unknown host "${hostName}". Available hosts: ${probe.hosts.join(", ")}.`,
-    );
-  }
+  const location = locateLoadable(projectRoot, hostName, scope);
+  const { folder, hostsDir } = location;
 
-  const file = path.join(probe.dir, hostName, HOST_FILE);
-  const producers = lintHostImportGraph(probe.dir, hostName);
+  const file = path.join(hostsDir, folder, HOST_FILE);
+  const producers = lintHostImportGraph(hostsDir, folder);
   // Step 1 of the loader pipeline: a stale outputs.js fails before the host
   // is evaluated (its token tree may name outputs that no longer exist).
   if (checkOutputs) {
     for (const producer of producers) {
-      await assertOutputsFileFresh(projectRoot, probe.dir, hostName, producer);
+      await assertOutputsFileFresh(projectRoot, location, producer);
     }
   }
 
@@ -504,10 +538,12 @@ async function importHost(
 
   assertHostShape(host as Record<string, unknown>, file);
   return {
-    name: hostName,
+    name: folder,
     dir: path.dirname(file),
     file,
     host: host as HostDefinition,
+    ref: location.ref,
+    ...(location.package ? { package: location.package } : {}),
   };
 }
 
@@ -608,9 +644,11 @@ export async function describeHostOutputs(
   projectRoot: string,
   hostName: string,
 ): Promise<HostOutputsDescription | undefined> {
-  const { host, file } = await importHost(projectRoot, hostName, false);
+  const loaded = await importHost(projectRoot, hostName, false);
+  const { host, file } = loaded;
+  const moduleRoot = moduleRootOf(projectRoot, loaded);
   const runnerModule = host.runner.module;
-  const runner = await resolveRunnerModule(projectRoot, runnerModule);
+  const runner = await resolveRunnerModule(moduleRoot, runnerModule);
   const schema = runner.outputsSchema;
   if (!isZodSchema(schema)) return undefined;
   const { $schema: _dialect, ...outputsSchema } = z.toJSONSchema(schema, {
@@ -625,7 +663,7 @@ export async function describeHostOutputs(
   );
   if (entries.length > 0) {
     const plan = await resolvePluginContributions(
-      projectRoot,
+      moduleRoot,
       "*",
       entries,
       path.relative(projectRoot, file),
@@ -635,13 +673,15 @@ export async function describeHostOutputs(
     );
   }
   const sortedDrives = [...new Set(drives)].sort();
+  // The folder: what the tokens in its own package's files name it by.
+  const folder = loaded.name;
   return {
-    host: hostName,
+    host: folder,
     runnerModule,
     outputsSchema,
     drives: sortedDrives,
     hash: computeOutputsHash({
-      host: hostName,
+      host: folder,
       runnerModule,
       outputsSchema,
       drives: sortedDrives,
@@ -651,29 +691,36 @@ export async function describeHostOutputs(
 
 async function assertOutputsFileFresh(
   projectRoot: string,
-  hostsDir: string,
-  consumer: string,
+  consumer: HostLocation,
   producer: string,
 ): Promise<void> {
-  const rel = `hosts/${producer}/${OUTPUTS_FILE}`;
+  const { hostsDir } = consumer;
+  const where = consumer.package ? `${consumer.package.name}/` : "";
+  const rel = `${where}hosts/${producer}/${OUTPUTS_FILE}`;
   const actual = readOutputsFileHash(
     readFileSync(path.join(hostsDir, producer, OUTPUTS_FILE), "utf8"),
   );
   if (!existsSync(path.join(hostsDir, producer, HOST_FILE))) {
     throw new HostLoadError(
-      `hosts/${consumer} imports ${rel}, but there is no hosts/${producer}/host.js to produce it.`,
+      `${where}hosts/${consumer.folder} imports ${rel}, but there is no ${hostFileLabel(producer, consumer.package)} to produce it.`,
       "Delete the orphaned outputs.js and fix the import.",
     );
   }
-  const description = await describeHostOutputs(projectRoot, producer);
+  // A sibling in the same hosts/ folder: the package's own, for a package's.
+  const description = await describeHostOutputs(
+    projectRoot,
+    formatHostRef({ package: consumer.package?.name, host: producer }),
+  );
   if (!description) {
     throw new HostLoadError(
-      `hosts/${consumer} imports ${rel}, but hosts/${producer}'s runner declares no outputsSchema, so it produces no outputs.`,
+      `${where}hosts/${consumer.folder} imports ${rel}, but ${where}hosts/${producer}'s runner declares no outputsSchema, so it produces no outputs.`,
     );
   }
   if (actual !== description.hash) {
     throw new HostLoadError(
-      `${rel} is stale (its producer's outputsSchema or declared drives changed since it was generated); run \`ph generate hosts\`.`,
+      consumer.package
+        ? `${rel} is stale against the runner this project resolves for it (its outputsSchema or declared drives differ from those it was generated from): package "${consumer.package.name}" was built against another version of "${description.runnerModule}".`
+        : `${rel} is stale (its producer's outputsSchema or declared drives changed since it was generated); run \`ph generate hosts\`.`,
       actual === undefined
         ? `${rel} carries no outputsHash export; it was not generated by \`ph generate hosts\`.`
         : `expected ${description.hash}, found ${actual}.`,

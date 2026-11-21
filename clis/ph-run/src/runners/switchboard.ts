@@ -426,14 +426,15 @@ async function start(
   if (noDatabase) throw new Error(noDatabase);
 
   // R2 step 2: a declared composition is resolved here, against the PROJECT
-  // dependency tree, and handing it to the server is what makes it boot. No
-  // plugins key = nothing to resolve: the server boots its default
-  // composition (the subsystems MCP_ENABLED and PH_WORKFLOWS_ENABLED turn
-  // on), which contributes no drives through this runner.
+  // dependency tree (the package's, for a host a package supplies), and
+  // handing it to the server is what makes it boot. No plugins key = nothing
+  // to resolve: the server boots its default composition (the subsystems
+  // MCP_ENABLED and PH_WORKFLOWS_ENABLED turn on), which contributes no
+  // drives through this runner.
   let pluginComposition;
   if (entries !== undefined) {
     pluginComposition = await resolveHostPlugins(
-      ctx.projectRoot,
+      ctx.hostPackage?.root ?? ctx.projectRoot,
       "switchboard",
       ctx.verb,
       entries,

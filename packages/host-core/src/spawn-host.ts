@@ -9,8 +9,9 @@ import {
   type CompoundMemberHost,
 } from "./compound-member.js";
 import { loadHost } from "./host-loader.js";
+import { locateHost } from "./host-ref.js";
 import { killTree } from "./kill-tree.js";
-import { clearRunRecord, listRunRecords } from "./run-record.js";
+import { clearRunRecord, listRunRecords, recordKeyOf } from "./run-record.js";
 import type { RunRecord } from "./run-record-schema.js";
 import {
   isSchemaLike,
@@ -22,7 +23,8 @@ import { STOP_ON_STDIN_ENV } from "./stop-channel.js";
 
 export interface SpawnHostOptions {
   projectRoot: string;
-  /** Folder name under hosts/. */
+  /** Folder name under hosts/, or `<package>/<host>` for a host an
+   * installed package supplies: what the child's `ph run` takes. */
   host: string;
   /** The child's PH_USER_DATA_DIR (created if missing). */
   dataDir: string;
@@ -188,7 +190,12 @@ async function assertWritesRecord(
     config?: { runtimeRecord?: unknown };
   };
   const specifier = declared.runner.module;
-  const runner = await resolveRunnerModule(projectRoot, specifier);
+  // As the child resolves it: from the package that supplies the host.
+  const supplier = locateHost(projectRoot, host).package;
+  const runner = await resolveRunnerModule(
+    supplier?.root ?? projectRoot,
+    specifier,
+  );
   if (runner.kind === "compound") {
     const config = declared.config;
     if (config?.runtimeRecord === false) {
@@ -346,7 +353,7 @@ export async function spawnHost(
   };
   const clearOwnRecords = () => {
     for (const record of ownRecords()) {
-      clearRunRecord(projectRoot, record.host, readerEnv);
+      clearRunRecord(projectRoot, recordKeyOf(record), readerEnv);
     }
   };
 

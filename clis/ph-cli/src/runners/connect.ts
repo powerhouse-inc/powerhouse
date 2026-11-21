@@ -46,12 +46,16 @@ async function toStudioArgs(
   };
 }
 
-// Per host: Studio and other hosts' dev servers run side by side in one project.
+// Per host: Studio and other hosts' dev servers run side by side in one
+// project. A package's host has the package in front, joined by `+`, which
+// no host name holds: `.vite-@acme+tools+connect`.
 const viteCacheOf = (host: ConnectHostParsed, ctx: RunnerContext) =>
   join(
     ctx.projectRoot,
     "node_modules",
-    `.vite-${host.name.replace(/[^\w.-]/g, "_")}`,
+    ctx.hostPackage
+      ? `.vite-${`${ctx.hostPackage.name}/${host.name}`.replace(/[^\w.@/-]/g, "_").replaceAll("/", "+")}`
+      : `.vite-${host.name.replace(/[^\w.-]/g, "_")}`,
   );
 
 export async function dev(

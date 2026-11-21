@@ -7,6 +7,7 @@ import {
   probeRun,
   readProjectName,
   readRunRecord,
+  runRecordKey,
   STOP_ON_STDIN_ENV,
   STOP_STREAM_LIMIT_MS,
   stopStreamOf,
@@ -69,7 +70,9 @@ const schemas = defineHostSchemas((s) =>
     config: z
       .strictObject({
         /** The package whose `./cli` export the host runs (`<package>/cli`,
-         * resolved from the project). Absent: the project's own `./cli`. */
+         * resolved from the project). Absent: the project's own `./cli`. In a
+         * host an installed package supplies, both resolve from that package:
+         * absent is the package's own `./cli`. */
         package: z.string().min(1).optional(),
       })
       .optional(),
@@ -339,23 +342,27 @@ function recordServing(
   projectRoot: string,
   hostName: string,
   verb: string,
+  hostPackage?: string,
 ): void {
   const projectName = readProjectName(projectRoot);
-  const probe = probeRun(projectRoot, hostName, projectName);
+  // A package's host is filed, and addressed, behind its package.
+  const key = runRecordKey(hostName, hostPackage);
+  const probe = probeRun(projectRoot, key, projectName);
   if (probe.status === "live" && probe.record.pid !== process.pid) {
     throw new Error(
-      `${hostName} is already running for this project (pid ${probe.record.pid}). ` +
-        `Stop it with \`ph run ${hostName} --stop\`, or run a command beside it: \`ph run ${hostName} -- <command>\`.`,
+      `${key} is already running for this project (pid ${probe.record.pid}). ` +
+        `Stop it with \`ph run ${key} --stop\`, or run a command beside it: \`ph run ${key} -- <command>\`.`,
     );
   }
   if (probe.status === "foreign") {
     throw new Error(
-      `.ph/run/${hostName}.json describes a live "${probe.record.projectName}", but this project is "${projectName}". Refusing to start a second instance.`,
+      `.ph/run/${key}.json describes a live "${probe.record.projectName}", but this project is "${projectName}". Refusing to start a second instance.`,
     );
   }
   writeRunRecord(projectRoot, {
     version: 2,
     host: hostName,
+    ...(hostPackage === undefined ? {} : { package: hostPackage }),
     projectName,
     kind: "reactor",
     verb,
@@ -364,8 +371,8 @@ function recordServing(
     outputs: {},
   });
   process.on("exit", () => {
-    if (readRunRecord(projectRoot, hostName)?.pid === process.pid) {
-      clearRunRecord(projectRoot, hostName);
+    if (readRunRecord(projectRoot, key)?.pid === process.pid) {
+      clearRunRecord(projectRoot, key);
     }
   });
 }
@@ -472,7 +479,12 @@ export async function run(
     );
   }
   const url = remoteUrlOf(host);
-  const cli = await loadCli(ctx.projectRoot, host.config?.package);
+  // From the package that supplies the host, if one does: its own `./cli`.
+  // The Cli still works in the project.
+  const cli = await loadCli(
+    ctx.hostPackage?.root ?? ctx.projectRoot,
+    host.config?.package,
+  );
   if (ctx.foreground) {
     return inStack(cli, host, { ...ctx, foreground: ctx.foreground }, url);
   }
@@ -482,7 +494,13 @@ export async function run(
     ...(url ? { url } : {}),
     workdir: ctx.projectRoot,
     ...(stopStream ? { stopStream } : {}),
-    onServe: () => recordServing(ctx.projectRoot, host.name, ctx.verb),
+    onServe: () =>
+      recordServing(
+        ctx.projectRoot,
+        host.name,
+        ctx.verb,
+        ctx.hostPackage?.name,
+      ),
   });
   await Promise.all([drained(process.stdout), drained(process.stderr)]);
   process.exit(code);

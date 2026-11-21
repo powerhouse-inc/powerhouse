@@ -14,12 +14,15 @@ export const runHost = command({
   description:
     "Run a host from the project's hosts/ folder: `ph run <host> [verb]`. " +
     "The host's own host.js names the runner module; the verb defaults to `run`. " +
-    "Arguments after the verb go to the runner, which names the ones it accepts.",
+    "Arguments after the verb go to the runner, which names the ones it accepts. " +
+    "`ph run <package>/<host>` runs a host that an installed package supplies.",
   args: {
     host: positional({
       type: string,
       displayName: "host",
-      description: "Folder name under hosts/ (e.g. vetra, connect).",
+      description:
+        "Folder name under hosts/ (e.g. vetra, connect), or `<package>/<host>` " +
+        "for one in an installed package's hosts/ (e.g. `@acme/tools/studio`).",
     }),
     verb: positional({
       type: optional(string),

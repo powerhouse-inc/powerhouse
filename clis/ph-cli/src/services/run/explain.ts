@@ -10,12 +10,14 @@ import {
   explainDrivePlan,
   findDeadConnectConfig,
   formatPath,
+  hostFileLabel,
   isToken,
   loadHost,
   loadProducers,
   memberForRef,
   memberProcessOf,
   mergeDrivePlan,
+  moduleRootOf,
   outputRefsOf,
   outputSitesOf,
   planCompound,
@@ -30,6 +32,7 @@ import {
   resolveRunnerModule,
   RunnerError,
   runnerOutputsSchema,
+  runRecordKey,
   runRecordOutputSource,
   validateDeclaredHost,
   validateHost,
@@ -77,6 +80,9 @@ interface MemberView {
   runner: RunnerModule;
   specifier: string;
   file: string;
+  /** Where its plugin specifiers resolve from: its package, else the
+   * project. */
+  moduleRoot: string;
   /** Where the effective `config` lives (a wrapper `config` is a full
    * statement in the compound's file). */
   configWhere: string;
@@ -87,6 +93,8 @@ interface LoadedView {
   runner: RunnerModule;
   specifier: string;
   file: string;
+  /** Where its plugin specifiers resolve from. */
+  moduleRoot: string;
   /** Set for a compound. */
   members?: MemberView[];
   /** Where tokens resolve NOW (for printing values): a standalone host's
@@ -99,14 +107,19 @@ async function loadView(
   projectRoot: string,
   name: string,
 ): Promise<LoadedView> {
+  // As `ph run` finds it: a package's host resolves its modules there, and
+  // its compound's bare members look there first.
   const loaded = await loadHost(projectRoot, name);
+  const scope = loaded.package;
+  const moduleRoot = moduleRootOf(projectRoot, loaded);
   const specifier = loaded.host.runner.module;
-  const runner = await resolveRunnerModule(projectRoot, specifier);
-  const file = `hosts/${name}/host.js`;
+  const runner = await resolveRunnerModule(moduleRoot, specifier);
+  const file = hostFileLabel(loaded.name, scope);
   if (runner.kind !== "compound") {
     const producers = await loadProducers(
       projectRoot,
       outputRefsOf(loaded.host),
+      scope,
     );
     validateDeclaredHost(runner, specifier, loaded.host, file, {
       outputsSchemaOf: producerOutputsSchemas(producers),
@@ -117,7 +130,7 @@ async function loadView(
       producers,
       projectName: readProjectName(projectRoot),
     });
-    return { host: loaded.host, runner, specifier, file, source };
+    return { host: loaded.host, runner, specifier, file, moduleRoot, source };
   }
   validateDeclaredHost(runner, specifier, loaded.host, file);
   validateHost(runner, specifier, loaded.host, file, { tokens: "allow" });
@@ -127,22 +140,23 @@ async function loadView(
   );
   const members: MemberView[] = [];
   for (const [key, wrapper] of Object.entries(children)) {
-    const host: ReactorView = applyChildWrapper(
-      (await loadHost(projectRoot, wrapper.host)).host,
-      wrapper,
-    );
+    const member = await loadHost(projectRoot, wrapper.host, { scope });
+    const host: ReactorView = applyChildWrapper(member.host, wrapper);
     const memberSpecifier = host.runner.module;
+    const memberRoot = moduleRootOf(projectRoot, member);
+    const memberFile = hostFileLabel(member.name, member.package);
     members.push({
       key,
       wrapper,
       host,
-      runner: await resolveRunnerModule(projectRoot, memberSpecifier),
+      runner: await resolveRunnerModule(memberRoot, memberSpecifier),
       specifier: memberSpecifier,
-      file: `hosts/${wrapper.host}/host.js`,
+      file: memberFile,
+      moduleRoot: memberRoot,
       configWhere:
         wrapper.config !== undefined
-          ? `hosts/${name}/host.js (children.${key}.config)`
-          : `hosts/${wrapper.host}/host.js`,
+          ? `${file} (children.${key}.config)`
+          : memberFile,
     });
   }
   const refs = members.map((m) => ({ key: m.key, host: m.wrapper.host }));
@@ -166,7 +180,7 @@ async function loadView(
   // compound runs (its record carries every member's outputs).
   const probe = probeRun(
     projectRoot,
-    loaded.host.name,
+    runRecordKey(loaded.host.name, scope?.name),
     readProjectName(projectRoot),
   );
   const live = new Map<string, unknown>();
@@ -179,7 +193,15 @@ async function loadView(
     probe.status === "live"
       ? compoundOutputSource(refs, live, loaded.host.name)
       : undefined;
-  return { host: loaded.host, runner, specifier, file, members, source };
+  return {
+    host: loaded.host,
+    runner,
+    specifier,
+    file,
+    moduleRoot,
+    members,
+    source,
+  };
 }
 
 /** A token's value from running producers, or undefined (producer not
@@ -215,7 +237,7 @@ export async function explainHost(options: ExplainOptions): Promise<void> {
     const verb = view.host.runner.defaultVerb ?? "run";
     for (const m of view.members) {
       await explainDrives(
-        projectRoot,
+        { projectRoot, moduleRoot: m.moduleRoot },
         `${options.host} › ${m.key} (${m.wrapper.host})`,
         m.host,
         verb,
@@ -227,7 +249,7 @@ export async function explainHost(options: ExplainOptions): Promise<void> {
     return;
   }
   await explainDrives(
-    projectRoot,
+    { projectRoot, moduleRoot: view.moduleRoot },
     options.host,
     view.host,
     "run",
@@ -240,7 +262,9 @@ export async function explainHost(options: ExplainOptions): Promise<void> {
 /* ------------------------------------------------------------------ drives */
 
 async function explainDrives(
-  projectRoot: string,
+  /** Drive ids are the project's; plugin specifiers resolve from
+   * `moduleRoot` (a package's host: the package). */
+  roots: { projectRoot: string; moduleRoot: string },
   label: string,
   host: ReactorView,
   verb: string,
@@ -248,10 +272,11 @@ async function explainDrives(
   configWhere: string,
   source?: OutputSource,
 ): Promise<void> {
+  const { projectRoot } = roots;
   const entries: PluginEntryData[] = host.runner.plugins ?? [];
   const contributions =
     entries.length > 0
-      ? await resolvePluginContributions(projectRoot, verb, entries, where)
+      ? await resolvePluginContributions(roots.moduleRoot, verb, entries, where)
       : { drives: [], unresolved: [] };
   const contributed = contributions.drives.map(({ declaration, source }) => {
     const parsed = drivesSchema.safeParse([declaration]);

@@ -134,6 +134,22 @@ describe("connect bridge runner", () => {
     );
   });
 
+  it("keeps a package's connect host in a Vite cache named after the package", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    vi.mocked(runConnectStudio).mockClear();
+    await runner.dev(connect(connectHost()), {
+      ...ctx,
+      hostPackage: { name: "@acme/tools", root: "/store/tools" },
+    });
+    // In the project's node_modules, apart from a project host's of the
+    // same name (`+` is in no host name).
+    expect(vi.mocked(runConnectStudio).mock.calls[0][3]?.cacheDir).toBe(
+      join(ctx.projectRoot, "node_modules", ".vite-@acme+tools+lab-connect"),
+    );
+  });
+
   it("serves the browser reactor's in-memory store to Connect", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =

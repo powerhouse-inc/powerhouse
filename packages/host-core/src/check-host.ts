@@ -4,6 +4,7 @@ import {
 } from "@powerhousedao/shared/clis/constants";
 import {
   compoundStartVerb,
+  memberCycle,
   memberVerbOf,
   planForeground,
   prepareMember,
@@ -11,7 +12,8 @@ import {
   type PreparedMember,
 } from "./compound.js";
 import { isBuiltinEnvName, substituteBuiltinEnv } from "./env-substitution.js";
-import { loadHost } from "./host-loader.js";
+import { loadHost, moduleRootOf } from "./host-loader.js";
+import { hostFileLabel, type HostPackage } from "./host-ref.js";
 import type { CheckStage, HostIssue } from "./host-issues.js";
 import type { ChildWrapper, CompoundWiring } from "./host-schemas.js";
 import {
@@ -74,22 +76,29 @@ export interface CheckHostResult {
   deferred: CheckDeferred[];
 }
 
-/** The `ph run` pipeline up to the verb, collecting every issue; starts nothing. */
+/** The `ph run` pipeline up to the verb, collecting every issue; starts
+ * nothing. `name` is a ref: a project host, or `<package>/<host>`. */
 export async function checkHost(
   name: string,
   options: CheckHostOptions,
 ): Promise<CheckHostResult> {
   const result: CheckHostResult = { issues: [], warnings: [], deferred: [] };
-  const file = `hosts/${name}/host.js`;
-  const issue = issuer(result, file);
+  let file = `hosts/${name}/host.js`;
   const verb = options.verb ?? "run";
   let host: Record<string, unknown> & { runner: { module: string } };
   let runner: RunnerModule;
+  let hostPackage: HostPackage | undefined;
   try {
-    host = (await loadHost(options.projectRoot, name)).host;
-    runner = await resolveRunnerModule(options.projectRoot, host.runner.module);
+    const loaded = await loadHost(options.projectRoot, name);
+    host = loaded.host;
+    hostPackage = loaded.package;
+    file = hostFileLabel(loaded.name, hostPackage);
+    runner = await resolveRunnerModule(
+      moduleRootOf(options.projectRoot, loaded),
+      host.runner.module,
+    );
   } catch (error) {
-    issue("load", "", error);
+    issuer(result, file)("load", "", error);
     return result;
   }
   const specifier = host.runner.module;
@@ -101,12 +110,13 @@ export async function checkHost(
       runner,
       specifier,
       verb,
+      hostPackage,
     });
     return result;
   }
 
   const refs = outputRefsOf(host);
-  const producers = await loadProducers(options.projectRoot, refs);
+  const producers = await loadProducers(options.projectRoot, refs, hostPackage);
   await checkSubject(result, options, {
     file,
     host,
@@ -125,6 +135,8 @@ interface Subject {
   runner: RunnerModule;
   specifier: string;
   verb: string;
+  /** The package that supplies the host. */
+  hostPackage?: HostPackage;
 }
 
 interface ReactorSubject extends Subject {
@@ -299,10 +311,29 @@ async function checkCompound(
   const prepared: PreparedMember[] = [];
   for (const [key, member] of Object.entries(children)) {
     try {
-      prepared.push(await prepareMember(options.projectRoot, key, member));
+      prepared.push(
+        await prepareMember(
+          options.projectRoot,
+          key,
+          member,
+          subject.hostPackage,
+        ),
+      );
     } catch (error) {
       issuer(result, `hosts/${member.host}/host.js`)("load", "", error);
     }
+  }
+  try {
+    const cycle = await memberCycle(options.projectRoot, prepared);
+    if (cycle) {
+      issue("declared", {
+        path: "children",
+        message: `compound member cycle: ${cycle.join(" -> ")}.`,
+        hint: "A compound cannot run itself, directly or through another compound.",
+      });
+    }
+  } catch (error) {
+    issue("load", "children", error);
   }
   const members = Object.entries(children).map(([key, m]) => ({
     key,

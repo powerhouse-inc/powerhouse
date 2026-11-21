@@ -12,7 +12,8 @@ import {
 } from "./host-schemas.js";
 import { applyChildWrapper, type MemberDraft } from "./child-wrapper.js";
 import { substituteBuiltinEnv } from "./env-substitution.js";
-import { loadHost } from "./host-loader.js";
+import { loadHost, moduleRootOf } from "./host-loader.js";
+import { hostFileLabel, type HostPackage } from "./host-ref.js";
 import { defaultUserDataDir } from "./placeholders.js";
 import { declaresKey, outputSitesOf } from "./resolve/declared.js";
 import { processResolveEnv, runnerOutputsSchema } from "./resolve/node.js";
@@ -28,6 +29,7 @@ import { compoundOutputSource } from "./resolve/sources.js";
 import {
   clearRunRecord,
   probeRun,
+  runRecordKey,
   writeRunRecord,
   type RunRecordMember,
 } from "./run-record.js";
@@ -74,11 +76,18 @@ export type { RunnerHandle, StartedHandle } from "./runner-handle.js";
  * `foreground: true`, the Cli runner) owns the terminal: it starts last, in
  * this process, and its end ends the stack with its exit code; the members
  * next to it run in their own processes unless they say otherwise.
+ *
+ * A compound an installed package supplies (`ctx.hostPackage`) names its
+ * members in that package first: a bare member host is the package's when
+ * it ships one, else the project's. Its record and its members' logs go in a
+ * folder named after the package.
  */
 
 interface StartedMember {
   name: string;
   member: ChildWrapper;
+  /** How the project addresses the member's host (PreparedMember.ref). */
+  ref: string;
   specifier: string;
   kind: RunnerKind;
   verb: string;
@@ -95,14 +104,22 @@ export interface PreparedMember {
   specifier: string;
   runner: RunnerModule;
   file: string;
+  /** How the project addresses the member's host: its folder, or
+   * `<package>/<host>` for one a package supplies. An own-process member is
+   * started by it, and the record names the member's host by it. */
+  ref: string;
+  /** The package that supplies the member's host. */
+  hostPackage?: HostPackage;
 }
 
+/** `scope`: the package whose compound names the member (rule 3, D5). */
 export async function memberDraft(
   projectRoot: string,
   member: ChildWrapper,
+  scope?: HostPackage,
 ): Promise<MemberDraft> {
   return applyChildWrapper(
-    (await loadHost(projectRoot, member.host)).host,
+    (await loadHost(projectRoot, member.host, { scope })).host,
     member,
   );
 }
@@ -234,15 +251,23 @@ const fileSafe = (id: string) => id.replace(/[<>:"/\\|?*]/g, "+");
 /**
  * A fresh log file for this run of an own-process member, named as the
  * services manager names a service's: `<phDir>/services/<member>/
- * <member>.<runId>.log`. Older runs beyond the newest few are removed.
+ * <member>.<runId>.log`, or `<phDir>/services/<package>/<member>/…` for a
+ * compound the package `hostPackage` supplies. Older runs beyond the newest
+ * few are removed.
  */
 export function memberLogFile(
   projectRoot: string,
   env: Readonly<Record<string, string | undefined>>,
   member: string,
+  hostPackage?: string,
 ): string {
   const safe = fileSafe(member);
-  const dir = path.join(resolvePhDir(projectRoot, env), "services", safe);
+  const dir = path.join(
+    resolvePhDir(projectRoot, env),
+    "services",
+    ...(hostPackage === undefined ? [] : hostPackage.split("/")),
+    safe,
+  );
   fs.mkdirSync(dir, { recursive: true });
   const escaped = safe.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`^${escaped}\\.(\\d+)\\.log$`);
@@ -408,7 +433,11 @@ export async function runCompound(
   ctx: RunnerContext,
   options: RunCompoundOptions,
 ): Promise<RunCompoundResult> {
-  const compoundFile = `hosts/${hostInput.name}`;
+  // The package that supplies this compound: its members are its first.
+  const scope = ctx.hostPackage;
+  const compoundFile = scope
+    ? `${scope.name}/hosts/${hostInput.name}`
+    : `hosts/${hostInput.name}`;
   const removed = findRemovedForms(hostInput);
   if (removed.length > 0) {
     throw new RunnerError(
@@ -448,13 +477,14 @@ export async function runCompound(
   }
 
   // Lock: one live instance per project per host (storage-root contention).
+  const recordKey = runRecordKey(host.name, scope?.name);
   const probe = oneShotCompound
     ? undefined
-    : probeRun(projectRoot, host.name, options.projectName);
+    : probeRun(projectRoot, recordKey, options.projectName);
   const live = probe?.status === "live" ? probe.record : undefined;
   const running = live
     ? new Error(
-        `${host.name} is already running for this project (pid ${live.pid}). ` +
+        `${recordKey} is already running for this project (pid ${live.pid}). ` +
           `Stop it before starting another.`,
       )
     : undefined;
@@ -462,7 +492,7 @@ export async function runCompound(
   if (running && (ctx.argv ?? []).length === 0) throw running;
   if (probe?.status === "foreign") {
     throw new Error(
-      `.ph/run/${host.name}.json describes a live "${probe.record.projectName}", ` +
+      `.ph/run/${recordKey}.json describes a live "${probe.record.projectName}", ` +
         `but this project is "${options.projectName}". Refusing to start a second instance.`,
     );
   }
@@ -476,7 +506,14 @@ export async function runCompound(
   let memberArgv: Map<string, string[]>;
   const byKey = new Map<string, PreparedMember>();
   try {
-    prepared = await prepareMembers(projectRoot, host.children);
+    prepared = await prepareMembers(projectRoot, host.children, scope);
+    const cycle = await memberCycle(projectRoot, prepared);
+    if (cycle) {
+      throw new RunnerError(
+        `${compoundFile}: compound member cycle: ${cycle.join(" -> ")}.`,
+        "A compound cannot run itself, directly or through another compound.",
+      );
+    }
     const plan = planCompound(
       prepared.map((m) => ({
         key: m.key,
@@ -586,7 +623,7 @@ export async function runCompound(
         }
         if (status?.status === "stopping") status.status = "stopped";
       }
-      if (keepsRecord) clearRunRecord(projectRoot, host.name);
+      if (keepsRecord) clearRunRecord(projectRoot, recordKey);
     })());
 
   // An own-process member that died on its own: what to print, and (once the
@@ -641,7 +678,7 @@ export async function runCompound(
       const argv = memberArgv.get(name) ?? [];
       const status: MemberStatus = {
         name,
-        host: m.member.host,
+        host: m.ref,
         process: memberProcess,
         status: "starting",
         endpoints: {},
@@ -654,7 +691,9 @@ export async function runCompound(
           projectRoot,
           compound: host.name,
           member: name,
-          folder: m.member.host,
+          // As the project addresses it: a bare name in a package's compound
+          // may be the package's host, which the child's `ph run` must get.
+          folder: m.ref,
           verb: memberVerb,
           argv,
           env: ctx.env,
@@ -662,6 +701,7 @@ export async function runCompound(
           // In-process members print here too; next to the terminal's
           // owner, output would draw into it.
           echo: foreground === undefined,
+          ...(scope ? { logPackage: scope.name } : {}),
         });
         handle = own.handle;
         status.pid = own.pid;
@@ -687,6 +727,7 @@ export async function runCompound(
         handle = toStartedHandle(
           await fn(oneShot ? emptyMaps(validated, resolved) : validated, {
             projectRoot,
+            ...(m.hostPackage ? { hostPackage: m.hostPackage } : {}),
             env: ctx.env,
             verb: memberVerb,
             parent: { host: host.name, verb },
@@ -704,6 +745,7 @@ export async function runCompound(
       started.push({
         name,
         member: m.member,
+        ref: m.ref,
         specifier: m.specifier,
         kind: m.runner.kind,
         verb: memberVerb,
@@ -743,7 +785,7 @@ export async function runCompound(
     const recordMembers: Record<string, RunRecordMember> = {};
     for (const m of started) {
       recordMembers[m.name] = {
-        host: m.member.host,
+        host: m.ref,
         runnerModule: m.specifier,
         kind: m.kind,
         verb: m.verb,
@@ -753,6 +795,7 @@ export async function runCompound(
     writeRunRecord(projectRoot, {
       version: 2,
       host: host.name,
+      ...(scope ? { package: scope.name } : {}),
       projectName: options.projectName,
       kind: "compound",
       verb,
@@ -777,7 +820,7 @@ export async function runCompound(
     end(signal === "SIGINT" ? 130 : 143);
   if (options.installSignalHandlers !== false) {
     process.on("exit", () => {
-      if (keepsRecord) clearRunRecord(projectRoot, host.name);
+      if (keepsRecord) clearRunRecord(projectRoot, recordKey);
     });
     process.on("SIGINT", () => void handleSignal("SIGINT"));
     process.on("SIGTERM", () => void handleSignal("SIGTERM"));
@@ -822,6 +865,9 @@ interface OwnProcessStart {
   host: Record<string, unknown>;
   /** Also write its output to this process's stdout and stderr. */
   echo: boolean;
+  /** The package that supplies the compound: its members' logs are in a
+   * folder named after it. */
+  logPackage?: string;
 }
 
 /**
@@ -831,7 +877,12 @@ interface OwnProcessStart {
  * run record is written, which its `ph run` does after `ready`.
  */
 async function startOwnProcess(start: OwnProcessStart) {
-  const logFile = memberLogFile(start.projectRoot, start.env, start.member);
+  const logFile = memberLogFile(
+    start.projectRoot,
+    start.env,
+    start.member,
+    start.logPackage,
+  );
   const spawned = await spawnHost({
     projectRoot: start.projectRoot,
     host: start.folder,
@@ -868,28 +919,82 @@ async function startOwnProcess(start: OwnProcessStart) {
 async function prepareMembers(
   projectRoot: string,
   children: Record<string, ChildWrapper>,
+  scope?: HostPackage,
 ): Promise<PreparedMember[]> {
   const out: PreparedMember[] = [];
   for (const [key, member] of Object.entries(children)) {
-    out.push(await prepareMember(projectRoot, key, member));
+    out.push(await prepareMember(projectRoot, key, member, scope));
   }
   return out;
 }
 
-/** One member's draft and runner. */
+/** One member's draft and runner. `scope`: the package whose compound names
+ * the member, where a bare member host is looked up first; the runner
+ * resolves from the package that supplies the member's host. */
 export async function prepareMember(
   projectRoot: string,
   key: string,
   member: ChildWrapper,
+  scope?: HostPackage,
 ): Promise<PreparedMember> {
-  const draft = await memberDraft(projectRoot, member);
+  const loaded = await loadHost(projectRoot, member.host, { scope });
+  const draft = applyChildWrapper(loaded.host, member);
   const specifier = draft.runner.module;
   return {
     key,
     member,
     draft,
     specifier,
-    runner: await resolveRunnerModule(projectRoot, specifier),
-    file: `hosts/${member.host}/host.js`,
+    runner: await resolveRunnerModule(
+      moduleRootOf(projectRoot, loaded),
+      specifier,
+    ),
+    file: hostFileLabel(loaded.name, loaded.package),
+    ref: loaded.ref ?? member.host,
+    ...(loaded.package ? { hostPackage: loaded.package } : {}),
   };
+}
+
+/**
+ * A compound that is, through its compound members, a member of itself
+ * would start itself without end: the chain of hosts, as the project
+ * addresses them, when there is one. Each compound member's own members are
+ * looked up as it looks them up (its package first, for a package's). A
+ * reactor member ends a chain.
+ */
+export async function memberCycle(
+  projectRoot: string,
+  prepared: readonly PreparedMember[],
+): Promise<string[] | undefined> {
+  const walk = async (
+    chain: string[],
+    children: Record<string, ChildWrapper>,
+    scope: HostPackage | undefined,
+  ): Promise<string[] | undefined> => {
+    for (const member of Object.values(children)) {
+      const loaded = await loadHost(projectRoot, member.host, { scope });
+      const ref = loaded.ref ?? member.host;
+      if (chain.includes(ref)) return [...chain, ref];
+      const nested = (loaded.host as { children?: unknown }).children;
+      if (!isPlainObject(nested)) continue;
+      const found = await walk(
+        [...chain, ref],
+        nested as Record<string, ChildWrapper>,
+        loaded.package,
+      );
+      if (found) return found;
+    }
+    return undefined;
+  };
+  for (const m of prepared) {
+    const nested = (m.draft as { children?: unknown }).children;
+    if (!isPlainObject(nested)) continue;
+    const found = await walk(
+      [m.ref],
+      nested as Record<string, ChildWrapper>,
+      m.hostPackage,
+    );
+    if (found) return found;
+  }
+  return undefined;
 }

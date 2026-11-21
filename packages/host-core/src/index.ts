@@ -13,12 +13,25 @@ export {
   lintHostImports,
   loadHost,
   loadHostFresh,
+  moduleRootOf,
   probeHostsFolder,
   stripComments,
   withoutHostsMessage,
   type HostsFolderStatus,
   type LoadedHost,
+  type LoadHostOptions,
 } from "./host-loader.js";
+// D5: hosts an installed package supplies (`<package>/<host>`).
+export {
+  findHostPackage,
+  formatHostRef,
+  hostFileLabel,
+  locateHost,
+  parseHostRef,
+  type HostLocation,
+  type HostPackage,
+  type HostRef,
+} from "./host-ref.js";
 export {
   CONNECT_RUNNER,
   getVerb,
@@ -65,6 +78,8 @@ export {
   probeRun,
   readProjectName,
   readRunRecord,
+  recordKeyOf,
+  runRecordKey,
   writeRunRecord,
   type RunProbe,
 } from "./run-record.js";
@@ -91,6 +106,7 @@ export {
 } from "./spawn-host.js";
 export {
   holdStopRequests,
+  memberCycle,
   memberProcessOf,
   planForeground,
   runCompound,
@@ -181,8 +197,11 @@ export {
   HOST_NAME_MAX_LENGTH,
   HOST_NAME_MESSAGE,
   HOST_NAME_PATTERN,
+  HOST_REF_MESSAGE,
+  HOST_REF_PATTERN,
   hostNameSchema,
   makeHostSchemas,
+  PACKAGE_NAME_PATTERN,
   memberProcessSchema,
   placementKeyIssues,
   profileSchema,

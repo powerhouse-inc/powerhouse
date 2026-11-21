@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import type { HostPackage } from "./host-ref.js";
 import { runnerKindSchema, type RunnerKind } from "./host-schemas.js";
 import {
   checkOutputPaths,
@@ -17,7 +18,9 @@ import { findToken, tokenKeyOf, type TokenMode } from "./tokens.js";
 /**
  * Resolves a host's `runner.module` specifier from the PROJECT's dependency
  * tree (not ph-cli's), imports it, and checks the runner-module contract:
- * `{ run, hostSchema, kind, outputsSchema?, verbs?, ...optionalVerbs }`.
+ * `{ run, hostSchema, kind, outputsSchema?, verbs?, ...optionalVerbs }`. For
+ * a host an installed package supplies, the caller passes the package's
+ * folder as the root (`moduleRootOf`).
  */
 
 export class RunnerError extends Error {
@@ -28,7 +31,13 @@ export class RunnerError extends Error {
 }
 
 export interface RunnerContext {
+  /** The project: the working directory, its `.ph/` state and stores, also
+   * for a host a package supplies. */
   projectRoot: string;
+  /** Set when an installed package supplies the host
+   * (`ph run <package>/<host>`): the module specifiers the host names (its
+   * plugins, a Cli's package) resolve from `root`, as its runner did. */
+  hostPackage?: HostPackage;
   /** The verb this runner runs at. For a compound member it is the member's
    * OWN effective verb (e.g. "serve" under a compound at "run"). */
   verb: string;
@@ -211,7 +220,7 @@ export async function resolveRunnerModule(
   } catch {
     throw new RunnerError(
       `Cannot resolve runner module "${specifier}" from ${projectRoot}.`,
-      "The runner must be a dependency of the project (install it, then retry).",
+      "The runner must be a dependency of the project, or of the package that supplies the host (install it, then retry).",
     );
   }
 

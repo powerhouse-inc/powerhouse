@@ -636,6 +636,66 @@ deterministic. A nested map names outer bindings with `as` and
 reference example: one front port, routes declared per member, resolved from
 each child's `runner.{host, port}`.
 
+## Hosts from a package
+
+An installed package can supply hosts, so that a tool brings its own stack
+and the project's `hosts/` folder holds nothing of it. The package ships a
+`hosts/` folder at its root, laid out as a project's, and lists it in its
+`files`:
+
+```
+node_modules/@acme/tools/
+  package.json           "files": ["dist", "hosts"]
+  hosts/
+    studio/host.js       ph run @acme/tools/studio
+    switchboard/host.js  ph run @acme/tools/switchboard
+```
+
+How a host is named:
+
+- **A bare name is always the project's.** `ph run switchboard` runs
+  `hosts/switchboard/` of the project. A package cannot shadow or replace a
+  project host.
+- **A package's host is `<package>/<host>`**: `ph run @acme/tools/studio`, or
+  `ph run tools/studio` for an unscoped package. The host is the last
+  segment, so a host name never holds a `/`. The package is found from the
+  project root, as Node finds it (a pnpm link is followed to the package's
+  own folder).
+- **Inside a package's compound, a bare member name is that package's host
+  first**, and only then the project's. A member can also be written in
+  full, `host: "@acme/tools/switchboard"`; that form always means the
+  installed package, from wherever it is written. A project compound may
+  name a package's host that way too.
+
+What a package's host resolves where:
+
+| From the package | From the project |
+| --- | --- |
+| the host file and its imports (sibling hosts, `outputs.js`, a `powerhouse.config.json` import is the package's own) | the working directory and `ctx.projectRoot` |
+| `runner.module` and `runner.plugins[].module` (switchboard) | `${projectRoot}`, `${userData}`, relative data paths: stores stay in the project |
+| a cli host's Cli: `config.package`, or without it the package's own `./cli` | drive ids, the `.ph/` tree, `PH_USER_DATA_DIR` |
+
+So a package names the runners its hosts use as its own dependencies; one
+that must match the project's tools, such as
+`@powerhousedao/ph-cli/runners/switchboard`, is best a peer dependency. The
+runner learns that it runs a package's host from `ctx.hostPackage`
+(`{ name, root }`).
+
+A package's host keeps its state in a folder named after the package, so a
+package's `studio` and a project host named `studio` never meet:
+
+| | project host | package host |
+| --- | --- | --- |
+| run record | `.ph/run/studio.json` | `.ph/run/@acme/tools/studio.json` |
+| a compound's member logs | `.ph/services/<member>/` | `.ph/services/@acme/tools/<member>/` |
+| Connect's Vite cache | `node_modules/.vite-<name>` | `node_modules/.vite-@acme+tools+<name>` |
+
+`ph run @acme/tools/studio --stop` stops it, and `ph host check
+@acme/tools/studio` checks it. A ref that names no host, a package that is
+not installed or has no `hosts/`, and a compound that is, through its
+compound members, its own member fail before anything starts, naming the
+package and the host.
+
 ## Debugging
 
 | symptom | tool |

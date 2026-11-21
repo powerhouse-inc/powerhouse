@@ -134,6 +134,23 @@ function makeProject(url: string): string {
       hostFile(name, url, config),
     );
   }
+  // A package that supplies a host of the same name over its own `./cli`
+  // (no config.package: the package's own, not the project's).
+  const pack = path.join(modules, "@fixture", "tool-pack");
+  writeCli(pack, "cli.mjs", "serving-cli.mjs");
+  writeFileSync(
+    path.join(pack, "package.json"),
+    JSON.stringify({
+      name: "@fixture/tool-pack",
+      type: "module",
+      exports: { "./cli": { node: "./cli.mjs" } },
+    }),
+  );
+  mkdirSync(path.join(pack, "hosts", "serving"), { recursive: true });
+  writeFileSync(
+    path.join(pack, "hosts", "serving", "host.js"),
+    hostFile("serving", url),
+  );
   return root;
 }
 
@@ -417,6 +434,35 @@ describe("cli-runner", () => {
     );
     expect(await exitCodeOf(serving)).toBe(0);
     expect(readRunRecord(project, "serving")).toBeUndefined();
+  }, 120_000);
+
+  it("runs a package's cli host over the package's own Cli, recorded behind the package", async () => {
+    // Without config.package the project's own (plain, one-shot) Cli would
+    // end at once: serving shows the package's was loaded.
+    const serving = phRun(["@fixture/tool-pack/serving"]);
+    await waitFor(serving, "Serving");
+    expect(readRunRecord(project, "@fixture/tool-pack/serving")).toMatchObject({
+      host: "serving",
+      package: "@fixture/tool-pack",
+      pid: serving.child.pid,
+    });
+    expect(readRunRecord(project, "serving")).toBeUndefined();
+
+    const second = phRun(["@fixture/tool-pack/serving"]);
+    expect(await exitCodeOf(second)).toBe(1);
+    expect(second.output()).toContain(
+      `@fixture/tool-pack/serving is already running for this project (pid ${serving.child.pid})`,
+    );
+
+    const stop = phRun(["@fixture/tool-pack/serving", "--stop"]);
+    expect(await exitCodeOf(stop)).toBe(0);
+    expect(stop.output()).toContain(
+      `Stopped @fixture/tool-pack/serving (pid ${serving.child.pid})`,
+    );
+    expect(await exitCodeOf(serving)).toBe(0);
+    expect(
+      readRunRecord(project, "@fixture/tool-pack/serving"),
+    ).toBeUndefined();
   }, 120_000);
 
   describe("with PH_STOP_ON_STDIN set", () => {

@@ -162,6 +162,27 @@ describe("switchboard runner — plugin-contributed drives", () => {
     });
   });
 
+  it("resolves a package host's plugins from the package, its drive ids from the project", async () => {
+    const hostCore = await import("@powerhousedao/host-core");
+    vi.mocked(hostCore.resolveHostPlugins).mockClear();
+    vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(
+      workflowsComposition(),
+    );
+    const { ensureDrive } = await import("@powerhousedao/switchboard/utils");
+    vi.mocked(ensureDrive).mockClear();
+
+    const runner = await import("../src/runners/switchboard.js");
+    await runner.run(switchboardHost(), {
+      ...ctx,
+      hostPackage: { name: "@acme/tools", root: "/store/tools" },
+    });
+    expect(vi.mocked(hostCore.resolveHostPlugins).mock.calls[0][0]).toBe(
+      "/store/tools",
+    );
+    const seeded = vi.mocked(ensureDrive).mock.calls[0][1] as { id: string };
+    expect(seeded.id).toBe(hostCore.projectDriveId("/lab", "workflows"));
+  });
+
   it("a host declaration with the same slug wins over the contribution", async () => {
     const hostCore = await import("@powerhousedao/host-core");
     vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(

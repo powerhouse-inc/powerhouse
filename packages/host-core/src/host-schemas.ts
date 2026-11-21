@@ -35,6 +35,22 @@ export const hostNameSchema = z
   .max(HOST_NAME_MAX_LENGTH, HOST_NAME_MESSAGE)
   .regex(HOST_NAME_PATTERN, HOST_NAME_MESSAGE);
 
+/** An npm package name, as `<package>/<host>` names a package that supplies
+ * hosts: `name` or `@scope/name`, each part letters, digits, '-', '.', '_'
+ * and '~', not starting with '.' or '_'. Each part is one folder name, the
+ * one the package has under node_modules. */
+export const PACKAGE_NAME_PATTERN =
+  /^(?:@[A-Za-z0-9~-][A-Za-z0-9._~-]*\/)?[A-Za-z0-9~-][A-Za-z0-9._~-]*$/;
+
+/** How a compound names a member's host: its folder under the project's
+ * `hosts/` (or, in a package's compound, the package's first), or
+ * `<package>/<host>` for one an installed package supplies. */
+export const HOST_REF_PATTERN = new RegExp(
+  `^(?:${PACKAGE_NAME_PATTERN.source.slice(1, -1)}/)?${HOST_NAME_PATTERN.source.slice(1, -1)}$`,
+);
+export const HOST_REF_MESSAGE =
+  "A member's host is a host folder (`switchboard`), or `<package>/<host>` (`@acme/tools/studio`) for one an installed package supplies.";
+
 /**
  * A URL, or one written against the page origin (`${origin}/graphql`): the
  * browser resolves the placeholder when it loads Connect's config, for a
@@ -590,7 +606,7 @@ function buildHostSchemas(tokenField: FieldWrappers) {
    * which key-merges over the member's own. Plugins live in `runner.plugins`
    * (as on a standalone host); there is no wrapper-level `plugins`. */
   const childWrapperSchema = z.strictObject({
-    host: z.string().min(1),
+    host: z.string().min(1).regex(HOST_REF_PATTERN, HOST_REF_MESSAGE),
     // 0 passes here; the member runner's own schema decides whether it may.
     runner: runnerBaseSchema
       .partial()

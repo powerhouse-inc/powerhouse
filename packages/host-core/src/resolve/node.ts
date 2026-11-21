@@ -1,7 +1,13 @@
 import path from "node:path";
-import { loadHost } from "../host-loader.js";
+import type { HostPackage } from "../host-ref.js";
+import { loadHost, moduleRootOf } from "../host-loader.js";
 import { defaultUserDataDir } from "../placeholders.js";
-import { isPidAlive, listRunRecords, probeRun } from "../run-record.js";
+import {
+  isPidAlive,
+  listRunRecords,
+  probeRun,
+  runRecordKey,
+} from "../run-record.js";
 import { resolveRunnerModule, type RunnerModule } from "../runner-resolver.js";
 import type { OutputRef, OutputsSchemaLookup } from "./declared.js";
 import type { OutputSource, ResolveSources } from "./resolve.js";
@@ -18,6 +24,10 @@ export interface ProducerInfo {
   folder: string;
   /** The producer host's `name` (its run-record key). */
   name: string;
+  /** How the project addresses it (`<package>/<host>` for a package's). */
+  ref?: string;
+  /** The package that supplies it. */
+  package?: HostPackage;
   specifier: string;
   runner: RunnerModule;
 }
@@ -25,22 +35,29 @@ export interface ProducerInfo {
 /** Producers by folder; a folder that fails to load carries its error. */
 export type ProducerMap = ReadonlyMap<string, ProducerInfo | { error: string }>;
 
-/** Load every producer host a set of refs names (each once). */
+/** Load every producer host a set of refs names (each once). In a host a
+ * package supplies (`scope`), a bare name is that package's host first. */
 export async function loadProducers(
   projectRoot: string,
   refs: readonly OutputRef[],
+  scope?: HostPackage,
 ): Promise<ProducerMap> {
   const producers = new Map<string, ProducerInfo | { error: string }>();
   for (const { host: folder } of refs) {
     if (producers.has(folder)) continue;
     try {
-      const loaded = await loadHost(projectRoot, folder);
+      const loaded = await loadHost(projectRoot, folder, { scope });
       const specifier = loaded.host.runner.module;
       producers.set(folder, {
         folder,
         name: loaded.host.name,
+        ...(loaded.ref !== undefined ? { ref: loaded.ref } : {}),
+        ...(loaded.package ? { package: loaded.package } : {}),
         specifier,
-        runner: await resolveRunnerModule(projectRoot, specifier),
+        runner: await resolveRunnerModule(
+          moduleRootOf(projectRoot, loaded),
+          specifier,
+        ),
       });
     } catch (error) {
       producers.set(folder, {
@@ -128,18 +145,22 @@ export function runRecordOutputSource(
   const siblings = siblingEnvs(projectRoot, env);
   return {
     lookup(ref) {
-      const notRunning = `${consumer} needs outputs from host "${ref.host}", which is not running. Start it first: ph run ${ref.host} (or run a compound that includes it).`;
       const info = producers.get(ref.host);
+      const loaded = info && !("error" in info) ? info : undefined;
+      // How the project addresses the producer: what a compound's record
+      // names its member by.
+      const address = loaded?.ref ?? ref.host;
+      const notRunning = `${consumer} needs outputs from host "${address}", which is not running. Start it first: ph run ${address} (or run a compound that includes it).`;
       // The producer's outputsSchema: an absent optional field omits the
       // consuming property instead of failing.
-      const schema =
-        info && !("error" in info) ? info.runner.outputsSchema : undefined;
+      const schema = loaded?.runner.outputsSchema;
       const withSchema =
         schema !== undefined && schema !== null ? { schema } : {};
       const standalone: { label: string; outputs: Record<string, unknown> }[] =
         [];
-      if (ref.member === undefined && info && !("error" in info)) {
-        const probe = probeRun(projectRoot, info.name, projectName, env);
+      if (ref.member === undefined && loaded) {
+        const key = runRecordKey(loaded.name, loaded.package?.name);
+        const probe = probeRun(projectRoot, key, projectName, env);
         if (probe.status === "live" && probe.record.outputs) {
           return {
             status: "available",
@@ -148,10 +169,10 @@ export function runRecordOutputSource(
           };
         }
         for (const sibling of siblings) {
-          const other = probeRun(projectRoot, info.name, projectName, sibling);
+          const other = probeRun(projectRoot, key, projectName, sibling);
           if (other.status === "live" && other.record.outputs) {
             standalone.push({
-              label: `"${info.name}" (pid ${other.record.pid})`,
+              label: `"${loaded.name}" (pid ${other.record.pid})`,
               outputs: other.record.outputs,
             });
           }
@@ -169,11 +190,11 @@ export function runRecordOutputSource(
           Object.entries(record.members ?? {})
             .filter(
               ([key, member]) =>
-                member.host === ref.host &&
+                member.host === address &&
                 (ref.member === undefined || key === ref.member),
             )
             .map(([key, member]) => ({
-              label: `member "${key}" of "${record.host}"`,
+              label: `member "${key}" of "${runRecordKey(record.host, record.package)}"`,
               outputs: member.outputs,
             })),
         );
@@ -188,7 +209,7 @@ export function runRecordOutputSource(
       if (found.length > 1) {
         return {
           status: "unavailable",
-          message: `${consumer} needs outputs from host "${ref.host}", which runs as ${found.map((m) => m.label).join(" and ")}; stop all but one, or run ${ref.host} on its own.`,
+          message: `${consumer} needs outputs from host "${address}", which runs as ${found.map((m) => m.label).join(" and ")}; stop all but one, or run ${address} on its own.`,
         };
       }
       return { status: "unavailable", message: notRunning };

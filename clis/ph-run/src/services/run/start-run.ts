@@ -3,8 +3,10 @@ import {
   checkRunnerArgv,
   clearRunRecord,
   emptyMaps,
+  findHostPackage,
   getVerb,
   holdStopRequests,
+  hostFileLabel,
   installStopChannel,
   isRunnerArgsSchema,
   isSchemaLike,
@@ -12,8 +14,10 @@ import {
   loadHost,
   loadHostFresh,
   loadProducers,
+  moduleRootOf,
   ONE_SHOT_VERBS,
   outputRefsOf,
+  parseHostRef,
   probeRun,
   processResolveEnv,
   producerOutputsSchemas,
@@ -21,6 +25,7 @@ import {
   readRunRecord,
   resolveHostOutputs,
   resolveRunnerModule,
+  runRecordKey,
   runRecordOutputSource,
   RunnerError,
   stopRun,
@@ -32,11 +37,14 @@ import {
   validateHost,
   writeRunRecord,
   type HostDefinition,
+  type HostPackage,
   type LoadedHost,
   type RunnerModule,
 } from "@powerhousedao/host-core";
 
 export interface StartRunArgs {
+  /** A folder under the project's hosts/, or `<package>/<host>` for one an
+   * installed package supplies. */
   host: string;
   verb?: string;
   projectRoot?: string;
@@ -71,6 +79,11 @@ export interface StartRunArgs {
  * (COMPOUND_MEMBER_ENV): its wrapper applied and its tokens resolved by the
  * compound, so the file is not read. A supervisor that holds stdin
  * (PH_STOP_ON_STDIN) stops a reactor host there, as it stops a compound.
+ *
+ * `ph run <package>/<host>` runs a host an installed package supplies: its
+ * runner (and through `ctx.hostPackage` its plugins) resolve from the
+ * package, its record is `.ph/run/<package>/<name>.json`, and everything
+ * else (cwd, stores, `.ph/`) stays the project's.
  */
 export async function startRun(args: StartRunArgs): Promise<unknown> {
   // Before the host loads: loading it can import its runner and plugins, and
@@ -95,7 +108,11 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   const { refuseSupersededConfigKeys } = await import("./superseded-config.js");
   refuseSupersededConfigKeys(projectRoot);
   const specifier = loaded.host.runner.module;
-  const runner = await resolveRunnerModule(projectRoot, specifier);
+  const hostPackage = loaded.package;
+  const runner = await resolveRunnerModule(
+    moduleRootOf(projectRoot, loaded),
+    specifier,
+  );
   const typed = commandOfVerb(runner, args);
   const verb = typed.verb ?? "run";
   const storeVerb = STORE_VERBS.has(verb);
@@ -132,6 +149,7 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
     const argv = typed.argv ?? [];
     return fn(host, {
       projectRoot,
+      ...(hostPackage ? { hostPackage } : {}),
       verb,
       env: process.env,
       ...(argv.length > 0 ? { argv } : {}),
@@ -146,12 +164,19 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   });
   const ctx = {
     projectRoot,
+    ...(hostPackage ? { hostPackage } : {}),
     verb,
     env: process.env,
     ...(argv.length > 0 ? { argv } : {}),
   };
   const projectName = readProjectName(projectRoot);
-  const producers = await loadProducers(projectRoot, outputRefsOf(loaded.host));
+  // Its record: in a folder named after the package that supplies it.
+  const recordKey = runRecordKey(loaded.host.name, hostPackage?.name);
+  const producers = await loadProducers(
+    projectRoot,
+    outputRefsOf(loaded.host),
+    hostPackage,
+  );
   validateDeclaredHost(runner, specifier, loaded.host, file, {
     outputsSchemaOf: producerOutputsSchemas(producers),
   });
@@ -169,7 +194,7 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   // A store verb starts no instance: it neither takes nor trips the lock.
   // Except `reset`, which would delete the stores under a live one.
   if (publishes && (!storeVerb || verb === "reset")) {
-    assertNotRunning(projectRoot, loaded.host.name, projectName);
+    assertNotRunning(projectRoot, recordKey, projectName);
   }
   const resolveAndValidate = (definition: typeof loaded.host) =>
     validateHost(
@@ -182,7 +207,7 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
           projectName,
         }),
         ...processResolveEnv(projectRoot),
-        where: `hosts/${args.host}/host.js`,
+        where: hostFileLabel(path.basename(loaded.dir), hostPackage),
       }),
       file,
     );
@@ -204,6 +229,7 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
       projectRoot,
       projectName,
       hostName: loaded.host.name,
+      ...(hostPackage ? { hostPackage } : {}),
       specifier,
       verb,
     });
@@ -213,19 +239,28 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   return result;
 }
 
-/** A compound member's host, handed over, in a loaded host's shape. */
+/** A compound member's host, handed over, in a loaded host's shape. `ref`
+ * is how the compound addressed it: for a package's host, the package is
+ * found again, since its runner resolves from there. */
 function memberHost(
   projectRoot: string,
-  folder: string,
+  ref: string,
   host: Record<string, unknown>,
 ): LoadedHost {
-  const dir = path.join(projectRoot, "hosts", folder);
+  const parsed = parseHostRef(ref);
+  const hostPackage: HostPackage | undefined =
+    parsed.package === undefined
+      ? undefined
+      : findHostPackage(projectRoot, parsed.package, parsed.host);
+  const dir = path.join(hostPackage?.root ?? projectRoot, "hosts", parsed.host);
   const definition = host as HostDefinition;
   return {
     name: definition.name,
     dir,
     file: path.join(dir, "host.js"),
     host: definition,
+    ref,
+    ...(hostPackage ? { package: hostPackage } : {}),
   };
 }
 
@@ -265,13 +300,17 @@ function commandOfVerb(
 /**
  * `ph run <host> --stop`: asks the project's running host to stop the way
  * Ctrl-C in its terminal does, and waits until it has. It never kills.
+ * `<package>/<host>` stops a package's host, by its record in the package's
+ * folder.
  */
 export async function stopRunningHost(args: {
   host: string;
   projectRoot?: string;
 }): Promise<void> {
   const projectRoot = args.projectRoot ?? process.cwd();
-  const result = await stopRun(projectRoot, args.host);
+  const ref = parseHostRef(args.host);
+  const key = runRecordKey(ref.host, ref.package);
+  const result = await stopRun(projectRoot, key);
   switch (result.status) {
     case "none":
       console.log(`${args.host} is not running for this project.`);
@@ -281,7 +320,7 @@ export async function stopRunningHost(args: {
       return;
     case "foreign":
       throw new RunnerError(
-        `.ph/run/${args.host}.json describes a live "${result.projectName}" (pid ${result.pid}), not this project.`,
+        `.ph/run/${key}.json describes a live "${result.projectName}" (pid ${result.pid}), not this project.`,
         "Stop it from its own project.",
       );
     case "unreachable":
@@ -297,20 +336,21 @@ export async function stopRunningHost(args: {
   }
 }
 
+/** `recordKey`: the host's name, behind its package for a package's. */
 function assertNotRunning(
   projectRoot: string,
-  hostName: string,
+  recordKey: string,
   projectName: string,
 ): void {
-  const probe = probeRun(projectRoot, hostName, projectName);
+  const probe = probeRun(projectRoot, recordKey, projectName);
   if (probe.status === "live" && probe.record.pid !== process.pid) {
     throw new Error(
-      `${hostName} is already running for this project (pid ${probe.record.pid}). Stop it before starting another.`,
+      `${recordKey} is already running for this project (pid ${probe.record.pid}). Stop it before starting another.`,
     );
   }
   if (probe.status === "foreign") {
     throw new Error(
-      `.ph/run/${hostName}.json describes a live "${probe.record.projectName}", but this project is "${projectName}". Refusing to start a second instance.`,
+      `.ph/run/${recordKey}.json describes a live "${probe.record.projectName}", but this project is "${projectName}". Refusing to start a second instance.`,
     );
   }
 }
@@ -319,6 +359,8 @@ interface PublishTarget {
   projectRoot: string;
   projectName: string;
   hostName: string;
+  /** The package that supplies the host: the record is filed under it. */
+  hostPackage?: HostPackage;
   specifier: string;
   verb: string;
 }
@@ -334,11 +376,12 @@ async function publishOutputs(
   const where = `${target.specifier} ${target.verb}`;
   const handle = toStartedHandle(result, where);
   const name = target.projectName;
+  const key = runRecordKey(target.hostName, target.hostPackage?.name);
   let outputs: unknown;
   try {
     if (!isSchemaLike(runner.outputsSchema)) return;
     // Checked again after the start: an instance that started meanwhile.
-    assertNotRunning(target.projectRoot, target.hostName, name);
+    assertNotRunning(target.projectRoot, key, name);
     if (handle.ready) await handle.ready;
     const parsed = runner.outputsSchema.safeParse(handle.outputs);
     if (!parsed.success) {
@@ -361,6 +404,7 @@ async function publishOutputs(
   writeRunRecord(target.projectRoot, {
     version: 2,
     host: target.hostName,
+    ...(target.hostPackage ? { package: target.hostPackage.name } : {}),
     projectName: name,
     kind: "reactor",
     verb: target.verb,
@@ -373,7 +417,7 @@ async function publishOutputs(
   // break that order. Without an exit event the record keeps a dead pid,
   // which probeRun reports as stale.
   process.on("exit", () => {
-    if (readRunRecord(target.projectRoot, target.hostName)?.pid === process.pid)
-      clearRunRecord(target.projectRoot, target.hostName);
+    if (readRunRecord(target.projectRoot, key)?.pid === process.pid)
+      clearRunRecord(target.projectRoot, key);
   });
 }
