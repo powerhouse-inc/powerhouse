@@ -147,6 +147,9 @@ async function convert(
       paths: Object.fromEntries(
         input.aliases.map((alias) => [`${alias}/*`, [`/${input.modelsDir}/*`]]),
       ),
+      // Custom code may be JavaScript. Without allowJs it stays out of the
+      // program, and reading a symbol inside one of its class bodies throws.
+      allowJs: true,
     },
   });
   for (const [path, text] of input.files) {

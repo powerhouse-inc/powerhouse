@@ -383,6 +383,9 @@ export function rewriteImports(
   const project = new Project({
     useInMemoryFileSystem: true,
     manipulationSettings: { quoteKind: QuoteKind.Double },
+    // Without allowJs, JavaScript files stay out of the program, and reading
+    // a symbol inside one of their class bodies throws.
+    compilerOptions: { allowJs: true },
   });
   const unresolved: Unresolved[] = [];
   /**
@@ -1163,6 +1166,8 @@ export function rebaseText(
   const file = new Project({
     useInMemoryFileSystem: true,
     manipulationSettings: { quoteKind: QuoteKind.Double },
+    // The moved file may be JavaScript, as in rewriteImports.
+    compilerOptions: { allowJs: true },
   }).createSourceFile(`/${toPath}`, text);
   for (const declaration of [
     ...file.getImportDeclarations(),
