@@ -780,6 +780,17 @@
       }
     },
     {
+      "files": ["packages/clint-common/**"],
+      "rules": {
+        "typescript/require-await": "warn",
+        "typescript/no-redundant-type-constituents": "warn",
+        "react-hooks-extra/purity": "off",
+        "react-hooks-extra/refs": "off",
+        "react-hooks-extra/set-state-in-effect": "off",
+        "react-hooks-extra/static-components": "off"
+      }
+    },
+    {
       "files": ["apps/connect/src/**/*.{ts,tsx}"],
       "excludeFiles": [
         "apps/connect/src/generic/**",

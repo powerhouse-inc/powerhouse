@@ -46,6 +46,9 @@
     "clint": {
       "paths": ["packages/clint/**"]
     },
+    "clint-common": {
+      "paths": ["packages/clint-common/**"]
+    },
     "codegen": {
       "paths": ["packages/codegen/**", "test/codegen/**"],
       "aliases": ["packages-codegen", "test-codegen"]

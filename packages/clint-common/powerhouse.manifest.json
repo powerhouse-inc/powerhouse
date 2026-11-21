@@ -1,0 +1,20 @@
+{
+  "name": "@powerhousedao/clint-common",
+  "description": "",
+  "category": "",
+  "publisher": {
+    "name": "",
+    "url": ""
+  },
+  "documentModels": [
+    {
+      "id": "powerhouse/chat-session",
+      "name": "ChatSession"
+    }
+  ],
+  "apps": [],
+  "editors": [],
+  "processors": [],
+  "subgraphs": [],
+  "config": []
+}
