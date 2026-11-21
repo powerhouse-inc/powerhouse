@@ -1,7 +1,7 @@
-import { readFileSync, renameSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import nodePath, { join } from "node:path";
 import { BUILD_DIRECTORY } from "../../build-control.js";
-import type { DirectoryMode } from "./files.js";
+import { renamePatiently, type DirectoryMode } from "./files.js";
 import type { CompilerOutput } from "./inventory.js";
 
 export const RUNS_DIRECTORY = join(BUILD_DIRECTORY, "runs");
@@ -109,12 +109,16 @@ export function journalPath(runDir: string): string {
   return join(runDir, JOURNAL_FILE);
 }
 
-/** Replaces the journal in one rename, so a reader sees the old state or the new. */
+/**
+ * Replaces the journal in one rename, so a reader sees the old state or the
+ * new. Patiently: on Windows a scanner that still holds the journal it just
+ * saw written fails the rename with EPERM.
+ */
 export function writeJournal(runDir: string, journal: RunJournal): void {
   const file = journalPath(runDir);
   const pending = `${file}.${process.pid}.tmp`;
   writeFileSync(pending, `${JSON.stringify(journal, null, 2)}\n`);
-  renameSync(pending, file);
+  renamePatiently(pending, file);
 }
 
 const isString = (value: unknown): value is string =>
