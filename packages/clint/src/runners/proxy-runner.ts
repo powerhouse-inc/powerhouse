@@ -24,7 +24,9 @@ export const verbs = ["run", "serve", "dev", "build"] as const;
  * The proxy host, from one definition in two forms: DECLARED (an upstream
  * may be an output token; what host.js authors write) and RESOLVED (what the
  * verbs receive). `runner.port` is the front port (0 = any free port) and
- * `runner.host` the bind address (default "0.0.0.0", as the embedded proxy).
+ * `runner.host` the bind address. The default is "127.0.0.1": a container or
+ * cloud host sets "0.0.0.0" in its own host data (the embedded proxy bound
+ * every interface by default).
  */
 const schemas = defineHostSchemas((s) =>
   s.reactorHostSchema.extend({
@@ -87,7 +89,7 @@ export async function run(
   const { createProxyServer } = await import("../core/proxy.js");
   const instance = await createProxyServer({
     port: host.runner.port ?? 0,
-    host: host.runner.host ?? "0.0.0.0",
+    host: host.runner.host ?? "127.0.0.1",
     publicUrl: host.config.publicUrl,
     logger: console as never,
   });
