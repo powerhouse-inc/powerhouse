@@ -253,12 +253,11 @@ jobs:
         run: pnpm rebuild --recursive
 
       # The UI suite runs against Connect's production build, which bundles
-      # the workflow package's dist. Still the classic command: --workflows
-      # has no `ph run` argument, and the fixture's connect host does not
-      # compose the workflows plugin.
+      # the workflow package's dist. The fixture's connect-workflows host is
+      # its connect host with the workflows plugin composed.
       - name: Build Connect for the workflow UI tests
         if: steps.workflow-ui.outputs.run == 'true'
-        run: node ../../clis/ph-cli/dist/cli.mjs connect build --workflows true
+        run: node ../../clis/ph-cli/dist/cli.mjs run connect-workflows build
         working-directory: ./test/test-consumer-project
 
       # No browser: the suite drives switchboard's GraphQL directly, and names

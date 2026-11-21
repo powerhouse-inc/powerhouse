@@ -69,7 +69,8 @@ test.describe("runtime-config-preview", () => {
   });
 
   test("--packages-registry CLI flag overrides packageRegistryUrl at build time", () => {
-    const scratchDir = `dist-cli-test-${Date.now()}`;
+    // The connect-registry host's runner.outDir.
+    const scratchDir = "dist-connect-registry";
     const scratchPath = path.join(PROJECT_ROOT, scratchDir);
     try {
       // Build into an isolated outDir so we don't trample the preview
@@ -79,7 +80,7 @@ test.describe("runtime-config-preview", () => {
       // is no env-var layer post-#2645, so this exercises the *real* override
       // mechanism, not an imagined env var.
       execSync(
-        `pnpm exec ph-cli connect build --outDir ${scratchDir} --packages-registry https://cli.example`,
+        `pnpm exec ph-cli run connect-registry build --packages-registry https://cli.example`,
         {
           cwd: PROJECT_ROOT,
           stdio: "pipe",

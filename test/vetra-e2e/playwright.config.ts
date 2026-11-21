@@ -17,16 +17,14 @@ const previewProject = {
 };
 
 const previewWebServer = {
-  // Isolated `--outDir dist-connect` so the Connect SPA build does NOT
-  // collide with `pnpm build` (= `ph-cli build`, the *package* build) that
-  // todo-document.spec.ts runs into the default `dist/`. Both commands
-  // write to `dist/` otherwise and the package build trashes the SPA.
-  // Still the classic commands: `ph run connect build` takes no --outDir
-  // (the host file's runner.outDir is the only place for it), and the
-  // preview specs build a second time with --packages-registry.
+  // The connect-preview host builds into `dist-connect` so the Connect SPA
+  // build does NOT collide with `pnpm build` (= `ph-cli build`, the
+  // *package* build) that todo-document.spec.ts runs into the default
+  // `dist/`. Both commands write to `dist/` otherwise and the package build
+  // trashes the SPA.
   command:
     (process.env.PH_COVERAGE_BROWSER_DIR ? "env -u NODE_V8_COVERAGE " : "") +
-    "pnpm exec ph-cli connect build --outDir dist-connect && pnpm exec ph-cli connect preview --outDir dist-connect --port 4173 --strictPort",
+    "pnpm exec ph-cli run connect-preview build && pnpm exec ph-cli run connect-preview serve --port 4173 --strictPort",
   url: PREVIEW_URL,
   stderr: "pipe" as const,
   stdout: "pipe" as const,
