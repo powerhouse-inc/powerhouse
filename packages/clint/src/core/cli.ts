@@ -1967,7 +1967,8 @@ export function defineCli<
             : {},
           ...(svc.shutdown && {
             shutdown: {
-              signal: String(svc.shutdown.signal),
+              // A host service is asked to stop through its stdin.
+              signal: svc.run ? "stdin" : String(svc.shutdown.signal),
               timeout: svc.shutdown.timeout,
             },
           }),

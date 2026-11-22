@@ -15,7 +15,12 @@ import {
 } from "../src/core/services.js";
 import { killTree } from "../src/core/process-platform.js";
 import { createEventBus } from "../src/core/events.js";
-import type { ServiceDefinition, EventBus } from "../src/core/types.js";
+import { readRunRecord } from "@powerhousedao/host-core";
+import type {
+  EventBus,
+  HostServiceDefinition,
+  ServiceDefinition,
+} from "../src/core/types.js";
 import {
   PROCESS_CLEANUP_WAIT,
   PROCESS_TEST_TIMEOUT,
@@ -1554,5 +1559,259 @@ describe("createServiceManager", () => {
       const input = "hello\nworld\n\ttabbed";
       expect(sanitizeLogText(input)).toBe(input);
     });
+  });
+});
+
+// ── Host services: `ph run <host>` through spawnHost ──────────────
+
+const REPO = path.resolve(import.meta.dirname, "../../..");
+const PH_RUN_ROOT = path.join(REPO, "clis", "ph-run");
+const HOST_CORE_ROOT = path.join(REPO, "packages", "host-core");
+
+function link(target: string, at: string) {
+  fs.mkdirSync(path.dirname(at), { recursive: true });
+  fs.symlinkSync(target, at, process.platform === "win32" ? "junction" : "dir");
+}
+
+function writeHostFile(root: string, folder: string, host: object) {
+  fs.mkdirSync(path.join(root, "hosts", folder), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "hosts", folder, "host.js"),
+    `export default ${JSON.stringify(host, null, 2)};\n`,
+  );
+}
+
+/** A project with a `web` host on the service-host fixture runner and a
+ * compound `stack` of it; ph-run, host-core and zod linked the way pnpm
+ * would. */
+function makeHostProject(root: string, config: Record<string, unknown>) {
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({ name: "svc-host-lab", private: true, type: "module" }),
+  );
+  fs.writeFileSync(path.join(root, "powerhouse.config.json"), "{}");
+  const modules = path.join(root, "node_modules");
+  link(PH_RUN_ROOT, path.join(modules, "@powerhousedao", "ph-run"));
+  link(HOST_CORE_ROOT, path.join(modules, "@powerhousedao", "host-core"));
+  link(
+    fs.realpathSync(
+      path.join(import.meta.dirname, "..", "node_modules", "zod"),
+    ),
+    path.join(modules, "zod"),
+  );
+  const runner = path.join(modules, "@fixture", "svc-host");
+  fs.mkdirSync(runner, { recursive: true });
+  fs.copyFileSync(
+    path.join(import.meta.dirname, "fixtures", "service-host-runner.mjs"),
+    path.join(runner, "runner.mjs"),
+  );
+  fs.writeFileSync(
+    path.join(runner, "package.json"),
+    JSON.stringify({
+      name: "@fixture/svc-host",
+      type: "module",
+      exports: { "./runner": "./runner.mjs" },
+    }),
+  );
+  writeHostFile(root, "web", {
+    name: "web",
+    runner: { module: "@fixture/svc-host/runner" },
+    config,
+  });
+  writeHostFile(root, "stack", {
+    name: "stack",
+    runner: { module: "@powerhousedao/host-core/runners/compound" },
+    children: { site: { host: "web" } },
+  });
+}
+
+describe("host services", () => {
+  let tmpDir: string;
+  let project: string;
+  let servicesDir: string;
+  let marker: string;
+  let pidFile: string;
+  let eventBus: EventBus;
+  /** Every pid a run reported: what afterEach checks, and kills if alive. */
+  let started: number[];
+
+  beforeEach(() => {
+    tmpDir = makeTmpDir();
+    project = path.join(tmpDir, "project");
+    fs.mkdirSync(project);
+    servicesDir = path.join(tmpDir, "services");
+    marker = path.join(tmpDir, "stopped.txt");
+    pidFile = path.join(tmpDir, "pid.txt");
+    eventBus = createEventBus();
+    started = [];
+  });
+
+  afterEach(async () => {
+    if (fs.existsSync(pidFile)) started.push(runPid());
+    const left = [...new Set(started)].filter((pid) => isAlive(pid));
+    for (const pid of left) safeKill(pid);
+    fs.rmSync(tmpDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
+    expect(left).toEqual([]);
+  });
+
+  const webDef = (
+    over: Partial<HostServiceDefinition> = {},
+  ): HostServiceDefinition => ({
+    id: "web",
+    run: { host: "web", verb: "dev" },
+    endpoints: (record) => ({
+      site: { url: String(record.outputs?.origin), type: "website" },
+    }),
+    readiness: { timeout: 60_000 },
+    ...over,
+  });
+
+  /** The pid of the ph run the fixture runner runs in. */
+  const runPid = () => Number(fs.readFileSync(pidFile, "utf8"));
+
+  function managerFor(def: ServiceDefinition) {
+    return createServiceManager([def], { config: {}, servicesDir, eventBus });
+  }
+
+  it("is ready once the run record is live, with the endpoints mapped from it, and stops through its stdin", async () => {
+    makeHostProject(project, { marker, pidFile, delayMs: 1_500 });
+    const mgr = managerFor(webDef());
+    const ready: unknown[] = [];
+    eventBus.on("service:ready", (data) => ready.push(data));
+
+    const starting = mgr.start("web", { cwd: project });
+    // While it waits for the record it has none and reads as starting.
+    await new Promise((r) => setTimeout(r, 300));
+    expect(mgr.list("web")[0]).toMatchObject({ status: "starting" });
+    expect(readRunRecord(project, "web")).toBeUndefined();
+
+    const instanceId = await starting;
+    const [instance] = mgr.list("web");
+    started.push(instance.pid!);
+    expect(instance.pid).toBe(runPid());
+    const record = readRunRecord(project, "web");
+    expect(record?.pid).toBe(instance.pid);
+    expect(instance).toMatchObject({
+      instanceId,
+      status: "ready",
+      endpoints: { site: record?.outputs?.origin },
+      endpointTypes: { site: "website" },
+    });
+    expect(ready).toHaveLength(1);
+    const answer = await fetch(`${String(record?.outputs?.origin)}/hello`);
+    expect(await answer.text()).toBe("web saw /hello");
+    expect(mgr.logs("web")).toContain("— Web");
+
+    const before = Date.now();
+    await mgr.stop("web");
+    // The runner's own stop ran: the request reached it through stdin.
+    expect(fs.readFileSync(marker, "utf8")).toBe("stopped through its stop");
+    expect(Date.now() - before).toBeLessThan(30_000);
+    expect(isAlive(instance.pid!)).toBe(false);
+    expect(readRunRecord(project, "web")).toBeUndefined();
+    expect(mgr.list("web")[0]).toMatchObject({ status: "stopped" });
+  }, 120_000);
+
+  it("kills its tree only once a stop has outlived shutdown.timeout", async () => {
+    makeHostProject(project, { marker, pidFile, hang: true });
+    const mgr = managerFor(webDef({ shutdown: { timeout: 1_500 } }));
+    await mgr.start("web", { cwd: project });
+    const [instance] = mgr.list("web");
+    started.push(instance.pid!);
+
+    const before = Date.now();
+    await mgr.stop("web");
+    expect(Date.now() - before).toBeGreaterThanOrEqual(1_400);
+    expect(fs.existsSync(marker)).toBe(false);
+    expect(isAlive(instance.pid!)).toBe(false);
+    expect(mgr.list("web")[0]).toMatchObject({ status: "stopped" });
+  }, 120_000);
+
+  it("fails the start and stops the run when the record lacks an endpoint", async () => {
+    makeHostProject(project, { marker, pidFile });
+    const failed: unknown[] = [];
+    eventBus.on("service:failed", (data) => failed.push(data));
+    const pids: number[] = [];
+    const mgr = managerFor(
+      webDef({
+        endpoints: (record) => {
+          pids.push(record.pid);
+          throw new Error('no member "vetra-switchboard"');
+        },
+      }),
+    );
+
+    await expect(mgr.start("web", { cwd: project })).rejects.toThrow(
+      /Reading its endpoints from the run record failed: no member "vetra-switchboard"/,
+    );
+    started.push(...pids);
+    expect(pids).toHaveLength(1);
+    expect(isAlive(pids[0]!)).toBe(false);
+    expect(failed).toHaveLength(1);
+    expect(mgr.list("web")[0]).toMatchObject({ status: "failed" });
+  }, 120_000);
+
+  it("aborts a start a stop arrives during, leaving nothing running", async () => {
+    makeHostProject(project, { marker, pidFile, delayMs: 5_000 });
+    const mgr = managerFor(webDef());
+    const starting = mgr.start("web", { cwd: project });
+    const outcome = starting.then(
+      () => "ready",
+      (error: Error) => error.message,
+    );
+    await new Promise((r) => setTimeout(r, 500));
+
+    await mgr.stop("web");
+    expect(await outcome).toBe("Service web was stopped before it was ready");
+    expect(mgr.list("web")[0]).toMatchObject({ status: "stopped" });
+    // The ph run it spawned is gone, and its record with it.
+    expect(isAlive(runPid())).toBe(false);
+    expect(readRunRecord(project, "web")).toBeUndefined();
+  }, 120_000);
+
+  it("runs a compound, with endpoints from its members, and stops every member", async () => {
+    makeHostProject(project, { marker, pidFile });
+    const mgr = managerFor(
+      webDef({
+        id: "stack",
+        run: { host: "stack", verb: "dev" },
+        endpoints: (record) => ({
+          site: {
+            url: String(record.members?.site?.outputs.origin),
+            type: "website",
+          },
+        }),
+      }),
+    );
+
+    await mgr.start("stack", { cwd: project });
+    const [instance] = mgr.list("stack");
+    started.push(instance.pid!, runPid());
+    const record = readRunRecord(project, "stack");
+    expect(record?.pid).toBe(instance.pid);
+    const origin = record?.members?.site?.outputs.origin;
+    expect(instance.endpoints).toEqual({ site: origin });
+    expect(await (await fetch(String(origin))).text()).toBe("web saw /");
+
+    await mgr.stop("stack");
+    expect(fs.readFileSync(marker, "utf8")).toBe("stopped through its stop");
+    expect(isAlive(instance.pid!)).toBe(false);
+    expect(isAlive(runPid())).toBe(false);
+    expect(readRunRecord(project, "stack")).toBeUndefined();
+  }, 120_000);
+
+  it("refuses a definition with both a command and a run", async () => {
+    const mgr = managerFor({
+      ...webDef(),
+      command: "node -e 0",
+    } as unknown as ServiceDefinition);
+    await expect(mgr.start("web", { cwd: project })).rejects.toThrow(
+      "Service web: give it a command or a host run (run), not both.",
+    );
   });
 });

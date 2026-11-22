@@ -7,14 +7,17 @@ import {
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import type { SpawnedHost } from "@powerhousedao/host-core";
 import type {
   CaptureDefinition,
   EndpointType,
   EventBus,
+  HostServiceDefinition,
   PreflightContext,
   ReadinessPattern,
   ServiceBuildContext,
   ServiceDefinition,
+  ServiceHostRun,
   ServiceInstanceStatus,
   ServiceManager,
   ServiceStartOptions,
@@ -405,13 +408,54 @@ function resolveInstanceId(
 }
 
 /**
- * Resolve a service command — supports static string or dynamic function.
+ * Resolve a service command — supports static string or dynamic function. A
+ * host service's is its `ph run` line, as the state file and preflight show
+ * it.
  */
 function resolveCommand(
   def: ServiceDefinition<any>,
   ctx: ServiceBuildContext,
 ): string {
+  if (def.run) return hostCommandLine(def.run);
   return typeof def.command === "function" ? def.command(ctx) : def.command;
+}
+
+/** The `ph run` a host service is. */
+export function hostCommandLine(run: ServiceHostRun): string {
+  return [
+    "ph",
+    "run",
+    run.host,
+    ...(run.verb === undefined ? [] : [run.verb]),
+    ...(run.argv?.length ? ["--", ...run.argv] : []),
+  ].join(" ");
+}
+
+/** A definition with both or neither of `command` and `run` (an untyped one). */
+function assertOneForm(def: ServiceDefinition<any>): void {
+  const forms = [def.command !== undefined, def.run !== undefined];
+  if (forms.filter(Boolean).length !== 1) {
+    throw new Error(
+      `Service ${def.id}: give it a command or a host run (run), not ${forms[0] ? "both" : "neither"}.`,
+    );
+  }
+}
+
+/** The failure a start reports: what went wrong, where, and the log's end. */
+function startFailure(
+  id: string,
+  error: string,
+  cwd: string | undefined,
+  command: string,
+  tail: string,
+): Error {
+  const lines = [error, "", `  workdir:  ${cwd}`, `  command:  ${command}`];
+  if (tail) {
+    lines.push("", "  Recent log output:");
+    lines.push(...tail.split("\n").map((l) => "    " + l));
+  }
+  lines.push("", `  Check the workdir and run '${id}-logs' for the full log.`);
+  return new Error(lines.join("\n"));
 }
 
 /**
@@ -497,6 +541,14 @@ export function createServiceManager(
   const stopping = new Set<string>();
   /** Pending restart-policy timers, cancelled by `stopAll()`. */
   const restartTimers = new Set<NodeJS.Timeout>();
+  /** Host services' runs by state path, from ready until they exit. */
+  const hostRuns = new Map<string, SpawnedHost>();
+  /** Host services waiting for their run record, by state path: a stop
+   * aborts the wait and awaits `settled`. */
+  const hostStarts = new Map<
+    string,
+    { abort: AbortController; settled: Promise<unknown> }
+  >();
 
   /**
    * The status of a recorded instance this manager did not spawn. One whose
@@ -559,9 +611,15 @@ export function createServiceManager(
   ): Promise<string> {
     const def = defMap.get(id);
     if (!def) throw new Error(`Unknown service: ${id}`);
+    assertOneForm(def);
 
     const instanceId = resolveInstanceId(id, startOpts);
     const maxInstances = def.maxInstances ?? 1;
+
+    // A host run has no pid until its record is live.
+    if (hostStarts.has(stateFilePath(servicesDir, id, instanceId))) {
+      throw new Error(`Service ${id} is already starting`);
+    }
 
     // Check if this specific instance is already running
     const existingState = readStateFile(
@@ -592,7 +650,8 @@ export function createServiceManager(
         s.instanceId !== instanceId &&
         s.status !== "stopped" &&
         isMine(s) &&
-        isInstanceAlive(s),
+        (isInstanceAlive(s) ||
+          hostStarts.has(stateFilePath(servicesDir, id, s.instanceId))),
     );
     if (running.length >= maxInstances) {
       throw new Error(
@@ -642,6 +701,29 @@ export function createServiceManager(
     // and under PH_STOP_ON_STDIN a `ph run` would take that as a stop.
     const inherited: NodeJS.ProcessEnv = { ...process.env };
     delete inherited.PH_STOP_ON_STDIN;
+    // A restart attempt counts only within this manager's own lifetime.
+    const restartAttempt =
+      existingState && isMine(existingState)
+        ? (existingState.restartAttempt ?? 0)
+        : 0;
+
+    if (def.run) {
+      // spawnHost appends to the log itself.
+      fs.closeSync(logFd);
+      return startHost(def, {
+        instanceId,
+        cwd: spawnCwd ?? process.cwd(),
+        workdir: startOpts?.workdir,
+        params,
+        command: commandStr,
+        logFile,
+        logPath,
+        baseEnv: inherited,
+        env: { ...def.run.env, ...(def.env ? def.env(buildCtx) : {}) },
+        restartAttempt,
+      });
+    }
+
     const env = { ...inherited, ...(def.env ? def.env(buildCtx) : {}) };
 
     const child = spawn(commandStr, {
@@ -661,11 +743,6 @@ export function createServiceManager(
     fs.closeSync(logFd);
 
     const pid = child.pid!;
-    // A restart attempt counts only within this manager's own lifetime.
-    const restartAttempt =
-      existingState && isMine(existingState)
-        ? (existingState.restartAttempt ?? 0)
-        : 0;
 
     // Write initial state
     const state: ServiceStateFile = {
@@ -743,20 +820,15 @@ export function createServiceManager(
             name: resolveServiceName(def),
             error: state.error,
           });
-          const tail = tailLogFile(logPath);
-          const hint = `Check the workdir and run '${id}-logs' for the full log.`;
-          const lines = [state.error];
-          lines.push("");
-          lines.push(`  workdir:  ${spawnCwd}`);
-          lines.push(`  command:  ${commandStr}`);
-          if (tail) {
-            lines.push("");
-            lines.push("  Recent log output:");
-            lines.push(...tail.split("\n").map((l) => "    " + l));
-          }
-          lines.push("");
-          lines.push(`  ${hint}`);
-          reject(new Error(lines.join("\n")));
+          reject(
+            startFailure(
+              id,
+              state.error,
+              spawnCwd,
+              commandStr,
+              tailLogFile(logPath),
+            ),
+          );
           return;
         }
 
@@ -844,25 +916,149 @@ export function createServiceManager(
             name: resolveServiceName(def),
             error: state.error,
           });
-          const tail = tailLogFile(logPath);
-          const hint = `Check the workdir and run '${id}-logs' for the full log.`;
-          const tLines = [state.error];
-          tLines.push("");
-          tLines.push(`  workdir:  ${spawnCwd}`);
-          tLines.push(`  command:  ${commandStr}`);
-          if (tail) {
-            tLines.push("");
-            tLines.push("  Recent log output:");
-            tLines.push(...tail.split("\n").map((l) => "    " + l));
-          }
-          tLines.push("");
-          tLines.push(`  ${hint}`);
-          const detail = tLines.join("\n");
-          reject(new Error(detail));
+          reject(
+            startFailure(
+              id,
+              state.error,
+              spawnCwd,
+              commandStr,
+              tailLogFile(logPath),
+            ),
+          );
         }
       }, 100);
     });
 
+    return instanceId;
+  }
+
+  /**
+   * Starts a host service: `spawnHost` in the project, stopped through its
+   * stdin. Ready when its run record is live, with the endpoints the
+   * definition reads from the record. A stop while it waits aborts the wait.
+   */
+  async function startHost(
+    def: HostServiceDefinition<any>,
+    run: {
+      instanceId: string;
+      cwd: string;
+      workdir?: string;
+      params?: Record<string, unknown>;
+      command: string;
+      logFile: string;
+      logPath: string;
+      baseEnv: NodeJS.ProcessEnv;
+      env: Record<string, string>;
+      restartAttempt: number;
+    },
+  ): Promise<string> {
+    const { id } = def;
+    const { instanceId } = run;
+    const name = resolveServiceName(def);
+    const statePath = stateFilePath(servicesDir, id, instanceId);
+    const state: ServiceStateFile = {
+      serviceId: id,
+      instanceId,
+      name,
+      pid: 0,
+      owner,
+      status: "starting",
+      startedAt: new Date().toISOString(),
+      command: run.command,
+      restartAttempt: run.restartAttempt,
+      workdir: run.workdir,
+      params: run.params,
+      logFile: run.logFile,
+    };
+    writeStateFile(statePath, state);
+
+    const fail = (error: string): Error => {
+      state.status = "failed";
+      state.error = error;
+      writeStateFile(statePath, state);
+      eventBus?.emit("service:failed", { id, instanceId, name, error });
+      return startFailure(
+        id,
+        error,
+        run.cwd,
+        run.command,
+        tailLogFile(run.logPath),
+      );
+    };
+
+    const abort = new AbortController();
+    const spawning = (async () => {
+      const { spawnHost } = await import("@powerhousedao/host-core");
+      return spawnHost({
+        projectRoot: run.cwd,
+        dataDir: run.cwd,
+        host: def.run.host,
+        ...(def.run.verb === undefined ? {} : { verb: def.run.verb }),
+        ...(def.run.argv ? { argv: def.run.argv } : {}),
+        env: run.env,
+        baseEnv: run.baseEnv,
+        stopOnStdin: true,
+        logFile: run.logPath,
+        ...(def.readiness ? { readyTimeoutMs: def.readiness.timeout } : {}),
+        ...(def.shutdown ? { stopTimeoutMs: def.shutdown.timeout } : {}),
+        signal: abort.signal,
+      });
+    })();
+    hostStarts.set(statePath, {
+      abort,
+      settled: spawning.catch(() => undefined),
+    });
+
+    let spawned: SpawnedHost;
+    try {
+      spawned = await spawning;
+    } catch (error) {
+      hostStarts.delete(statePath);
+      if (abort.signal.aborted) {
+        state.status = "stopped";
+        state.stoppedAt = new Date().toISOString();
+        writeStateFile(statePath, state);
+        eventBus?.emit("service:stopped", { id, instanceId, name });
+        throw new Error(`Service ${id} was stopped before it was ready`);
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      // The tail follows from the log; the error carries its own copy.
+      throw fail(message.split("\n--- output tail ---\n")[0]!);
+    }
+    hostStarts.delete(statePath);
+
+    let endpoints: Record<string, { url: string; type?: EndpointType }>;
+    try {
+      endpoints = def.endpoints?.(spawned.record) ?? {};
+    } catch (error) {
+      await spawned.stop();
+      const message = error instanceof Error ? error.message : String(error);
+      throw fail(
+        `Reading its endpoints from the run record failed: ${message}`,
+      );
+    }
+
+    state.pid = spawned.pid;
+    state.status = "ready";
+    state.restartAttempt = 0;
+    state.endpoints = {};
+    state.endpointTypes = {};
+    for (const [key, endpoint] of Object.entries(endpoints)) {
+      state.endpoints[key] = endpoint.url;
+      if (endpoint.type) state.endpointTypes[key] = endpoint.type;
+    }
+    writeStateFile(statePath, state);
+    hostRuns.set(statePath, spawned);
+    void spawned.exited.then(() => {
+      if (hostRuns.get(statePath) === spawned) hostRuns.delete(statePath);
+    });
+    eventBus?.emit("service:ready", {
+      id,
+      instanceId,
+      name,
+      endpoints: state.endpoints,
+      endpointTypes: state.endpointTypes,
+    });
     return instanceId;
   }
 
@@ -881,6 +1077,14 @@ export function createServiceManager(
     instanceId: string,
   ): Promise<void> {
     const statePath = stateFilePath(servicesDir, serviceId, instanceId);
+    // A host run still waiting for its record: abort the wait, which stops
+    // it and settles its state.
+    const starting = hostStarts.get(statePath);
+    if (starting) {
+      starting.abort.abort();
+      await starting.settled;
+      return;
+    }
     const state = readStateFile(statePath);
     if (!state || !state.pid) {
       // If it's a stopped state file, it's already stopped
@@ -904,7 +1108,30 @@ export function createServiceManager(
       return;
     }
 
-    const signal = def.shutdown?.signal ?? "SIGTERM";
+    // A host run ends through its stdin; its tree is killed only after the
+    // stop timeout (see spawnHost).
+    const hostRun = hostRuns.get(statePath);
+    if (hostRun) {
+      stopping.add(statePath);
+      try {
+        await hostRun.stop();
+        hostRuns.delete(statePath);
+        state.status = "stopped";
+        state.pid = 0;
+        state.stoppedAt = new Date().toISOString();
+        writeStateFile(statePath, state);
+      } finally {
+        stopping.delete(statePath);
+      }
+      eventBus?.emit("service:stopped", {
+        id: serviceId,
+        instanceId,
+        name: resolveServiceName(def),
+      });
+      return;
+    }
+
+    const signal = (def.run ? undefined : def.shutdown?.signal) ?? "SIGTERM";
     const timeout = def.shutdown?.timeout ?? 5_000;
 
     // Until the stopped state is on disk, list() reports the instance as
@@ -1046,6 +1273,18 @@ export function createServiceManager(
         }
 
         const statePath = stateFilePath(servicesDir, def.id, state.instanceId);
+        // A host run has no pid while it waits for its record.
+        if (hostStarts.has(statePath)) {
+          results.push({
+            serviceId: def.id,
+            instanceId: state.instanceId,
+            name: resolveServiceName(def),
+            status: "starting",
+            params: state.params,
+            workdir: state.workdir,
+          });
+          continue;
+        }
         if (stopping.has(statePath)) {
           results.push({
             serviceId: def.id,

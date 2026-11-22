@@ -654,17 +654,21 @@ export interface ServiceProxyRouteSpec {
 }
 
 /**
- * Definition for a long-running background service.
- * Services are child processes of the CLI: they never outlive the process
- * that started them.
+ * Definition for a long-running background service: a shell `command`, or a
+ * host run (`run`). Services are child processes of the CLI: they never
+ * outlive the process that started them.
  */
-export interface ServiceDefinition<TConfig = Record<string, unknown>> {
+export type ServiceDefinition<TConfig = Record<string, unknown>> =
+  | CommandServiceDefinition<TConfig>
+  | HostServiceDefinition<TConfig>;
+
+/** What both forms of {@link ServiceDefinition} have. */
+export interface ServiceDefinitionBase<TConfig = Record<string, unknown>> {
   id: string;
   /** Display name for this service. Defaults to slugToTitle(id) when omitted. */
   name?: string;
   /** Human-readable description of the service. */
   description?: string;
-  command: string | ((ctx: ServiceBuildContext<TConfig>) => string);
   env?: (ctx: ServiceBuildContext<TConfig>) => Record<string, string>;
   /**
    * Proxy routes derived from a ready instance's endpoints, mounted under
@@ -682,10 +686,58 @@ export interface ServiceDefinition<TConfig = Record<string, unknown>> {
    */
   preflight?: PreflightCheck<TConfig>[];
   readiness?: ReadinessConfig;
-  shutdown?: { signal: NodeJS.Signals; timeout: number };
   restart?: { enabled: boolean; maxRetries: number; delay: number };
   /** Project scanner for auto-discovery. Enables `{id}-ls` command and panel integration. */
   projectScanner?: ProjectScanner;
+}
+
+/** A service that runs a shell command, ready when its output matches `readiness`. */
+export interface CommandServiceDefinition<
+  TConfig = Record<string, unknown>,
+> extends ServiceDefinitionBase<TConfig> {
+  command: string | ((ctx: ServiceBuildContext<TConfig>) => string);
+  shutdown?: { signal: NodeJS.Signals; timeout: number };
+  run?: never;
+  endpoints?: never;
+}
+
+/**
+ * A service that is a host run: `ph run <host> [verb] [-- argv]` in the
+ * start's cwd, through host-core's `spawnHost`, with the project as its data
+ * dir (its stores and `.ph/run` record are the project's own). The child's
+ * output goes to the service log. It is ready once its run record is live,
+ * within `readiness.timeout` (patterns and `wait` do not apply), and its
+ * endpoints are `endpoints(record)`. A stop ends its stdin, which it takes as
+ * a stop request; its process tree is killed only when it has not exited
+ * after `shutdown.timeout` (default 30 s).
+ */
+export interface HostServiceDefinition<
+  TConfig = Record<string, unknown>,
+> extends ServiceDefinitionBase<TConfig> {
+  run: ServiceHostRun;
+  /** The endpoints a ready instance reports, read from its run record. A
+   * throw fails the start, naming what the record lacks. */
+  endpoints?: (
+    record: import("@powerhousedao/host-core").RunRecord,
+  ) => Record<string, { url: string; type?: EndpointType }>;
+  /** No signal: the stop is the end of its stdin. */
+  shutdown?: { timeout: number; signal?: never };
+  command?: never;
+}
+
+/** What {@link HostServiceDefinition} runs. */
+export interface ServiceHostRun {
+  /** The host: its folder under the project's `hosts/`, or `<package>/<host>`
+   * for one an installed package supplies. */
+  host: string;
+  /** Absent: the host's default verb. A one-shot verb writes no run record
+   * and is refused. */
+  verb?: string;
+  /** The runner's arguments, after `--`. */
+  argv?: readonly string[];
+  /** Merged into the child's env, under `env(ctx)`. It may not set
+   * PH_USER_DATA_DIR: the data dir is the project. */
+  env?: Record<string, string>;
 }
 
 /**
