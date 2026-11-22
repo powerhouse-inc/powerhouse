@@ -18,7 +18,7 @@ import type { EmitFn } from "../../core/types.js";
 /**
  * Bridge Reactor document subscriptions to the ph-clint event bus.
  *
- * @param client - IReactorClient from the built ReactorClientModule
+ * @param client - The reactor client (in-process or remote)
  * @param subscriptions - Filter configuration for which document changes to bridge
  * @param emit - Event bus emit function from CommandContext
  * @returns Unsubscribe function

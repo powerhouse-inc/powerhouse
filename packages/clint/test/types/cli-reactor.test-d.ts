@@ -13,7 +13,6 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import { createTypes, defineRegistry } from "../../src/index.js";
 import type {
-  BuildDefaultReactorOptions,
   DriveConfig,
   EnsureDriveClient,
   RemoteReactorConfig,
@@ -21,7 +20,6 @@ import type {
 } from "../../src/index.js";
 import {
   attachRemoteReactor,
-  buildReactor,
   ensureDrive,
 } from "../../src/integrations/powerhouse/index.js";
 
@@ -31,17 +29,12 @@ const models = [driveDocumentModelModule, documentModelDocumentModelModule];
 // ── documentModels: any model module, mutable or readonly ──────────
 
 const remote: RemoteReactorConfig = { documentModels: models };
-const embedded: BuildDefaultReactorOptions = {
-  documentModels: [driveDocumentModelModule],
-};
 const asConst = [driveDocumentModelModule] as const;
 const remoteAsConst: RemoteReactorConfig = { documentModels: asConst };
 void remote;
-void embedded;
 void remoteAsConst;
 
 async function checkModuleTakers() {
-  await buildReactor({ documentModels: models, storagePath: "/tmp/x" });
   await attachRemoteReactor({
     url: "http://localhost:4001/d/home",
     documentModels: asConst,

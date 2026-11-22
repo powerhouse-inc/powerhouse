@@ -64,13 +64,6 @@ export { formatStreamChunk, renderStream } from "./core/stream.js";
 export type { RenderedChunk } from "./core/stream.js";
 export { createProxyServer } from "./core/proxy.js";
 export type { ProxyServerOptions, ProxyServerInstance } from "./core/proxy.js";
-export {
-  buildSwitchboardRoutes,
-  buildSwitchboardRouteSpecs,
-  buildServiceRoutes,
-  captureRoutePrefix,
-  isWsEndpointType,
-} from "./core/proxy-routes.js";
 export type { ProxyRoute } from "./core/proxy-routes.js";
 export { createReplSession } from "./interactive/session.js";
 export { parseReplInput, tokenizeArgs } from "./interactive/router.js";
@@ -83,21 +76,9 @@ export {
 export { renderMarkdown } from "./interactive/markdown.js";
 export {
   attachDefaultReactor,
-  buildDefaultReactor,
   resolveRemoteReactorConfig,
 } from "./integrations/powerhouse/index.js";
-export type {
-  AttachDefaultReactorOptions,
-  BuildDefaultReactorOptions,
-} from "./integrations/powerhouse/index.js";
-export { startSwitchboard } from "./integrations/powerhouse/index.js";
-export {
-  defaultPort,
-  resolvePort,
-  resolveReactorDefaults,
-} from "./integrations/powerhouse/ports.js";
-export { deterministicId } from "./integrations/powerhouse/identity.js";
-export type { StartSwitchboardOptions } from "./integrations/powerhouse/switchboard.js";
+export type { AttachDefaultReactorOptions } from "./integrations/powerhouse/index.js";
 export { defineRegistry } from "./integrations/powerhouse/registry.js";
 export { createDocumentChangeTrigger } from "./integrations/powerhouse/change-trigger.js";
 export type { DocumentChangeTriggerOptions } from "./integrations/powerhouse/change-trigger.js";
@@ -121,14 +102,11 @@ export type {
   FolderEntry,
   FolderOperations,
   SubscriptionConfig,
-  SwitchboardConfig,
-  ConnectConfig,
   DocumentRegistry,
   AnyRegistry,
   RegistryEntry,
   TypedReactorClient,
   TypedDocumentChangeEvent,
-  ReactorClientModule,
   IAttachmentService,
   AttachmentRef,
   AttachmentResponse,
@@ -205,7 +183,6 @@ export type {
   CommandServiceDefinition,
   HostServiceDefinition,
   ServiceHostRun,
-  ServiceProxyRouteSpec,
   ServiceStartOptions,
   ServiceInstanceStatus,
   ServiceStatus,

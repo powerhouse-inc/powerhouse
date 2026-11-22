@@ -5,14 +5,6 @@ import zlib from "node:zlib";
 import { createProxyServer, safeEnd } from "../src/core/proxy.js";
 import type { ProxyServerInstance } from "../src/core/proxy.js";
 import type { ProxyRoute } from "../src/core/proxy-routes.js";
-import {
-  buildSwitchboardRoutes,
-  buildServiceRoutes,
-} from "../src/core/proxy-routes.js";
-import type {
-  ServiceDefinition,
-  ServiceInstanceStatus,
-} from "../src/core/types.js";
 import { createLogger } from "../src/core/logger.js";
 
 const logger = createLogger("warn", () => {});
@@ -1311,6 +1303,23 @@ describe("createProxyServer", () => {
 });
 
 describe("proxy routes end-to-end", () => {
+  /** A path route to `upstream`, under a source label. */
+  const route = (
+    prefix: string,
+    upstream: string,
+    source: string,
+    ws = false,
+  ): ProxyRoute => ({ prefix, upstream: new URL(upstream), ws, source });
+
+  /** A switchboard's routes under /switchboard: graphql, drives,
+   * attachments and (WebSocket) mcp. */
+  const switchboardRoutes = (sb: string, mcp: string): ProxyRoute[] => [
+    route("/switchboard/graphql", `${sb}/graphql`, "switchboard"),
+    route("/switchboard/d/", `${sb}/d/`, "switchboard"),
+    route("/switchboard/attachments/", `${sb}/attachments/`, "switchboard"),
+    route("/switchboard/mcp", `${mcp}/mcp`, "switchboard", true),
+  ];
+
   it("switchboard routes forward to correct upstreams", async () => {
     // Simulate switchboard (graphql + d/) and MCP as two separate upstreams
     const sbUpstream = await createUpstream("switchboard");
@@ -1323,7 +1332,7 @@ describe("proxy routes end-to-end", () => {
     });
     servers.push({ close: () => proxy.stop() });
 
-    const routes = buildSwitchboardRoutes(sbUpstream.url, mcpUpstream.url);
+    const routes = switchboardRoutes(sbUpstream.url, mcpUpstream.url);
     for (const r of routes) proxy.addRoute(r);
 
     // GraphQL endpoint → switchboard upstream
@@ -1358,28 +1367,14 @@ describe("proxy routes end-to-end", () => {
     });
     servers.push({ close: () => proxy.stop() });
 
-    const def: ServiceDefinition = {
-      id: "my-registry",
-      command: "echo",
-      readiness: {
-        pattern: /listening on (http:\/\/\S+)/,
-        captures: {
-          mcp: { group: 1, type: "api-mcp" },
-        },
-        timeout: 5000,
-      },
-    };
-
-    const instance: ServiceInstanceStatus = {
-      serviceId: "my-registry",
-      instanceId: "i1",
-      name: "my-registry",
-      status: "ready",
-      endpoints: { mcp: `${svcUpstream.url}/mcp` },
-    };
-
-    const routes = buildServiceRoutes(def, instance);
-    for (const r of routes) proxy.addRoute(r);
+    proxy.addRoute(
+      route(
+        "/my-registry/mcp",
+        `${svcUpstream.url}/mcp`,
+        "service:my-registry",
+        true,
+      ),
+    );
 
     const res = await httpGet(`${proxy.url}/my-registry/mcp`);
     expect(res.status).toBe(200);
@@ -1401,43 +1396,17 @@ describe("proxy routes end-to-end", () => {
     servers.push({ close: () => proxy.stop() });
 
     // Add switchboard routes
-    for (const r of buildSwitchboardRoutes(sbUpstream.url, mcpUpstream.url)) {
+    for (const r of switchboardRoutes(sbUpstream.url, mcpUpstream.url)) {
       proxy.addRoute(r);
     }
 
     // Add service routes
-    const def: ServiceDefinition = {
-      id: "ext-svc",
-      command: "echo",
-      readiness: {
-        patterns: [
-          {
-            name: "rest",
-            pattern: /REST at (http:\/\/\S+)/,
-            captures: { api: { group: 1, type: "api-rest" } },
-          },
-          {
-            name: "mcp",
-            pattern: /MCP at (http:\/\/\S+)/,
-            captures: { mcp: { group: 1, type: "api-mcp" } },
-          },
-        ],
-        timeout: 5000,
-      },
-    };
-    const instance: ServiceInstanceStatus = {
-      serviceId: "ext-svc",
-      instanceId: "i1",
-      name: "ext-svc",
-      status: "ready",
-      endpoints: {
-        api: `${svcUpstream.url}/api`,
-        mcp: `${svcUpstream.url}/mcp`,
-      },
-    };
-    for (const r of buildServiceRoutes(def, instance)) {
-      proxy.addRoute(r);
-    }
+    proxy.addRoute(
+      route("/ext-svc/api", `${svcUpstream.url}/api`, "service:ext-svc"),
+    );
+    proxy.addRoute(
+      route("/ext-svc/mcp", `${svcUpstream.url}/mcp`, "service:ext-svc", true),
+    );
 
     // Switchboard graphql → sb upstream
     const gqlRes = await httpGet(`${proxy.url}/switchboard/graphql`);

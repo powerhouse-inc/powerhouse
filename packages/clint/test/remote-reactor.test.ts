@@ -23,7 +23,7 @@ import {
   attachRemoteReactor,
   deriveGraphqlEndpoint,
 } from "../src/integrations/powerhouse/remote-reactor.js";
-import { LocalSigner } from "../src/integrations/powerhouse/local-signer.js";
+import { LocalSigner } from "./fixtures/local-signer.js";
 import { ensureDrive } from "../src/integrations/powerhouse/drive.js";
 import {
   SignerNotReadyError,

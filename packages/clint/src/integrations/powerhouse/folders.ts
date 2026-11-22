@@ -50,7 +50,7 @@ async function getDriveNodes(
  * created via `ADD_FOLDER` and `ADD_FILE` drive operations executed on the
  * personal drive. This is separate from the document relationship graph.
  * Only calls the remote `GraphQLReactorClient` has too are made, so the same
- * operations work on an embedded and on an attached reactor.
+ * operations work on an in-process and on an attached reactor.
  */
 export function createFolderOperations(
   client: TypedReactorClient<any>,

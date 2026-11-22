@@ -11,7 +11,6 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -210,26 +209,6 @@ function killTree(pid: number) {
   }
 }
 
-async function freePort(): Promise<number> {
-  const server = net.createServer();
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const { port } = server.address() as net.AddressInfo;
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-  return port;
-}
-
-/** Whether anything accepts connections on `port`. */
-function listening(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const socket = net.connect(port, "127.0.0.1");
-    socket.once("connect", () => {
-      socket.destroy();
-      resolve(true);
-    });
-    socket.once("error", () => resolve(false));
-  });
-}
-
 describe("cli-runner", () => {
   let switchboard: SwitchboardServer.SwitchboardReactor;
   let root: string;
@@ -412,12 +391,8 @@ describe("cli-runner", () => {
     expect(readRunRecord(project, "cli")).toBeUndefined();
   }, 120_000);
 
-  it("starts none of the embedded reactor, switchboard or Connect the Cli configured, and ensures its drive on the remote", async () => {
-    const ports = {
-      FIXTURE_SWITCHBOARD_PORT: String(await freePort()),
-      FIXTURE_CONNECT_PORT: String(await freePort()),
-    };
-    const shell = phRun(["embedded", "--", "-i"], { env: ports });
+  it("never calls the create the Cli configured, and ensures its drive on the remote", async () => {
+    const shell = phRun(["embedded", "--", "-i"]);
     await waitFor(shell, "Reactor ready (drive: ");
     const drives = await switchboard.reactor.find({ type: DRIVE_TYPE });
     const notes = drives.results.find((drive) => drive.header.name === "Notes");
@@ -425,25 +400,12 @@ describe("cli-runner", () => {
     expect(shell.output()).toContain(
       `Reactor ready (drive: ${notes?.header.id})`,
     );
-    for (const port of Object.values(ports)) {
-      expect(await listening(Number(port))).toBe(false);
-    }
     shell.child.stdin?.write(`/read-doc ${documentId}\n`);
     await waitFor(shell, `read ${documentId} powerhouse/document-model`);
     shell.child.stdin?.write("/exit\n");
     expect(await exitCodeOf(shell)).toBe(0);
 
-    const output = shell.output();
-    expect(output).not.toContain("embedded reactor created");
-    expect(output).not.toMatch(/Switchboard '.*' ready/);
-    expect(output).not.toMatch(/Connect '.*' (ready|already running)/);
-
-    // Nor do the embedded parts' switches exist for the run.
-    const help = phRun(["embedded", "--", "--help"], { env: ports });
-    expect(await exitCodeOf(help)).toBe(0);
-    expect(help.output()).toContain("hello");
-    expect(help.output()).not.toContain("--no-api");
-    expect(help.output()).not.toContain("--no-studio");
+    expect(shell.output()).not.toContain("embedded reactor created");
   }, 120_000);
 
   it("builds a remote config given as a function from the setup context", async () => {
@@ -579,9 +541,8 @@ describe("cli-runner", () => {
       };
     }
 
-    it("attaches with no _module, on the drive the address names, and releases once", async () => {
+    it("attaches on the drive the address names, and releases once", async () => {
       const reactor = await attachDefaultReactor(setup(), { url });
-      expect(reactor._module).toBeUndefined();
       expect(reactor.driveId).toBe(labId);
       expect(reactor.driveUrl).toBe(url);
       expect(reactor.switchboardUrl).toBe(

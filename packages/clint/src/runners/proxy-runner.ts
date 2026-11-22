@@ -25,8 +25,7 @@ export const verbs = ["run", "serve", "dev", "build"] as const;
  * may be an output token; what host.js authors write) and RESOLVED (what the
  * verbs receive). `runner.port` is the front port (0 = any free port) and
  * `runner.host` the bind address. The default is "127.0.0.1": a container or
- * cloud host sets "0.0.0.0" in its own host data (the embedded proxy bound
- * every interface by default).
+ * cloud host sets "0.0.0.0" in its own host data.
  */
 const schemas = defineHostSchemas((s) =>
   s.reactorHostSchema.extend({

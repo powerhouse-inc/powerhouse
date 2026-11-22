@@ -1,21 +1,19 @@
 /**
- * `ensureDrive` on a client alone (no `ReactorClientModule`), against a real
- * embedded reactor. The light view hands it only the methods the remote
- * `GraphQLReactorClient` also has, so a call outside them fails here, and it
- * records every write the view submits.
+ * `ensureDrive` on a client alone, against a real in-process reactor. The
+ * light view hands it only the methods the remote `GraphQLReactorClient`
+ * also has, so a call outside them fails here, and it records every write
+ * the view submits.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { randomBytes } from "node:crypto";
-import { rm } from "node:fs/promises";
-import type { IReactorClient } from "@powerhousedao/reactor";
+import { randomUUID } from "node:crypto";
+import type {
+  InProcessReactorClientModule,
+  IReactorClient,
+} from "@powerhousedao/reactor";
 import { GraphQLReactorClient } from "@powerhousedao/reactor-browser/graphql-client";
-import { buildReactor } from "../../src/integrations/powerhouse/reactor.js";
 import { ensureDrive } from "../../src/integrations/powerhouse/drive.js";
-import { deterministicId } from "../../src/integrations/powerhouse/identity.js";
 import { policyOfHeader } from "../../src/integrations/powerhouse/signing.js";
-import type { ReactorClientModule } from "../../src/integrations/powerhouse/types.js";
+import { buildTestReactor } from "../fixtures/in-process-reactor.js";
 
 /** What ensureDrive may call: on the client, and on its write half. */
 const CLIENT_METHODS = ["find", "newDocument"] as const;
@@ -63,18 +61,10 @@ async function readDrive(id: string): Promise<ReadDrive> {
   return (await reactorModule.client.get(id)) as unknown as ReadDrive;
 }
 
-const testDir = join(
-  tmpdir(),
-  `ensure-drive-test-${randomBytes(4).toString("hex")}`,
-);
-let reactorModule: ReactorClientModule;
+let reactorModule: InProcessReactorClientModule;
 
 beforeAll(async () => {
-  reactorModule = await buildReactor({
-    documentModels: [],
-    storagePath: join(testDir, "reactor-storage"),
-    enableSync: false,
-  });
+  reactorModule = await buildTestReactor();
 }, 30_000);
 
 afterAll(async () => {
@@ -83,7 +73,6 @@ afterAll(async () => {
       await reactorModule.reactor.kill().completed;
     } catch {}
   }
-  await rm(testDir, { recursive: true, force: true }).catch(() => {});
 });
 
 describe("ensureDrive on a client alone", () => {
@@ -123,9 +112,9 @@ describe("ensureDrive on a client alone", () => {
     expect(writes).toEqual(["create"]);
   }, 30_000);
 
-  it("creates a legacy drive under a deterministic id with a preferred editor, once", async () => {
+  it("creates a legacy drive under a chosen id with a preferred editor, once", async () => {
     const { client, writes } = lightView(reactorModule.client);
-    const wantedId = deterministicId("ensure-drive-test", "fixed");
+    const wantedId = randomUUID();
     const created: string[] = [];
 
     const first = await ensureDrive(client, {
@@ -195,7 +184,7 @@ describe("ensureDrive on a client alone", () => {
     expect(pointed).toEqual({ id: home.id, name: "Pointer" });
   }, 30_000);
 
-  it("works the same on the full embedded client", async () => {
+  it("works the same on the full in-process client", async () => {
     const first = await ensureDrive(reactorModule.client, {
       name: "Full Home",
     });

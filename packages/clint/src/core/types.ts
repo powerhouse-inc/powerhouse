@@ -116,26 +116,6 @@ export interface CommandContext<
   routine?: Routine;
   processes?: ProcessManager;
   services?: ServiceManager;
-  /** Embedded reverse proxy, when `proxyEnabled`. */
-  proxy?: {
-    /** Public base URL of the proxy (e.g. 'http://localhost:8090'). */
-    url: string;
-    port: number;
-    /** Current route table snapshot. */
-    routes(): ReadonlyArray<{
-      prefix: string;
-      upstream?: string;
-      ws: boolean;
-      source: string;
-      redirectTo?: string;
-      exact?: boolean;
-    }>;
-    /**
-     * Register a proxy route at runtime — used by embedding CLIs to add
-     * redirects or announce extra endpoints once a service is ready.
-     */
-    addRoute(route: import("./proxy-routes.js").ProxyRoute): void;
-  };
   emit?: EmitFn<R>;
   on?: OnFn<R>;
   /** Folder operations on the agent's personal drive. Available when a personal drive is configured. */
@@ -144,8 +124,8 @@ export interface CommandContext<
   reactor?: () => Promise<ReactorContext<R> | undefined>;
   /**
    * True when the run's reactor is the one `RunOptions.reactor` supplies (a
-   * host runner's attach to a switchboard): `reactor()` then boots no
-   * embedded reactor, in a one-shot command too.
+   * host runner's attach to a switchboard): `reactor()` then reaches that
+   * switchboard, in a one-shot command too.
    */
   reactorAttached?: boolean;
   /** Lazy agent accessor — returns the AgentProvider or undefined if not configured. */
@@ -524,15 +504,6 @@ export type EndpointType =
 export interface CaptureDefinition {
   group: number;
   type?: EndpointType;
-  /**
-   * Claim the proxy's `/` catch-all for this website endpoint. Only honored
-   * on `website`-type captures. Exactly one capture across all services
-   * should set this — the primary SPA whose root-relative asset requests
-   * must resolve at the proxy root. Other `website` captures are routed
-   * under `/{serviceId}/{captureName}` and must serve themselves under that
-   * base path.
-   */
-  proxyRoot?: boolean;
 }
 
 /**
@@ -638,25 +609,6 @@ export interface ServiceBuildContext<TConfig = Record<string, unknown>> {
   params?: Record<string, unknown>;
   /** Resolved CLI config. */
   config: TConfig;
-  /** Embedded-proxy mount info derived from `config.proxyPublicUrl`. */
-  proxy: {
-    /** Validated public URL, trailing slashes stripped. Undefined when unset/invalid. */
-    publicUrl?: string;
-    /** Mount base path: '' at root, else leading-slash no-trailing-slash ('/myagent'). */
-    basePath: string;
-  };
-}
-
-/**
- * A proxy route declared by a service, relative to its mount. The framework
- * mounts `prefix` under `/{serviceId}/` and manages the route's lifecycle
- * alongside capture-derived routes (added on ready, removed on stop/failure).
- */
-export interface ServiceProxyRouteSpec {
-  /** Path prefix relative to the service mount (leading '/' ignored). */
-  prefix: string;
-  upstream: string | URL;
-  ws?: boolean;
 }
 
 /**
@@ -676,11 +628,6 @@ export interface ServiceDefinitionBase<TConfig = Record<string, unknown>> {
   /** Human-readable description of the service. */
   description?: string;
   env?: (ctx: ServiceBuildContext<TConfig>) => Record<string, string>;
-  /**
-   * Proxy routes derived from a ready instance's endpoints, mounted under
-   * `/{serviceId}/`. Invalid specs (bad upstream URL) are skipped.
-   */
-  proxyRoutes?: (instance: ServiceInstanceStatus) => ServiceProxyRouteSpec[];
   /** Zod schema for typed start parameters (merged into start command flags). */
   paramsSchema?: import("zod").ZodType;
   /** Maximum concurrent instances (default 1). */
@@ -1114,12 +1061,6 @@ export interface CliOptions<
 > {
   name: string;
   version: string;
-  /**
-   * Absolute path to the CLI package root (the directory containing package.json).
-   * Used by the framework to resolve sibling packages (e.g. the `-app` Reactor Package)
-   * and auto-detect Connect assets. Typically set to `CLI_ROOT` from config.ts.
-   */
-  root?: string;
   description: Resolvable<string, z.infer<TSchema> & z.infer<TSecrets>>;
   commands: Command<any, any, any>[];
   configSchema?: TSchema;
@@ -1127,8 +1068,8 @@ export interface CliOptions<
   secretsSchema?: TSecrets;
   interactive?: InteractiveConfig<z.infer<TSchema> & z.infer<TSecrets>>;
   /**
-   * Builds the bearer-token handler for the embedded switchboard's HTTP
-   * attachment routes (`/attachments/*`). Called once after config resolves,
+   * Builds the bearer-token handler for the switchboard's HTTP attachment
+   * routes (`/attachments/*`). Called once after config resolves,
    * with the workdir + resolved config; the returned handler mints a token per
    * call (or undefined when none is available). The framework has no identity
    * of its own, so the host CLI supplies this — without it, attachment
@@ -1161,25 +1102,6 @@ export interface CliOptions<
    * When set, skills are available as CLI commands and auto-installed on first run.
    */
   prompts?: PromptsConfig;
-  /**
-   * When true, an embedded reverse proxy is started that exposes all service
-   * endpoints through a single port. Config fields `proxyPort` and `proxyHost`
-   * are auto-injected into the config schema.
-   */
-  proxyEnabled?: boolean;
-  /**
-   * Extra proxy routes registered at startup, alongside the service-derived
-   * ones. For in-process HTTP servers on fixed ports (e.g. a trigger-owned
-   * API) that the ServiceManager doesn't know about. Requires `proxyEnabled`.
-   */
-  proxyRoutes?: Array<{
-    /** URL path prefix matched against incoming requests (e.g. '/preview'). */
-    prefix: string;
-    /** Upstream target URL (e.g. 'http://127.0.0.1:5180'). */
-    upstream: string;
-    /** Forward WebSocket upgrades on this route. */
-    ws?: boolean;
-  }>;
   /**
    * Lifecycle hooks registered with this CLI. Each hook may contribute a
    * config schema fragment (merged into the effective schema, so its fields
@@ -1215,17 +1137,16 @@ export interface RunOptions {
   /**
    * The reactor for this run, in place of the one `configureReactor` set:
    * called lazily, like that configuration's `create`, with the setup
-   * context and that configuration (undefined when the CLI set none). The
-   * embedded switchboard and Connect the configuration enables stay off for
-   * the run, and so do `--no-api` and `--no-studio`. A host runner
-   * (`@powerhousedao/clint/cli-runner`) attaches a remote switchboard here.
+   * context and that configuration (undefined when the CLI set none). A
+   * host runner (`@powerhousedao/clint/cli-runner`) attaches a remote
+   * switchboard here.
    */
   reactor?: RunReactor;
   /**
    * Called once when the CLI keeps running (interactive, or serving its
-   * routine, API or proxy), before it starts anything for that; never for a
-   * one-shot command. A host runner writes its run record here. A rejection
-   * ends the run: its message on stderr, exit code 1.
+   * routine), before it starts anything for that; never for a one-shot
+   * command. A host runner writes its run record here. A rejection ends the
+   * run: its message on stderr, exit code 1.
    */
   onServe?: () => void | Promise<void>;
   /**

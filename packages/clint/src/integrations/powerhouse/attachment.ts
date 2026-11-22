@@ -5,9 +5,9 @@ import type { CommandContext } from "../../core/types.js";
 import type { AttachmentRef, IAttachmentService } from "./types.js";
 
 /**
- * The attachment service of the run's reactor. Never boots an embedded
- * reactor for it: only where the Cli serves (`folders` marks that) or where
- * its reactor is attached to a switchboard, which reaching boots nothing.
+ * The attachment service of the run's reactor. Never builds the reactor for
+ * it: only where the Cli serves (`folders` marks that) or where its reactor
+ * is attached to a switchboard, which reaching builds nothing.
  */
 export async function getAttachmentService(
   ctx: Pick<CommandContext, "folders" | "reactor" | "reactorAttached">,
@@ -19,9 +19,8 @@ export async function getAttachmentService(
 
 export function attachmentsUnavailableMessage(): string {
   return (
-    "Attachments need a running reactor (daemon mode) on a switchboard: " +
-    "one the Cli attached to, or its embedded Switchboard started. None is " +
-    "available in this context."
+    "Attachments need a running reactor (daemon mode) on a switchboard the " +
+    "Cli attached to. None is available in this context."
   );
 }
 

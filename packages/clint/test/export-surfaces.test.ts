@@ -15,7 +15,6 @@ const SURFACES: Record<string, { source: string; names: string[] }> = {
     source: "./src/index.ts",
     names: [
       "defineCli",
-      "buildDefaultReactor",
       "attachDefaultReactor",
       "SignerNotReadyError",
       "signerReady",

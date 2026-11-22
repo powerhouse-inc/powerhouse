@@ -11,7 +11,7 @@ import type {
   UserActionSigner,
 } from "@powerhousedao/shared/document-model";
 import { setName } from "@powerhousedao/shared/document-model";
-import { LocalSigner } from "../src/integrations/powerhouse/local-signer.js";
+import { LocalSigner } from "./fixtures/local-signer.js";
 import {
   SignerNotReadyError,
   canWrite,

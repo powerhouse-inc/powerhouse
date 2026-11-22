@@ -2,36 +2,22 @@
 // (jest ran transpile-only); this file carries pre-existing type drift. Runtime
 // assertions are unchanged. Tighten opportunistically when touching the file.
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { randomBytes } from "node:crypto";
-import { rm } from "node:fs/promises";
+import type { InProcessReactorClientModule } from "@powerhousedao/reactor";
 import {
   createFolderOperations,
   createFolderCommands,
 } from "../../src/integrations/powerhouse/folders.js";
-import { buildReactor } from "../../src/integrations/powerhouse/reactor.js";
 import { ensureDrive } from "../../src/integrations/powerhouse/drive.js";
-import type {
-  FolderOperations,
-  ReactorClientModule,
-} from "../../src/integrations/powerhouse/types.js";
+import type { FolderOperations } from "../../src/integrations/powerhouse/types.js";
+import { buildTestReactor } from "../fixtures/in-process-reactor.js";
 
 // ── Real reactor setup ──────────────────────────────────────────
 
-const testDir = join(
-  tmpdir(),
-  `folders-test-${randomBytes(4).toString("hex")}`,
-);
-let reactorModule: ReactorClientModule;
+let reactorModule: InProcessReactorClientModule;
 let driveId: string;
 
 beforeAll(async () => {
-  reactorModule = await buildReactor({
-    documentModels: [],
-    storagePath: join(testDir, "reactor-storage"),
-    enableSync: false,
-  });
+  reactorModule = await buildTestReactor();
   const drive = await ensureDrive(reactorModule.client, {
     name: "folder-test-drive",
   });
@@ -45,7 +31,6 @@ afterAll(async () => {
       await status.completed;
     } catch {}
   }
-  await rm(testDir, { recursive: true, force: true }).catch(() => {});
 });
 
 // ── FolderOperations tests (real reactor) ────────────────────────

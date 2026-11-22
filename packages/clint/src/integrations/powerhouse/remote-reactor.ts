@@ -10,8 +10,8 @@ import type {
 
 /**
  * P5.5 — the agent host's reactor is a REMOTE attach: a running switchboard,
- * reached over GraphQL, instead of the embedded PGlite reactor glued to the
- * CLI's lifetime. N agents attach to ONE reactor as clients; the switchboard
+ * reached over GraphQL, with nothing of it glued to the CLI's lifetime. N
+ * agents attach to ONE reactor as clients; the switchboard
  * outlives agent sessions. The agent DEPENDS on the switchboard — an
  * unreachable remote fails the attach loudly with the start hint, it never
  * auto-starts one.

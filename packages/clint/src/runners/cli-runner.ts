@@ -30,9 +30,8 @@ import type { ReactorContext } from "../integrations/powerhouse/types.js";
  * reactor is a REMOTE attach, as mastra-runner's: a lone `remote` backend
  * whose `remote.url` is a drive address on a running switchboard (typically
  * the output token `switchboard.drives.<slug>.url`). The runner hands that
- * reactor to the Cli for the run (`RunOptions.reactor`), so whatever the Cli
- * configured in code, no embedded reactor, switchboard or Connect starts.
- * Everything after `ph run <host> --` (or `ph run <host> run`, or a first word
+ * reactor to the Cli for the run (`RunOptions.reactor`), in place of the
+ * `create` the Cli configured. Everything after `ph run <host> --` (or `ph run <host> run`, or a first word
  * that is no verb: `ph run <host> hello`) is the Cli's argv: a one-shot
  * command, `-i` for its shell, or nothing.
  *

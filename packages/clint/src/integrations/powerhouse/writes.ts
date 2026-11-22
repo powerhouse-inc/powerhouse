@@ -1,8 +1,8 @@
 /**
  * `ReactorContext.writes` and the `powerhouse:writes:ready` event, built once
- * for whichever factory makes the reactor: one wrapping `attachRemoteReactor`
- * in `configureReactor.create` (it hands the returned `signer` to the client)
- * or the embedded `buildDefaultReactor`.
+ * for whichever factory makes the reactor: `attachDefaultReactor`, or one
+ * wrapping `attachRemoteReactor` in `configureReactor.create` (it hands the
+ * returned `signer` to the client).
  */
 import type { ISigner } from "@powerhousedao/shared/document-model";
 import {

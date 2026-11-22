@@ -1532,9 +1532,6 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
-      '@powerhousedao/switchboard':
-        specifier: workspace:*
-        version: link:../../apps/switchboard
       cli-highlight:
         specifier: ^2.1.11
         version: 2.1.11
@@ -1587,6 +1584,9 @@ importers:
       '@powerhousedao/reactor-attachments':
         specifier: workspace:*
         version: link:../reactor-attachments
+      '@powerhousedao/switchboard':
+        specifier: workspace:*
+        version: link:../../apps/switchboard
       '@types/http-proxy':
         specifier: ^1.17.15
         version: 1.17.17
@@ -37549,9 +37549,9 @@ snapshots:
     dependencies:
       acorn: 8.16.0
 
-  acorn-jsx@5.3.2(acorn@8.16.0):
+  acorn-jsx@5.3.2(acorn@8.19.0):
     dependencies:
-      acorn: 8.16.0
+      acorn: 8.19.0
 
   acorn-loose@8.5.2:
     dependencies:
@@ -40099,8 +40099,8 @@ snapshots:
 
   espree@11.2.0:
     dependencies:
-      acorn: 8.16.0
-      acorn-jsx: 5.3.2(acorn@8.16.0)
+      acorn: 8.19.0
+      acorn-jsx: 5.3.2(acorn@8.19.0)
       eslint-visitor-keys: 5.0.1
 
   esprima@4.0.1: {}

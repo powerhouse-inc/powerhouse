@@ -1,5 +1,6 @@
 /**
- * Embedded reverse proxy — exposes all service endpoints through a single port.
+ * Reverse proxy — one front port routing path prefixes to upstreams (the
+ * server behind `@powerhousedao/clint/proxy-runner`).
  * Uses http-proxy for HTTP + WebSocket forwarding.
  */
 import http from "node:http";
@@ -21,8 +22,7 @@ export interface ProxyServerOptions {
    * Browser-facing base URL when the proxy sits behind an ingress /
    * reverse proxy (e.g. `https://vetra-agent.<tenant>.vetra.io`). When
    * set, `url` returns this instead of the local listen address, so
-   * everything composed from it (the ready event's proxied switchboard /
-   * drive / mcp URLs) is reachable from outside the pod.
+   * everything composed from it is reachable from outside the pod.
    *
    * A non-root pathname mounts the whole proxy surface under that base
    * path (e.g. `https://host/myagent` → base path `/myagent`): incoming
@@ -142,7 +142,7 @@ export function stripClientForwardedHost(req: {
 }
 
 /**
- * Create and start an embedded reverse proxy server.
+ * Create and start a reverse proxy server.
  */
 export async function createProxyServer(
   options: ProxyServerOptions,

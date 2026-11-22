@@ -23,7 +23,6 @@ import type {
   ServiceStartOptions,
 } from "./types.js";
 import { isPortFree } from "./preflight.js";
-import { resolveServiceProxyContext } from "./proxy-routes.js";
 import { scanProjects as scanProjectsImpl } from "./project-scanner.js";
 import { slugToTitle } from "./schema.js";
 
@@ -596,13 +595,7 @@ export function createServiceManager(
   }
 
   function buildContext(params?: Record<string, unknown>): ServiceBuildContext {
-    return {
-      params,
-      config,
-      proxy: resolveServiceProxyContext(
-        config.proxyPublicUrl as string | undefined,
-      ),
-    };
+    return { params, config };
   }
 
   async function start(

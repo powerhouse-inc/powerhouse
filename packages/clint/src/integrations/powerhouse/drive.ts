@@ -3,11 +3,7 @@
  */
 
 import type { PHBaseState, PHDocument } from "document-model";
-import type {
-  DriveConfig,
-  EnsureDriveClient,
-  ReactorClientModule,
-} from "./types.js";
+import type { DriveConfig, EnsureDriveClient } from "./types.js";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive" as const;
 
@@ -15,10 +11,10 @@ const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive" as const;
  * Ensure a drive exists, matching by name. On first run, creates a new drive.
  * On subsequent runs, finds the existing one by name.
  *
- * Works on a client alone, embedded or remote: drives are documents of type
+ * Works on a client alone, in-process or remote: drives are documents of type
  * `powerhouse/document-drive`, listed with `client.find({ type })`, built
  * with `client.newDocument()` and created, already named, with one
- * `client.write.create()`. Those three are what both the embedded
+ * `client.write.create()`. Those three are what both the in-process
  * `IReactorClient` and `GraphQLReactorClient` (which has no
  * `write.createEmpty` or `write.rename`) offer. A Cli passes its own
  * `ReactorContext.client` as it is (see `EnsureDriveClient`).
@@ -104,36 +100,4 @@ async function findDrives(client: EnsureDriveClient): Promise<PHDocument[]> {
     drives.push(...page.results);
   }
   return drives;
-}
-
-/**
- * Ensure a remote drive is connected for watching.
- * Uses the reactor client's addRemoteDrive capability.
- *
- * @param reactorModule - The full ReactorClientModule
- * @param url - The Switchboard URL to sync from
- * @param name - Display name for the drive
- * @returns The drive ID and name
- */
-export async function ensureRemoteDrive(
-  reactorModule: ReactorClientModule,
-  url: string,
-  name: string,
-): Promise<{ id: string; name: string }> {
-  const { client } = reactorModule;
-
-  // addRemoteDrive is idempotent — calling again for the same URL
-  // returns the existing drive
-  const result = await (client as any).addRemoteDrive(url);
-  const driveId = result.header?.id ?? result.id;
-
-  if (name) {
-    try {
-      await (await client.write.rename(driveId, name)).document();
-    } catch {
-      // Rename may fail for remote drives — non-fatal
-    }
-  }
-
-  return { id: driveId, name };
 }

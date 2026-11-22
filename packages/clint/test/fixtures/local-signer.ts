@@ -29,10 +29,10 @@ export type LocalSignerOptions = {
 };
 
 /**
- * The clint-embedded reactor's signer — replicated from reactor-monitor's
- * LocalSigner (unpublished package; NOTE(port): new documents are v2-required
- * by default on the modern stack, and clint's old embedded reactor submitted
- * unsigned actions — UNSIGNED_REQUIRED on every write): a fresh in-memory P-256 key, no Renown.
+ * A test signer, replicated from reactor-monitor's LocalSigner: a fresh
+ * in-memory P-256 key, no Renown. It signed clint's old embedded reactor;
+ * the tests keep it for the in-process reactor fixture and for signing
+ * pushes to a fake switchboard.
  *
  * This is the smallest signer the stack actually works with, and the reason
  * it is a real key rather than a no-op stub is worth stating: new documents

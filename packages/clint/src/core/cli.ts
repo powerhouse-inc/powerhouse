@@ -1,8 +1,5 @@
 import fs from "node:fs";
-import path from "node:path";
-import { createRequire } from "node:module";
 import { Command as Commander } from "commander";
-import { z } from "zod";
 import type {
   AgentLoader,
   BootstrapOptions,
@@ -17,15 +14,12 @@ import type {
   ResolvedInteractiveConfig,
   Routine,
   RunOptions,
-  ServiceDefinition,
 } from "./types.js";
 import type {
   ReactorConfiguration,
   DocumentRegistry,
   AnyRegistry,
 } from "../integrations/powerhouse/types.js";
-import { connectServiceDefinition } from "../integrations/powerhouse/connect.js";
-import { resolveReactorDefaults } from "../integrations/powerhouse/ports.js";
 import { randomUUID } from "node:crypto";
 import { formatStreamChunk } from "./stream.js";
 import { getSchemaFields, slugToTitle, type FieldInfo } from "./schema.js";
@@ -61,11 +55,6 @@ import {
 import { createReplSession } from "../interactive/session.js";
 import { formatZodError } from "./errors.js";
 import { createLogger } from "./logger.js";
-import { createProxyServer, type ProxyServerInstance } from "./proxy.js";
-import {
-  buildServiceRoutes,
-  resolveImplicitProxyRoot,
-} from "./proxy-routes.js";
 import { createCliRuntime } from "./runtime.js";
 import { initLifecycle } from "./lifecycle.js";
 import type { BootTimings, LifecycleInitContext } from "./types.js";
@@ -151,26 +140,6 @@ export function defineCli<
     options = {
       ...options,
       configSchema: configObj.merge(secretsObj) as unknown as TSchema,
-    };
-  }
-
-  // Auto-inject proxy config fields when enabled
-  if (options.proxyEnabled && options.configSchema) {
-    const proxySchema = z.object({
-      proxyPort: z.coerce.number().default(0),
-      proxyHost: z.string().default("0.0.0.0"),
-      // Browser-facing base URL when deployed behind an ingress
-      // (env: {CLINAME}_PROXY_PUBLIC_URL). See ProxyServerOptions.publicUrl.
-      // A non-root pathname mounts the whole surface under that base path.
-      // The .url() check accepts scheme-less values like 'localhost:8090'
-      // (parsed with protocol 'localhost:'); resolveServiceProxyContext
-      // requires http(s) and treats anything else as unset.
-      proxyPublicUrl: z.string().url().optional(),
-    });
-    const configObj = options.configSchema as any;
-    options = {
-      ...options,
-      configSchema: configObj.merge(proxySchema) as unknown as TSchema,
     };
   }
 
@@ -274,7 +243,7 @@ export function defineCli<
 
   // Lazy singleton event bus — created on first access, shared everywhere.
   // This eliminates the dual-path wiring that caused stale references when
-  // services were added after defineCli() (e.g. configureReactor adding Connect).
+  // services were added after defineCli().
   let _eventBus: ReturnType<typeof createEventBus> | undefined;
   function getEventBus(): ReturnType<typeof createEventBus> {
     if (!_eventBus) _eventBus = createEventBus();
@@ -340,41 +309,9 @@ export function defineCli<
   function configureReactor<R extends DocumentRegistry = AnyRegistry>(
     config: ReactorConfiguration<R>,
   ): void {
-    // Stamp port/name defaults from CLI name before anything else
-    const resolved = resolveReactorDefaults(options.name, config);
-    if (resolved.switchboard)
-      config = { ...config, switchboard: resolved.switchboard };
-    if (resolved.connect) config = { ...config, connect: resolved.connect };
-
-    // Auto-resolve Connect workdir and assetsDir from CLI root
-    if (config.connect?.enabled && options.root) {
-      const connect = { ...config.connect };
-      if (!connect.workdir) {
-        connect.workdir = resolveAppPackageDir(options.root, options.name);
-      }
-      if (connect.assetsDir === undefined && connect.workdir) {
-        const candidateDir = path.join(connect.workdir, "dist", "connect");
-        if (fs.existsSync(path.join(candidateDir, "index.html"))) {
-          connect.assetsDir = candidateDir;
-        }
-      }
-      config = { ...config, connect };
-    }
-
     // Erase R at the storage site — at runtime the registry is just a dict.
     // The generic only exists to type-check the caller's `create` factory.
     reactorConfig = config as unknown as ReactorConfiguration;
-
-    // Inject Connect service commands immediately
-    if (config.connect?.enabled) {
-      const def = connectServiceDefinition(config.connect);
-      for (const cmd of createServiceCommands(def)) {
-        if (!commandMap.has(cmd.id)) commandMap.set(cmd.id, cmd);
-      }
-      // Store the service definition for ServiceManager registration in run()
-      if (!options.services) options.services = [];
-      (options.services as any[]).push(def);
-    }
   }
 
   function getCommand(id: string): Command | undefined {
@@ -762,8 +699,6 @@ export function defineCli<
     resolvedDescription: string,
     onSkillInvocation?: (invocation: SkillInvocation) => Promise<void>,
     wraps?: import("./types.js").WrapRegistry,
-    // The run's reactor configuration: RunOptions.reactor replaces this one.
-    runReactor: ReactorConfiguration | undefined = reactorConfig,
   ): Commander {
     const program = new Commander();
     program
@@ -783,14 +718,6 @@ export function defineCli<
 
     if (hasTriggers) {
       program.option("-R, --no-routine", "Skip routine activation");
-    }
-
-    if (runReactor?.switchboard?.enabled) {
-      program.option("-A, --no-api", "Skip API (switchboard) activation");
-    }
-
-    if (runReactor?.connect?.enabled) {
-      program.option("-S, --no-studio", "Skip Studio (connect) activation");
     }
 
     program.option("--verbose", "Enable debug-level logging");
@@ -990,15 +917,14 @@ export function defineCli<
   }
 
   /**
-   * Wire up ServiceManager (process + routine), event handlers, and proxy
-   * event wiring onto a freshly-built context.  Shared by bootstrap() and
-   * the interactive-mode startup in runImpl().
+   * Wire up ServiceManager (process + routine + compound members) and event
+   * handlers onto a freshly-built context.  Shared by bootstrap() and the
+   * interactive-mode startup in runImpl().
    */
   function wireServices(
     context: CommandContext,
     config: Record<string, unknown>,
     log: import("./types.js").Logger,
-    proxyInstance?: ProxyServerInstance,
     members?: RunOptions["members"],
   ): void {
     const servicesNow = options.services && options.services.length > 0;
@@ -1055,42 +981,6 @@ export function defineCli<
       for (const [event, handler] of Object.entries(options.events)) {
         _eventBus.on(event, (data: unknown) => handler(data, log));
       }
-    }
-
-    // Proxy route wiring via event bus
-    if (proxyInstance) {
-      // All definitions (including the reactor-config Connect, pushed into
-      // options.services by configureReactor) are known here, so the implicit
-      // root resolves deterministically regardless of startup order.
-      const implicitRoot = resolveImplicitProxyRoot(
-        (options.services ?? []) as ServiceDefinition[],
-      );
-      if (implicitRoot) {
-        log.debug(
-          `Proxy: '${implicitRoot.serviceId}/${implicitRoot.captureName}' is the only website capture — serving it at '/' (set proxyRoot to make this explicit)`,
-        );
-      }
-      const bus = getEventBus();
-      bus.on("service:ready", (data: any) => {
-        if (!data?.id || !context.services) return;
-        const def = context.services.getDefinition(data.id);
-        if (!def) return;
-        const instances = context.services.list(data.id);
-        const inst = instances.find((i) => i.instanceId === data.instanceId);
-        if (!inst) return;
-        const routes = buildServiceRoutes(def, inst, implicitRoot, log);
-        for (const route of routes) {
-          proxyInstance.addRoute(route);
-        }
-      });
-      bus.on("service:stopped", (data: any) => {
-        if (data?.id) proxyInstance.removeRoutesBySource(`service:${data.id}`);
-      });
-      bus.on("service:failed", (data: any) => {
-        if (data?.id) proxyInstance.removeRoutesBySource(`service:${data.id}`);
-      });
-      // No routes for services found running at boot: a service of an
-      // earlier run is never adopted (every service is this process's own).
     }
   }
 
@@ -1286,8 +1176,6 @@ export function defineCli<
     let verboseFlag = false;
     let metaFlag = false;
     let noRoutineFlag = false;
-    let noApiFlag = false;
-    let noStudioFlag = false;
     const frameworkFlags = new Set([
       "--resume",
       "--workdir",
@@ -1305,10 +1193,6 @@ export function defineCli<
         metaFlag = true;
       } else if (arg === "-R" || arg === "--no-routine") {
         noRoutineFlag = true;
-      } else if (arg === "-A" || arg === "--no-api") {
-        noApiFlag = true;
-      } else if (arg === "-S" || arg === "--no-studio") {
-        noStudioFlag = true;
       } else if (frameworkFlags.has(arg) && i + 1 < preCommandArgs.length) {
         const value = preCommandArgs[i + 1]!;
         if (arg === "--workdir" || arg === "-w") workdirFlag = value;
@@ -1369,8 +1253,6 @@ export function defineCli<
       log,
     });
 
-    // One-shot detection — before the proxy bind so one-shot invocations skip
-    // it (they take the lazy dispatch and start no services).
     const postCmdArgs = userArgs.slice(subcommandIdx);
     const firstSubcmd = postCmdArgs[0];
     const isSubcommand =
@@ -1379,59 +1261,8 @@ export function defineCli<
     const isBuiltinFlag = preCommandArgs.some(
       (a) => a === "--help" || a === "-h" || a === "--version" || a === "-V",
     );
-    const willRunOneShot =
-      !interactiveFlag && (isSubcommand || isBuiltinFlag || metaFlag);
 
-    // Embedded proxy — skipped for one-shot invocations.
-    let proxyInstance: ProxyServerInstance | undefined;
-    if (options.proxyEnabled && !willRunOneShot) {
-      const proxyPort = (config as any).proxyPort ?? 0;
-      const proxyHost = (config as any).proxyHost ?? "0.0.0.0";
-      const proxyPublicUrl = (config as any).proxyPublicUrl as
-        | string
-        | undefined;
-      proxyInstance = await createProxyServer({
-        port: proxyPort,
-        host: proxyHost,
-        publicUrl: proxyPublicUrl,
-        logger: log,
-      });
-      for (const route of options.proxyRoutes ?? []) {
-        try {
-          proxyInstance.addRoute({
-            // Request paths always start with '/'; normalize so a bare
-            // 'preview' prefix doesn't silently never match.
-            prefix: route.prefix.startsWith("/")
-              ? route.prefix
-              : `/${route.prefix}`,
-            upstream: new URL(route.upstream),
-            ws: route.ws ?? false,
-            source: "static",
-          });
-        } catch (err) {
-          log.warn(
-            `Invalid proxyRoutes entry '${route.prefix}': ${err instanceof Error ? err.message : String(err)}`,
-          );
-        }
-      }
-      const proxy = proxyInstance;
-      context.proxy = {
-        url: proxy.url,
-        port: proxy.port,
-        routes: () =>
-          proxy.getRoutes().map((r) => ({
-            prefix: r.prefix,
-            upstream: r.upstream?.toString(),
-            ws: r.ws,
-            source: r.source,
-            redirectTo: r.redirectTo,
-            exact: r.exact,
-          })),
-        addRoute: (route) => proxy.addRoute(route),
-      };
-    }
-
-    wireServices(context, config, log, proxyInstance, opts.members);
+    wireServices(context, config, log, opts.members);
 
     // Run lifecycle hooks after config resolves, before runtime construction.
     // Identity wraps when no hook is registered; otherwise composed contributions.
@@ -1465,13 +1296,13 @@ export function defineCli<
       : undefined;
 
     // The run's reactor: a host runner's (RunOptions.reactor) stands in for
-    // the configured one, and brings no embedded switchboard or Connect.
+    // the configured one.
     const supplyReactor = opts.reactor;
     const runReactor: ReactorConfiguration | undefined = supplyReactor
       ? { create: (setup) => supplyReactor(setup, reactorConfig) }
       : reactorConfig;
 
-    // Create CLI runtime for lifecycle management (reactor, switchboard, agent, routine)
+    // Create CLI runtime for lifecycle management (reactor, agent, routine)
     const runtime = createCliRuntime({
       cliName: options.name,
       cliVersion: options.version,
@@ -1485,9 +1316,6 @@ export function defineCli<
       agentLoader,
       routine,
       skipRoutineStart: noRoutineFlag,
-      proxyInstance,
-      enableSwitchboard: !noApiFlag,
-      enableConnect: !noStudioFlag,
       attachmentJwtHandler: options.attachmentJwtHandler?.({
         workdir,
         config: typedConfig,
@@ -1569,9 +1397,8 @@ export function defineCli<
     }
 
     // ── Dispatch ─────────────────────────────────────────────────────
-    // --no-routine / --no-api suppress their respective keep-alive reasons
+    // --no-routine suppresses the keep-alive reason
     const effectiveRoutine = noRoutineFlag ? undefined : routine;
-    const effectiveApi = !noApiFlag && runReactor?.switchboard?.enabled;
 
     // Interaction mode: how the CLI does I/O
     // - headless: no input loop, execute and exit (or serve until killed)
@@ -1590,9 +1417,8 @@ export function defineCli<
         : "interactive-streaming";
 
     // Keep-alive: why the process stays running after primary work completes
-    // Orthogonal to interaction mode — a headless CLI with switchboard blocks on signals
-    const hasKeepAlive =
-      !!effectiveRoutine || !!effectiveApi || !!proxyInstance;
+    // Orthogonal to interaction mode — a headless CLI with a routine blocks on signals
+    const hasKeepAlive = !!effectiveRoutine;
 
     if (isBuiltinFlag || (!interactiveFlag && (isSubcommand || hasPrompt))) {
       // ── Command execution (any mode): subcommand or prompt without -i → execute, exit ──
@@ -1622,7 +1448,6 @@ export function defineCli<
         resolvedDescription,
         agentLoader ? handleSkillInvocation : undefined,
         lifecycle.wraps,
-        runReactor,
       );
       try {
         await program.parseAsync(argv);
@@ -1845,7 +1670,6 @@ export function defineCli<
         resolvedDescription,
         agentLoader ? handleSkillInvocation : undefined,
         lifecycle.wraps,
-        runReactor,
       );
       program.outputHelp();
       await runtime.teardown();
@@ -2023,40 +1847,6 @@ export function defineCli<
     typeof options.description === "string"
       ? options.description
       : options.description({ workdir: activeWorkdir, config: {} as TMerged });
-
-  /**
-   * Resolve the -app companion package directory using Node module resolution.
-   * Falls back to the sibling directory convention for workspace layouts.
-   */
-  function resolveAppPackageDir(cliRoot: string, cliName: string): string {
-    // Try Node module resolution first (works for npm global, pnpm global, etc.).
-    // Any failure — missing/unreadable package.json, unresolvable module, no
-    // matching package.json walking up — falls through to the sibling fallback.
-    try {
-      const cliPkgPath = path.join(cliRoot, "package.json");
-      const cliPkg = JSON.parse(fs.readFileSync(cliPkgPath, "utf8"));
-      const fullName = cliPkg.name as string; // e.g. "@powerhousedao/ph-clint-cli"
-      const appPkgName = fullName.replace(/-cli$/, "-app"); // e.g. "@powerhousedao/ph-clint-app"
-
-      const req = createRequire(cliPkgPath);
-      const entry = req.resolve(appPkgName);
-      // Walk up from the resolved entry to find the package root
-      let dir = path.dirname(entry);
-      while (dir !== path.dirname(dir)) {
-        const candidate = path.join(dir, "package.json");
-        if (fs.existsSync(candidate)) {
-          const pkg = JSON.parse(fs.readFileSync(candidate, "utf8"));
-          if (pkg.name === appPkgName) return dir;
-        }
-        dir = path.dirname(dir);
-      }
-    } catch {
-      // Fall through to sibling convention
-    }
-    // Fall back to sibling directory (workspace layout)
-    const bareName = cliName.replace(/^@[^/]+\//, "");
-    return path.resolve(cliRoot, `../${bareName}-app`);
-  }
 
   cliRef = {
     name: options.name,

@@ -225,28 +225,6 @@ export interface TypedDocumentChangeEvent<
   documents: Array<R[T]["document"]>;
 }
 
-// ── Reactor client module ────────────────────────────────────────
-
-/**
- * Structural type for the ReactorClientModule returned by
- * @powerhousedao/reactor's ReactorClientBuilder.buildModule().
- *
- * Used as the boundary type between buildReactor() and its consumers
- * (ensureDrive, startSwitchboard, buildDefaultReactor). The actual module
- * has additional properties; this captures the subset ph-clint uses.
- *
- * Imported via `import type` — zero runtime coupling.
- */
-export interface ReactorClientModule {
-  client: IReactorClient;
-  reactor: {
-    kill(): { completed: Promise<void> };
-    findByType(
-      documentType: string,
-    ): Promise<{ results?: Array<{ header: { id: string } }> } | undefined>;
-  };
-}
-
 // ── Drive entry ──────────────────────────────────────────────────
 
 /**
@@ -261,8 +239,6 @@ export interface DriveEntry {
   name: string;
   /** Role: 'personal' = agent's own workspace, 'watched' = observed from elsewhere. */
   role: "personal" | "watched";
-  /** For watched remote drives: the Switchboard URL to sync from. */
-  remoteUrl?: string;
 }
 
 // ── Folder operations ────────────────────────────────────────────
@@ -327,14 +303,10 @@ export interface ReactorContext<R extends DocumentRegistry = AnyRegistry> {
   drives?: DriveEntry[];
   /** The personal drive ID (first drive with role 'personal'). */
   personalDriveId?: string;
-  /** Phase 2: Switchboard GraphQL URL (e.g. http://localhost:4001/graphql). */
+  /** The switchboard's GraphQL URL (e.g. http://localhost:4001/graphql). */
   switchboardUrl?: string;
-  /** Phase 2: Switchboard drive URL (e.g. http://localhost:4001/d/{driveId}). */
+  /** The default drive's URL on the switchboard (e.g. http://localhost:4001/d/{driveId}). */
   driveUrl?: string;
-  /** Phase 2: Switchboard MCP URL (e.g. http://localhost:4001/mcp). */
-  mcpUrl?: string;
-  /** Phase 3: Connect web UI URL (e.g. http://localhost:3000). */
-  connectUrl?: string;
   /**
    * Switchboard-provided attachment service. Constructed externally
    * (switchboard owns createRemoteAttachmentService) and passed in via
@@ -343,8 +315,6 @@ export interface ReactorContext<R extends DocumentRegistry = AnyRegistry> {
    * reach it here. Undefined when no attachment service is wired.
    */
   attachments?: IAttachmentService;
-  /** Internal: the ReactorClientModule, passed to startSwitchboard(). */
-  _module?: ReactorClientModule;
   /**
    * Whether the agent may write a document right now (see
    * `createReactorWrites`). Triggers that write on the agent's behalf skip a
@@ -371,7 +341,7 @@ export interface ReactorWrites {
 
 /**
  * What `ensureDrive` and a `DriveConfig.resolveId` call on a client. Both an
- * `IReactorClient` (embedded or remote) and a Cli's `ReactorContext.client`
+ * `IReactorClient` (in-process or remote) and a Cli's `ReactorContext.client`
  * fit it as they are: the typed client is the same object, and these
  * members read any document as a plain `PHDocument`.
  */
@@ -435,75 +405,6 @@ export interface SubscriptionConfig<R extends DocumentRegistry = AnyRegistry> {
 }
 
 /**
- * Switchboard (Phase 2) configuration.
- */
-export interface SwitchboardConfig {
-  /** Enable Switchboard. Default: false. */
-  enabled: boolean;
-  /** Hostname/IP to bind to. Default: 'localhost'. */
-  host?: string;
-  /** HTTP port. Default: derived from CLI name via hash. */
-  port?: number;
-  /** Number of ports to scan starting from `port`. Default: 1. */
-  portRange?: number;
-  /** Service label for preflight messages. Default: '{cliName}-api'. */
-  name?: string;
-  /**
-   * Registry URL forwarded to the switchboard's `HttpPackageLoader`. When
-   * set, the `Packages` GraphQL subgraph is registered (install/uninstall
-   * mutations) and dynamic package resolution is enabled.
-   */
-  registryUrl?: string;
-}
-
-/**
- * Connect UI (Phase 3) configuration.
- */
-export interface ConnectConfig {
-  /** Enable Connect. Default: false. */
-  enabled: boolean;
-  /** HTTP port. Default: derived from CLI name via hash. */
-  port?: number;
-  /** Number of ports to scan starting from `port`. Default: 1. */
-  portRange?: number;
-  /** Working directory for `ph connect` (must be a Reactor Package project). */
-  workdir?: string;
-  /** Service ID for ServiceManager. Default: '{cliName}-studio'. */
-  name?: string;
-  /** Path to pre-built Connect static assets. When set, serves via static file server instead of Vite dev server. */
-  assetsDir?: string;
-  // Precompress assets to brotli/gzip on first boot (static mode). Opt-in; only
-  // safe for bundles immutable after boot (in-place rewrites stale the .br/.gz).
-  precompress?: boolean;
-  /**
-   * Package registry URL forwarded to Connect via
-   * `PH_CONNECT_PACKAGES_REGISTRY`. The vite config reads this to resolve
-   * Powerhouse packages for in-browser dynamic imports.
-   */
-  registryUrl?: string;
-}
-
-/**
- * Options for definePowerhouseIntegration().
- */
-export interface PowerhouseIntegrationOptions<
-  R extends DocumentRegistry = AnyRegistry,
-> {
-  /** Document model modules to register with the Reactor. */
-  documentModels: readonly DocumentModelModule<any>[];
-  /** Document registry for typed client narrowing. Usually built with `defineRegistry([...modules] as const)`. */
-  registry?: R;
-  /** Default drive to create/find on startup. */
-  drive?: DriveConfig;
-  /** Subscribe to document changes → event bus. */
-  subscriptions?: SubscriptionConfig<R>;
-  /** Phase 2: Switchboard (GraphQL + MCP endpoint). Requires Phase 1. */
-  switchboard?: SwitchboardConfig;
-  /** Phase 3: Connect web UI. Requires Phase 2. */
-  connect?: ConnectConfig;
-}
-
-/**
  * Context passed to the reactor factory in configureReactor().
  * Provides core infrastructure the factory needs to build the reactor.
  *
@@ -520,8 +421,6 @@ export interface ReactorSetupContext<R extends DocumentRegistry = AnyRegistry> {
   workspace: WorkdirStore;
   emit?: import("../../core/types.js").EmitFn<R>;
   on?: import("../../core/types.js").OnFn<R>;
-  /** Switchboard config — passed by the framework so create() can set enableSync. */
-  switchboard?: SwitchboardConfig;
   /**
    * Switchboard-provided attachment service to thread through to ReactorContext.
    * The service is constructed externally (switchboard owns createRemoteAttachmentService)
@@ -544,12 +443,12 @@ export interface ReactorSetupContext<R extends DocumentRegistry = AnyRegistry> {
 export interface ReactorConfiguration<
   R extends DocumentRegistry = AnyRegistry,
 > {
-  /** Factory that builds and returns a ReactorContext. */
+  /**
+   * Factory that builds and returns a ReactorContext, when no host runner
+   * attaches the CLI to a switchboard (a test fake, a custom client, or an
+   * error naming how to run the CLI).
+   */
   create: (ctx: ReactorSetupContext<R>) => Promise<ReactorContext<R>>;
-  /** Connect web UI service configuration — commands injected immediately. */
-  connect?: ConnectConfig;
-  /** Switchboard service configuration. */
-  switchboard?: SwitchboardConfig;
   /**
    * What the reactor holds when a host runner attaches it to a remote
    * switchboard instead of calling `create` (see `RunOptions.reactor`):
@@ -614,14 +513,4 @@ export interface RemoteReactorConfig<R extends DocumentRegistry = AnyRegistry> {
       protocolVersions?: Record<string, number> | null;
     };
   }) => boolean;
-}
-
-/**
- * Internal handle for the Switchboard instance.
- */
-export interface SwitchboardInstance {
-  switchboardUrl: string;
-  driveUrl: string;
-  mcpUrl: string;
-  shutdown(): Promise<void>;
 }

@@ -1,5 +1,5 @@
 /**
- * CLI Runtime — manages the lifecycle of reactor, switchboard, agent, and routine.
+ * CLI Runtime — manages the lifecycle of reactor, agent, and routine.
  *
  * Extracted from the runImpl() closure in cli.ts so that each operation
  * (startup, teardown, lazy reactor/agent creation) is independently testable
@@ -23,17 +23,8 @@ import type { SkillInfo } from "./skills.js";
 import type {
   ReactorConfiguration,
   ReactorContext,
-  SwitchboardInstance,
   IAttachmentService,
 } from "../integrations/powerhouse/types.js";
-import type { ProxyServerInstance } from "./proxy.js";
-import { resolvePort } from "../integrations/powerhouse/ports.js";
-import {
-  buildSwitchboardRoutes,
-  buildSwitchboardProxyUrls,
-  deriveBasePath,
-} from "./proxy-routes.js";
-import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
 
 /**
  * Dependencies for a CLI runtime instance.
@@ -57,11 +48,10 @@ export interface CliRuntimeDeps {
   attachments?: IAttachmentService;
   /**
    * Mints the bearer token for the switchboard's HTTP attachment routes.
-   * Passed to the default `createRemoteAttachmentService` below, and to the
-   * reactor factory (`ReactorSetupContext.attachmentJwtHandler`) for a remote
-   * attach, so reservation/upload calls authenticate against an auth-enabled
-   * switchboard. Supplied by the host CLI (the framework has no identity of
-   * its own).
+   * Passed to the reactor factory (`ReactorSetupContext.attachmentJwtHandler`)
+   * for a remote attach, so reservation/upload calls authenticate against an
+   * auth-enabled switchboard. Supplied by the host CLI (the framework has no
+   * identity of its own).
    */
   attachmentJwtHandler?: (url: string) => Promise<string | undefined>;
   agentLoader?: AgentLoader;
@@ -69,12 +59,6 @@ export interface CliRuntimeDeps {
   routine?: Routine;
   /** When true, the routine is not started in startupSequence (--no-routine). */
   skipRoutineStart?: boolean;
-  proxyInstance?: ProxyServerInstance;
-
-  /** When false, switchboard startup is skipped (--no-api). Default: true. */
-  enableSwitchboard?: boolean;
-  /** When false, connect startup is skipped (--no-studio). Default: true. */
-  enableConnect?: boolean;
 
   skillIds: Set<string>;
   resolvedSkills: SkillInfo[];
@@ -87,7 +71,7 @@ export interface CliRuntimeDeps {
 }
 
 /**
- * CLI runtime: manages the lifecycle of reactor, switchboard, agent, and routine.
+ * CLI runtime: manages the lifecycle of reactor, agent, and routine.
  */
 export interface CliRuntime {
   getReactor(): Promise<ReactorContext | undefined>;
@@ -110,19 +94,15 @@ export function createCliRuntime(deps: CliRuntimeDeps): CliRuntime {
     reactorConfig,
     agentLoader,
     routine,
-    proxyInstance,
     skillIds,
     resolvedSkills,
     prompts,
   } = deps;
-  const enableSwitchboard = deps.enableSwitchboard ?? true;
-  const enableConnect = deps.enableConnect ?? true;
   const skipRoutineStart = deps.skipRoutineStart ?? false;
   const wraps = deps.wraps ?? IDENTITY_WRAPS;
   const lifecycleShutdown = deps.lifecycleShutdown;
 
   let cachedReactor: ReactorContext | undefined;
-  let switchboardInstance: SwitchboardInstance | undefined;
   let cachedProvider: AgentProvider | undefined;
 
   async function getReactor(): Promise<ReactorContext | undefined> {
@@ -134,7 +114,6 @@ export function createCliRuntime(deps: CliRuntimeDeps): CliRuntime {
       workspace,
       emit: context.emit,
       on: context.on,
-      switchboard: reactorConfig.switchboard,
       attachments: deps.attachments,
       attachmentJwtHandler: deps.attachmentJwtHandler,
     });
@@ -161,99 +140,16 @@ export function createCliRuntime(deps: CliRuntimeDeps): CliRuntime {
     return cachedProvider;
   }
 
-  async function startSwitchboardLayer(): Promise<void> {
-    if (!reactorConfig?.switchboard?.enabled || !cachedReactor?._module) return;
-    const switchboardHost = reactorConfig.switchboard.host ?? "localhost";
-    const switchboardLabel = reactorConfig.switchboard.name ?? "switchboard";
-    const switchboardPort = await resolvePort(
-      reactorConfig.switchboard.port!,
-      reactorConfig.switchboard.portRange ?? 1,
-      switchboardLabel,
-    );
-
-    const dbPath = workspace.getStoreFolder("read-model.db");
-    log.debug(
-      `Starting Switchboard on ${switchboardHost}:${switchboardPort}, dbPath: ${dbPath}`,
-    );
-
-    const { startSwitchboard } =
-      await import("../integrations/powerhouse/switchboard.js");
-    switchboardInstance = await startSwitchboard({
-      reactorModule: cachedReactor._module,
-      host: switchboardHost,
-      port: switchboardPort,
-      dbPath,
-      driveId: cachedReactor.driveId,
-      registryUrl: reactorConfig.switchboard.registryUrl,
-    });
-
-    // Propagate URLs to the reactor context
-    cachedReactor.switchboardUrl = switchboardInstance.switchboardUrl;
-    cachedReactor.driveUrl = switchboardInstance.driveUrl;
-    cachedReactor.mcpUrl = switchboardInstance.mcpUrl;
-
-    // Resolve attachment:// refs through the local switchboard. The
-    // /attachments/* routes mount at the host root, so use the origin.
-    // The jwtHandler authenticates reservation/upload calls when the
-    // switchboard has auth enabled (otherwise they 401). Skip if a service
-    // was injected externally.
-    if (!cachedReactor.attachments) {
-      cachedReactor.attachments = createRemoteAttachmentService({
-        remoteUrl: new URL(switchboardInstance.switchboardUrl).origin,
-        jwtHandler: deps.attachmentJwtHandler,
-      });
-    }
-
-    // Route through the proxy before announcing readiness, so consumers of
-    // the event can hand out the proxied URLs immediately.
-    if (proxyInstance) {
-      const sbRoutes = buildSwitchboardRoutes(
-        switchboardInstance.switchboardUrl,
-        switchboardInstance.mcpUrl,
-      );
-      for (const route of sbRoutes) {
-        proxyInstance.addRoute(route);
-        log.debug(
-          `  proxy: ${route.prefix} → ${route.upstream?.toString() ?? route.redirectTo ?? ""}`,
-        );
-      }
-    }
-
-    context.emit?.("powerhouse:switchboard:ready", {
-      switchboardUrl: switchboardInstance.switchboardUrl,
-      driveUrl: switchboardInstance.driveUrl,
-      mcpUrl: switchboardInstance.mcpUrl,
-      // Browser-facing equivalents through the embedded proxy, when enabled.
-      proxy: proxyInstance
-        ? {
-            url: proxyInstance.url,
-            ...buildSwitchboardProxyUrls(
-              proxyInstance.url,
-              switchboardInstance,
-            ),
-          }
-        : undefined,
-    });
-  }
-
   async function teardown(): Promise<void> {
     if (routine && routine.status === "running") {
       log.debug("Stopping routine...");
       await routine.stop();
     }
     // Services are this process's children and end with it: stop them
-    // gracefully before the switchboard and reactor they may talk to.
+    // gracefully before the reactor they may talk to.
     if (context.services) {
       log.debug("Stopping services...");
       await context.services.stopAll();
-    }
-    if (switchboardInstance) {
-      log.debug("Stopping Switchboard...");
-      await switchboardInstance.shutdown();
-    }
-    if (proxyInstance) {
-      log.debug("Stopping proxy...");
-      await proxyInstance.stop();
     }
     if (cachedReactor) {
       log.debug("Stopping Reactor...");
@@ -284,18 +180,10 @@ export function createCliRuntime(deps: CliRuntimeDeps): CliRuntime {
 
   async function startupSequence(output: (msg: string) => void): Promise<void> {
     try {
-      // 0. Proxy (if enabled, already listening)
-      if (proxyInstance) {
-        output(`Proxy listening on ${proxyInstance.url}`);
-      }
-
-      // 1. Reactor (in-process document store + drive + subscriptions)
+      // 1. Reactor (the client of its switchboard + drives + subscriptions)
       if (reactorConfig) {
         log.debug("Starting Reactor...");
         await getReactor();
-        log.debug(
-          `Reactor storage: ${workspace.getStoreFolder("reactor-storage")}`,
-        );
         output(`Reactor ready (drive: ${cachedReactor!.driveId})`);
 
         // Inject folder operations when a personal drive is available
@@ -315,87 +203,7 @@ export function createCliRuntime(deps: CliRuntimeDeps): CliRuntime {
         }
       }
 
-      // 2. Switchboard (GraphQL + MCP endpoint wrapping reactor)
-      if (
-        reactorConfig?.switchboard?.enabled &&
-        enableSwitchboard &&
-        cachedReactor?._module
-      ) {
-        log.debug("Starting Switchboard...");
-        await startSwitchboardLayer();
-        const sb = switchboardInstance!;
-        output(
-          `Switchboard '${reactorConfig.switchboard.name!}' ready at ${sb.switchboardUrl}`,
-        );
-        log.debug(`  drive: ${sb.driveUrl}`);
-        log.debug(`  mcp:   ${sb.mcpUrl}`);
-      }
-
-      // 3. Connect (web UI child process)
-      if (
-        reactorConfig?.connect?.enabled &&
-        enableConnect &&
-        context.services
-      ) {
-        const connectName = reactorConfig.connect.name!; // Always stamped by resolveReactorDefaults
-        const connectWorkdir = reactorConfig.connect.workdir ?? workdir;
-        const instances = context.services.list(connectName);
-        const running = instances.find(
-          (i) => i.status === "ready" || i.status === "starting",
-        );
-
-        if (running && running.workdir === connectWorkdir) {
-          const url = running.endpoints?.["connect-studio"] ?? "unknown URL";
-          output(`Connect '${connectName}' already running at ${url}`);
-        } else {
-          // Stop instance running in wrong workdir
-          if (running) {
-            log.info(`Stopping Connect (wrong workdir: ${running.workdir})`);
-            await context.services.stop(connectName);
-          }
-          log.debug(`Starting Connect in ${connectWorkdir}`);
-          const connectParams: Record<string, unknown> = {};
-          if (reactorConfig.connect!.port)
-            connectParams.port = reactorConfig.connect!.port;
-          if (cachedReactor?.driveUrl)
-            connectParams.driveUrl = cachedReactor.driveUrl;
-          // Deploy base for the dynamic-base Connect bundle: the proxy mount
-          // derived from the resolved proxyPublicUrl ('/' at root). The mount
-          // only — never X-Forwarded-Prefix, which is per-route.
-          connectParams.base = `${deriveBasePath(config.proxyPublicUrl as string | undefined)}/`;
-          const instanceId = await context.services.start(connectName, {
-            workdir: connectWorkdir,
-            cwd: connectWorkdir,
-            params:
-              Object.keys(connectParams).length > 0 ? connectParams : undefined,
-          });
-          // URL is captured from the service's readiness pattern
-          const status = context.services
-            .list(connectName)
-            .find((i) => i.instanceId === instanceId);
-          const connectUrl =
-            status?.endpoints?.["connect-studio"] ??
-            `http://localhost:${reactorConfig.connect!.port!}`;
-          output(`Connect '${connectName}' ready at ${connectUrl}`);
-        }
-
-        // List all drives
-        const drives = cachedReactor?.drives;
-        const baseDriveUrl = cachedReactor?.driveUrl;
-        const baseDriveId = cachedReactor?.driveId;
-        if (drives?.length) {
-          const driveLines = drives.map((d) => {
-            const url =
-              baseDriveUrl && baseDriveId
-                ? baseDriveUrl.replace(baseDriveId, d.id)
-                : `(drive: ${d.id})`;
-            return `    ${d.name} (${d.role}): ${url}`;
-          });
-          output(`  Drives:\n${driveLines.join("\n")}`);
-        }
-      }
-
-      // 4. Routine (tick-based trigger loop)
+      // 2. Routine (tick-based trigger loop)
       if (routine && !skipRoutineStart) {
         routine.setContext(context);
         routine.start();
