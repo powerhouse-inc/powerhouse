@@ -1,3 +1,15 @@
+## 6.4.0-next.1 (2026-11-22)
+
+### 🚀 Features
+
+- **vetra:** export the spec document editors' components ([3afc1c57da](https://github.com/powerhouse-inc/powerhouse/commit/3afc1c57da))
+- **vetra:** move the ideate and build spec documents from vetra-cli ([bfc530d0f3](https://github.com/powerhouse-inc/powerhouse/commit/bfc530d0f3))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.4.0-next.0 (2026-11-22)
 
 ### 🚀 Features

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-monitor",
-  "version": "6.4.0-next.0",
+  "version": "6.4.0-next.1",
   "description": "Reactor provisioning and inspection APIs for the reactor-monitor lab bench.",
   "keywords": [],
   "author": "",

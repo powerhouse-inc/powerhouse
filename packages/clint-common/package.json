@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/clint-common",
-  "version": "6.4.0-next.0",
+  "version": "6.4.0-next.1",
   "description": "The chat-session document model and editor, and the chat module that runs agent turns from chat-session documents for a clint CLI (watch trigger, stream bridge, steer processor).",
   "license": "AGPL-3.0-only",
   "type": "module",

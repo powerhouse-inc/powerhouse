@@ -1,3 +1,24 @@
+## 6.4.0-next.1 (2026-11-22)
+
+### 🚀 Features
+
+- ⚠️  **ph-cli,ph-cmd,shared:** ph dev runs the dev mode, ph vetra opens vetra studio ([cafcbdb713](https://github.com/powerhouse-inc/powerhouse/commit/cafcbdb713))
+- **vetra:** move the ideate and build spec documents from vetra-cli ([bfc530d0f3](https://github.com/powerhouse-inc/powerhouse/commit/bfc530d0f3))
+- **vetra:** export the spec document editors' components ([3afc1c57da](https://github.com/powerhouse-inc/powerhouse/commit/3afc1c57da))
+
+### ⚠️  Breaking Changes
+
+- **ph-cli,ph-cmd,shared:** ph dev runs the dev mode, ph vetra opens vetra studio  ([cafcbdb713](https://github.com/powerhouse-inc/powerhouse/commit/cafcbdb713))
+  `ph vetra` no longer starts the project's vetra host. Use
+  `ph dev` (or `ph run vetra`) for the dev mode.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.4.0-next.0 (2026-11-22)
 
 ### 🚀 Features
