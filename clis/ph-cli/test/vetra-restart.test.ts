@@ -42,7 +42,7 @@ async function makeProject(): Promise<string> {
       vetra: { connectPort: await freePort() },
     }),
   );
-  // `ph vetra` runs the project's vetra host.
+  // `ph dev` runs the project's vetra host.
   writeScaffoldHosts(dir, PROJECT_NAME);
   linkVetraStudio(dir);
   cleanups.push(async () => {
@@ -86,7 +86,7 @@ async function driveIds(client: Client): Promise<string[]> {
 }
 
 describe("restarting Vetra", () => {
-  it("restartVetra and ph vetra --restart replace it, and the launcher follows", async () => {
+  it("restartVetra and ph dev --restart replace it, and the launcher follows", async () => {
     const dir = await makeProject();
     const { launcher, stderr } = await connectLauncher(dir);
 
@@ -132,7 +132,7 @@ describe("restarting Vetra", () => {
     // A restart from a terminal: the launcher's next call reaches the new one.
     const child = spawn(
       process.execPath,
-      [PH_CLI, "vetra", "--restart", "--strictPort", "--watch"],
+      [PH_CLI, "dev", "--restart", "--strictPort", "--watch"],
       { cwd: dir, stdio: "ignore" },
     );
     await vi.waitFor(

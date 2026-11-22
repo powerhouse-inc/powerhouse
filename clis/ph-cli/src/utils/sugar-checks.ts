@@ -8,10 +8,10 @@ import {
   DEPRECATIONS_REMOVED_IN,
   MIGRATION_GUIDE_URL,
 } from "@powerhousedao/shared/clis/deprecations";
-import { CONNECT_VERBS, HOST_COMMANDS } from "./run-sugar.js";
+import { CONNECT_VERBS, HOST_COMMANDS, type SugarHost } from "./run-sugar.js";
 
 /**
- * What `ph vetra`, `ph connect` and `ph switchboard` are refused for, before
+ * What `ph dev`, `ph connect` and `ph switchboard` are refused for, before
  * they become `ph run <host>` (run-sugar.ts): a project without the host
  * file, and the flags of the commands they once were that `ph run` has no
  * argument for. `ph run` is not checked here, nor is any other host name: a
@@ -40,7 +40,7 @@ interface SugarInvocation {
   /** As typed: `ph connect build`. */
   typed: string;
   /** The host it runs. */
-  host: "vetra" | "connect" | "switchboard";
+  host: SugarHost;
   /** What it is sugar for: `ph run <host> [verb]`. */
   replacement: string;
   /** The flags passed, by name, without their values. */
@@ -49,7 +49,9 @@ interface SugarInvocation {
 
 function sugarInvocation(args: readonly string[]): SugarInvocation | undefined {
   const [command, ...rest] = args;
-  if (command === undefined || !HOST_COMMANDS.has(command)) return undefined;
+  if (command === undefined || !Object.hasOwn(HOST_COMMANDS, command)) {
+    return undefined;
+  }
   if (rest.some((arg) => arg === "--help" || arg === "-h")) return undefined;
   const flags = [
     ...new Set(
@@ -77,9 +79,10 @@ function sugarInvocation(args: readonly string[]): SugarInvocation | undefined {
       flags,
     };
   }
-  const host = command === "vetra" ? "vetra" : "switchboard";
+  // `ph dev` runs hosts/vetra.
+  const host = HOST_COMMANDS[command];
   return {
-    typed: word ? `ph ${host} ${word}` : `ph ${host}`,
+    typed: word ? `ph ${command} ${word}` : `ph ${command}`,
     host,
     replacement: word ? `ph run ${host} ${word}` : `ph run ${host}`,
     flags,
@@ -132,7 +135,7 @@ export function withoutHostError(
 
 /**
  * The flags `ph run <host>` has no argument for, as one error. A flag the
- * runner takes passes, under its member name for `ph vetra`
+ * runner takes passes, under its member name for `ph dev`
  * (`--switchboard-port`); a flag the runner retired passes too, and the
  * runner says so. Undefined when every flag passes.
  */
@@ -224,13 +227,13 @@ async function runnerModuleOf(
 
 /**
  * Whether the host runs the stock runner of its command: the connect or
- * switchboard runner, or for `ph vetra` the compound over members that are
+ * switchboard runner, or for `ph dev` the compound over members that are
  * the project's connect and switchboard hosts, each on its stock runner.
  * Anything else has arguments of its own, which its runner checks.
  */
 export async function runsStockRunner(
   projectRoot: string,
-  host: "vetra" | "connect" | "switchboard",
+  host: SugarHost,
 ): Promise<boolean> {
   const loaded = await runnerModuleOf(projectRoot, host);
   if (!loaded) return false;

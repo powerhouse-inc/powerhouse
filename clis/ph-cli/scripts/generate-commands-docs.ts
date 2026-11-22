@@ -30,11 +30,13 @@ import { modelCheck, modelInspect } from "../src/commands/model.js";
 import { phCli } from "../src/commands/ph-cli.js";
 import { runHost } from "../src/commands/run.js";
 import { uninstall } from "../src/commands/uninstall.js";
+import { vetra } from "../src/commands/vetra.js";
 
 const commands = [
   { name: "run", command: runHost },
   { name: "host check", command: hostCheck },
   { name: "host export", command: hostExport },
+  { name: "vetra", command: vetra },
   { name: "generate", command: generate },
   { name: "all", command: generateAllCmd },
   { name: "document-model", command: generateDocumentModelCmd },

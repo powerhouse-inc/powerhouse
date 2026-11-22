@@ -68,9 +68,23 @@ async function main() {
     cliName: "ph-cli",
     release: getVersion(),
   });
-  const typed = process.argv.slice(2);
-  // `ph vetra`, `ph connect` and `ph switchboard` run the host of that name:
-  // refused here in a project without it, and for the flags `ph run` lacks.
+  let typed = process.argv.slice(2);
+  // `ph vetra` opens Vetra Studio: `ph run <studio host>`, once the project
+  // has the package (services/vetra-gateway.ts). Its help is the vetra
+  // command's.
+  if (
+    typed[0] === "vetra" &&
+    !typed.some((arg) => arg === "--help" || arg === "-h")
+  ) {
+    const { vetraGateway } = await import("./services/vetra-gateway.js");
+    const gateway = await vetraGateway(typed.slice(1));
+    // A new ph-cli ran it, after an install.
+    if ("exitCode" in gateway) process.exit(gateway.exitCode);
+    typed = gateway.args;
+  }
+  // `ph dev`, `ph connect` and `ph switchboard` run the hosts vetra, connect
+  // and switchboard: refused here in a project without the host, and for the
+  // flags `ph run` lacks.
   const { sugarError } = await import("./utils/sugar-checks.js");
   const refused = await sugarError(typed, process.cwd());
   if (refused !== undefined) throw new Error(refused);

@@ -5,6 +5,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Run](#run)
 - [Host Check](#host-check)
 - [Host Export](#host-export)
+- [Vetra](#vetra)
 - [Generate](#generate)
 - [All](#all)
 - [Document Model](#document-model)
@@ -105,6 +106,24 @@ the host to export (a directory under hosts/)<br><br>
 #### Out <br>
 write the JSON to this file instead of stdout<br><br>
 **usage:** `--out <str>`<br>
+
+
+### flags
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Vetra
+Open Vetra Studio: `ph vetra [verb]` is `ph run @powerhousedao/vetra-cli/studio [verb]`, the studio host of the @powerhousedao/vetra-cli package. A project without the package gets it first: `ph vetra` installs it as a devDependency, at this ph-cli's version, with the project's package manager. The runner arguments, --stop and --explain work as for `ph run`. The dev mode that `ph vetra` started before 6.4 (the project's hosts/vetra) is `ph dev`.
+### arguments
+#### Verb <br>
+Verb of the studio host (default: the host's own).<br><br>
+**usage:** `[verb]`<br>
+
+#### Runner Arguments *[required]*<br>
+Arguments for the studio host's runner, as `ph run` takes them.<br><br>
+**usage:** `[...runner arguments]`<br>
 
 
 ### flags

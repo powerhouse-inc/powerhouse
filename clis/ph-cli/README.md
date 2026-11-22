@@ -299,7 +299,7 @@ module.exports = {
 
 ## Catch-up and telemetry output
 
-While a reactor catches up, `ph vetra` and `ph switchboard` show progress below the server's output. With processor timing on (see `PH_PROCESSOR_TIMING` in the deployment docs) they also list the busiest processors of the last minute, and one summary when catch-up ends. Without a terminal, the same comes as log lines:
+While a reactor catches up, `ph dev` and `ph switchboard` show progress below the server's output. With processor timing on (see `PH_PROCESSOR_TIMING` in the deployment docs) they also list the busiest processors of the last minute, and one summary when catch-up ends. Without a terminal, the same comes as log lines:
 
 ```
 catch-up: sektar (8 drives) 47% · vetra (10 drives) 0% · priority 4 dynamic

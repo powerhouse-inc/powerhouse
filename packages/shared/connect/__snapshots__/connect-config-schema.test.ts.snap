@@ -28,7 +28,7 @@ exports[`emitted JSON Schema fragment > matches the pinned fragment 1`] = `
         },
         "cookieBanner": {
           "default": true,
-          "description": "Show the analytics cookie consent banner on a first visit, when a plugin that needs consent (Sentry, OpenPanel) is active. When false, no banner is shown and analytics consent stays rejected. \`ph vetra\` turns it off for its local Studio; true by default.",
+          "description": "Show the analytics cookie consent banner on a first visit, when a plugin that needs consent (Sentry, OpenPanel) is active. When false, no banner is shown and analytics consent stays rejected. \`ph dev\` turns it off for its local Studio; true by default.",
           "type": "boolean",
         },
         "logLevel": {
@@ -49,7 +49,7 @@ exports[`emitted JSON Schema fragment > matches the pinned fragment 1`] = `
         },
         "studioMode": {
           "default": false,
-          "description": "Studio mode. Enables builder-only capabilities: Connect loads the vetra package and exposes DocumentModel (and vetra spec types) as creatable documents. Forced on by \`ph vetra\` / \`ph connect studio\`; false by default.",
+          "description": "Studio mode. Enables builder-only capabilities: Connect loads the vetra package and exposes DocumentModel (and vetra spec types) as creatable documents. Forced on by \`ph dev\` / \`ph connect studio\`; false by default.",
           "type": "boolean",
         },
         "workflowsEnabled": {

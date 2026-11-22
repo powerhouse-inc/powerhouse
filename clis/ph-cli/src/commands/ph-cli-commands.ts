@@ -18,6 +18,7 @@ import { registryLogin } from "./registry-login.js";
 import { runHost } from "./run.js";
 import { uninstall } from "./uninstall.js";
 import { unpublish } from "./unpublish.js";
+import { vetra } from "./vetra.js";
 
 export const phCliCommands = {
   init,
@@ -40,4 +41,5 @@ export const phCliCommands = {
   uninstall,
   run: runHost,
   host,
+  vetra,
 } as const;

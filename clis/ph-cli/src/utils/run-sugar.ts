@@ -6,17 +6,21 @@ export interface RunSugarResult {
   warning?: string;
 }
 
+/** A host every scaffold has. */
+export type SugarHost = "vetra" | "connect" | "switchboard";
+
 /**
- * The hosts every scaffold has, run by their name: `ph vetra`, `ph connect`
- * and `ph switchboard` are `ph run <host>` and have no code of their own.
- * They are rewritten whatever the project holds, so a project without the
- * host gets the error of `ph run` (sugar-checks.ts says it first, as typed).
+ * The commands that run a host every scaffold has, and the host: `ph dev`,
+ * `ph connect` and `ph switchboard` are `ph run <host>` and have no code of
+ * their own. `ph dev` runs hosts/vetra, the dev mode. They are rewritten
+ * whatever the project holds, so a project without the host gets the error
+ * of `ph run` (sugar-checks.ts says it first, as typed).
  */
-export const HOST_COMMANDS: ReadonlySet<string> = new Set([
-  "vetra",
-  "connect",
-  "switchboard",
-]);
+export const HOST_COMMANDS: Readonly<Record<string, SugarHost>> = {
+  dev: "vetra",
+  connect: "connect",
+  switchboard: "switchboard",
+};
 
 /** `ph connect <subcommand>` and the verb of the connect host it stands for. */
 export const CONNECT_VERBS: Readonly<Record<string, string>> = {
@@ -49,7 +53,9 @@ function connectSugar(args: string[]): string[] {
  * `ph <host-name> [verb]` sugar: when the first arg is not a registered
  * command and names a host in the project's hosts/ folder, splice in `run`.
  * Built-in commands win collisions by construction — the known-command check
- * runs first. {@link HOST_COMMANDS} are sugar in every project.
+ * runs first. {@link HOST_COMMANDS} are sugar in every project. `ph vetra` is
+ * a command, the gateway to Vetra Studio (services/vetra-gateway.ts), and
+ * never a host.
  */
 export function applyRunSugar(
   args: string[],
@@ -63,8 +69,8 @@ export function applyRunSugar(
   if (first === "connect") {
     return { args: connectSugar(args) };
   }
-  if (HOST_COMMANDS.has(first)) {
-    return { args: ["run", ...args] };
+  if (Object.hasOwn(HOST_COMMANDS, first)) {
+    return { args: ["run", HOST_COMMANDS[first], ...args.slice(1)] };
   }
   if (knownCommands.has(first)) {
     return { args };

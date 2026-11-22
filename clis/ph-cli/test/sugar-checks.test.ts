@@ -69,8 +69,9 @@ async function schemas(): Promise<SugarArgSchemas> {
 
 describe("a project without the host is an error", () => {
   it.each([
-    [["vetra"], "ph vetra"],
-    [["vetra", "--watch"], "ph vetra"],
+    [["dev"], "ph dev"],
+    [["dev", "--watch"], "ph dev"],
+    [["dev", "dev"], "ph dev dev"],
     [["connect"], "ph connect"],
     [["connect", "studio"], "ph connect studio"],
     [["connect", "build"], "ph connect build"],
@@ -86,19 +87,19 @@ describe("a project without the host is an error", () => {
   it("says the same of a hosts/ folder that holds no host", () => {
     const project = makeProject();
     mkdirSync(path.join(project, "hosts"));
-    const error = withoutHostError(["vetra"], project);
+    const error = withoutHostError(["dev"], project);
     expect(error).toMatch(
       /^hosts\/ exists at .+ but contains no <name>\/host\.js/,
     );
     expect(error).toContain(
-      ", so `ph vetra` cannot run. Run `ph migrate` to add the host files.",
+      ", so `ph dev` cannot run. Run `ph migrate` to add the host files.",
     );
   });
 
   it("names the missing host file in a project with other hosts", () => {
     const project = makeProject(["switchboard", "connect"]);
-    expect(withoutHostError(["vetra"], project)).toBe(
-      "This project has no hosts/vetra/host.js, so `ph vetra` cannot run. " +
+    expect(withoutHostError(["dev"], project)).toBe(
+      "This project has no hosts/vetra/host.js, so `ph dev` cannot run. " +
         "`ph migrate` adds the host files to a project without hosts only: add hosts/vetra/host.js to this one. " +
         `See ${MIGRATION_GUIDE_URL}`,
     );
@@ -109,7 +110,10 @@ describe("a project without the host is an error", () => {
   it("is silent for help, for `ph connect config` and for other commands", () => {
     const project = makeProject();
     for (const args of [
-      ["vetra", "--help"],
+      ["dev", "--help"],
+      // The Vetra Studio gateway, not the vetra host.
+      ["vetra"],
+      ["vetra", "--watch"],
       ["switchboard", "-h"],
       ["connect", "--help"],
       ["connect", "config"],
@@ -160,24 +164,32 @@ describe("a flag `ph run` has no argument for is an error", () => {
   it("names several in one error", async () => {
     expect(
       removedFlagsError(
-        ["vetra", "--logs", "--port", "4001", "--ignore-local=true"],
+        ["dev", "--logs", "--port", "4001", "--ignore-local=true"],
         await schemas(),
       ),
     ).toBe(
-      "The `ph vetra` flags --logs, --port, --ignore-local were removed in 6.4: `ph run vetra` has no such arguments. " +
+      "The `ph dev` flags --logs, --port, --ignore-local were removed in 6.4: `ph run vetra` has no such arguments. " +
         "Set what they configure in the host files under hosts/ instead. " +
         `See ${MIGRATION_GUIDE_URL}`,
     );
   });
 
-  it("passes what the runner takes, under its member name for `ph vetra`", async () => {
+  it("names `ph dev`'s verb as typed and in its replacement", async () => {
+    expect(removedFlagsError(["dev", "dev", "--logs"], await schemas())).toBe(
+      "`ph dev dev --logs` was removed in 6.4: `ph run vetra dev` has no such argument. " +
+        "Set what it configures in the host files under hosts/ instead. " +
+        `See ${MIGRATION_GUIDE_URL}`,
+    );
+  });
+
+  it("passes what the runner takes, under its member name for `ph dev`", async () => {
     const argSchemas = await schemas();
     for (const args of [
-      ["vetra"],
-      ["vetra", "--switchboard-port", "4001", "--connect-port=3001"],
-      ["vetra", "--strictPort"],
-      ["vetra", "--restart"],
-      ["vetra", "--debug"],
+      ["dev"],
+      ["dev", "--switchboard-port", "4001", "--connect-port=3001"],
+      ["dev", "--strictPort"],
+      ["dev", "--restart"],
+      ["dev", "--debug"],
       ["switchboard", "--port", "4001", "--db-path", "x.db"],
       ["switchboard", "migrate", "--db-path", "x.db"],
       ["connect", "--port", "3001", "--strictPort"],
@@ -190,9 +202,9 @@ describe("a flag `ph run` has no argument for is an error", () => {
 
   it("passes a flag the runner retired: the runner says so itself", async () => {
     const argSchemas = await schemas();
-    expect(removedFlagsError(["vetra", "--watch"], argSchemas)).toBeUndefined();
+    expect(removedFlagsError(["dev", "--watch"], argSchemas)).toBeUndefined();
     expect(
-      removedFlagsError(["vetra", "--disable-connect"], argSchemas),
+      removedFlagsError(["dev", "--disable-connect"], argSchemas),
     ).toBeUndefined();
     expect(
       removedFlagsError(["connect", "studio", "-w"], argSchemas),
@@ -202,8 +214,10 @@ describe("a flag `ph run` has no argument for is an error", () => {
   it("is silent for help, for `ph connect config` and for `ph run`", async () => {
     const argSchemas = await schemas();
     expect(
-      removedFlagsError(["vetra", "--logs", "--help"], argSchemas),
+      removedFlagsError(["dev", "--logs", "--help"], argSchemas),
     ).toBeUndefined();
+    // `ph vetra` runs the studio host, whose runner checks its own.
+    expect(removedFlagsError(["vetra", "--logs"], argSchemas)).toBeUndefined();
     expect(
       removedFlagsError(["connect", "config", "--json", "{}"], argSchemas),
     ).toBeUndefined();
@@ -227,7 +241,7 @@ describe("sugarError", () => {
       "`ph switchboard --migrate` was removed in 6.4. Use `ph run switchboard migrate` instead.",
     );
     await expect(
-      sugarError(["vetra", "--strictPort"], makeProject(SCAFFOLD)),
+      sugarError(["dev", "--strictPort"], makeProject(SCAFFOLD)),
     ).resolves.toBeUndefined();
   });
 
@@ -246,23 +260,30 @@ describe("sugarError", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("checks `ph vetra` only when it is the compound over the stock runners", async () => {
+  it("checks `ph dev` only when it is the compound over the stock runners", async () => {
     // A member on a runner of its own, or a compound of the project's own.
     await expect(
       sugarError(
-        ["vetra", "--logs"],
+        ["dev", "--logs"],
         makeProject(SCAFFOLD, { connect: OWN_RUNNER }),
       ),
     ).resolves.toBeUndefined();
     await expect(
       sugarError(
-        ["vetra", "--logs"],
+        ["dev", "--logs"],
         makeProject(SCAFFOLD, { vetra: OWN_RUNNER }),
       ),
     ).resolves.toBeUndefined();
     await expect(
+      sugarError(["dev", "--logs"], makeProject(SCAFFOLD)),
+    ).resolves.toContain("`ph dev --logs` was removed in 6.4");
+  });
+
+  it("checks nothing of `ph vetra`, the Vetra Studio gateway", async () => {
+    await expect(
       sugarError(["vetra", "--logs"], makeProject(SCAFFOLD)),
-    ).resolves.toContain("`ph vetra --logs` was removed in 6.4");
+    ).resolves.toBeUndefined();
+    await expect(sugarError(["vetra"], makeProject())).resolves.toBeUndefined();
   });
 
   it("says `ph reactor` is gone, unless the project has a host of that name", async () => {

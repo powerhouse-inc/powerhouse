@@ -303,12 +303,12 @@ export function buildCliConnectOverride(args: ConnectBuildArgs): {
 }
 
 /**
- * Parallel of `buildCliConnectOverride` for `ph connect studio` / `ph vetra`.
+ * Parallel of `buildCliConnectOverride` for `ph connect studio` / `ph dev`.
  * Studio only exposes the 4 commonArgs flags (`--base`, `--log-level`,
  * `--default-drives-url`, `--drive-preserve-strategy`); each is gated through
  * `wasFlagExplicitlyPassed` so cmd-ts defaults don't leak into the override.
  *
- * `callerOverride` is supplied by wrappers around studio (notably `ph vetra`,
+ * `callerOverride` is supplied by wrappers around studio (notably `ph dev`,
  * which sets default drives + preserveStrategy directly). The flag override
  * deep-merges on top of it: caller choices apply for every flag the user
  * didn't type, and an explicitly passed flag wins for its own field —
@@ -336,7 +336,7 @@ export function buildStudioConnectOverride(
     renownNamespace: args.renownNamespace,
   }) as PHConnectRuntimeConfig;
 
-  // Studio commands (`ph connect studio`, `ph vetra`) always run in studio
+  // Studio commands (`ph connect studio`, `ph dev`) always run in studio
   // mode: Connect loads the vetra package and offers builder document types.
   const studioOverride: PHConnectRuntimeConfig = { app: { studioMode: true } };
   const layers = [callerOverride, flagOverride, studioOverride].filter(

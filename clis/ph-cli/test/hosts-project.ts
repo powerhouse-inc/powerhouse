@@ -9,7 +9,7 @@ const linkType = process.platform === "win32" ? "junction" : "dir";
 /**
  * Gives a test project the host files `ph init` and `ph migrate` write for
  * it: the switchboard, connect and vetra hosts of the scaffold templates.
- * `ph vetra`, `ph connect` and `ph switchboard` run these hosts.
+ * `ph dev`, `ph connect` and `ph switchboard` run these hosts.
  */
 export function writeScaffoldHosts(dir: string, projectName: string): void {
   const templates = buildHostsTemplates(projectName);

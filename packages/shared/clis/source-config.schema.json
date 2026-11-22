@@ -198,20 +198,20 @@
       "properties": {
         "driveUrl": {
           "type": "string",
-          "description": "A remote Vetra drive `ph vetra` connects to. Written by `ph init --remote-drive`; overridden by --remote-drive."
+          "description": "A remote Vetra drive `ph dev` connects to. Written by `ph init --remote-drive`; overridden by --remote-drive."
         },
         "connectPort": {
           "type": "integer",
-          "description": "Port `ph vetra`'s Connect dev server listens on. Assigned per project by `ph init`. Overridden by PH_VETRA_CONNECT_PORT or --connect-port."
+          "description": "Port `ph dev`'s Connect dev server listens on. Assigned per project by `ph init`. Overridden by PH_VETRA_CONNECT_PORT or --connect-port."
         },
         "previewDrive": {
           "type": "object",
           "additionalProperties": false,
-          "description": "The Vetra Preview drive `ph vetra` creates in watch mode.",
+          "description": "The Vetra Preview drive `ph dev` creates in watch mode.",
           "properties": {
             "app": {
               "type": "string",
-              "description": "Id of the drive app the preview drive opens in, e.g. a drive editor's `config.id`. `ph vetra` sets it on the drive each time it starts; leaving it out keeps the drive's current app."
+              "description": "Id of the drive app the preview drive opens in, e.g. a drive editor's `config.id`. `ph dev` sets it on the drive each time it starts; leaving it out keeps the drive's current app."
             }
           }
         }
@@ -544,12 +544,12 @@
               "type": "boolean"
             },
             "studioMode": {
-              "description": "Studio mode. Enables builder-only capabilities: Connect loads the vetra package and exposes DocumentModel (and vetra spec types) as creatable documents. Forced on by `ph vetra` / `ph connect studio`; false by default.",
+              "description": "Studio mode. Enables builder-only capabilities: Connect loads the vetra package and exposes DocumentModel (and vetra spec types) as creatable documents. Forced on by `ph dev` / `ph connect studio`; false by default.",
               "default": false,
               "type": "boolean"
             },
             "cookieBanner": {
-              "description": "Show the analytics cookie consent banner on a first visit, when a plugin that needs consent (Sentry, OpenPanel) is active. When false, no banner is shown and analytics consent stays rejected. `ph vetra` turns it off for its local Studio; true by default.",
+              "description": "Show the analytics cookie consent banner on a first visit, when a plugin that needs consent (Sentry, OpenPanel) is active. When false, no banner is shown and analytics consent stays rejected. `ph dev` turns it off for its local Studio; true by default.",
               "default": true,
               "type": "boolean"
             },

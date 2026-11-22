@@ -1746,7 +1746,7 @@ describe("the runners hand the services the classic argument shape", () => {
       routes: undefined,
       cacheDir: join(ctx.projectRoot, "node_modules", ".vite-lab-connect"),
       proxy: undefined,
-      // As `ph connect studio` and `ph vetra` start Studio.
+      // As `ph connect studio` and `ph dev` start Studio.
       reloadOnConfigChange: true,
       restartWith: expect.any(Function) as unknown,
       exposeStop: expect.any(Function) as unknown,
@@ -1939,7 +1939,7 @@ describe("the runners hand the services the classic argument shape", () => {
 });
 
 /** Connect has no https option on the classic path, so its runner declares
- * none (see the `argsSchema` expectation above); `ph vetra`'s three belong
+ * none (see the `argsSchema` expectation above); `ph dev`'s three belong
  * to its switchboard, and reach it as they do there. */
 describe("https reaches the switchboard, from the arguments and the host file", () => {
   it("--https-key-file and --https-cert-file are carried as `ph switchboard` carries them", async () => {

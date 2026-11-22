@@ -78,7 +78,7 @@ export const runHost = command({
       debug: args.debug,
       argv: args.argv,
     };
-    // hosts/vetra is what `ph vetra` is sugar for (run-sugar.ts): its stack
+    // hosts/vetra is what `ph dev` is sugar for (run-sugar.ts): its stack
     // keeps the runtime record `ph mcp` reads.
     if (args.host === "vetra") {
       const { runVetraHost } = await import("../services/run/vetra-host.js");

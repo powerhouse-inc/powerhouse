@@ -6,7 +6,7 @@ import { probeVetraRuntime } from "./vetra-runtime.js";
  * what a start asks here: whether a Vetra already holds the project.
  */
 
-/** The host folder `ph vetra` runs, and the name its host file carries. */
+/** The host folder `ph dev` runs, and the name its host file carries. */
 export const VETRA_HOST = "vetra";
 
 /** Why `ph run vetra` must not start: a live Vetra holds the project. */

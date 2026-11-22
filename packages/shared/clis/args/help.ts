@@ -58,11 +58,18 @@ export const phCliHelpCommands = {
     description: "Generate powerhouse code",
     handler: () => {},
   }),
+  dev: helpCommand({
+    name: "dev",
+    args: debugArgs,
+    description:
+      "Run the project's vetra host (hosts/vetra) in dev mode: the same as `ph run vetra`",
+    handler: () => {},
+  }),
   vetra: helpCommand({
     name: "vetra",
     args: debugArgs,
     description:
-      "Run the project's vetra host (hosts/vetra): the same as `ph run vetra`",
+      "Open Vetra Studio: `ph run @powerhousedao/vetra-cli/studio`, installing @powerhousedao/vetra-cli first when the project lacks it. The dev mode is `ph dev`",
     handler: () => {},
   }),
   connect: helpCommand({

@@ -44,18 +44,18 @@ function makeProject(switchboardPort: number, connectPort: number): string {
       vetra: { connectPort },
     }),
   );
-  // `ph vetra` runs the project's vetra host.
+  // `ph dev` runs the project's vetra host.
   writeScaffoldHosts(dir, PROJECT_NAME);
   linkVetraStudio(dir);
   return dir;
 }
 
-describe("ph vetra's runtime record", () => {
+describe("ph dev's runtime record", () => {
   it("gives the Connect, Switchboard and MCP URLs, and goes when Vetra stops", async () => {
     const switchboardPort = await freePort();
     const connectPort = await freePort();
     const dir = makeProject(switchboardPort, connectPort);
-    const child = spawn(process.execPath, [PH_CLI, "vetra", "--strictPort"], {
+    const child = spawn(process.execPath, [PH_CLI, "dev", "--strictPort"], {
       cwd: dir,
       stdio: "ignore",
     });

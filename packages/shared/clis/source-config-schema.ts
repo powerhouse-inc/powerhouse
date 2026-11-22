@@ -197,23 +197,23 @@ export const sourceConfigSchema = {
         driveUrl: {
           type: "string",
           description:
-            "A remote Vetra drive `ph vetra` connects to. Written by `ph init --remote-drive`; overridden by --remote-drive.",
+            "A remote Vetra drive `ph dev` connects to. Written by `ph init --remote-drive`; overridden by --remote-drive.",
         },
         connectPort: {
           type: "integer",
           description:
-            "Port `ph vetra`'s Connect dev server listens on. Assigned per project by `ph init`. Overridden by PH_VETRA_CONNECT_PORT or --connect-port.",
+            "Port `ph dev`'s Connect dev server listens on. Assigned per project by `ph init`. Overridden by PH_VETRA_CONNECT_PORT or --connect-port.",
         },
         previewDrive: {
           type: "object",
           additionalProperties: false,
           description:
-            "The Vetra Preview drive `ph vetra` creates in watch mode.",
+            "The Vetra Preview drive `ph dev` creates in watch mode.",
           properties: {
             app: {
               type: "string",
               description:
-                "Id of the drive app the preview drive opens in, e.g. a drive editor's `config.id`. `ph vetra` sets it on the drive each time it starts; leaving it out keeps the drive's current app.",
+                "Id of the drive app the preview drive opens in, e.g. a drive editor's `config.id`. `ph dev` sets it on the drive each time it starts; leaving it out keeps the drive's current app.",
             },
           },
         },

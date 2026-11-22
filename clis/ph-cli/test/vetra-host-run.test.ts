@@ -101,7 +101,7 @@ afterEach(() => {
 });
 
 describe("the record of a ready vetra stack", () => {
-  it("carries the fields ph vetra writes, from the members' outputs", () => {
+  it("carries the fields ph dev writes, from the members' outputs", () => {
     const record = vetraRecordOfRun(
       PROJECT_NAME,
       compoundResult(switchboardOutputs, connectOutputs),
@@ -244,7 +244,7 @@ describe("ph run vetra", () => {
     });
   });
 
-  it("refuses while a live ph vetra holds the project", async () => {
+  it("refuses while a live ph dev holds the project", async () => {
     const dir = makeProject("vetra");
     writeVetraRuntime(dir, otherVetra());
     answersReady();

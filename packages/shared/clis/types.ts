@@ -203,9 +203,9 @@ export type PowerhouseConfig = {
   vetra?: {
     driveUrl?: string;
     connectPort?: number;
-    /** The Vetra Preview drive `ph vetra` creates in watch mode. */
+    /** The Vetra Preview drive `ph dev` creates in watch mode. */
     previewDrive?: {
-      /** The id of the drive app the drive opens in, set each time `ph vetra` starts. */
+      /** The id of the drive app the drive opens in, set each time `ph dev` starts. */
       app?: string;
     };
   };

@@ -55,7 +55,7 @@ export async function runVetraHost(args: StartRunArgs): Promise<unknown> {
   return result;
 }
 
-/** `ph run vetra --restart`, which `ph vetra --restart` is sugar for. */
+/** `ph run vetra --restart`, which `ph dev --restart` is sugar for. */
 const RESTART_FLAG = "--restart";
 
 const startedSchema = z.object({

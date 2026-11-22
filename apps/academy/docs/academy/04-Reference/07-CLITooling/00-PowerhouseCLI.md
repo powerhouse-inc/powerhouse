@@ -246,6 +246,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Run](#run)
 - [Host Check](#host-check)
 - [Host Export](#host-export)
+- [Vetra](#vetra)
 - [Generate](#generate)
 - [All](#all)
 - [Document Model](#document-model)
@@ -352,6 +353,27 @@ Print a host as declared, with every member a compound names, as JSON (tokens un
 
 ### Options
 **Out** - write the JSON to this file instead of stdout - Usage: `--out <str>`
+
+
+
+
+### Flags
+**Help** - show help - Usage: `--help, -h`
+
+
+## Vetra
+Open Vetra Studio: `ph vetra [verb]` is `ph run @powerhousedao/vetra-cli/studio [verb]`, the studio host of the @powerhousedao/vetra-cli package. A project without the package gets it first: `ph vetra` installs it as a devDependency, at this ph-cli's version, with the project's package manager. The runner arguments, --stop and --explain work as for `ph run`. The dev mode that `ph vetra` started before 6.4 (the project's hosts/vetra) is `ph dev`.
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Verb** - Verb of the studio host (default: the host's own). - Usage: `[verb]`
+
+**Runner Arguments *[required]*** - Arguments for the studio host's runner, as `ph run` takes them. - Usage: `[...runner arguments]`
 
 
 

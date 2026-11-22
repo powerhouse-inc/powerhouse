@@ -92,7 +92,7 @@ export async function dev(
       // Served as a build's servers serve them: a Studio's tab reads them
       // in dev too.
       ...(host.runner.serveFiles ? { serveFiles: host.runner.serveFiles } : {}),
-      // As `ph connect studio` and `ph vetra` start it.
+      // As `ph connect studio` and `ph dev` start it.
       reloadOnConfigChange: true,
       ...(reloadHost
         ? {

@@ -13,6 +13,7 @@ import { maybeNotifyOutdated } from "./utils/version-check.js";
 // values like `subcommand:my-package` polluting Sentry.
 const COMMANDS_WITH_SUBCOMMANDS = new Set([
   "connect",
+  "dev",
   "vetra",
   "host",
   "model",
