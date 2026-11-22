@@ -1,7 +1,12 @@
-import { boolean, command, flag, oneOf, option, run } from "cmd-ts";
+import { boolean, command, flag, oneOf, option, run, string } from "cmd-ts";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { ReleaseClient } from "nx/release";
-import type { ReleaseType } from "semver";
+import semver, { type ReleaseType } from "semver";
+import {
+  assertVersionNotTaken,
+  readLockstepVersion,
+  resolveBranchVersion,
+} from "./branch-version";
 import {
   listPublishablePackages,
   waitForNpmPropagation,
@@ -16,11 +21,14 @@ const SENTRY_INJECT_DIRS = [
   "clis/ph-run/dist",
 ];
 
-type Channel = "dev" | "staging" | "production" | "rc";
+type Channel = "dev" | "staging" | "production" | "rc" | "next";
 const modes = ["prerelease", "patch", "minor", "major"] as const;
 type Mode = (typeof modes)[number];
 
-function getSpecifier(channel: Channel, mode: Mode): ReleaseType {
+function getSpecifier(
+  channel: Exclude<Channel, "next">,
+  mode: Mode,
+): ReleaseType {
   if (channel === "production" && mode === "prerelease") {
     throw new Error("Cannot do a prerelease on production");
   }
@@ -70,14 +78,16 @@ function runBuild(workspaceVersion: string) {
  * "staging" for release/staging/[semver]
  * "production" for release/production/[semver]
  *  */
-function getReleaseChannelFromBranchName(branchName: string): Channel {
+function getReleaseChannelFromBranchName(
+  branchName: string,
+): Exclude<Channel, "next"> {
   if (branchName === "main") return "dev";
 
   const [releaseSignifier, tag, version] = branchName.split("/");
 
   if (releaseSignifier !== "release") {
     throw new Error(
-      `Branch name "${branchName}" is invalid. Release branches must start with release/.`,
+      `Branch name "${branchName}" is invalid. Release branches must start with release/. For a branch release give version_prefix (6, 6.4 or 6.4.1).`,
     );
   }
 
@@ -92,6 +102,22 @@ function getReleaseChannelFromBranchName(branchName: string): Channel {
   }
 
   return tag;
+}
+
+/** The release channel of a run.
+ *
+ * With a version prefix the run is a branch release on the "next" channel;
+ * main and release/* keep their own channel and refuse a prefix. Without a
+ * prefix the channel comes from the branch name.
+ */
+function getReleaseChannel(branchName: string, versionPrefix: string): Channel {
+  if (!versionPrefix) return getReleaseChannelFromBranchName(branchName);
+  if (branchName === "main" || branchName.startsWith("release/")) {
+    throw new Error(
+      `version_prefix is for branch releases; ${branchName} releases on its own channel. Leave it empty.`,
+    );
+  }
+  return "next";
 }
 
 /** Get the preid to use for npm tags in prereleases.
@@ -157,6 +183,18 @@ const app = command({
       long: "skip-git-tag",
       description: "Do not set a git tag",
     }),
+    versionPrefix: option({
+      long: "version-prefix",
+      description:
+        "Branch releases only (not main, not release/*): 6, 6.4 or 6.4.1. Publishes X.Y.Z-next.N under the npm tag next. Defaults to the RELEASE_VERSION_PREFIX environment variable.",
+      type: string,
+      defaultValue: () => process.env.RELEASE_VERSION_PREFIX ?? "",
+    }),
+    planOnly: flag({
+      long: "plan-only",
+      description:
+        "Resolve the branch, channel, version and npm tag, print them, write the outputs and stop before any nx call.",
+    }),
   },
   handler: async (args) => {
     console.log(">>> args", { args });
@@ -171,7 +209,9 @@ const app = command({
       skipPush,
       skipStage,
       skipGitTag,
+      planOnly,
     } = args;
+    const versionPrefix = args.versionPrefix.trim();
     // do not stage, commit, tag, or push with git on a dry run
     const doGitSideEffects = !dryRun;
 
@@ -184,21 +224,82 @@ const app = command({
     const gitPush = doGitSideEffects && gitCommit && skipPush !== true;
 
     const branchName = getBranchName();
-    const channel = getReleaseChannelFromBranchName(branchName);
-    const specifier = getSpecifier(channel, mode);
+    const channel = getReleaseChannel(branchName, versionPrefix);
     const preid = getPreid(channel);
+    const npmTag = preid ?? "latest";
+
+    // A branch release gets an exact version; the other channels a semver
+    // keyword that nx applies to the version on disk.
+    let specifier: string;
+    let branchVersion: string | undefined;
+    if (channel === "next") {
+      if (mode !== "prerelease") {
+        throw new Error(
+          `release_mode is ignored for branch releases; leave it at prerelease (got ${mode}).`,
+        );
+      }
+      const resolved = await resolveBranchVersion(
+        versionPrefix,
+        RELEASE_PROJECT_GLOBS,
+      );
+      branchVersion = resolved.version;
+      specifier = resolved.version;
+      console.log(
+        `>>> version_prefix ${versionPrefix} resolves to ${resolved.version} (package.json files: ${resolved.diskVersion})`,
+      );
+    } else {
+      specifier = getSpecifier(channel, mode);
+    }
 
     console.log(">>> release inputs", {
       branchName,
       channel,
+      versionPrefix,
+      branchVersion,
       specifier,
       preid,
+      npmTag,
       doGitSideEffects,
       stageChanges,
       gitCommit,
       gitTag,
       gitPush,
     });
+
+    if (planOnly) {
+      // A branch release already has its exact version. For the other
+      // channels this applies the keyword to the version on disk, which is
+      // what nx does with a "fixed" group and the disk resolver.
+      let planVersion: string | null | undefined = branchVersion;
+      if (!planVersion) {
+        const diskVersion = await readLockstepVersion(RELEASE_PROJECT_GLOBS);
+        const keyword = specifier as ReleaseType;
+        planVersion = preid
+          ? semver.inc(diskVersion, keyword, preid)
+          : semver.inc(diskVersion, keyword);
+      }
+      if (!planVersion) {
+        throw new Error(
+          `Cannot apply ${specifier} to the version in the package.json files.`,
+        );
+      }
+      console.log(">>> release plan", {
+        branchName,
+        channel,
+        specifier,
+        version: planVersion,
+        preid,
+        npmTag,
+      });
+      writeReleaseOutputs({
+        version: planVersion,
+        channel,
+        npmTag,
+        published: false,
+      });
+      console.log(">>> Plan only: nothing was versioned, built or published.");
+      process.exit(0);
+    }
 
     const releaseClient = new ReleaseClient(
       {
@@ -272,7 +373,7 @@ const app = command({
     runBuild(workspaceVersion);
 
     const changelogFromRef = !skipChangelog
-      ? resolvePreviousReleaseTag()
+      ? resolvePreviousReleaseTag(channel)
       : undefined;
 
     if (!skipChangelog) {
@@ -328,6 +429,13 @@ const app = command({
     }
 
     if (!skipPublish) {
+      // Another branch release may have taken this counter since it was
+      // computed. nx would not fail: it would move the dist-tag to the
+      // existing version.
+      if (channel === "next" && !dryRun) {
+        await assertVersionNotTaken(workspaceVersion, RELEASE_PROJECT_GLOBS);
+      }
+
       try {
         const publishResult = await releasePublish({
           tag: preid,
@@ -439,11 +547,20 @@ const app = command({
     // tag we just published so downstream jobs (e.g. publish-ph-binaries)
     // can consume it via `steps.<id>.outputs.tag` / `needs.release.outputs.tag`
     // without re-deriving it from git tag sort order. Only emit if we
-    // actually created a tag — skipped releases or --skip-git-tag runs leave
-    // the output empty, which downstream jobs gate on.
-    if (gitTag && workspaceVersion && process.env.GITHUB_OUTPUT) {
+    // actually created a tag — skipped releases, runs that committed nothing
+    // or --skip-git-tag runs leave the output empty, which downstream jobs
+    // gate on.
+    if (gitTag && didCommit && workspaceVersion && process.env.GITHUB_OUTPUT) {
       appendFileSync(process.env.GITHUB_OUTPUT, `tag=v${workspaceVersion}\n`);
     }
+    // What this run released, for the jobs that test and deploy it. Written
+    // on dry runs too, with published=false.
+    writeReleaseOutputs({
+      version: workspaceVersion,
+      channel,
+      npmTag,
+      published: !dryRun && !skipPublish,
+    });
     console.log(">>> Release successfully completed 🚀");
     process.exit(0);
   },
@@ -527,11 +644,42 @@ function createRemoteRelease(
   }
 }
 
-function resolvePreviousReleaseTag(): string {
-  const result = Bun.spawnSync({
-    cmd: ["git", "describe", "--tags", "--abbrev=0", "--match", "v*", "HEAD^"],
+function writeReleaseOutputs(outputs: {
+  version: string;
+  channel: Channel;
+  npmTag: string;
+  published: boolean;
+}): void {
+  if (!process.env.GITHUB_OUTPUT) return;
+  appendFileSync(
+    process.env.GITHUB_OUTPUT,
+    [
+      `version=${outputs.version}`,
+      `channel=${outputs.channel}`,
+      `npm_tag=${outputs.npmTag}`,
+      `published=${outputs.published}`,
+      "",
+    ].join("\n"),
+  );
+}
+
+function describePreviousTag(match: string) {
+  return Bun.spawnSync({
+    cmd: ["git", "describe", "--tags", "--abbrev=0", "--match", match, "HEAD^"],
     stdio: ["ignore", "pipe", "pipe"],
   });
+}
+
+function resolvePreviousReleaseTag(channel: Channel): string {
+  // After main is merged into a release branch the nearest v* tag can be a
+  // -dev tag, and the changelog would repeat what the previous -next build
+  // already listed. Prefer the previous -next tag when there is one.
+  if (channel === "next") {
+    const nextResult = describePreviousTag("v*-next.*");
+    const nextTag = nextResult.stdout.toString().trim();
+    if (nextResult.exitCode === 0 && nextTag) return nextTag;
+  }
+  const result = describePreviousTag("v*");
   if (result.exitCode !== 0) {
     throw new Error(
       `Failed to resolve previous release tag: ${result.stderr.toString().trim()}`,

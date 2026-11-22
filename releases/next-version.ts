@@ -63,7 +63,10 @@ export function nextBranchVersion(args: {
   const builds: { line: string; n: number }[] = [];
   for (const version of taken) {
     const match = NEXT_BUILD_PATTERN.exec(version);
-    if (match) builds.push({ line: match[1], n: Number(match[2]) });
+    const [, buildLine, counter] = match ?? [];
+    if (buildLine !== undefined && counter !== undefined) {
+      builds.push({ line: buildLine, n: Number(counter) });
+    }
   }
 
   let line: string;
