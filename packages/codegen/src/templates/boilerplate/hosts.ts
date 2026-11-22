@@ -118,7 +118,7 @@ with \`{ $key: true }\` and \`{ $item: ["url"] }\` naming each element.
 every host file.
 
 Scaffolded hosts: \`connect\` (studio dev server), \`switchboard\` (API/reactor
-server), \`vetra\` (compound: both, dev mode — what \`ph vetra\` runs),
+server), \`vetra\` (compound: both, dev mode — what \`ph dev\` runs),
 \`desktop\` (production switchboard + built Connect on the generic compound),
 \`assistant\` (headless agent API on the project switchboard) and \`cli\`
 (switchboard + Connect together, Connect as a remote client).

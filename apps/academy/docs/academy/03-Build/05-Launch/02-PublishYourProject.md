@@ -40,7 +40,7 @@ pnpm install -g ph-cmd
 
 Key commands include:
 
-- `ph vetra --watch` for launching Vetra Studio
+- `ph dev --watch` for launching Vetra Studio
 - `ph connect` for running Connect locally (alternative)
 - `ph switchboard` or `ph reactor` for starting the API service
 - `ph init` to start a new project
@@ -74,7 +74,7 @@ Please be aware that these versions can contain bugs and experimental features t
 Launch Vetra Studio in interactive watch mode for development:
 
 ```bash
-ph vetra --interactive --watch
+ph dev --interactive --watch
 ```
 
 This mode provides:
@@ -146,7 +146,7 @@ pnpm build
 This creates an optimized build output ready for distribution. Test the build locally:
 
 ```bash
-ph vetra --interactive --watch
+ph dev --interactive --watch
 ```
 
 Create documents of your defined types and verify all functionality works as expected.
@@ -276,7 +276,7 @@ ph init --pnpm --version=6.0.0-dev.153 your-test-project
 Start Vetra in watch mode:
 
 ```bash
-cd your-test-project && ph vetra --watch
+cd your-test-project && ph dev --watch
 ```
 
 ### 4.2. Build your package

@@ -31,7 +31,7 @@
 - **Block** – What a workflow step or trigger names: a piece's action or trigger, as `pieceName`, `pieceVersion` and `actionName` (or `triggerName`). The version is exact and is the version of the package that ships the piece. It isn't part of the block's identity, so the same action at another version is the same block. The engine's own blocks belong to the built-in piece `@powerhousedao/piece-core`.
 - **Connection** – A `powerhouse/connection` document holding one credential a workflow step authenticates with. Steps refer to it by id, so the secret is never written into the workflow document itself.
 - **Run** – One execution of a workflow, started by its trigger. A run records the workflow version it executed, so an old run stays readable against the definition it actually used.
-- **Preview Drive** – A local drive created in `--watch` mode during `ph vetra` development, used for testing local document models and editors without affecting the main synced drive.
+- **Preview Drive** – A local drive created in `--watch` mode during `ph dev` development, used for testing local document models and editors without affecting the main synced drive.
 - **Remote Drive** – A Powerhouse drive hosted on a remote server (e.g., Vetra) that syncs across team members, enabling collaborative development on shared documents and document models.
 - **Powerhouse CLI (ph)** – The command-line tool for Powerhouse project initialization, code generation, package management, and running local development environments (Connect Studio). It also manages services, ensuring the terminology aligns with the updated setup guide.
 - **Connect App (Connect Studio)** – The primary Powerhouse application for defining document models, building/testing editors (in Studio mode), and collaborating on documents.
@@ -90,7 +90,7 @@
 - **Storybook (for Powerhouse Design System)** – Interactive environment for browsing and testing Powerhouse Design System UI components.
 - **Tailwind CSS (in Connect Studio)** – Utility CSS framework integrated into Connect Studio for styling document editors.
 - **Vetra** – A Powerhouse platform for hosting remote drives, enabling collaborative development and document synchronization across team members.
-- **Watch Mode (`--watch`)** – A development mode flag for `ph vetra` that enables dynamic loading of local document models and editors, creating a separate Preview Drive for testing changes in real-time.
+- **Watch Mode (`--watch`)** – A development mode flag for `ph dev` that enables dynamic loading of local document models and editors, creating a separate Preview Drive for testing changes in real-time.
 
 ## AI & Automation
 

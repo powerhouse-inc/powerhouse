@@ -121,7 +121,7 @@ declare global {
 }
 
 /** What a switchboard accepts after `ph run <host> [verb]`: the classic
- * `ph switchboard` and `ph vetra` definitions of the same names. */
+ * `ph switchboard` and `ph dev` definitions of the same names. */
 const invocationArgs = {
   port: switchboardArgs.port,
   strictPort: commonServerArgs.strictPort,
@@ -148,7 +148,7 @@ export type InvocationArgs = ParsedCmdResult<typeof invocation>;
 const WATCH_RETIRED = "it is no longer needed.";
 
 export const argsSchema = runnerArgsSchemaOf(invocationArgs, {
-  // `ph vetra --switchboard-port`
+  // `ph dev --switchboard-port`
   memberOptions: { "--switchboard-port": "--port" },
   retired: {
     "--watch": WATCH_RETIRED,

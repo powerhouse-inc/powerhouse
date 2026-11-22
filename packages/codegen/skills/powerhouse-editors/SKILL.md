@@ -133,7 +133,7 @@ A drive app is the view Connect shows for a drive: an editor module for `powerho
 A drive shows the app its `header.meta.preferredEditor` names.
 
 - New drive: `addDrive` with `{ "name": "<name>", "preferredEditor": "<app-id>" }`. Vetra Studio lists every drive on the local Switchboard.
-- The Vetra Preview drive: set `"vetra": { "previewDrive": { "app": "<app-id>" } }` in `powerhouse.config.json`. `ph vetra` applies it when it starts, so call `restartVetra` after setting it; a fresh clone keeps it.
+- The Vetra Preview drive: set `"vetra": { "previewDrive": { "app": "<app-id>" } }` in `powerhouse.config.json`. `ph dev` applies it when it starts, so call `restartVetra` after setting it; a fresh clone keeps it.
 - Existing drive: `addActions` on the drive with `{ "type": "SET_PREFERRED_EDITOR", "scope": "header", "input": { "preferredEditor": "<app-id>" } }`.
 
 The Create Drive dialog, drives every user gets (`connect.drives.defaultDrives`), setting the app from code and Connect's default view are in the customize-connect skill's drive-apps guide.

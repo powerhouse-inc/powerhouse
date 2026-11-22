@@ -46,7 +46,7 @@ If you don't have a document specification file created yet, have a look at the 
 Before you start, make sure you have Vetra Studio running locally with the command:
 
 ```bash
-ph vetra --watch
+ph dev --watch
 ```
 
 ## ChatRoom document specification

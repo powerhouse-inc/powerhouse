@@ -263,7 +263,7 @@ For a single-database deployment (the normal case), set `PH_REACTOR_DATABASE_URL
 
 #### Telemetry
 
-Processor timing and memory telemetry share one surface: the `processorTiming` and `memoryTelemetry` inspection fields, the Processors and Memory tabs of the reactor monitor, and the `catch-up slowest` and `memory:` lines of `ph vetra` and `ph switchboard`.
+Processor timing and memory telemetry share one surface: the `processorTiming` and `memoryTelemetry` inspection fields, the Processors and Memory tabs of the reactor monitor, and the `catch-up slowest` and `memory:` lines of `ph dev` and `ph switchboard`.
 
 | Variable                                  | Description                                                                                                                                  | Default                             |
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |

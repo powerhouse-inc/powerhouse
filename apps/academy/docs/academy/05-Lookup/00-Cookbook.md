@@ -506,7 +506,7 @@ Without a package-manager flag, `ph init` picks one in this order: the one that 
 
 This comprehensive section covers the complete workflow for building Powerhouse packages using Vetra Studio, from project initialization and document model creation to editors, Drive-apps, and package publishing.
 
-> **Tip:** For the best development experience, use **Vetra Studio** with `ph vetra --watch`. Vetra Studio provides automatic code generation, AI-assisted development, and live preview of your documents and editors.
+> **Tip:** For the best development experience, use **Vetra Studio** with `ph dev --watch`. Vetra Studio provides automatic code generation, AI-assisted development, and live preview of your documents and editors.
 
 ### Vetra Studio
 
@@ -544,7 +544,7 @@ Vetra Studio offers three modes depending on your workflow:
 #### Interactive Mode (Recommended for Development)
 
 ```bash
-ph vetra --interactive
+ph dev --interactive
 ```
 
 In interactive mode:
@@ -556,7 +556,7 @@ In interactive mode:
 #### Watch Mode with Interactive
 
 ```bash
-ph vetra --interactive --watch
+ph dev --interactive --watch
 ```
 
 In watch mode:
@@ -568,7 +568,7 @@ In watch mode:
 #### Standard Mode
 
 ```bash
-ph vetra
+ph dev
 ```
 
 In standard mode:
@@ -638,7 +638,7 @@ ph init --remote-drive https://switchboard.staging.vetra.io/d/my-team-drive
 ### Step 2: Start Vetra with Watch Mode
 
 ```bash
-ph vetra --watch
+ph dev --watch
 ```
 
 #### Option B: Clone an Existing Project from Remote Drive
@@ -652,7 +652,7 @@ ph checkout --remote-drive <url>
 ### Step 2: Start Vetra
 
 ```bash
-ph vetra --watch
+ph dev --watch
 ```
 
 #### Option C: Configure Remote Drive in Existing Project
@@ -673,7 +673,7 @@ Add the Vetra configuration to your `powerhouse.config.json` file:
 ### Step 2: Start Vetra
 
 ```bash
-ph vetra --watch
+ph dev --watch
 ```
 
 ### Expected outcome
@@ -690,7 +690,7 @@ ph vetra --watch
 - **Issue**: Local changes not syncing
   - **Solution**: The "Vetra Preview" drive is for local testing. Changes need to be explicitly synced to the main drive.
 - **Issue**: Conflicts with team member changes
-  - **Solution**: Always use `ph vetra --watch` when restarting to ensure local documents and editors are loaded properly.
+  - **Solution**: Always use `ph dev --watch` when restarting to ensure local documents and editors are loaded properly.
 
 ### Related recipes
 
@@ -739,7 +739,7 @@ You want to use AI-assisted development in Vetra Studio by connecting Claude to 
 }
 ```
 
-`ph mcp` serves the reactor-mcp tools over stdio from the project's own `ph-cli`. `node --run mcp` runs the project's `mcp` script (`ph-cli mcp`), which works on every platform. On the first tool call it connects to the project's running Vetra, or starts `ph vetra --watch` in the background and writes its output to `.ph/vetra.log`, so you don't need to start Vetra first. To watch Vetra Studio yourself, start it first with `ph vetra --interactive --watch`; the launcher connects to it.
+`ph mcp` serves the reactor-mcp tools over stdio from the project's own `ph-cli`. `node --run mcp` runs the project's `mcp` script (`ph-cli mcp`), which works on every platform. On the first tool call it connects to the project's running Vetra, or starts `ph run vetra --strictPort` in the background and writes its output to `.ph/vetra.log`, so you don't need to start Vetra first. To watch Vetra Studio yourself, start it first with `ph dev --interactive --watch`; the launcher connects to it.
 
 For a client that doesn't start in the project directory, such as Claude Desktop, copy the entry from `.cursor/mcp.json` and replace `${workspaceFolder}` with the project's path. A project created before `ph mcp` points reactor-mcp at `http://localhost:4001/mcp`; run `ph migrate` to switch it to the launcher.
 
@@ -813,7 +813,7 @@ You want to create a new document model using natural language descriptions thro
 
 ### Prerequisites
 
-- Vetra Studio running (`ph vetra --interactive --watch`)
+- Vetra Studio running (`ph dev --interactive --watch`)
 - Claude connected to Reactor MCP (see [Connecting Claude with Reactor MCP](#connecting-claude-with-reactor-mcp))
 
 ### Solution
@@ -900,7 +900,7 @@ You have a document model and want to create a user interface (editor) for it us
 
 ### Prerequisites
 
-- Vetra Studio running (`ph vetra --interactive --watch`)
+- Vetra Studio running (`ph dev --interactive --watch`)
 - Claude connected to Reactor MCP
 - An existing document model in your Vetra drive
 
@@ -1001,7 +1001,7 @@ You need to create a new, empty document model within a Powerhouse project to re
 
 ### Solution
 
-> **Recommended:** Use **Vetra Studio** for document model development. Vetra provides automatic code generation and a live preview with `ph vetra --watch`. See [Launching Vetra Studio](#launching-vetra-studio) for the preferred workflow.
+> **Recommended:** Use **Vetra Studio** for document model development. Vetra provides automatic code generation and a live preview with `ph dev --watch`. See [Launching Vetra Studio](#launching-vetra-studio) for the preferred workflow.
 
 ### Step 1: Initialize a Powerhouse Project (if needed)
 
@@ -1025,7 +1025,7 @@ cd <yourprojectname>
 Run Vetra with watch mode for automatic code generation and live preview:
 
 ```bash
-ph vetra --watch
+ph dev --watch
 ```
 
 This will:
@@ -1056,7 +1056,7 @@ Wait for the output indicating the server is running (e.g., `Local: http://local
 
 ### Common issues and solutions
 
-- Issue: `ph vetra` command fails.
+- Issue: `ph dev` command fails.
   - Solution: Ensure `ph-cmd` is installed correctly (`ph-cmd --version`). Check for port conflicts. Make sure you are inside the project directory created by `ph init`.
 - Issue: Browser window doesn't open automatically.
   - Solution: Manually open the URL shown in the terminal output.
@@ -1094,14 +1094,14 @@ You have a Powerhouse Document Model defined in a `.phdm` or `.phdm.zip` file an
 
 ### Solution
 
-> **Recommended:** Use **Vetra Studio** with `ph vetra --watch` for automatic code generation. Vetra watches for changes to your document models and automatically generates reducers and other code. See [Launching Vetra Studio](#launching-vetra-studio).
+> **Recommended:** Use **Vetra Studio** with `ph dev --watch` for automatic code generation. Vetra watches for changes to your document models and automatically generates reducers and other code. See [Launching Vetra Studio](#launching-vetra-studio).
 
 ### Using Vetra (Recommended)
 
 With Vetra running in watch mode, code generation happens automatically:
 
 ```bash
-ph vetra --watch
+ph dev --watch
 ```
 
 When you make changes to document models in Vetra Studio, reducers and other code are generated automatically.
@@ -1362,7 +1362,7 @@ You need to run the local Powerhouse application using HTTPS, possibly on a diff
 
 ### Solution
 
-> **Note:** For local development, **Vetra Studio** (`ph vetra --watch`) is the recommended workflow as it provides automatic code generation and live preview. Use the options below when you specifically need HTTPS or custom port configurations.
+> **Note:** For local development, **Vetra Studio** (`ph dev --watch`) is the recommended workflow as it provides automatic code generation and live preview. Use the options below when you specifically need HTTPS or custom port configurations.
 
 ### Step 1: Navigate to Project Directory
 
@@ -1378,7 +1378,7 @@ cd <yourprojectname>
 
 ```bash
 # Vetra with watch mode for automatic code generation
-ph vetra --watch
+ph dev --watch
 ```
 
 #### Using Connect (for HTTPS/Custom Port)
@@ -1450,14 +1450,14 @@ You have a Powerhouse document model and need to create a user interface (editor
 
 ### Solution
 
-> **Recommended:** Use **Vetra Studio** with `ph vetra --watch` for editor development. Vetra automatically generates editor scaffolding and provides live preview as you develop. See [Launching Vetra Studio](#launching-vetra-studio) and [Creating an Editor with AI Assistance](#creating-an-editor-with-ai-assistance).
+> **Recommended:** Use **Vetra Studio** with `ph dev --watch` for editor development. Vetra automatically generates editor scaffolding and provides live preview as you develop. See [Launching Vetra Studio](#launching-vetra-studio) and [Creating an Editor with AI Assistance](#creating-an-editor-with-ai-assistance).
 
 ### Using Vetra (Recommended)
 
 Start Vetra with watch mode for automatic code generation and live preview:
 
 ```bash
-ph vetra --watch
+ph dev --watch
 ```
 
 In Vetra Studio, you can:
@@ -1493,7 +1493,7 @@ ph generate editor --name <ModelName> --document-type <docType>
 - A new directory is created under `editors/` (e.g., `editors/<model-name>/`).
 - An `editor.tsx` file is generated within that directory, containing a basic template for your document editor.
 - You can now customize `editor.tsx` to build your desired UI using HTML, Tailwind CSS, or custom CSS.
-- With Vetra, you get live preview with `ph vetra --watch` as you develop.
+- With Vetra, you get live preview with `ph dev --watch` as you develop.
 
 ### Related recipes
 
@@ -1526,14 +1526,14 @@ You need a custom, application-like interface to browse, organize, or interact w
 
 ### Solution
 
-> **Recommended:** Use **Vetra Studio** with `ph vetra --watch` for drive explorer development. Vetra provides automatic code generation and live preview as you build your custom drive interface. See [Launching Vetra Studio](#launching-vetra-studio).
+> **Recommended:** Use **Vetra Studio** with `ph dev --watch` for drive explorer development. Vetra provides automatic code generation and live preview as you build your custom drive interface. See [Launching Vetra Studio](#launching-vetra-studio).
 
 ### Using Vetra (Recommended)
 
 Start Vetra with watch mode for automatic code generation and live preview:
 
 ```bash
-ph vetra --watch
+ph dev --watch
 ```
 
 Vetra Studio allows you to develop and preview your Drive-app in real-time.
@@ -1565,7 +1565,7 @@ ph generate app --name <drive-app-name>
 - Template files (`EditorContainer.tsx`, components, hooks, etc.) are generated within that directory, providing a basic structure for a Drive-app.
 - You can now customize these files to create your specific drive interface, potentially removing default components and adding custom views relevant to your document models.
 - Remember to update your `powerhouse.manifest.json` to register the new app.
-- With Vetra, you get live preview with `ph vetra --watch` as you develop.
+- With Vetra, you get live preview with `ph dev --watch` as you develop.
 
 ### Related recipes
 
@@ -1818,7 +1818,7 @@ ph install /Users/you/dev/my-local-package
 
 ### Step 3: Verify Installation
 
-Check your project's `package.json` and `powerhouse.manifest.json` to ensure the package dependency has been added correctly. Run `ph vetra --watch` (or `ph connect`) to see if the components from the installed package are available.
+Check your project's `package.json` and `powerhouse.manifest.json` to ensure the package dependency has been added correctly. Run `ph dev --watch` (or `ph connect`) to see if the components from the installed package are available.
 
 ### Expected outcome
 
@@ -2114,7 +2114,7 @@ During the setup, you will be prompted for:
 
 This section covers managing the Powerhouse Reactor (the local service for processing document model operations) and troubleshooting data synchronization within the Powerhouse ecosystem.
 
-> **Tip:** For development workflows, **Vetra Studio** (`ph vetra --watch`) is recommended as it includes reactor functionality along with automatic code generation and live preview.
+> **Tip:** For development workflows, **Vetra Studio** (`ph dev --watch`) is recommended as it includes reactor functionality along with automatic code generation and live preview.
 
 ### Reactor Recipes
 
@@ -4711,12 +4711,12 @@ You need to start the Powerhouse Reactor, the local service responsible for proc
 
 ### Solution
 
-> **Note:** For development, **Vetra Studio** (`ph vetra --watch`) is the recommended workflow as it includes the reactor functionality along with automatic code generation and live preview. Use `ph reactor` directly when you need to run the reactor service independently.
+> **Note:** For development, **Vetra Studio** (`ph dev --watch`) is the recommended workflow as it includes the reactor functionality along with automatic code generation and live preview. Use `ph reactor` directly when you need to run the reactor service independently.
 
 ### Using Vetra (Recommended for Development)
 
 ```bash
-ph vetra --watch
+ph dev --watch
 ```
 
 Vetra includes reactor functionality and provides:
@@ -4780,7 +4780,7 @@ You've created or modified documents within a specific drive using Powerhouse Co
 
 - Powerhouse CLI (`ph-cmd`) installed.
 - A Powerhouse project initialized (`ph init`).
-- Vetra Studio is running (`ph vetra --watch`) or the Powerhouse Reactor is running (`ph reactor`).
+- Vetra Studio is running (`ph dev --watch`) or the Powerhouse Reactor is running (`ph reactor`).
 - You have attempted to create or modify documents in a drive (e.g., a "finances" drive).
 
 ### Solution
@@ -4841,7 +4841,7 @@ Understanding the different GraphQL endpoints in Powerhouse is crucial for effec
 
 ### Problem statement
 
-You are running Powerhouse locally (via `ph vetra --watch` or `ph connect`), but you can't find your local drive in the interface. Alternatively, you can see the drive or have recreated it, but the `DocumentModel` button is missing, preventing you from creating new document model schemas.
+You are running Powerhouse locally (via `ph dev --watch` or `ph connect`), but you can't find your local drive in the interface. Alternatively, you can see the drive or have recreated it, but the `DocumentModel` button is missing, preventing you from creating new document model schemas.
 
 ### Prerequisites
 

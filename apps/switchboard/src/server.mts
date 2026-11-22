@@ -604,7 +604,7 @@ async function initServer(
   // stale lock and WAL temp files, then detect PG_VERSION and migrate or
   // warn. Under PH_FORCE_PG_VERSION the dirs are wiped instead.
   // One process per PGlite store, before anything (the pre-flight included)
-  // touches it: hosts share one .ph tree, so a second `ph run …` / `ph vetra`
+  // touches it: hosts share one .ph tree, so a second `ph run …` / `ph dev`
   // in the same project must fail here instead of tearing the store.
   if (!inMemory) acquireStoreLocks(pgliteDirs);
   warnIgnoredFlushInterval(logger);
@@ -1214,7 +1214,7 @@ async function initServer(
   }
 
   // Vetra is builder-only and bundled (not CDN-loadable); lazy-load its
-  // processor only in dev, where builder tooling runs (e.g. `ph vetra`).
+  // processor only in dev, where builder tooling runs (e.g. `ph dev`).
   const vetraProcessorFactory = dev
     ? (await import("@powerhousedao/vetra/processors")).processorFactory
     : undefined;

@@ -174,8 +174,8 @@ starting it. It exits with code 1 when it finds a problem.
 
 | Old                               | New                                 |
 | --------------------------------- | ----------------------------------- |
-| `ph vetra`                        | `ph run vetra`                      |
-| `ph vetra --watch`                | `ph run vetra`                      |
+| `ph vetra`                        | `ph run vetra`, or `ph dev`         |
+| `ph vetra --watch`                | `ph run vetra`, or `ph dev`         |
 | `ph vetra --interactive`          | `ph run vetra --interactive`        |
 | `ph connect`, `ph connect studio` | `ph run connect dev`                |
 | `ph connect build`                | `ph run connect build`              |
@@ -274,8 +274,9 @@ The host file exists, but `ph connect` and `ph switchboard` do not read it.
 Change the command in your scripts, Dockerfile and CI to the replacement the
 warning names. See [Commands](#commands).
 
-`ph vetra` is different: in a project with `hosts/vetra/host.js` it already
-runs `ph run vetra` and prints no warning.
+`ph vetra` is different: in 6.3, in a project with `hosts/vetra/host.js` it
+already runs `ph run vetra` and prints no warning. In 6.4 that is `ph dev`,
+and `ph vetra` opens Vetra Studio instead.
 
 ### `ph reactor` {/* #ph-reactor */}
 
@@ -432,10 +433,15 @@ depend on environment variables that your own machine may not set.
 
 - A project without host files does not start. The error names `ph migrate`.
 - The classic boot path of `ph vetra`, `ph connect` and `ph switchboard` is
-  gone. The three names stay as short forms of `ph run <host>`, and
-  `ph connect studio`, `ph connect build` and `ph connect preview` stay as
-  short forms of the `dev`, `build` and `serve` verbs. A flag that has no
-  `ph run` argument fails.
+  gone. `ph connect` and `ph switchboard` stay as short forms of
+  `ph run <host>`, and `ph connect studio`, `ph connect build` and
+  `ph connect preview` stay as short forms of the `dev`, `build` and `serve`
+  verbs. A flag that has no `ph run` argument fails.
+- The dev mode `ph vetra` started is `ph dev`, the short form of
+  `ph run vetra`. `ph vetra` opens Vetra Studio: it is
+  `ph run @powerhousedao/vetra-cli/studio`, and installs
+  `@powerhousedao/vetra-cli` into the project first when the project lacks
+  it. Change `ph vetra` to `ph dev` in your scripts, Dockerfile and CI.
 - `ph reactor` is removed.
 - The `powerhouse.config.json` keys under [Settings](#settings) are errors.
 - `FEATURE_UNIFORM_RUNNERS_ENABLED=false` stops the start.

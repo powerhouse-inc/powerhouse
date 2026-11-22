@@ -7,7 +7,7 @@ At Powerhouse, frontend development for document editors follows a simple and fa
 ### Development environment
 
 **Vetra Studio** is your primary tool for builder workflows and editor development.  
-When you run `ph vetra --watch`, it provides a dynamic, local environment where you can define and preview your document models and their editors live. This replaces the need for tools like Storybook for editor development, though Storybook remains invaluable for exploring the [Powerhouse Component Library](#powerhouse-component-library).
+When you run `ph dev --watch`, it provides a dynamic, local environment where you can define and preview your document models and their editors live. This replaces the need for tools like Storybook for editor development, though Storybook remains invaluable for exploring the [Powerhouse Component Library](#powerhouse-component-library).
 
 #### Key aspects of the Powerhouse development environment:
 
@@ -34,7 +34,7 @@ When using **Vetra Studio**, editor generation is automatic and integrated into 
 
 #### With Vetra Studio (Recommended)
 
-1. Open Vetra Studio (`ph vetra --watch`)
+1. Open Vetra Studio (`ph dev --watch`)
 2. In your Vetra Studio Drive, click **"Add new specification"** in the Editors section
 3. Select your document model (e.g., `TodoList`) to link the editor to
 4. Name your editor (e.g., `todo-list-editor`)
@@ -103,7 +103,7 @@ You have several options for styling your editor components:
     }
     ```
 
-Choose the method or combination of methods that best suits your project needs and team preferences. Vetra Studio (`ph vetra --watch`) or Connect (`ph connect`) will allow you to see your styles applied in real-time.
+Choose the method or combination of methods that best suits your project needs and team preferences. Vetra Studio (`ph dev --watch`) or Connect (`ph connect`) will allow you to see your styles applied in real-time.
 
 :::tip[Advanced Styling: Connect Container Customization]
 When your editor runs inside Connect, it's wrapped in container elements that you can target for advanced styling. See [CSS Customization for Connect Integration](/academy/Build/BuildingUserExperiences/CSSCustomization) to learn how to customize `#document-editor-container` and `#document-editor-context`.
@@ -369,7 +369,7 @@ Now build the editor: the user interface for the **TodoList** document model. It
 
 ### Using Vetra Studio (Recommended)
 
-With Vetra Studio running (`ph vetra --watch`), simply create an Editor specification:
+With Vetra Studio running (`ph dev --watch`), simply create an Editor specification:
 
 1. In your Vetra Studio Drive, click **"Add new specification"** in the Editors section
 2. Select the **TodoList** document model to link the editor to
@@ -401,7 +401,7 @@ You have several options for styling your editor component:
 2.  **Tailwind CSS:** Vetra Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes for rapid, consistent styling without writing separate CSS files.
 3.  **Custom CSS Files:** You can import traditional CSS files (`.css`) to apply custom styles or integrate existing style libraries.
 
-Vetra Studio provides a dynamic local environment (`ph vetra --watch`) to visualize your components instantly as you build them, regardless of the styling method you choose. Manual build steps are typically only needed when publishing packages.
+Vetra Studio provides a dynamic local environment (`ph dev --watch`) to visualize your components instantly as you build them, regardless of the styling method you choose. Manual build steps are typically only needed when publishing packages.
 
 ---
 
@@ -617,7 +617,7 @@ export function TodoList() {
 Now you can run Vetra Studio and see the **TodoList** editor in action:
 
 ```bash
-ph vetra --watch
+ph dev --watch
 ```
 
 In Vetra Studio, you'll be able to create and test your **TodoList** documents. Click on the Document Models section and create a new TodoList document.

@@ -93,7 +93,7 @@ async function probeEndpoint(
       `Cannot attach to the reactor at ${endpoint}: the switchboard is not ` +
         `answering. The agent depends on a RUNNING switchboard and never ` +
         `starts one — start it first (e.g. \`ph run switchboard\`, ` +
-        `\`ph vetra\`, or the compound that members both) and retry.`,
+        `\`ph dev\`, or the compound that members both) and retry.`,
       { cause },
     );
   }

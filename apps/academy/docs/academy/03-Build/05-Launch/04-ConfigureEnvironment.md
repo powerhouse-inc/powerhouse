@@ -250,7 +250,7 @@ In **Switchboard** it starts the workflow runtime: trigger watching, runs, step
 execution. In **Connect** it loads Workflow Studio and the workflow and
 connection editors. It defaults to off.
 
-`ph vetra` also seeds a drive named **Workflows** (slug `workflows`) that opens
+`ph dev` also seeds a drive named **Workflows** (slug `workflows`) that opens
 in Workflow Studio, and adds it to Connect's default drives.
 
 To set Connect apart, give it `connect.app.workflowsEnabled`, which wins over
@@ -303,7 +303,7 @@ PH_WORKFLOWS_SECRETS_MASTER_KEY=<64 hex chars>
 PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES=127.0.0.1/32,::1/128
 ```
 
-`ph vetra` and `ph switchboard --dev` add `127.0.0.1/32,::1/128` to
+`ph dev` and `ph switchboard --dev` add `127.0.0.1/32,::1/128` to
 `PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES` themselves, keeping any addresses already
 in it, so pieces can reach services on your machine during development.
 

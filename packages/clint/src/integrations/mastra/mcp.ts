@@ -150,7 +150,7 @@ export async function discoverMcpTools(
       );
       // Evict so the next discovery reconnects fresh. The cached client's
       // session dies when the MCP server restarts inside a live service
-      // instance (e.g. `ph vetra --watch` reloading its switchboard), which
+      // instance (e.g. `ph dev --watch` reloading its switchboard), which
       // the instanceId staleness check above cannot see.
       try {
         await entry.client.disconnect();

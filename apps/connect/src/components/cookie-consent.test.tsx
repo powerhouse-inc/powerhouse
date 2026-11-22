@@ -76,7 +76,7 @@ describe("the cookie banner", { timeout: 20_000 }, () => {
     expect(localStorage.getItem(ACCEPTED_COOKIES_KEY_STORAGE)).toBeNull();
   });
 
-  // `ph vetra` turns it off for the local Studio.
+  // `ph dev` turns it off for the local Studio.
   it("never shows when the config turns it off", async () => {
     await serve(DEFAULT_COMPOSITION, false);
     const { container } = render(<PluginRoots />);

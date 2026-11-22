@@ -295,7 +295,7 @@ Key commands include:
 - `ph run switchboard` for starting the API service
 - `ph help` to get an overview of all the available commands
 
-`ph run <host>` starts a host from the `hosts/` folder of your project. The classic commands `ph vetra`, `ph connect`, `ph switchboard` and `ph reactor` are deprecated: see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
+`ph run <host>` starts a host from the `hosts/` folder of your project. The classic commands `ph connect`, `ph switchboard` and `ph reactor` are deprecated. The dev mode the classic `ph vetra` started is `ph dev` (the same as `ph run vetra`), and `ph vetra` opens Vetra Studio: see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
 
 Use it to create, build, and run Document Models.
 

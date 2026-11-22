@@ -28,7 +28,7 @@ The guides are in `references/`, next to this file.
 
 ## How it fits together
 
-- Connect routes with [TanStack Router](https://tanstack.com/router) file routes. The project's `hosts/connect/routes/` folder joins Connect's own routes in one router. `ph vetra`, `ph connect studio`, `ph connect build` and `ph build` all mount it.
+- Connect routes with [TanStack Router](https://tanstack.com/router) file routes. The project's `hosts/connect/routes/` folder joins Connect's own routes in one router. `ph dev`, `ph connect studio`, `ph connect build` and `ph build` all mount it.
 - A file in `_app/` renders inside Connect's layout, with the sidebar. Its route id starts with `/_app` but its URL does not: `_app/inventory.tsx` is `createFileRoute("/_app/inventory")` at `/inventory`. Any other file is a full page.
 - A route's `loader` reads the app's PH store from the router context (`context.store`: drives, `reactorClient`, `documentCache`); components read live data with the `@powerhousedao/reactor-browser` hooks.
 - A route describes itself through `staticData`: `nav` lists it in the sidebar, `settings` makes it a settings tab, `sidebar` hides or collapses the sidebar, `modals` and `modalFrame` restyle modals.

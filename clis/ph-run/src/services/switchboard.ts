@@ -201,7 +201,7 @@ export function projectDriveId(name: string, projectRoot: string): string {
   return `${name}-${hash.substring(0, 8)}`;
 }
 
-/** The drive PH_WORKFLOWS_ENABLED seeds, the same one `ph vetra` does. */
+/** The drive PH_WORKFLOWS_ENABLED seeds, the same one `ph dev` does. */
 export async function seedWorkflowsDrive(
   reactor: Parameters<typeof ensureDrive>[0],
   port: number,

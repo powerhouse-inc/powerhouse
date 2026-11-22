@@ -490,14 +490,14 @@ models, and the reactor piece. Connect does the same for Workflow Studio, unless
 Switchboard refuses to boot with "Workflows are enabled but
 @powerhousedao/workflow could not be loaded".
 
-**2. The reactor is running from your package.** `ph vetra` and `ph switchboard`
+**2. The reactor is running from your package.** `ph dev` and `ph switchboard`
 load the project they're started in, pieces included, unless you pass
 `--ignore-local`. There is no separate piece install. The `packages` list is for
 pieces shipped by _other_ packages, installed from a registry.
 
 **3. The piece is built.** `ph build` after every edit — see above.
 
-Then start the reactor. `ph vetra` runs Switchboard and Connect together and is
+Then start the reactor. `ph dev` runs Switchboard and Connect together and is
 the quickest way to see your piece in Workflow Studio; `ph switchboard` runs the
 server alone, which is what you want if you're driving it from a script or an
 agent. Either way the boot log tells you whether it worked:

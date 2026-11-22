@@ -19,7 +19,7 @@ This repository is a Powerhouse reactor package: document models, editors, drive
 
 Use \`reactor-mcp\` for all document and document-model work. Its tools are there from the start of the session: the first tool call connects to the project's Vetra, or starts \`ph run vetra --strictPort\` in the background and waits for it, so that call can take a while and reports its progress. Don't start Vetra yourself. **Never start a second reactor**: two reactors share \`.ph/\` storage and their drives diverge.
 
-Once a call succeeds, give the user the \`connectUrl\` from \`.ph/vetra-runtime.json\`. Vetra picks up new routes and \`powerhouse.config.json\` changes by itself; call the \`restartVetra\` tool only for a change it reads at startup, such as installed packages. If a tool call returns a startup error, report it to the user with the output it carries (the full log is \`.ph/vetra.log\`). To stop Vetra, stop the process whose pid \`.ph/vetra-runtime.json\` names; other \`ph run vetra\` and \`ph vetra\` processes on the machine belong to other projects.
+Once a call succeeds, give the user the \`connectUrl\` from \`.ph/vetra-runtime.json\`. Vetra picks up new routes and \`powerhouse.config.json\` changes by itself; call the \`restartVetra\` tool only for a change it reads at startup, such as installed packages. If a tool call returns a startup error, report it to the user with the output it carries (the full log is \`.ph/vetra.log\`). To stop Vetra, stop the process whose pid \`.ph/vetra-runtime.json\` names; other \`ph run vetra\` and \`ph dev\` processes on the machine belong to other projects.
 
 ## reactor-mcp
 

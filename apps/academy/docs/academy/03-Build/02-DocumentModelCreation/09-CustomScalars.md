@@ -279,7 +279,7 @@ A project without custom scalars generates the same reducers as before. Only ope
 
 ## What the host validates
 
-A host, such as Switchboard or `ph vetra`, loads each package's `./scalars` export before the package's document models and subgraphs. Each exported definition registers its scalar by name.
+A host, such as Switchboard or `ph dev`, loads each package's `./scalars` export before the package's document models and subgraphs. Each exported definition registers its scalar by name.
 
 For each registered scalar, the host checks input values:
 
@@ -348,7 +348,7 @@ A scalar can also take a name that a host subgraph defines as a type, such as `P
 Refusing scalar PHDocument of package @acme/payments: subgraph r defines a type of that name
 ```
 
-In `ph vetra`, saving `scalars/index.ts` rebuilds the GraphQL schema and reloads the project's document models, so the reducers also parse with the new definition. You don't need to restart.
+In `ph dev`, saving `scalars/index.ts` rebuilds the GraphQL schema and reloads the project's document models, so the reducers also parse with the new definition. You don't need to restart.
 
 An object or list default value for an argument or input field of a custom or catalog scalar type breaks GraphQL introspection today.
 

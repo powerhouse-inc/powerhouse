@@ -247,7 +247,7 @@ Two fields interact with the service worker and deserve a caveat:
 Two special-case writers also exist:
 
 - `ph install --registry <url>` writes the top-level `packageRegistryUrl` (overwrites when `--registry` is explicit, otherwise preserves existing).
-- `ph vetra` passes a programmatic `callerOverride` to `ph connect studio` so default drives don't have to be tipped on every invocation. It also sets `instance.reactorClient: "remote"`, so Studio reads and writes every drive on the local Switchboard (drives created in Studio land there too), unless the project sets `instance.multiReactor` or `instance.reactorClient`, or runs `ph vetra --remote-drive`. `ph migrate` drops the `connect.instance` block older scaffolds wrote.
+- `ph dev` passes a programmatic `callerOverride` to `ph connect studio` so default drives don't have to be tipped on every invocation. It also sets `instance.reactorClient: "remote"`, so Studio reads and writes every drive on the local Switchboard (drives created in Studio land there too), unless the project sets `instance.multiReactor` or `instance.reactorClient`, or runs `ph dev --remote-drive`. `ph migrate` drops the `connect.instance` block older scaffolds wrote.
 
 ### Notes on each method
 

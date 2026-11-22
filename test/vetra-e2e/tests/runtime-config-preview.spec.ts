@@ -1,5 +1,5 @@
 // Production-mode runtime-config tests. Distinct from runtime-config-read.spec.ts,
-// which targets `ph vetra --watch` (dev mode, content served from an in-memory
+// which targets `ph dev --watch` (dev mode, content served from an in-memory
 // closure in phConfigPlugin). These tests run against `ph connect build &&
 // ph connect preview` — the dist/powerhouse.config.json is a real file on disk
 // served as static, so editing it + browser refresh actually re-reads it.

@@ -64,7 +64,7 @@ export function probeHostsFolder(projectRoot: string): HostsFolderStatus {
 /**
  * Why `subject` cannot run in a project whose hosts/ folder is absent or
  * empty, and what adds the host files. One wording, for `ph run <host>` and
- * for the `ph vetra`, `ph connect` and `ph switchboard` sugar.
+ * for the `ph dev`, `ph connect` and `ph switchboard` sugar.
  */
 export function withoutHostsMessage(
   probe: Exclude<HostsFolderStatus, { kind: "present" }>,

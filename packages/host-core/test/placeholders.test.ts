@@ -7,7 +7,7 @@ import {
 
 describe("userData placeholders (desktop shape)", () => {
   it("is the project root in the CLI and honors PH_USER_DATA_DIR", () => {
-    // ${userData}/.ph is then <project>/.ph — the ONE tree ph vetra uses
+    // ${userData}/.ph is then <project>/.ph — the ONE tree ph dev uses
     expect(defaultUserDataDir("/proj", {})).toBe(path.resolve("/proj"));
     expect(defaultUserDataDir("/proj", { PH_USER_DATA_DIR: "/profile" })).toBe(
       "/profile",

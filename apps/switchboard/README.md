@@ -145,7 +145,7 @@ Requirements when `REACTOR_WORKERS > 0`:
   so switchboard refuses to start on local PGlite storage.
 - **Built packages only.** Worker threads import document models by file path,
   so every configured package needs a built `document-models` entry. `dev`
-  mode (Vite-loaded models, e.g. `ph vetra`) is rejected.
+  mode (Vite-loaded models, e.g. `ph dev`) is rejected.
 - **Connection budget.** Total Postgres connections are roughly
   `REACTOR_DB_POOL_SIZE_HOST + REACTOR_WORKERS x REACTOR_DB_POOL_SIZE_WORKER`;
   keep this under the server's `max_connections`. Behind a connection pooler,

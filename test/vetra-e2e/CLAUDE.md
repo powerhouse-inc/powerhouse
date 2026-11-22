@@ -1,7 +1,7 @@
 ## Project-specific notes
 
 - Use `pnpm test` to run tests.
-- You can also run `ph vetra` in this directory, then load `http://localhost:3001` with the Chrome DevTools to inspect what is being served manually.
+- You can also run `ph dev` in this directory, then load `http://localhost:3001` with the Chrome DevTools to inspect what is being served manually.
 
 # Powerhouse Document Models Assistant
 
@@ -21,12 +21,12 @@ This project creates document models, editors, processors and subgraphs for the 
 - **Reactor Package**: A deployable bundle that extends the Reactor. It contains one or more document models, editors, processors, and subgraphs. A Vetra project generates a Reactor Package.
 - **Connect**: The Powerhouse web application for document management. End users open Connect to browse drives, create documents, and interact with editors.
 - **Switchboard**: The Powerhouse API service. It exposes GraphQL and MCP endpoints so external tools can read/write documents programmatically.
-- **Vetra**: The local development environment for building Reactor Packages. It includes Vetra Studio (a local Connect instance) and Vetra Switchboard (a local Switchboard with reactor-mcp). Start it with `ph vetra`.
+- **Vetra**: The local development environment for building Reactor Packages. It includes Vetra Studio (a local Connect instance) and Vetra Switchboard (a local Switchboard with reactor-mcp). Start it with `ph dev`.
 
 ## CRITICAL: MCP Tool Usage Rules
 
 **MANDATORY**: The `reactor-mcp` MUST BE USED when handling documents or document-models for the Powerhouse/Vetra ecosystem.
-If the `reactor-mcp` server is unavailable, ask the user to run `ph vetra` on a separate terminal to start the server and try to reconnect to the MCP server, DO NOT run it yourself.
+If the `reactor-mcp` server is unavailable, ask the user to run `ph dev` on a separate terminal to start the server and try to reconnect to the MCP server, DO NOT run it yourself.
 
 ### Key Requirements:
 

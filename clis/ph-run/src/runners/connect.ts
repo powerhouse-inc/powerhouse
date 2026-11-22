@@ -521,7 +521,7 @@ const WATCH_RETIRED = "it is no longer needed.";
 export const argsSchema = runnerArgsSchemaOf(
   { ...invocationArgs, ...buildInvocationArgs },
   {
-    // `ph vetra --connect-port`
+    // `ph dev --connect-port`
     memberOptions: { "--connect-port": "--port" },
     retired: { "--watch": WATCH_RETIRED, "-w": WATCH_RETIRED },
   },

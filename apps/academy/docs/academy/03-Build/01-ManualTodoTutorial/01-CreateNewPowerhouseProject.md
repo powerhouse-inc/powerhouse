@@ -180,7 +180,7 @@ Once in the project directory, run the `ph run vetra` command to start a Vetra S
 You'll notice "reactor-api" in the terminal output. A **Reactor** is the Powerhouse back-end service that hosts your drives, handles document synchronization, and provides the GraphQL API. When you run `ph run vetra`, a local Reactor starts automatically to power your development environment.
 :::
 
-`ph run vetra` starts the `vetra` host that `ph init` wrote to `hosts/vetra/host.js`. The classic `ph vetra` command is deprecated: see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
+`ph run vetra`, or `ph dev`, starts the `vetra` host that `ph init` wrote to `hosts/vetra/host.js`. The classic `ph vetra` command started it before 6.4; `ph vetra` now opens Vetra Studio: see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
 
     ```bash
     ph run vetra

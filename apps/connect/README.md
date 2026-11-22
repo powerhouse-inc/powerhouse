@@ -66,7 +66,7 @@ Connect's runtime settings (renown URL, package registry, default drives, log le
 
 Connect routes with [TanStack Router](https://tanstack.com/router) file routes. Core's routes live in `@powerhousedao/connect-core` (`packages/connect-core/src/routes/`): the root route, the pathless `_app` layout, and `/`, `/d/$driveSlug/{-$nodeSlug}`, `/settings` with its Appearance and Packages tabs, and the 404 catch-all `$` inside it. Connect's `src/routes/` has one file per core route: it spreads core's `options` and shows core's view, which the active plugins' UI replaces (the generic plugin draws the sidebar, home, drive views and its own settings tabs). `src/routeTree.gen.ts` is generated from them (`pnpm exec tsr generate`, or `vite dev`) and committed.
 
-A project customizes Connect with file routes in `hosts/connect/routes/`, which `ph vetra`, `ph connect studio`, `ph connect build` and `ph build` mount beside Connect's routes in one router:
+A project customizes Connect with file routes in `hosts/connect/routes/`, which `ph dev`, `ph connect studio`, `ph connect build` and `ph build` mount beside Connect's routes in one router:
 
 ```
 hosts/connect/routes/

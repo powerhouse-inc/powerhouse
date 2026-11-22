@@ -19,11 +19,11 @@ Closing Connect doesn't destroy the Reactor _library_ — that's just code. But 
 
 When Connect starts, it reads configuration to know which document models and editors to load. The key env variable is `PH_CONNECT_PACKAGES` — a comma-separated list of packages Connect should pull in at runtime. If your todo document model isn't in that list, Connect has no idea it exists.
 
-For local development you don't usually set this manually. Running `ph vetra` spins up the full stack — Connect, Switchboard, and MCP — all pointed at your local Reactor Package automatically.
+For local development you don't usually set this manually. Running `ph dev` spins up the full stack — Connect, Switchboard, and MCP — all pointed at your local Reactor Package automatically.
 
 ```bash
 # Full local dev stack
-ph vetra
+ph dev
 
 # Connect only, pointed at a specific Switchboard
 ph connect studio

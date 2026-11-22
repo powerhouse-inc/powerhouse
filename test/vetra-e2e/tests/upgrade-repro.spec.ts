@@ -1,6 +1,6 @@
 /**
  * Repro for the reported bug:
- * 1. fresh project + `ph vetra --watch`
+ * 1. fresh project + `ph dev --watch`
  * 2. (vetra drive) create a new doc model + editor -> v1 folder generated
  * 3. (preview drive) create a doc with v1
  * 4. (vetra drive) add a field to the state schema, accept the release prompt

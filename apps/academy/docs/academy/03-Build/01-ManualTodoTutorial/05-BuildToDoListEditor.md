@@ -83,7 +83,7 @@ You have several options for styling your editor component:
 2.  **Tailwind CSS:** Connect Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes for rapid, consistent styling without writing separate CSS files.
 3.  **Custom CSS Files:** You can import traditional CSS files (`.css`) to apply custom styles or integrate existing style libraries.
 
-Vetra Studio Preview provides a dynamic local environment, by running `ph vetra --watch` you can visualize your components instantly as you build them, regardless of the styling method you choose.  
+Vetra Studio Preview provides a dynamic local environment, by running `ph dev --watch` you can visualize your components instantly as you build them, regardless of the styling method you choose.  
 Manual build steps are typically only needed when publishing packages.
 
 ## Build the editor with components
@@ -494,7 +494,7 @@ export function TodoListName() {
 Now you can run the Vetra Studio Preview and see the **todo-list** editor in action:
 
 ```bash
-ph vetra --watch
+ph dev --watch
 ```
 
 In the bottom right corner you'll find a new Document Model that you can create: **todo-list**.  
@@ -556,7 +556,7 @@ pnpm lint
 pnpm test
 
 # Test in Vetra Studio
-ph vetra --watch
+ph dev --watch
 
 # Compare with reference implementation
 git diff tutorial/step-6-add-basic-todo-editor-ui-components -- editors/todo-list-editor/

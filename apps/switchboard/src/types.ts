@@ -125,7 +125,7 @@ export type StartServerOptions = {
   /**
    * If true, fail immediately when the requested port is in use instead of
    * falling back to the next free port. Matches the semantics of Vite's
-   * `--strictPort` flag that flows through the `ph vetra` command.
+   * `--strictPort` flag that flows through the `ph dev` command.
    */
   strictPort?: boolean;
   dev?: boolean;
