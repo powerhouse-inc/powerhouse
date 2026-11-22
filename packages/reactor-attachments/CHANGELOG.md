@@ -1,3 +1,34 @@
+## 6.4.0-next.0 (2026-11-22)
+
+### 🚀 Features
+
+- **codegen,ph-cli,shared:** a package with a cli declares clint as a versioned peer ([40936957cb](https://github.com/powerhouse-inc/powerhouse/commit/40936957cb))
+- **ph-cli,shared:** the cli of a package is its own build, with declared packages external ([8504275af5](https://github.com/powerhouse-inc/powerhouse/commit/8504275af5))
+- **clint-common:** port the chat-session package from ph-clint dev.113 ([d21119c6a9](https://github.com/powerhouse-inc/powerhouse/commit/d21119c6a9))
+- **clint:** add the ./cli package export and the cli runner ([64bb9f10c9](https://github.com/powerhouse-inc/powerhouse/commit/64bb9f10c9))
+- ⚠️  **reactor-attachments:** remove PreprocessResult.data and stream ([afe219c5a6](https://github.com/powerhouse-inc/powerhouse/commit/afe219c5a6))
+- **ph-cli:** ph run connect build takes --base and --packages-registry ([894d5a7f31](https://github.com/powerhouse-inc/powerhouse/commit/894d5a7f31))
+- ⚠️  **ph-cli:** a project without hosts is an error ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+
+### 🩹 Fixes
+
+- **host-core,ph-run:** linux failures in the next/6.4 checks ([0fdc5a4797](https://github.com/powerhouse-inc/powerhouse/commit/0fdc5a4797))
+
+### ⚠️  Breaking Changes
+
+- **reactor-attachments:** remove PreprocessResult.data and stream  ([afe219c5a6](https://github.com/powerhouse-inc/powerhouse/commit/afe219c5a6))
+  PreprocessResult no longer has `data` or `stream()`. Read `blob` and
+  pass it to `send()`, which accepts a Blob.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **ph-cli:** a project without hosts is an error  ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+  the classic commands need a hosts/ folder; run ph migrate.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.3.0-dev.9 (2026-11-22)
 
 ### 🚀 Features

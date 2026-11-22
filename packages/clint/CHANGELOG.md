@@ -1,3 +1,61 @@
+## 6.4.0-next.0 (2026-11-22)
+
+### 🚀 Features
+
+- **clint:** a service may be a host run through spawnHost ([4a210ca632](https://github.com/powerhouse-inc/powerhouse/commit/4a210ca632))
+- **clint:** a remote attach carries the switchboard's attachment service ([54cf8dc188](https://github.com/powerhouse-inc/powerhouse/commit/54cf8dc188))
+- **clint:** remote attach carries the Cli's identity and a remote built at attach ([4585da6b7c](https://github.com/powerhouse-inc/powerhouse/commit/4585da6b7c))
+- **codegen,ph-cli,shared:** a package with a cli declares clint as a versioned peer ([40936957cb](https://github.com/powerhouse-inc/powerhouse/commit/40936957cb))
+- **ph-cli,shared:** the cli of a package is its own build, with declared packages external ([8504275af5](https://github.com/powerhouse-inc/powerhouse/commit/8504275af5))
+- **host-core:** an installed package supplies hosts, addressed as <package>/<host> ([677b136c62](https://github.com/powerhouse-inc/powerhouse/commit/677b136c62))
+- **clint:** the proxy as a member of a generic compound ([ea12e76b93](https://github.com/powerhouse-inc/powerhouse/commit/ea12e76b93))
+- **clint:** the skill build reads the package's cli metadata ([698ffc7842](https://github.com/powerhouse-inc/powerhouse/commit/698ffc7842))
+- **clint-common:** port the chat-session package from ph-clint dev.113 ([d21119c6a9](https://github.com/powerhouse-inc/powerhouse/commit/d21119c6a9))
+- **host-core,clint,ph-run:** own-process compound members and a foreground cli member ([6447402ebe](https://github.com/powerhouse-inc/powerhouse/commit/6447402ebe))
+- **clint:** add the ./cli package export and the cli runner ([64bb9f10c9](https://github.com/powerhouse-inc/powerhouse/commit/64bb9f10c9))
+- ⚠️  **clint:** catch up with ph-clint dev.113 for a remote reactor ([7863d7ef3f](https://github.com/powerhouse-inc/powerhouse/commit/7863d7ef3f))
+- **clint:** export the mastra, powerhouse and testing surfaces ([bcec896ac9](https://github.com/powerhouse-inc/powerhouse/commit/bcec896ac9))
+- ⚠️  **reactor-attachments:** remove PreprocessResult.data and stream ([afe219c5a6](https://github.com/powerhouse-inc/powerhouse/commit/afe219c5a6))
+- **ph-cli:** ph run connect build takes --base and --packages-registry ([894d5a7f31](https://github.com/powerhouse-inc/powerhouse/commit/894d5a7f31))
+- ⚠️  **switchboard:** the plugin host is the only boot path ([fc8ba25655](https://github.com/powerhouse-inc/powerhouse/commit/fc8ba25655))
+- ⚠️  **ph-cli:** a project without hosts is an error ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+
+### 🩹 Fixes
+
+- **host-core,ph-run:** linux failures in the next/6.4 checks ([0fdc5a4797](https://github.com/powerhouse-inc/powerhouse/commit/0fdc5a4797))
+- **clint-common,clint:** chat-session attachment fields are attachment refs ([ebbfda2bed](https://github.com/powerhouse-inc/powerhouse/commit/ebbfda2bed))
+- **clint,clint-common:** attachment reads name the document that references the attachment ([c26c9ce1eb](https://github.com/powerhouse-inc/powerhouse/commit/c26c9ce1eb))
+- **clint:** folder operations use only calls the remote client has ([76ca656864](https://github.com/powerhouse-inc/powerhouse/commit/76ca656864))
+- **clint,clint-common:** close the gaps the vetra-cli port found ([b9b8c7c477](https://github.com/powerhouse-inc/powerhouse/commit/b9b8c7c477))
+- **clint:** the proxy member binds 127.0.0.1 by default ([80d6d7c224](https://github.com/powerhouse-inc/powerhouse/commit/80d6d7c224))
+
+### ⚠️  Breaking Changes
+
+- **clint:** catch up with ph-clint dev.113 for a remote reactor  ([7863d7ef3f](https://github.com/powerhouse-inc/powerhouse/commit/7863d7ef3f))
+  ensureDrive takes the reactor client, not the reactor
+  module, and creates a drive in one write with its name set at creation.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+- **reactor-attachments:** remove PreprocessResult.data and stream  ([afe219c5a6](https://github.com/powerhouse-inc/powerhouse/commit/afe219c5a6))
+  PreprocessResult no longer has `data` or `stream()`. Read `blob` and
+  pass it to `send()`, which accepts a Blob.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **switchboard:** the plugin host is the only boot path  ([fc8ba25655](https://github.com/powerhouse-inc/powerhouse/commit/fc8ba25655))
+  FEATURE_PLUGIN_HOST_ENABLED=false refuses to start, and
+  FEATURE_PLUGIN_HOST_ENABLED=1 without declared plugins no longer boots
+  every built-in plugin. reactor.workflows in a host file fails validation.
+  A host with only readModel.url must name its reactor store. The config
+  file's workflows.enabled no longer turns workflows on in Switchboard.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **ph-cli:** a project without hosts is an error  ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+  the classic commands need a hosts/ folder; run ph migrate.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.3.0-dev.9 (2026-11-22)
 
 ### 🚀 Features

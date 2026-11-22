@@ -1,3 +1,39 @@
+## 6.4.0-next.0 (2026-11-22)
+
+### 🚀 Features
+
+- **codegen,ph-cli,shared:** a package with a cli declares clint as a versioned peer ([40936957cb](https://github.com/powerhouse-inc/powerhouse/commit/40936957cb))
+- **ph-cli,shared:** the cli of a package is its own build, with declared packages external ([8504275af5](https://github.com/powerhouse-inc/powerhouse/commit/8504275af5))
+- **clint-common:** port the chat-session package from ph-clint dev.113 ([d21119c6a9](https://github.com/powerhouse-inc/powerhouse/commit/d21119c6a9))
+- **host-core,clint,ph-run:** own-process compound members and a foreground cli member ([6447402ebe](https://github.com/powerhouse-inc/powerhouse/commit/6447402ebe))
+- **clint:** add the ./cli package export and the cli runner ([64bb9f10c9](https://github.com/powerhouse-inc/powerhouse/commit/64bb9f10c9))
+- ⚠️  **config:** superseded powerhouse.config.json keys are errors ([5db0117db3](https://github.com/powerhouse-inc/powerhouse/commit/5db0117db3))
+- **ph-cli:** ph run connect build takes --base and --packages-registry ([894d5a7f31](https://github.com/powerhouse-inc/powerhouse/commit/894d5a7f31))
+- ⚠️  **ph-cli:** a project without hosts is an error ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+
+### 🩹 Fixes
+
+- **host-core,ph-run:** linux failures in the next/6.4 checks ([0fdc5a4797](https://github.com/powerhouse-inc/powerhouse/commit/0fdc5a4797))
+- **codegen:** scaffold hosts use the form of satisfies that type-checks ([bd34ba1ad9](https://github.com/powerhouse-inc/powerhouse/commit/bd34ba1ad9))
+- **codegen,ph-cli:** ph migrate handles javascript files and leaves ignored files alone ([687cd2555d](https://github.com/powerhouse-inc/powerhouse/commit/687cd2555d))
+- **codegen:** the scaffolded switchboard entrypoint migrates with ph run ([fb185f5842](https://github.com/powerhouse-inc/powerhouse/commit/fb185f5842))
+
+### ⚠️  Breaking Changes
+
+- **config:** superseded powerhouse.config.json keys are errors  ([5db0117db3](https://github.com/powerhouse-inc/powerhouse/commit/5db0117db3))
+  ph run refuses a project whose powerhouse.config.json sets studio.host,
+  studio.https, studio.openBrowser, reactor.https, reactor.storage or switchboard.database.url.
+  Run ph migrate, or move the value to the host file and remove the key.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **ph-cli:** a project without hosts is an error  ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+  the classic commands need a hosts/ folder; run ph migrate.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.3.0-dev.9 (2026-11-22)
 
 ### 🚀 Features

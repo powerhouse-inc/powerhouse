@@ -1,3 +1,235 @@
+## 6.4.0-next.0 (2026-11-22)
+
+### 🚀 Features
+
+- **clint:** export the mastra, powerhouse and testing surfaces ([bcec896ac9](https://github.com/powerhouse-inc/powerhouse/commit/bcec896ac9))
+- ⚠️  **clint:** catch up with ph-clint dev.113 for a remote reactor ([7863d7ef3f](https://github.com/powerhouse-inc/powerhouse/commit/7863d7ef3f))
+- **clint:** add the ./cli package export and the cli runner ([64bb9f10c9](https://github.com/powerhouse-inc/powerhouse/commit/64bb9f10c9))
+- **clint:** the skill build reads the package's cli metadata ([698ffc7842](https://github.com/powerhouse-inc/powerhouse/commit/698ffc7842))
+- **clint:** the proxy as a member of a generic compound ([ea12e76b93](https://github.com/powerhouse-inc/powerhouse/commit/ea12e76b93))
+- **clint:** remote attach carries the Cli's identity and a remote built at attach ([4585da6b7c](https://github.com/powerhouse-inc/powerhouse/commit/4585da6b7c))
+- **clint:** a remote attach carries the switchboard's attachment service ([54cf8dc188](https://github.com/powerhouse-inc/powerhouse/commit/54cf8dc188))
+- **clint:** a service may be a host run through spawnHost ([4a210ca632](https://github.com/powerhouse-inc/powerhouse/commit/4a210ca632))
+- **clint-common:** port the chat-session package from ph-clint dev.113 ([d21119c6a9](https://github.com/powerhouse-inc/powerhouse/commit/d21119c6a9))
+- **clint-common:** a downloads folder option for extracted chat files ([e105cfdf21](https://github.com/powerhouse-inc/powerhouse/commit/e105cfdf21))
+- **clint-common:** publish the package ([34cc3966cd](https://github.com/powerhouse-inc/powerhouse/commit/34cc3966cd))
+- **codegen,ph-cli,shared:** a package with a cli declares clint as a versioned peer ([40936957cb](https://github.com/powerhouse-inc/powerhouse/commit/40936957cb))
+- ⚠️  **config:** superseded powerhouse.config.json keys are errors ([5db0117db3](https://github.com/powerhouse-inc/powerhouse/commit/5db0117db3))
+- ⚠️  **connect:** Connect boots from its composition only ([a15fbed435](https://github.com/powerhouse-inc/powerhouse/commit/a15fbed435))
+- ⚠️  **connect:** remove useClientErrorHandler ([6a8ac17d88](https://github.com/powerhouse-inc/powerhouse/commit/6a8ac17d88))
+- ⚠️  **connect:** remove the IReactorDispatch alias ([05cbd4b54d](https://github.com/powerhouse-inc/powerhouse/commit/05cbd4b54d))
+- ⚠️  **desktop:** remove the deprecated app.json loading keys ([a2ffd6e90a](https://github.com/powerhouse-inc/powerhouse/commit/a2ffd6e90a))
+- **host-core:** a member that dies stops the stack; portle autostart env switch ([58a1a2530e](https://github.com/powerhouse-inc/powerhouse/commit/58a1a2530e))
+- **host-core:** an installed package supplies hosts, addressed as <package>/<host> ([677b136c62](https://github.com/powerhouse-inc/powerhouse/commit/677b136c62))
+- **host-core,clint,ph-run:** own-process compound members and a foreground cli member ([6447402ebe](https://github.com/powerhouse-inc/powerhouse/commit/6447402ebe))
+- **host-core,ph-run:** a package switchboard finds its packages.list names from the package ([571a2efe28](https://github.com/powerhouse-inc/powerhouse/commit/571a2efe28))
+- **host-core,ph-run:** refuse build on a host a package supplies ([310c48efd2](https://github.com/powerhouse-inc/powerhouse/commit/310c48efd2))
+- **host-core,ph-run,ph-cli:** a ${package} built-in for hosts a package supplies ([d7c83fcac8](https://github.com/powerhouse-inc/powerhouse/commit/d7c83fcac8))
+- ⚠️  **ph-cli:** a project without hosts is an error ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+- **ph-cli:** ph run vetra takes --restart ([fdcdf29081](https://github.com/powerhouse-inc/powerhouse/commit/fdcdf29081))
+- ⚠️  **ph-cli:** the classic commands are sugar for ph run ([9976e40986](https://github.com/powerhouse-inc/powerhouse/commit/9976e40986))
+- **ph-cli:** ph run connect build takes --base and --packages-registry ([894d5a7f31](https://github.com/powerhouse-inc/powerhouse/commit/894d5a7f31))
+- **ph-cli,shared:** the cli of a package is its own build, with declared packages external ([8504275af5](https://github.com/powerhouse-inc/powerhouse/commit/8504275af5))
+- **ph-run,ph-cli:** connect runner.serveFiles serves named files next to the build ([5733f02f35](https://github.com/powerhouse-inc/powerhouse/commit/5733f02f35))
+- ⚠️  **reactor-api:** remove the constructor shims kept for one release ([ade5976a51](https://github.com/powerhouse-inc/powerhouse/commit/ade5976a51))
+- ⚠️  **reactor-api:** remove the exact mount option alias ([275219abf6](https://github.com/powerhouse-inc/powerhouse/commit/275219abf6))
+- ⚠️  **reactor-api:** remove the ADMIN_USERS proxy ([a814a0437b](https://github.com/powerhouse-inc/powerhouse/commit/a814a0437b))
+- ⚠️  **reactor-api:** remove the unused drive client resolver parameters ([f517f0be20](https://github.com/powerhouse-inc/powerhouse/commit/f517f0be20))
+- ⚠️  **reactor-api:** remove the deprecated processor type aliases ([6211ab8a5c](https://github.com/powerhouse-inc/powerhouse/commit/6211ab8a5c))
+- ⚠️  **reactor-api,reactor-browser:** remove the drive-url re-export files ([5ff0ab47b9](https://github.com/powerhouse-inc/powerhouse/commit/5ff0ab47b9))
+- ⚠️  **reactor-attachments:** remove PreprocessResult.data and stream ([afe219c5a6](https://github.com/powerhouse-inc/powerhouse/commit/afe219c5a6))
+- ⚠️  **reactor-browser:** remove dead browser-side API ([f8c0f6afea](https://github.com/powerhouse-inc/powerhouse/commit/f8c0f6afea))
+- ⚠️  **reactor-browser:** remove the settings modal variant ([232605c0c5](https://github.com/powerhouse-inc/powerhouse/commit/232605c0c5))
+- **reactor-browser:** relationship writes and rename on the GraphQL client ([173a5b2ca2](https://github.com/powerhouse-inc/powerhouse/commit/173a5b2ca2))
+- ⚠️  **reactor-workflow:** remove the RunActionOptions alias ([ef854d9bc7](https://github.com/powerhouse-inc/powerhouse/commit/ef854d9bc7))
+- ⚠️  **renown:** remove the ConnectCrypto aliases and the browser initRenown ([8cf109ee31](https://github.com/powerhouse-inc/powerhouse/commit/8cf109ee31))
+- ⚠️  **shared:** remove buildSignedAction and verifyOperationSignature ([6b68333528](https://github.com/powerhouse-inc/powerhouse/commit/6b68333528))
+- ⚠️  **shared:** remove the legacy addFile overload ([0178f54ea5](https://github.com/powerhouse-inc/powerhouse/commit/0178f54ea5))
+- ⚠️  **shared:** remove the throwing generateMock stub ([ef77298724](https://github.com/powerhouse-inc/powerhouse/commit/ef77298724))
+- ⚠️  **shared:** remove the PH_BIN and PH_GLOBAL_PROJECT_NAME constants ([89981c38ff](https://github.com/powerhouse-inc/powerhouse/commit/89981c38ff))
+- ⚠️  **shared:** refuse to start with FEATURE_UNIFORM_RUNNERS_ENABLED=false ([6796d98281](https://github.com/powerhouse-inc/powerhouse/commit/6796d98281))
+- ⚠️  **switchboard:** the plugin host is the only boot path ([fc8ba25655](https://github.com/powerhouse-inc/powerhouse/commit/fc8ba25655))
+- **switchboard:** say so when a removed switch is still set ([f13ae91013](https://github.com/powerhouse-inc/powerhouse/commit/f13ae91013))
+- ⚠️  **switchboard:** remove addDefaultDrive and addDefaultReactorDrive ([a398d5ce83](https://github.com/powerhouse-inc/powerhouse/commit/a398d5ce83))
+- **switchboard:** identity.storagePath names the renown user file ([877a9a33d4](https://github.com/powerhouse-inc/powerhouse/commit/877a9a33d4))
+
+### 🩹 Fixes
+
+- **builder-tools:** keep own vendor packages in one chunk on windows ([8e8d1ca445](https://github.com/powerhouse-inc/powerhouse/commit/8e8d1ca445))
+- **clint:** the proxy member binds 127.0.0.1 by default ([80d6d7c224](https://github.com/powerhouse-inc/powerhouse/commit/80d6d7c224))
+- **clint:** folder operations use only calls the remote client has ([76ca656864](https://github.com/powerhouse-inc/powerhouse/commit/76ca656864))
+- **clint,clint-common:** close the gaps the vetra-cli port found ([b9b8c7c477](https://github.com/powerhouse-inc/powerhouse/commit/b9b8c7c477))
+- **clint,clint-common:** attachment reads name the document that references the attachment ([c26c9ce1eb](https://github.com/powerhouse-inc/powerhouse/commit/c26c9ce1eb))
+- **clint-common:** version in lockstep with the other packages ([2db01b6e27](https://github.com/powerhouse-inc/powerhouse/commit/2db01b6e27))
+- **clint-common,clint:** chat-session attachment fields are attachment refs ([ebbfda2bed](https://github.com/powerhouse-inc/powerhouse/commit/ebbfda2bed))
+- **codegen:** the scaffolded switchboard entrypoint migrates with ph run ([fb185f5842](https://github.com/powerhouse-inc/powerhouse/commit/fb185f5842))
+- **codegen:** scaffold hosts use the form of satisfies that type-checks ([bd34ba1ad9](https://github.com/powerhouse-inc/powerhouse/commit/bd34ba1ad9))
+- **codegen,ph-cli:** ph migrate handles javascript files and leaves ignored files alone ([687cd2555d](https://github.com/powerhouse-inc/powerhouse/commit/687cd2555d))
+- **host-core,ph-run:** linux failures in the next/6.4 checks ([0fdc5a4797](https://github.com/powerhouse-inc/powerhouse/commit/0fdc5a4797))
+- **ph-cli:** a config change restarts Studio with the host as it reads then ([e1d1a56d27](https://github.com/powerhouse-inc/powerhouse/commit/e1d1a56d27))
+- **ph-cli:** write the build journal with the patient rename ([bd5dc1adc8](https://github.com/powerhouse-inc/powerhouse/commit/bd5dc1adc8))
+
+### ⚠️  Breaking Changes
+
+- **clint:** catch up with ph-clint dev.113 for a remote reactor  ([7863d7ef3f](https://github.com/powerhouse-inc/powerhouse/commit/7863d7ef3f))
+  ensureDrive takes the reactor client, not the reactor
+  module, and creates a drive in one write with its name set at creation.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+- **shared:** refuse to start with FEATURE_UNIFORM_RUNNERS_ENABLED=false  ([6796d98281](https://github.com/powerhouse-inc/powerhouse/commit/6796d98281))
+  the CLI refuses to start while FEATURE_UNIFORM_RUNNERS_ENABLED is set
+  to a false value. Remove the variable; hosts and `ph run` are always on.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-api:** remove the deprecated processor type aliases  ([6211ab8a5c](https://github.com/powerhouse-inc/powerhouse/commit/6211ab8a5c))
+  IReactorProcessorHostModule and ProcessorDriveFactory are removed from
+  @powerhousedao/reactor-api. Use IProcessorHostModule, and ProcessorFactory from
+  @powerhousedao/shared/processors.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **shared:** remove the PH_BIN and PH_GLOBAL_PROJECT_NAME constants  ([89981c38ff](https://github.com/powerhouse-inc/powerhouse/commit/89981c38ff))
+  PH_BIN and PH_GLOBAL_PROJECT_NAME are removed from
+  @powerhousedao/shared/clis. PH_BIN has no replacement (the legacy CLI binary is gone);
+  use PH_GLOBAL_DIR_NAME in place of PH_GLOBAL_PROJECT_NAME.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **connect:** remove the IReactorDispatch alias  ([05cbd4b54d](https://github.com/powerhouse-inc/powerhouse/commit/05cbd4b54d))
+  the IReactorDispatch type is removed from @powerhousedao/connect. Use
+  IReactorClient from @powerhousedao/reactor-browser.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **connect:** remove useClientErrorHandler  ([6a8ac17d88](https://github.com/powerhouse-inc/powerhouse/commit/6a8ac17d88))
+  useClientErrorHandler and the ClientErrorHandler type are removed from
+  @powerhousedao/connect. The hook did nothing; drop the call, there is no replacement.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-browser:** remove the settings modal variant  ([232605c0c5](https://github.com/powerhouse-inc/powerhouse/commit/232605c0c5))
+  PHModal no longer has `{ type: "settings" }`, and showPHModal does not
+  open the settings page. Open it through the navigation: `openTarget({ settings: true })`
+  or `useLinkProps({ settings: true })`.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-workflow:** remove the RunActionOptions alias  ([ef854d9bc7](https://github.com/powerhouse-inc/powerhouse/commit/ef854d9bc7))
+  the RunActionOptions type is removed. Use RequestOptions, which has
+  the same shape.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-attachments:** remove PreprocessResult.data and stream  ([afe219c5a6](https://github.com/powerhouse-inc/powerhouse/commit/afe219c5a6))
+  PreprocessResult no longer has `data` or `stream()`. Read `blob` and
+  pass it to `send()`, which accepts a Blob.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-api:** remove the unused drive client resolver parameters  ([f517f0be20](https://github.com/powerhouse-inc/powerhouse/commit/f517f0be20))
+  the reactor resolver functions createDocument, createEmptyDocument,
+  createDocumentWithInitialState and deleteDocument no longer take a drive client as
+  their third argument; `subject` is now the third argument of the three create functions.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-api,reactor-browser:** remove the drive-url re-export files  ([5ff0ab47b9](https://github.com/powerhouse-inc/powerhouse/commit/5ff0ab47b9))
+  driveIdFromUrl, parseDriveUrl and ParsedDriveUrl are no longer
+  exported from @powerhousedao/reactor-api and @powerhousedao/reactor-browser.
+  Import them from @powerhousedao/reactor.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-api:** remove the ADMIN_USERS proxy  ([a814a0437b](https://github.com/powerhouse-inc/powerhouse/commit/a814a0437b))
+  the ADMIN_USERS export of @powerhousedao/reactor-api is removed.
+  Read the ADMIN_USERS environment variable where you need it, or pass `auth.admins`.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-api:** remove the exact mount option alias  ([275219abf6](https://github.com/powerhouse-inc/powerhouse/commit/275219abf6))
+  the `exact` option of IHttpAdapter.mount is removed. It selected
+  prefix matching; pass `{ prefix: true }` instead.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **switchboard:** remove addDefaultDrive and addDefaultReactorDrive  ([a398d5ce83](https://github.com/powerhouse-inc/powerhouse/commit/a398d5ce83))
+  addDefaultDrive and addDefaultReactorDrive are removed from
+  @powerhousedao/switchboard/utils. Call ensureDrive; pass
+  `documentType: "powerhouse/reactor-drive"` for a reactor drive.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **shared:** remove the throwing generateMock stub  ([ef77298724](https://github.com/powerhouse-inc/powerhouse/commit/ef77298724))
+  generateMock is no longer exported from "document-model" or
+  "@powerhousedao/shared/document-model". Import it from "document-model/mock
+- **shared:** remove the legacy addFile overload  ([0178f54ea5](https://github.com/powerhouse-inc/powerhouse/commit/0178f54ea5))
+  the addFile overload taking synchronizationUnits is removed, with the
+  LegacyAddFileInput, LegacyAddFileAction and LegacySynchronizationUnit types. Call
+  addFile with an AddFileInput.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **desktop:** remove the deprecated app.json loading keys  ([a2ffd6e90a](https://github.com/powerhouse-inc/powerhouse/commit/a2ffd6e90a))
+  hosts/desktop/app.json no longer takes splash, splashDark, loading.art or
+  loading.artDark, and ph run desktop refuses a file that sets one. Replace splash with a
+  background layer ({ src, position: { bottom: "calc(50% + 32px)" }, width: "min(720px, 80vw)",
+  maxHeight: "65vh" }), loading.art with a background layer at { bottom: 0, right: 0 } (or
+  background: "<image>"), and splashDark and loading.artDark with dark in that layer's src
+  ({ light, dark }). ph migrate does not rewrite app.json.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **shared:** remove buildSignedAction and verifyOperationSignature  ([6b68333528](https://github.com/powerhouse-inc/powerhouse/commit/6b68333528))
+  `@powerhousedao/shared/document-model` (and the `document-model`
+  re-export) no longer exports `buildSignedAction` (sign through
+  `ISigner.signAction`) or `verifyOperationSignature` (use `verifyActionSignature`
+  from `@powerhousedao/reactor`).
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **renown:** remove the ConnectCrypto aliases and the browser initRenown  ([8cf109ee31](https://github.com/powerhouse-inc/powerhouse/commit/8cf109ee31))
+  `@renown/sdk` no longer exports `ConnectCrypto` (use
+  `RenownCrypto`), `IConnectCrypto` (use `IRenownCrypto`) or the browser
+  `initRenown(appName, options)` (use `new RenownBuilder(appName, options).build()`).
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-api:** remove the constructor shims kept for one release  ([ade5976a51](https://github.com/powerhouse-inc/powerhouse/commit/ade5976a51))
+  GraphQLManagerOptions.readClient and writeClient are required. Passing only
+  reactorClient no longer works: new GraphQLManager({ reactorClient: client, ... }) becomes
+  new GraphQLManager({ readClient: client.read, writeClient: client.write, reactorClient:
+  client, ... }), where reactorClient is optional and only feeds subgraph.reactorClient.
+  ReactorDriveClient no longer accepts a facade: new ReactorDriveClient({ reactor, readModel })
+  becomes new ReactorDriveClient({ read: reactor.read, write: reactor.write, readModel }). The
+  types ReactorDriveClientHalvesArgs and ReactorDriveClientFacadeArgs are removed;
+  ReactorDriveClientArgs is the halves form.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **config:** superseded powerhouse.config.json keys are errors  ([5db0117db3](https://github.com/powerhouse-inc/powerhouse/commit/5db0117db3))
+  ph run refuses a project whose powerhouse.config.json sets studio.host,
+  studio.https, studio.openBrowser, reactor.https, reactor.storage or switchboard.database.url.
+  Run ph migrate, or move the value to the host file and remove the key.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-browser:** remove dead browser-side API  ([f8c0f6afea](https://github.com/powerhouse-inc/powerhouse/commit/f8c0f6afea))
+  the names below are gone from @powerhousedao/reactor-browser and
+  @powerhousedao/design-system.
+  PHGlobalConfig loses the 37 fields nothing read, with their useX, setX and addXEventHandler:
+  version, requiresHardRefresh, versionCheckInterval, cliVersion, fileUploadOperationsChunkSize,
+  gaTrackingId, isDocumentModelSelectionSettingsEnabled, the public, cloud and local drive
+  flags (isXDrivesEnabled, isAddXDrivesEnabled, isDeleteXDrivesEnabled), analyticsDatabaseName,
+  isEditorDebugModeEnabled, isEditorReadModeEnabled, enabledEditors, drivesPreserveStrategy,
+  isAnalyticsEnabled, isAnalyticsDatabaseWorkerEnabled, isDiffAnalyticsEnabled,
+  isDriveAnalyticsEnabled, isAnalyticsExternalProcessorsEnabled, isRelationalProcessorsEnabled,
+  isExternalRelationalProcessorsEnabled, isExternalProcessorsEnabled, isExternalPackagesEnabled,
+  renownNetworkId, renownChainId, renownAdapters, sentryRelease, sentryDsn, sentryEnv and
+  isSentryTracingEnabled. The types PHAnalyticsGlobalConfig, PHRelationalProcessorsGlobalConfig,
+  PHProcessorsGlobalConfig and PHSentryGlobalConfig are empty and go with them.
+  RevisionHistory takes only the scoped props: globalOperations, localOperations,
+  RevisionHistoryLegacyProps and RevisionHistoryScopedProps are removed. useDocumentOperations
+  keeps only the (documentId, scope, options) form; DocumentOperationsState is removed.
+  Deprecated exports removed: addSetSelectedDriveOnPopStateEventHandler,
+  addSetSelectedNodeOnPopStateEventHandler, makeDriveUrlComponent, extractNodeIdFromPath,
+  extractDriveIdFromPath, createUrlWithPreservedParams, addRevisionHistoryVisibleEventHandler,
+  initConnectCrypto and the IReactorProcessorHostModule alias. setSelectedDriveId,
+  setSelectedNodeId, addSelectedDriveIdEventHandler, addSelectedNodeIdEventHandler,
+  syncSelectionFromPath and addSyncSelectionOnPopStateEventHandler stay as internals and are no
+  longer exported.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **ph-cli:** the classic commands are sugar for ph run  ([9976e40986](https://github.com/powerhouse-inc/powerhouse/commit/9976e40986))
+  `ph vetra`, `ph connect` and `ph switchboard` need the host files
+  under hosts/ and take the arguments of `ph run` only. `ph service` and `ph reactor`
+  are removed, as are the switchboard flags --use-vetra-drive and --vetra-drive-id.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **connect:** Connect boots from its composition only  ([a15fbed435](https://github.com/powerhouse-inc/powerhouse/commit/a15fbed435))
+  Connect always runs its plugin composition. The pluginRunner
+  flag no longer switches it off. connect.instance.reactorWorker, .multiReactor
+  and ?reactorWorker no longer select the reactor client; declare
+  reactor.backends in the host file or set connect.instance.reactorClient.
+  getActivePluginModules no longer returns null and loadConnectPluginUi needs a
+  composition.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **switchboard:** the plugin host is the only boot path  ([fc8ba25655](https://github.com/powerhouse-inc/powerhouse/commit/fc8ba25655))
+  FEATURE_PLUGIN_HOST_ENABLED=false refuses to start, and
+  FEATURE_PLUGIN_HOST_ENABLED=1 without declared plugins no longer boots
+  every built-in plugin. reactor.workflows in a host file fails validation.
+  A host with only readModel.url must name its reactor store. The config
+  file's workflows.enabled no longer turns workflows on in Switchboard.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **ph-cli:** a project without hosts is an error  ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+  the classic commands need a hosts/ folder; run ph migrate.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.3.0-dev.9 (2026-11-22)
 
 ### 🚀 Features

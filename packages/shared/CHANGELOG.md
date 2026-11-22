@@ -1,3 +1,87 @@
+## 6.4.0-next.0 (2026-11-22)
+
+### 🚀 Features
+
+- **clint-common:** publish the package ([34cc3966cd](https://github.com/powerhouse-inc/powerhouse/commit/34cc3966cd))
+- **codegen,ph-cli,shared:** a package with a cli declares clint as a versioned peer ([40936957cb](https://github.com/powerhouse-inc/powerhouse/commit/40936957cb))
+- **ph-cli,shared:** the cli of a package is its own build, with declared packages external ([8504275af5](https://github.com/powerhouse-inc/powerhouse/commit/8504275af5))
+- **clint-common:** port the chat-session package from ph-clint dev.113 ([d21119c6a9](https://github.com/powerhouse-inc/powerhouse/commit/d21119c6a9))
+- **clint:** add the ./cli package export and the cli runner ([64bb9f10c9](https://github.com/powerhouse-inc/powerhouse/commit/64bb9f10c9))
+- ⚠️  **shared:** refuse to start with FEATURE_UNIFORM_RUNNERS_ENABLED=false ([6796d98281](https://github.com/powerhouse-inc/powerhouse/commit/6796d98281))
+- ⚠️  **shared:** remove the PH_BIN and PH_GLOBAL_PROJECT_NAME constants ([89981c38ff](https://github.com/powerhouse-inc/powerhouse/commit/89981c38ff))
+- ⚠️  **shared:** remove the throwing generateMock stub ([ef77298724](https://github.com/powerhouse-inc/powerhouse/commit/ef77298724))
+- ⚠️  **shared:** remove the legacy addFile overload ([0178f54ea5](https://github.com/powerhouse-inc/powerhouse/commit/0178f54ea5))
+- ⚠️  **shared:** remove buildSignedAction and verifyOperationSignature ([6b68333528](https://github.com/powerhouse-inc/powerhouse/commit/6b68333528))
+- ⚠️  **config:** superseded powerhouse.config.json keys are errors ([5db0117db3](https://github.com/powerhouse-inc/powerhouse/commit/5db0117db3))
+- **ph-cli:** ph run connect build takes --base and --packages-registry ([894d5a7f31](https://github.com/powerhouse-inc/powerhouse/commit/894d5a7f31))
+- ⚠️  **ph-cli:** the classic commands are sugar for ph run ([9976e40986](https://github.com/powerhouse-inc/powerhouse/commit/9976e40986))
+- ⚠️  **connect:** Connect boots from its composition only ([a15fbed435](https://github.com/powerhouse-inc/powerhouse/commit/a15fbed435))
+- ⚠️  **switchboard:** the plugin host is the only boot path ([fc8ba25655](https://github.com/powerhouse-inc/powerhouse/commit/fc8ba25655))
+- ⚠️  **ph-cli:** a project without hosts is an error ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+
+### 🩹 Fixes
+
+- **host-core,ph-run:** linux failures in the next/6.4 checks ([0fdc5a4797](https://github.com/powerhouse-inc/powerhouse/commit/0fdc5a4797))
+
+### ⚠️  Breaking Changes
+
+- **shared:** refuse to start with FEATURE_UNIFORM_RUNNERS_ENABLED=false  ([6796d98281](https://github.com/powerhouse-inc/powerhouse/commit/6796d98281))
+  the CLI refuses to start while FEATURE_UNIFORM_RUNNERS_ENABLED is set
+  to a false value. Remove the variable; hosts and `ph run` are always on.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **shared:** remove the PH_BIN and PH_GLOBAL_PROJECT_NAME constants  ([89981c38ff](https://github.com/powerhouse-inc/powerhouse/commit/89981c38ff))
+  PH_BIN and PH_GLOBAL_PROJECT_NAME are removed from
+  @powerhousedao/shared/clis. PH_BIN has no replacement (the legacy CLI binary is gone);
+  use PH_GLOBAL_DIR_NAME in place of PH_GLOBAL_PROJECT_NAME.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **shared:** remove the throwing generateMock stub  ([ef77298724](https://github.com/powerhouse-inc/powerhouse/commit/ef77298724))
+  generateMock is no longer exported from "document-model" or
+  "@powerhousedao/shared/document-model". Import it from "document-model/mock
+- **shared:** remove the legacy addFile overload  ([0178f54ea5](https://github.com/powerhouse-inc/powerhouse/commit/0178f54ea5))
+  the addFile overload taking synchronizationUnits is removed, with the
+  LegacyAddFileInput, LegacyAddFileAction and LegacySynchronizationUnit types. Call
+  addFile with an AddFileInput.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **shared:** remove buildSignedAction and verifyOperationSignature  ([6b68333528](https://github.com/powerhouse-inc/powerhouse/commit/6b68333528))
+  `@powerhousedao/shared/document-model` (and the `document-model`
+  re-export) no longer exports `buildSignedAction` (sign through
+  `ISigner.signAction`) or `verifyOperationSignature` (use `verifyActionSignature`
+  from `@powerhousedao/reactor`).
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **config:** superseded powerhouse.config.json keys are errors  ([5db0117db3](https://github.com/powerhouse-inc/powerhouse/commit/5db0117db3))
+  ph run refuses a project whose powerhouse.config.json sets studio.host,
+  studio.https, studio.openBrowser, reactor.https, reactor.storage or switchboard.database.url.
+  Run ph migrate, or move the value to the host file and remove the key.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **ph-cli:** the classic commands are sugar for ph run  ([9976e40986](https://github.com/powerhouse-inc/powerhouse/commit/9976e40986))
+  `ph vetra`, `ph connect` and `ph switchboard` need the host files
+  under hosts/ and take the arguments of `ph run` only. `ph service` and `ph reactor`
+  are removed, as are the switchboard flags --use-vetra-drive and --vetra-drive-id.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **connect:** Connect boots from its composition only  ([a15fbed435](https://github.com/powerhouse-inc/powerhouse/commit/a15fbed435))
+  Connect always runs its plugin composition. The pluginRunner
+  flag no longer switches it off. connect.instance.reactorWorker, .multiReactor
+  and ?reactorWorker no longer select the reactor client; declare
+  reactor.backends in the host file or set connect.instance.reactorClient.
+  getActivePluginModules no longer returns null and loadConnectPluginUi needs a
+  composition.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **switchboard:** the plugin host is the only boot path  ([fc8ba25655](https://github.com/powerhouse-inc/powerhouse/commit/fc8ba25655))
+  FEATURE_PLUGIN_HOST_ENABLED=false refuses to start, and
+  FEATURE_PLUGIN_HOST_ENABLED=1 without declared plugins no longer boots
+  every built-in plugin. reactor.workflows in a host file fails validation.
+  A host with only readModel.url must name its reactor store. The config
+  file's workflows.enabled no longer turns workflows on in Switchboard.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **ph-cli:** a project without hosts is an error  ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+  the classic commands need a hosts/ folder; run ph migrate.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.3.0-dev.9 (2026-11-22)
 
 ### 🚀 Features

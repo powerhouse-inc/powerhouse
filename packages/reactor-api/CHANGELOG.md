@@ -1,3 +1,68 @@
+## 6.4.0-next.0 (2026-11-22)
+
+### 🚀 Features
+
+- **codegen,ph-cli,shared:** a package with a cli declares clint as a versioned peer ([40936957cb](https://github.com/powerhouse-inc/powerhouse/commit/40936957cb))
+- **ph-cli,shared:** the cli of a package is its own build, with declared packages external ([8504275af5](https://github.com/powerhouse-inc/powerhouse/commit/8504275af5))
+- **clint-common:** port the chat-session package from ph-clint dev.113 ([d21119c6a9](https://github.com/powerhouse-inc/powerhouse/commit/d21119c6a9))
+- **clint:** add the ./cli package export and the cli runner ([64bb9f10c9](https://github.com/powerhouse-inc/powerhouse/commit/64bb9f10c9))
+- ⚠️  **reactor-api:** remove the deprecated processor type aliases ([6211ab8a5c](https://github.com/powerhouse-inc/powerhouse/commit/6211ab8a5c))
+- ⚠️  **reactor-api:** remove the unused drive client resolver parameters ([f517f0be20](https://github.com/powerhouse-inc/powerhouse/commit/f517f0be20))
+- ⚠️  **reactor-api,reactor-browser:** remove the drive-url re-export files ([5ff0ab47b9](https://github.com/powerhouse-inc/powerhouse/commit/5ff0ab47b9))
+- ⚠️  **reactor-api:** remove the ADMIN_USERS proxy ([a814a0437b](https://github.com/powerhouse-inc/powerhouse/commit/a814a0437b))
+- ⚠️  **reactor-api:** remove the exact mount option alias ([275219abf6](https://github.com/powerhouse-inc/powerhouse/commit/275219abf6))
+- ⚠️  **reactor-api:** remove the constructor shims kept for one release ([ade5976a51](https://github.com/powerhouse-inc/powerhouse/commit/ade5976a51))
+- **ph-cli:** ph run connect build takes --base and --packages-registry ([894d5a7f31](https://github.com/powerhouse-inc/powerhouse/commit/894d5a7f31))
+- ⚠️  **ph-cli:** a project without hosts is an error ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+
+### 🩹 Fixes
+
+- **host-core,ph-run:** linux failures in the next/6.4 checks ([0fdc5a4797](https://github.com/powerhouse-inc/powerhouse/commit/0fdc5a4797))
+
+### ⚠️  Breaking Changes
+
+- **reactor-api:** remove the deprecated processor type aliases  ([6211ab8a5c](https://github.com/powerhouse-inc/powerhouse/commit/6211ab8a5c))
+  IReactorProcessorHostModule and ProcessorDriveFactory are removed from
+  @powerhousedao/reactor-api. Use IProcessorHostModule, and ProcessorFactory from
+  @powerhousedao/shared/processors.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-api:** remove the unused drive client resolver parameters  ([f517f0be20](https://github.com/powerhouse-inc/powerhouse/commit/f517f0be20))
+  the reactor resolver functions createDocument, createEmptyDocument,
+  createDocumentWithInitialState and deleteDocument no longer take a drive client as
+  their third argument; `subject` is now the third argument of the three create functions.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-api,reactor-browser:** remove the drive-url re-export files  ([5ff0ab47b9](https://github.com/powerhouse-inc/powerhouse/commit/5ff0ab47b9))
+  driveIdFromUrl, parseDriveUrl and ParsedDriveUrl are no longer
+  exported from @powerhousedao/reactor-api and @powerhousedao/reactor-browser.
+  Import them from @powerhousedao/reactor.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-api:** remove the ADMIN_USERS proxy  ([a814a0437b](https://github.com/powerhouse-inc/powerhouse/commit/a814a0437b))
+  the ADMIN_USERS export of @powerhousedao/reactor-api is removed.
+  Read the ADMIN_USERS environment variable where you need it, or pass `auth.admins`.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-api:** remove the exact mount option alias  ([275219abf6](https://github.com/powerhouse-inc/powerhouse/commit/275219abf6))
+  the `exact` option of IHttpAdapter.mount is removed. It selected
+  prefix matching; pass `{ prefix: true }` instead.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-api:** remove the constructor shims kept for one release  ([ade5976a51](https://github.com/powerhouse-inc/powerhouse/commit/ade5976a51))
+  GraphQLManagerOptions.readClient and writeClient are required. Passing only
+  reactorClient no longer works: new GraphQLManager({ reactorClient: client, ... }) becomes
+  new GraphQLManager({ readClient: client.read, writeClient: client.write, reactorClient:
+  client, ... }), where reactorClient is optional and only feeds subgraph.reactorClient.
+  ReactorDriveClient no longer accepts a facade: new ReactorDriveClient({ reactor, readModel })
+  becomes new ReactorDriveClient({ read: reactor.read, write: reactor.write, readModel }). The
+  types ReactorDriveClientHalvesArgs and ReactorDriveClientFacadeArgs are removed;
+  ReactorDriveClientArgs is the halves form.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **ph-cli:** a project without hosts is an error  ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+  the classic commands need a hosts/ folder; run ph migrate.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.3.0-dev.9 (2026-11-22)
 
 ### 🚀 Features
