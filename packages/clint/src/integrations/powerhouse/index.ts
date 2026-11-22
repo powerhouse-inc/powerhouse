@@ -88,6 +88,7 @@ import type {
   SubscriptionConfig,
   DocumentRegistry,
   AnyRegistry,
+  IAttachmentService,
   RemoteReactorConfig,
   RemoteReactorSource,
   TypedReactorClient,
@@ -232,6 +233,22 @@ export async function resolveRemoteReactorConfig<
   return source ?? {};
 }
 
+/**
+ * The attachment service of the switchboard at `endpoint`. Its
+ * `/attachments/*` routes mount at the host root, so the origin is used.
+ */
+async function remoteAttachmentService(
+  endpoint: string,
+  jwtHandler: ((url: string) => Promise<string | undefined>) | undefined,
+): Promise<IAttachmentService> {
+  const { createRemoteAttachmentService } =
+    await import("@powerhousedao/reactor-attachments");
+  return createRemoteAttachmentService({
+    remoteUrl: new URL(endpoint).origin,
+    ...(jwtHandler ? { jwtHandler } : {}),
+  });
+}
+
 /** The id of the drive a switchboard serves under `slug`. */
 async function driveOfAddress(
   client: IReactorClient,
@@ -256,8 +273,10 @@ async function driveOfAddress(
  * one the address names. The signer, its rules and its watch go to
  * `createReactorWrites`, which emits `powerhouse:writes:ready` on `ctx.emit`;
  * a signer change also reconnects the realtime socket with the current
- * bearer. `shutdown` releases only this process's side (the bridged
- * subscriptions, the signer watch, the client) and runs once.
+ * bearer. Without `ctx.attachments` the context gets the switchboard's own
+ * attachment service, authenticated by `ctx.attachmentJwtHandler`, else by
+ * `tokenProvider`. `shutdown` releases only this process's side (the
+ * bridged subscriptions, the signer watch, the client) and runs once.
  */
 export async function attachDefaultReactor<
   R extends DocumentRegistry = AnyRegistry,
@@ -341,6 +360,14 @@ export async function attachDefaultReactor<
     );
   }
 
+  const { tokenProvider } = options;
+  const attachments =
+    ctx.attachments ??
+    (await remoteAttachmentService(
+      attachment.endpoint,
+      ctx.attachmentJwtHandler ?? (tokenProvider && (() => tokenProvider())),
+    ));
+
   let stopped = false;
   const result: ReactorContext<R> = {
     client: client as unknown as TypedReactorClient<R>,
@@ -349,7 +376,7 @@ export async function attachDefaultReactor<
     drives,
     switchboardUrl: attachment.endpoint,
     ...(driveUrl ? { driveUrl } : {}),
-    attachments: ctx.attachments,
+    attachments,
     writes: handle.writes,
     shutdown() {
       if (stopped) return Promise.resolve();

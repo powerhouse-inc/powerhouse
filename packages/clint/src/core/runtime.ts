@@ -56,10 +56,12 @@ export interface CliRuntimeDeps {
    */
   attachments?: IAttachmentService;
   /**
-   * Mints the bearer token for the embedded switchboard's HTTP attachment
-   * routes. Passed to the default `createRemoteAttachmentService` below so
-   * reservation/upload calls authenticate against an auth-enabled switchboard.
-   * Supplied by the host CLI (the framework has no identity of its own).
+   * Mints the bearer token for the switchboard's HTTP attachment routes.
+   * Passed to the default `createRemoteAttachmentService` below, and to the
+   * reactor factory (`ReactorSetupContext.attachmentJwtHandler`) for a remote
+   * attach, so reservation/upload calls authenticate against an auth-enabled
+   * switchboard. Supplied by the host CLI (the framework has no identity of
+   * its own).
    */
   attachmentJwtHandler?: (url: string) => Promise<string | undefined>;
   agentLoader?: AgentLoader;
@@ -134,6 +136,7 @@ export function createCliRuntime(deps: CliRuntimeDeps): CliRuntime {
       on: context.on,
       switchboard: reactorConfig.switchboard,
       attachments: deps.attachments,
+      attachmentJwtHandler: deps.attachmentJwtHandler,
     });
     return cachedReactor;
   }

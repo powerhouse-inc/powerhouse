@@ -14,8 +14,9 @@ export async function getAttachmentService(
 
 export function attachmentsUnavailableMessage(): string {
   return (
-    "Attachments need a running reactor (daemon mode) with the embedded " +
-    "Switchboard started; none is available in this context."
+    "Attachments need a running reactor (daemon mode) on a switchboard: " +
+    "one the Cli attached to, or its embedded Switchboard started. None is " +
+    "available in this context."
   );
 }
 

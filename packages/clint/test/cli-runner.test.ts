@@ -20,6 +20,8 @@ import type * as SwitchboardServer from "@powerhousedao/switchboard/server";
 import type { ILogger } from "document-model";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createMemoryWorkdirStore } from "../src/core/store.js";
+import type { CommandContext } from "../src/core/types.js";
+import { createAttachmentCommands } from "../src/integrations/powerhouse/attachment-commands.js";
 import { attachDefaultReactor } from "../src/integrations/powerhouse/index.js";
 
 // The Cli runner end to end: a real switchboard in this process, and the real
@@ -559,6 +561,39 @@ describe("cli-runner", () => {
       ]);
       await first.shutdown();
       await again.shutdown();
+    }, 60_000);
+
+    it("uploads attachments through the switchboard's own service", async () => {
+      const reactor = await attachDefaultReactor(setup(), { url });
+      expect(reactor.attachments).toBeDefined();
+      const file = path.join(root, "note.txt");
+      writeFileSync(file, `attached at ${Date.now()}`);
+      const context = {
+        workdir: root,
+        // The commands run only where the Cli serves, which `folders` marks.
+        folders: {},
+        reactor: () => Promise.resolve(reactor),
+      } as unknown as CommandContext;
+      const run = async (id: string, input: object) => {
+        const command = createAttachmentCommands().find((c) => c.id === id)!;
+        return (
+          (await command.execute(input as never, context)) as {
+            text: string;
+          }
+        ).text;
+      };
+
+      const uploaded = await run("attachment-upload", { filePath: file });
+      const ref = /^ref: (\S+)$/m.exec(uploaded)?.[1];
+      expect(ref).toMatch(/^attachment:\/\/v1:[0-9a-f]{64}$/);
+      expect(uploaded).toContain("status: available");
+
+      // A switchboard serves an attachment's metadata and bytes only through
+      // a document that references it, and the commands name none: the
+      // remote service refuses the read before any request.
+      const stat = await run("attachment-stat", { ref });
+      expect(stat).toContain(`Not found or error for ${ref}`);
+      await reactor.shutdown();
     }, 60_000);
 
     it("refuses an address whose drive the switchboard does not serve", async () => {

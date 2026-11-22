@@ -338,8 +338,9 @@ export interface ReactorContext<R extends DocumentRegistry = AnyRegistry> {
   /**
    * Switchboard-provided attachment service. Constructed externally
    * (switchboard owns createRemoteAttachmentService) and passed in via
-   * ReactorSetupContext.attachments. Upload and read sites reach it here.
-   * Undefined when no attachment service is wired.
+   * ReactorSetupContext.attachments; a remote attach that is passed none
+   * builds one for the switchboard it attached to. Upload and read sites
+   * reach it here. Undefined when no attachment service is wired.
    */
   attachments?: IAttachmentService;
   /** Internal: the ReactorClientModule, passed to startSwitchboard(). */
@@ -527,6 +528,13 @@ export interface ReactorSetupContext<R extends DocumentRegistry = AnyRegistry> {
    * and relayed here so the create() factory can place it on the returned context.
    */
   attachments?: IAttachmentService;
+  /**
+   * Mints the bearer for a switchboard's `/attachments/*` routes, from
+   * `CliOptions.attachmentJwtHandler`. A remote attach without `attachments`
+   * builds its attachment service with it, else with the remote's
+   * `tokenProvider`.
+   */
+  attachmentJwtHandler?: (url: string) => Promise<string | undefined>;
 }
 
 /**

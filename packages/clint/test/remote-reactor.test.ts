@@ -9,9 +9,11 @@ import {
   vi,
 } from "vitest";
 import type {
+  AttachmentRef,
   BatchExecutionRequest,
   IReactorClient,
 } from "@powerhousedao/reactor";
+import type { IAttachmentService } from "@powerhousedao/reactor-attachments";
 import type {
   ISigner,
   UserActionSigner,
@@ -193,7 +195,11 @@ describe("attachRemoteReactor", () => {
           res.writeHead(200, { "content-type": "application/json" });
           res.end(JSON.stringify(payload));
         };
-        if (req.url?.endsWith("/inspection")) {
+        if (req.url?.startsWith("/attachments/")) {
+          // The attachment routes hold nothing here.
+          res.writeHead(404);
+          res.end();
+        } else if (req.url?.endsWith("/inspection")) {
           send({
             data: { inspection: { info: { name: "fake-switchboard" } } },
           });
@@ -616,6 +622,66 @@ describe("attachRemoteReactor", () => {
         "Bearer agent-bearer",
       ]);
       await reactor.shutdown();
+    });
+
+    describe("attachment service", () => {
+      const HASH = "a".repeat(64);
+      const ref = `attachment://v1:${HASH}` as AttachmentRef;
+      // The switchboard authorizes a read by the document that references
+      // the attachment, so a read names one.
+      const statRequests = () =>
+        seen.filter((s) => s.path === `/attachments/${HASH}?documentId=doc-1`);
+
+      it("is the switchboard's, on its origin, authenticated by the context's handler ahead of the bearer", async () => {
+        const reactor = await attachDefaultReactor(
+          {
+            ...setup(),
+            attachmentJwtHandler: (url) =>
+              Promise.resolve(`jwt:${new URL(url).pathname}`),
+          },
+          {
+            url: `http://127.0.0.1:${port}/graphql`,
+            tokenProvider: () => Promise.resolve("agent-bearer"),
+          },
+        );
+        seen.length = 0;
+
+        await expect(
+          reactor.attachments!.stat(ref, { documentId: "doc-1" }),
+        ).rejects.toThrow();
+
+        expect(statRequests().map((s) => s.authorization)).toEqual([
+          `Bearer jwt:/attachments/${HASH}`,
+        ]);
+        await reactor.shutdown();
+      });
+
+      it("falls back to the remote's bearer", async () => {
+        const reactor = await attachDefaultReactor(setup(), {
+          url: `http://127.0.0.1:${port}/graphql`,
+          tokenProvider: () => Promise.resolve("agent-bearer"),
+        });
+        seen.length = 0;
+
+        await expect(
+          reactor.attachments!.stat(ref, { documentId: "doc-1" }),
+        ).rejects.toThrow();
+
+        expect(statRequests().map((s) => s.authorization)).toEqual([
+          "Bearer agent-bearer",
+        ]);
+        await reactor.shutdown();
+      });
+
+      it("keeps a service the context brings", async () => {
+        const brought = {} as IAttachmentService;
+        const reactor = await attachDefaultReactor(
+          { ...setup(), attachments: brought },
+          { url: `http://127.0.0.1:${port}/graphql` },
+        );
+        expect(reactor.attachments).toBe(brought);
+        await reactor.shutdown();
+      });
     });
 
     it("stops watching the signer when the attach fails", async () => {
