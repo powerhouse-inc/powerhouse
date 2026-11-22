@@ -6,10 +6,12 @@ concurrency:
 
 on:
   workflow_dispatch:
+  # next/** are the long-lived branches of the coming minor (next/6.4): they
+  # take pull requests and publish X.Y.Z-next.N builds, so they get the checks.
   push:
-    branches: ["main", "release/**"]
+    branches: ["main", "release/**", "next/**"]
   pull_request:
-    branches: ["main", "release/**"]
+    branches: ["main", "release/**", "next/**"]
     types: [opened, reopened, synchronize]
 
 permissions:
