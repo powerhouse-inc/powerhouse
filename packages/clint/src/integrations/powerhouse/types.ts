@@ -39,6 +39,8 @@ import type {
   AttachmentHeader,
 } from "@powerhousedao/reactor-attachments";
 import type { AttachmentRef } from "@powerhousedao/reactor";
+import type { BearerTokenProvider } from "@powerhousedao/reactor-browser/graphql-client";
+import type { ISigner } from "@powerhousedao/shared/document-model";
 
 export type {
   IAttachmentService,
@@ -543,15 +545,26 @@ export interface ReactorConfiguration<
   /**
    * What the reactor holds when a host runner attaches it to a remote
    * switchboard instead of calling `create` (see `RunOptions.reactor`):
-   * read by `attachDefaultReactor`, never by `create`.
+   * read by `attachDefaultReactor`, never by `create`. A function is called
+   * with the setup context at attach time, for what depends on the workdir
+   * or the config (an identity, a token).
    */
-  remote?: RemoteReactorConfig<R>;
+  remote?: RemoteReactorSource<R>;
 }
+
+/** `ReactorConfiguration.remote`: the config, or how to build it at attach. */
+export type RemoteReactorSource<R extends DocumentRegistry = AnyRegistry> =
+  | RemoteReactorConfig<R>
+  | ((
+      setup: ReactorSetupContext<R>,
+    ) => RemoteReactorConfig<R> | Promise<RemoteReactorConfig<R>>);
 
 /**
  * What a CLI's reactor holds on a remote switchboard: the models its client
- * signs and reduces with, the drives to find or create there, and the changes
- * to bridge to the event bus. No drive: the drive the address names.
+ * signs and reduces with, the drives to find or create there, the changes
+ * to bridge to the event bus, and who it writes as. No drive: the drive the
+ * address names. No signer: writes go out unsigned and the switchboard signs
+ * them with its own key.
  */
 export interface RemoteReactorConfig<R extends DocumentRegistry = AnyRegistry> {
   /** Any model module fits, as for the reactor and its clients. */
@@ -561,6 +574,38 @@ export interface RemoteReactorConfig<R extends DocumentRegistry = AnyRegistry> {
   /** First 'personal' drive = personalDriveId = driveId. */
   drives?: Array<DriveConfig & { role: "personal" | "watched" }>;
   subscriptions?: SubscriptionConfig<R>;
+  /**
+   * Signs the actions the client pushes, read on every write (see
+   * `createReactorWrites`): a signer whose `user` is set later, by a
+   * sign-in, takes effect without a new attach.
+   *
+   * Limit: while the signer has no user, every push is refused with
+   * `SignerNotReadyError`, a write to a legacy document included, whatever
+   * `legacyDocuments` says. The client asks for its signer before it knows
+   * which document it writes, so the resolver cannot pass a legacy write
+   * through unsigned. Give a signer only where the documents written are
+   * v2, or once its user is known.
+   */
+  signer?: ISigner;
+  /** The bearer per request, for an authenticated switchboard. */
+  tokenProvider?: BearerTokenProvider;
+  /**
+   * Subscribe to changes of the signer's user; returns an unsubscribe
+   * function. On each change the realtime socket reconnects with the
+   * current bearer, and `powerhouse:writes:ready` is emitted when writes
+   * become possible.
+   */
+  onSignerChange?: (listener: () => void) => () => void;
+  /** See `WriteRules.legacyDocuments` (`writes.canWrite`). Default: `sign-when-ready`. */
+  legacyDocuments?: "refuse" | "sign-when-ready";
+  /** Which documents the agent acts on by itself (`writes.canWrite`). */
+  accepts?: (document: {
+    header: {
+      id: string;
+      documentType?: string;
+      protocolVersions?: Record<string, number> | null;
+    };
+  }) => boolean;
 }
 
 /**

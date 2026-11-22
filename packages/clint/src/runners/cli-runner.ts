@@ -18,7 +18,10 @@ import {
 import { defineHostSchemas } from "@powerhousedao/host-core/schema";
 import { z } from "zod";
 import type { Cli, RunOptions, RunReactor } from "../core/types.js";
-import { attachDefaultReactor } from "../integrations/powerhouse/index.js";
+import {
+  attachDefaultReactor,
+  resolveRemoteReactorConfig,
+} from "../integrations/powerhouse/index.js";
 import type { ReactorContext } from "../integrations/powerhouse/types.js";
 
 /**
@@ -286,7 +289,7 @@ export async function runCli(
   const reactor: RunReactor | undefined = url
     ? async (setup, configured) =>
         (attached = await attachDefaultReactor(setup, {
-          ...configured?.remote,
+          ...(await resolveRemoteReactorConfig(configured?.remote, setup)),
           url,
         }))
     : undefined;

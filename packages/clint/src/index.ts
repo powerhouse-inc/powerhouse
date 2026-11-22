@@ -84,6 +84,7 @@ export { renderMarkdown } from "./interactive/markdown.js";
 export {
   attachDefaultReactor,
   buildDefaultReactor,
+  resolveRemoteReactorConfig,
 } from "./integrations/powerhouse/index.js";
 export type {
   AttachDefaultReactorOptions,
@@ -112,6 +113,7 @@ export type {
   ReactorSetupContext,
   ReactorConfiguration,
   RemoteReactorConfig,
+  RemoteReactorSource,
   DriveConfig,
   EnsureDriveClient,
   ReactorWrites,

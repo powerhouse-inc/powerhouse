@@ -1,5 +1,13 @@
 import { createServer, type Server } from "node:http";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import type {
   BatchExecutionRequest,
   IReactorClient,
@@ -21,6 +29,11 @@ import {
   policyOfHeader,
 } from "../src/integrations/powerhouse/signing.js";
 import { createReactorWrites } from "../src/integrations/powerhouse/writes.js";
+import {
+  attachDefaultReactor,
+  resolveRemoteReactorConfig,
+} from "../src/integrations/powerhouse/index.js";
+import { createMemoryWorkdirStore } from "../src/core/store.js";
 
 describe("deriveGraphqlEndpoint", () => {
   it("derives from a drive url, a graphql url, and a bare origin", () => {
@@ -85,6 +98,26 @@ function documentFields(doc: SentDocument) {
     revisionsList: [],
     createdAtUtcIso: doc.header.createdAtUtcIso,
     lastModifiedAtUtcIso: doc.header.lastModifiedAtUtcIso,
+  };
+}
+
+/** A job the fake switchboard settled at once, named `job-<documentId>`. */
+function settledJob(documentId: string) {
+  return {
+    id: `job-${documentId}`,
+    documentId,
+    status: "READ_READY",
+    result: null,
+    error: null,
+    errorName: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    completedAt: "2026-01-01T00:00:01.000Z",
+    consistencyToken: {
+      version: 1,
+      createdAtUtcIso: "2026-01-01T00:00:01.000Z",
+      coordinates: [],
+    },
+    meta: { batchId: "batch-1", batchJobIds: [`job-${documentId}`] },
   };
 }
 
@@ -209,6 +242,17 @@ describe("attachRemoteReactor", () => {
           });
         } else if (query.includes("mutation ExecuteBatch")) {
           send({ errors: [{ message: "recorded by the fake switchboard" }] });
+        } else if (query.includes("mutation MutateDocumentAsync")) {
+          send({
+            data: {
+              mutateDocumentAsync: settledJob(
+                String(body.variables?.documentIdOrSlug),
+              ),
+            },
+          });
+        } else if (query.includes("query GetJobStatus")) {
+          const jobId = String(body.variables?.jobId);
+          send({ data: { jobStatus: settledJob(jobId.replace(/^job-/, "")) } });
         } else {
           send({ data: { __typename: "Query" } });
         }
@@ -416,5 +460,202 @@ describe("attachRemoteReactor", () => {
     const byName = await ensureDrive(remote, { name: "Remote Fixed" });
     expect(byName.id).toBe("remote-fixed");
     expect(mutations()).toEqual([]);
+  });
+
+  describe("attachDefaultReactor with an identity", () => {
+    const pushed = (): PushedAction[] =>
+      seen
+        .filter((s) => s.query.includes("mutation MutateDocumentAsync"))
+        .flatMap((s) => (s.variables?.actions ?? []) as PushedAction[]);
+
+    /** A stored document under `id`, v2-required or legacy. */
+    function storeDocument(id: string, policy: "v2" | "legacy"): void {
+      stored.set(id, {
+        header: {
+          id,
+          name: id,
+          documentType: "powerhouse/document-model",
+          protocolVersions:
+            policy === "v2"
+              ? { "base-reducer": 2, signature: 2 }
+              : { "base-reducer": 2 },
+          createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+          lastModifiedAtUtcIso: "2026-01-01T00:00:00.000Z",
+        },
+        state: { global: { name: id } },
+      });
+    }
+
+    /** A signer-change source, as Renown's `on("user")` would be. */
+    function signerChanges() {
+      const listeners = new Set<() => void>();
+      return {
+        onSignerChange: (listener: () => void) => {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+        change: () => {
+          for (const listener of [...listeners]) listener();
+        },
+        get size() {
+          return listeners.size;
+        },
+      };
+    }
+
+    function setup(emit?: (event: string, data?: unknown) => void) {
+      return {
+        workdir: process.cwd(),
+        config: {},
+        workspace: createMemoryWorkdirStore(),
+        ...(emit ? { emit } : {}),
+      };
+    }
+
+    it("signs a v2 push with the agent's signer", async () => {
+      storeDocument("v2-doc", "v2");
+      const signer = await LocalSigner.create({ user: OWNER });
+      const reactor = await attachDefaultReactor(setup(), {
+        url: `http://127.0.0.1:${port}/graphql`,
+        signer,
+      });
+      seen.length = 0;
+
+      await reactor.client.write.execute("v2-doc", "main", [setName("x")]);
+
+      const [action] = pushed();
+      expect(action?.context?.signer?.app?.key).toBe(signer.did);
+      expect(action?.context?.signer?.user?.address).toBe(OWNER.address);
+      expect(action?.context?.signer?.signatures).toHaveLength(1);
+      await reactor.shutdown();
+    });
+
+    it("refuses every push while the signer has no user, a legacy one included", async () => {
+      // The limit documented on RemoteReactorConfig.signer: the client asks
+      // for its signer before it knows the document, so the legacy rule
+      // `canWrite` applies cannot let this write through unsigned.
+      storeDocument("v2-doc", "v2");
+      storeDocument("legacy-doc", "legacy");
+      const live = await createLiveSigner();
+      const reactor = await attachDefaultReactor(setup(), {
+        url: `http://127.0.0.1:${port}/graphql`,
+        signer: live,
+      });
+      const legacy = { header: stored.get("legacy-doc")!.header };
+      expect(reactor.writes?.ready()).toBe(false);
+      expect(reactor.writes?.canWrite(legacy)).toBe(true);
+      seen.length = 0;
+
+      for (const id of ["v2-doc", "legacy-doc"]) {
+        await expect(
+          reactor.client.write.execute(id, "main", [setName("x")]),
+        ).rejects.toBeInstanceOf(SignerNotReadyError);
+      }
+      expect(pushed()).toEqual([]);
+
+      live.user = OWNER;
+      await reactor.client.write.execute("legacy-doc", "main", [setName("y")]);
+      expect(pushed()[0]?.context?.signer?.user?.address).toBe(OWNER.address);
+      await reactor.shutdown();
+    });
+
+    it("announces powerhouse:writes:ready once when the user arrives, and re-authenticates realtime on each change", async () => {
+      const live = await createLiveSigner();
+      const changes = signerChanges();
+      const events: string[] = [];
+      const reactor = await attachDefaultReactor(
+        setup((event) => events.push(event)),
+        {
+          url: `http://127.0.0.1:${port}/graphql`,
+          signer: live,
+          onSignerChange: changes.onSignerChange,
+        },
+      );
+      const client = reactor.client as unknown as {
+        notifyCredentialsChanged(): void;
+      };
+      const notify = vi.spyOn(client, "notifyCredentialsChanged");
+      const ready = () =>
+        events.filter((event) => event === "powerhouse:writes:ready");
+
+      changes.change();
+      expect(ready()).toEqual([]);
+      expect(notify).toHaveBeenCalledTimes(1);
+
+      live.user = OWNER;
+      changes.change();
+      changes.change();
+      expect(ready()).toHaveLength(1);
+      expect(reactor.writes?.ready()).toBe(true);
+      expect(notify).toHaveBeenCalledTimes(3);
+
+      await reactor.shutdown();
+      expect(changes.size).toBe(0);
+    });
+
+    it("applies legacyDocuments and accepts to writes.canWrite, and sends the bearer", async () => {
+      const reactor = await attachDefaultReactor(setup(), {
+        url: `http://127.0.0.1:${port}/graphql`,
+        signer: await LocalSigner.create({ user: OWNER }),
+        legacyDocuments: "refuse",
+        accepts: (document) => document.header.id !== "ignored",
+        tokenProvider: () => Promise.resolve("agent-bearer"),
+      });
+      const v2 = { header: { id: "a", protocolVersions: { signature: 2 } } };
+      expect(reactor.writes?.canWrite(v2)).toBe(true);
+      expect(
+        reactor.writes?.canWrite({ header: { id: "b", protocolVersions: {} } }),
+      ).toBe(false);
+      expect(
+        reactor.writes?.canWrite({ header: { ...v2.header, id: "ignored" } }),
+      ).toBe(false);
+      seen.length = 0;
+
+      await reactor.client.find({ type: "powerhouse/document-drive" });
+      expect(findRequests().map((s) => s.authorization)).toEqual([
+        "Bearer agent-bearer",
+      ]);
+      await reactor.shutdown();
+    });
+
+    it("stops watching the signer when the attach fails", async () => {
+      const changes = signerChanges();
+      await expect(
+        attachDefaultReactor(setup(), {
+          url: "http://127.0.0.1:1/graphql",
+          onSignerChange: changes.onSignerChange,
+        }),
+      ).rejects.toThrow(/not answering/);
+      expect(changes.size).toBe(0);
+    }, 20_000);
+  });
+});
+
+describe("resolveRemoteReactorConfig", () => {
+  const setup = {
+    workdir: "/work/agent",
+    config: { environmentId: "env-1" },
+    workspace: createMemoryWorkdirStore(),
+  };
+
+  it("takes an object as given, and none as empty", async () => {
+    const remote = { drive: { name: "Home" } };
+    expect(await resolveRemoteReactorConfig(remote, setup)).toBe(remote);
+    expect(await resolveRemoteReactorConfig(undefined, setup)).toEqual({});
+  });
+
+  it("calls a function with the setup context, sync or async", async () => {
+    expect(
+      await resolveRemoteReactorConfig(
+        (ctx) => ({ drive: { name: `${String(ctx.config.environmentId)}` } }),
+        setup,
+      ),
+    ).toEqual({ drive: { name: "env-1" } });
+    expect(
+      await resolveRemoteReactorConfig(
+        (ctx) => Promise.resolve({ drive: { name: ctx.workdir } }),
+        setup,
+      ),
+    ).toEqual({ drive: { name: "/work/agent" } });
   });
 });

@@ -100,9 +100,9 @@ describe("ensureDrive on a client alone", () => {
     for (const name of WRITE_METHODS) {
       expect(typeof remote.write[name], `write.${name}`).toBe("function");
     }
-    // Why ensureDrive does not use them.
+    // Why ensureDrive does not use it. It names the drive in its one create,
+    // though the light client renames too.
     expect(remote.write.createEmpty).toBeUndefined();
-    expect(remote.write.rename).toBeUndefined();
   });
 
   it("creates a v2-required drive in one write, named, and finds it by name on the next call", async () => {

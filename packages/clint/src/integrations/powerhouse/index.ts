@@ -14,6 +14,7 @@ export type {
   ReactorSetupContext,
   ReactorConfiguration,
   RemoteReactorConfig,
+  RemoteReactorSource,
   PowerhouseIntegrationOptions,
   DriveConfig,
   EnsureDriveClient,
@@ -78,8 +79,6 @@ export {
 } from "./attachment.js";
 
 import type { IReactorClient } from "@powerhousedao/reactor";
-import type { BearerTokenProvider } from "@powerhousedao/reactor-browser/graphql-client";
-import type { ISigner } from "@powerhousedao/shared/document-model";
 import type { DocumentModelModule } from "document-model";
 import type {
   ReactorContext,
@@ -90,6 +89,7 @@ import type {
   DocumentRegistry,
   AnyRegistry,
   RemoteReactorConfig,
+  RemoteReactorSource,
   TypedReactorClient,
 } from "./types.js";
 
@@ -216,11 +216,20 @@ export interface AttachDefaultReactorOptions<
   /** A switchboard drive address, `<switchboard>/d/<slug>`; its GraphQL
    * endpoint or bare origin attach too, but name no drive. */
   url: string;
-  /** Signs the actions the client pushes (see `createReactorWrites`);
-   * without one they go out unsigned. */
-  signer?: ISigner;
-  /** The bearer per request, for an authenticated switchboard. */
-  tokenProvider?: BearerTokenProvider;
+}
+
+/**
+ * The `ReactorConfiguration.remote` a runner attaches with: the config as
+ * given, or the function's answer for this setup context. None: `{}`.
+ */
+export async function resolveRemoteReactorConfig<
+  R extends DocumentRegistry = AnyRegistry,
+>(
+  source: RemoteReactorSource<R> | undefined,
+  setup: ReactorSetupContext<R>,
+): Promise<RemoteReactorConfig<R>> {
+  if (typeof source === "function") return source(setup);
+  return source ?? {};
 }
 
 /** The id of the drive a switchboard serves under `slug`. */
@@ -244,8 +253,11 @@ async function driveOfAddress(
  * buildDefaultReactor(), with the same drives and subscriptions, and no
  * `_module`, so no embedded switchboard can start over it. The default drive
  * is the first personal drive the options ask for, else the first, else the
- * one the address names. `shutdown` releases only this process's side (the
- * bridged subscriptions, the signer watch, the client) and runs once.
+ * one the address names. The signer, its rules and its watch go to
+ * `createReactorWrites`, which emits `powerhouse:writes:ready` on `ctx.emit`;
+ * a signer change also reconnects the realtime socket with the current
+ * bearer. `shutdown` releases only this process's side (the bridged
+ * subscriptions, the signer watch, the client) and runs once.
  */
 export async function attachDefaultReactor<
   R extends DocumentRegistry = AnyRegistry,
@@ -259,16 +271,45 @@ export async function attachDefaultReactor<
   const { switchboardOfDrive } =
     await import("@powerhousedao/shared/host-tokens");
 
-  const handle = createReactorWrites({ signer: options.signer });
-  const attachment = await attachRemoteReactor({
-    url: options.url,
-    documentModels: options.documentModels ?? [],
-    ...(handle.signer ? { signer: handle.signer } : {}),
-    ...(options.tokenProvider ? { tokenProvider: options.tokenProvider } : {}),
+  // A socket presents the credentials it opened with until it is replaced,
+  // and the bearer follows the signer's user.
+  let credentialsChanged = (): void => undefined;
+  const { onSignerChange } = options;
+  const handle = createReactorWrites({
+    signer: options.signer,
+    legacyDocuments: options.legacyDocuments,
+    accepts: options.accepts,
+    ...(onSignerChange
+      ? {
+          onSignerChange: (listener: () => void) =>
+            onSignerChange(() => {
+              credentialsChanged();
+              listener();
+            }),
+        }
+      : {}),
+    ...(ctx.emit ? { emit: ctx.emit } : {}),
   });
+
+  let attachment: Awaited<ReturnType<typeof attachRemoteReactor>>;
+  try {
+    attachment = await attachRemoteReactor({
+      url: options.url,
+      documentModels: options.documentModels ?? [],
+      ...(handle.signer ? { signer: handle.signer } : {}),
+      ...(options.tokenProvider
+        ? { tokenProvider: options.tokenProvider }
+        : {}),
+    });
+  } catch (error) {
+    handle.stop();
+    throw error;
+  }
   const client = attachment.client as IReactorClient & {
     dispose?: () => void;
+    notifyCredentialsChanged?: () => void;
   };
+  credentialsChanged = () => client.notifyCredentialsChanged?.();
 
   const driveConfigs =
     options.drives ??

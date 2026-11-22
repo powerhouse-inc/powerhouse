@@ -110,6 +110,7 @@ function makeProject(url: string): string {
   for (const [name, fixture] of [
     ["embedded-cli", "embedded-cli.mjs"],
     ["serving-cli", "serving-cli.mjs"],
+    ["function-remote-cli", "function-remote-cli.mjs"],
   ] as const) {
     const dir = path.join(modules, "@fixture", name);
     writeCli(dir, "cli.mjs", fixture);
@@ -126,6 +127,7 @@ function makeProject(url: string): string {
     ["cli", undefined],
     ["embedded", { package: "@fixture/embedded-cli" }],
     ["serving", { package: "@fixture/serving-cli" }],
+    ["function-remote", { package: "@fixture/function-remote-cli" }],
   ];
   for (const [name, config] of hosts) {
     mkdirSync(path.join(root, "hosts", name), { recursive: true });
@@ -410,6 +412,19 @@ describe("cli-runner", () => {
     expect(help.output()).toContain("hello");
     expect(help.output()).not.toContain("--no-api");
     expect(help.output()).not.toContain("--no-studio");
+  }, 120_000);
+
+  it("builds a remote config given as a function from the setup context", async () => {
+    const read = phRun(["function-remote", "--", "read-doc", documentId]);
+    expect(await exitCodeOf(read)).toBe(0);
+    const drives = await switchboard.reactor.find({ type: DRIVE_TYPE });
+    const desk = drives.results.find(
+      (drive) => drive.header.name === `Desk ${path.basename(project)}`,
+    );
+    expect(desk).toBeDefined();
+    expect(read.output()).toContain(
+      `read ${documentId} powerhouse/document-model (drive ${desk?.header.id})`,
+    );
   }, 120_000);
 
   it("keeps one serving instance, which `--stop` ends, and runs one-shots beside it", async () => {

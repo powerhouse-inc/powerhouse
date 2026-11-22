@@ -52,6 +52,12 @@ export interface ReactorWritesHandle {
    * `GraphQLReactorClient` pushes unsigned when it gets no signer, and checks
    * `user` itself before it would call the gated `signAction`. Undefined
    * without a signer.
+   *
+   * Limit: the client resolves its signer before it knows the document, so
+   * while there is no user this refuses a push to a legacy document too,
+   * though `legacyDocuments: "sign-when-ready"` lets `canWrite` pass it.
+   * Passing the target document to the resolver would lift it; until then
+   * give a signer only where the documents written are v2.
    */
   signer?: () => ISigner;
   /** Stops watching the signer; call it from `ReactorContext.shutdown`. */
