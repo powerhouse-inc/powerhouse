@@ -31,6 +31,7 @@ import {
   stopRun,
   stopStreamOf,
   STORE_VERBS,
+  substituteBuiltinEnv,
   takeCompoundMember,
   toStartedHandle,
   validateDeclaredHost,
@@ -83,7 +84,9 @@ export interface StartRunArgs {
  * `ph run <package>/<host>` runs a host an installed package supplies: its
  * runner (and through `ctx.hostPackage` its plugins) resolve from the
  * package, its record is `.ph/run/<package>/<name>.json`, and everything
- * else (cwd, stores, `.ph/`) stays the project's.
+ * else (cwd, stores, `.ph/`) stays the project's. Its file names the
+ * package's own files with `${package}` (the package root; for a project
+ * host, the project root).
  */
 export async function startRun(args: StartRunArgs): Promise<unknown> {
   // Before the host loads: loading it can import its runner and plugins, and
@@ -180,13 +183,21 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   validateDeclaredHost(runner, specifier, loaded.host, file, {
     outputsSchemaOf: producerOutputsSchemas(producers),
   });
+  // `${package}`: the package that supplies the host, else the project.
+  const resolveEnv = processResolveEnv(projectRoot, process.env, hostPackage);
   const oneShot = ONE_SHOT_VERBS.has(verb);
   if (oneShot) {
-    // `build` reads no other host's outputs: no producer needs to run.
-    const host = validateHost(runner, specifier, loaded.host, file, {
+    // `build` reads no other host's outputs: no producer needs to run. Its
+    // paths get the built-in string sugar, as a compound's build member's
+    // do; tokens stay.
+    const declared = substituteBuiltinEnv(
+      loaded.host,
+      resolveEnv.builtins ?? {},
+    );
+    const host = validateHost(runner, specifier, declared, file, {
       tokens: "allow",
     });
-    return fn(emptyMaps(host, loaded.host), ctx);
+    return fn(emptyMaps(host, declared), ctx);
   }
   const publishes = isSchemaLike(runner.outputsSchema);
   // Before the verb starts anything: a second live instance would take
@@ -206,7 +217,7 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
           producers,
           projectName,
         }),
-        ...processResolveEnv(projectRoot),
+        ...resolveEnv,
         where: hostFileLabel(path.basename(loaded.dir), hostPackage),
       }),
       file,

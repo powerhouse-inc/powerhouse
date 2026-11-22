@@ -1,6 +1,7 @@
 import {
   mkdirSync,
   mkdtempSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -310,17 +311,21 @@ export const outputsSchema = z.strictObject({
 export async function run() {}
 `,
     );
+    // Both name `${package}`: each member gets the root of whoever supplies
+    // its host.
+    const dist = { dist: "${package}/dist" };
     const hosts = {
       switchboard: {
         name: "tools-switchboard",
         runner: { module: "pack-runners/switchboard" },
+        config: dist,
       },
       stack: {
         name: "stack",
         runner: { module: "pack-runners/compound" },
         children: {
           sb: { host: "switchboard" },
-          ui: { host: "connect" },
+          ui: { host: "connect", config: dist },
         },
       },
     };
@@ -341,6 +346,12 @@ export async function run() {}
     );
     expect(outputs).toContain(
       "[@acme/tools/stack › ui (connect)] fake-runners/connect",
+    );
+    expect(outputs).toContain(
+      `[@acme/tools/stack › sb (switchboard)] pack-runners/switchboard\n  produces: origin, drives\n  \${package} = ${realpathSync(pack)} (the root of @acme/tools, which supplies the host)`,
+    );
+    expect(outputs).toContain(
+      `  \${package} = ${dir} (the project root: a project host)`,
     );
   });
 });

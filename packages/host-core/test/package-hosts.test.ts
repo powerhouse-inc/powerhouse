@@ -29,6 +29,8 @@ import {
 import { COMPOUND_MEMBER_ENV } from "../src/compound-member.js";
 import { loadHost, moduleRootOf } from "../src/host-loader.js";
 import { parseHostRef } from "../src/host-ref.js";
+import { processResolveEnv } from "../src/resolve/node.js";
+import { resolveHostOutputs } from "../src/resolve/resolve.js";
 import {
   clearRunRecord,
   isPidAlive,
@@ -91,6 +93,7 @@ export async function run(host, ctx) {
     name: host.name,
     projectRoot: ctx.projectRoot,
     hostPackage: ctx.hostPackage ? ctx.hostPackage.name : null,
+    ...(host.config ? { config: host.config } : {}),
   });
   return { outputs: { origin: "http://localhost:1", who } };
 }
@@ -106,6 +109,7 @@ interface KitCall {
   name: string;
   projectRoot: string;
   hostPackage: string | null;
+  config?: Record<string, unknown>;
 }
 
 declare global {
@@ -229,10 +233,43 @@ export default { name: "tools-studio", runner: { ...sb.runner } };`,
   symlinkSync(tools, path.join(modules, "@acme", "tools"), "junction");
 
   const kit = path.join(store, "kit");
+  // Where `${package}` points: kit's own paths host, and a compound with it
+  // next to the project's app, both naming the built-in.
+  const paths = {
+    dist: "${package}/dist/connect",
+    root: { $env: "package" },
+    project: "${projectRoot}",
+  };
   pkg(kit, "kit", {
+    "node_modules/kit-runner/package.json": JSON.stringify({
+      name: "kit-runner",
+      type: "module",
+      main: "index.js",
+    }),
+    "node_modules/kit-runner/index.js": kitRunner("kit"),
+    "node_modules/fake-compound/package.json": JSON.stringify({
+      name: "fake-compound",
+      type: "module",
+      main: "index.js",
+    }),
+    "node_modules/fake-compound/index.js": FAKE_COMPOUND,
     "hosts/studio/host.js": host({
       name: "kit-studio",
       runner: { module: "kit-runner" },
+    }),
+    "hosts/paths/host.js": host({
+      name: "kit-paths",
+      runner: { module: "kit-runner" },
+      config: paths,
+    }),
+    // The wrapper is written in kit's file; `app` is the project's host.
+    "hosts/paths-stack/host.js": host({
+      name: "paths-stack",
+      runner: { module: "fake-compound" },
+      children: {
+        own: { host: "paths" },
+        app: { host: "app", config: paths },
+      },
     }),
   });
   symlinkSync(kit, path.join(modules, "kit"), "junction");
@@ -567,5 +604,63 @@ describe("rule 4: a package host's state is in a folder named after the package"
       path.join(project, ".ph", "services", "@acme", "tools", "switchboard"),
     );
     expect(path.basename(file)).toMatch(/^switchboard\.\d+\.log$/);
+  });
+});
+
+describe("${package}: the root of the package that supplies the host", () => {
+  const kit = () => path.join(store, "kit");
+  const resolvedPaths = (root: string) => ({
+    dist: `${root}/dist/connect`,
+    root,
+    project,
+  });
+
+  it("is the package's real root for a package host, the project root for a project host", async () => {
+    const theirs = await loadHost(project, "kit/paths");
+    expect(
+      resolveHostOutputs(
+        theirs.host,
+        processResolveEnv(project, {}, theirs.package),
+      ).config,
+    ).toEqual(resolvedPaths(kit()));
+    // A project host with the same body: the project itself.
+    expect(
+      resolveHostOutputs(
+        { ...theirs.host, name: "lab-paths" },
+        processResolveEnv(project, {}),
+      ).config,
+    ).toEqual(resolvedPaths(project));
+  });
+
+  it("is each member's own in a package's compound: the project root for a project member", async () => {
+    await startCompound("kit/paths-stack");
+    expect(calls()).toEqual([
+      {
+        who: "kit",
+        name: "kit-paths",
+        projectRoot: project,
+        hostPackage: "kit",
+        config: resolvedPaths(kit()),
+      },
+      // The wrapper is written in kit's compound, but `app` is the
+      // project's host.
+      {
+        who: "project",
+        name: "lab-app",
+        projectRoot: project,
+        hostPackage: null,
+        config: resolvedPaths(project),
+      },
+    ]);
+  });
+
+  it("passes ph host check: $env package is a built-in, never unset", async () => {
+    const stack = await checkHost("kit/paths-stack", {
+      projectRoot: project,
+      env: {},
+    });
+    expect(stack.issues).toEqual([]);
+    const own = await checkHost("kit/paths", { projectRoot: project, env: {} });
+    expect(own.issues).toEqual([]);
   });
 });

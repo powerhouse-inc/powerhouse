@@ -321,6 +321,21 @@ describe("standalone ph run resolves output tokens", () => {
     );
   });
 
+  it("build gets the built-in string sugar, its tokens stay: ${package} is the project root of a project host", async () => {
+    const drive = withDrive(workflowsUrl);
+    const { dir, sink } = makeProject({
+      runner: { ...drive.runner, outDir: "${package}/dist/connect" },
+      config: { home: "${projectRoot}" },
+    });
+    await startRun({ host: "connect", verb: "build", projectRoot: dir });
+    const [call] = calls(sink) as (Call & {
+      host: { runner: { outDir?: string }; config?: unknown };
+    })[];
+    expect(call.host.runner.outDir).toBe(`${dir}/dist/connect`);
+    expect(call.host.config).toEqual({ home: dir });
+    expect(call.host.runner.plugins?.[0].config.drive).toEqual(workflowsUrl);
+  });
+
   it("refuses a second live instance before its verb starts anything", async () => {
     const { dir, sink } = makeProject({});
     liveSwitchboard(dir);
@@ -365,6 +380,21 @@ describe("--explain outputs", () => {
     expect(await explain(dir, "connect")).toContain(
       'host "switchboard": running',
     );
+  });
+
+  it("prints where ${package} points; $env package is a built-in", async () => {
+    const { dir } = makeProject({
+      runner: { module: "fake-runners/connect", outDir: "${package}/dist" },
+      config: { root: { $env: "package" } },
+    });
+    const out = await explain(dir, "connect");
+    expect(out).toContain(
+      `  \${package} = ${dir} (the project root: a project host)`,
+    );
+    expect(out).toContain("config.root ← $env package [set]");
+    // A host that names no ${package} gets no line.
+    vi.restoreAllMocks();
+    expect(await explain(dir, "switchboard")).not.toContain("${package} =");
   });
 
   it("prints a compound's token-derived start order", async () => {

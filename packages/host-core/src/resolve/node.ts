@@ -218,16 +218,20 @@ export function runRecordOutputSource(
 }
 
 /** The resolving process's `$env` inputs: its environment plus the
- * always-resolvable built-ins (`userData` honours PH_USER_DATA_DIR). */
+ * always-resolvable built-ins (`userData` honours PH_USER_DATA_DIR).
+ * `package` is the root of the package that supplies the host being
+ * resolved (`hostPackage`), else the project root. */
 export function processResolveEnv(
   projectRoot: string,
   env: Readonly<Record<string, string | undefined>> = process.env,
+  hostPackage?: HostPackage,
 ): Pick<ResolveSources, "env" | "builtins"> {
   return {
     env,
     builtins: {
       userData: defaultUserDataDir(projectRoot, env),
       projectRoot: path.resolve(projectRoot),
+      package: hostPackage?.root ?? path.resolve(projectRoot),
     },
   };
 }

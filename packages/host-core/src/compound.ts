@@ -598,7 +598,10 @@ export async function runCompound(
     host.name,
     new Map(prepared.map((m) => [m.key, m.runner.outputsSchema])),
   );
-  const resolveEnv = processResolveEnv(projectRoot, ctx.env);
+  // Per member: `${package}` is the root of the package that supplies the
+  // member's host, the project root for a project member.
+  const resolveEnvOf = (m: PreparedMember) =>
+    processResolveEnv(projectRoot, ctx.env, m.hostPackage);
   // What the foreground member is shown of the others.
   const statuses = new Map<string, MemberStatus>();
   const othersSeen = (): MemberStatus[] =>
@@ -651,11 +654,12 @@ export async function runCompound(
         oneShot,
       });
       // A one-shot member (build) needs no other member's outputs: it gets
-      // its declared host with only the "${userData}"/"${projectRoot}"
-      // string sugar substituted (tokens stay; its verb reads paths, never
-      // outputs; a $map reaches the verb as an empty collection). Everything
-      // else resolves against the members started before it and is
-      // validated in resolved form.
+      // its declared host with only the "${userData}"/"${projectRoot}"/
+      // "${package}" string sugar substituted (tokens stay; its verb reads
+      // paths, never outputs; a $map reaches the verb as an empty
+      // collection). Everything else resolves against the members started
+      // before it and is validated in resolved form.
+      const resolveEnv = resolveEnvOf(m);
       const resolved = oneShot
         ? substituteBuiltinEnv(m.draft, resolveEnv.builtins ?? {})
         : resolveHostOutputs(m.draft, {

@@ -146,7 +146,11 @@ A host file may import exactly three things: the project's
 generated `../<host>/outputs.js` (`ph generate hosts`). `process.` is banned —
 read the environment with `{ $env: "NAME" }` (or
 `{ $env: { name: "NAME", optional: true } }` to omit the property when unset),
-resolved when the host starts.
+resolved when the host starts. Three names always resolve, as
+`{ $env: "<name>" }` or as `"${<name>}"` inside a string: `userData` (the
+root of the `.ph` tree: `PH_USER_DATA_DIR`, else the project), `projectRoot`
+and `package` (the root of the package that supplies the host, see
+[Hosts from a package](#hosts-from-a-package)).
 
 ## Core reactor config (not plugins)
 
@@ -675,6 +679,17 @@ What a package's host resolves where:
 | the host file and its imports (sibling hosts, `outputs.js`, a `powerhouse.config.json` import is the package's own) | the working directory and `ctx.projectRoot` |
 | `runner.module` and `runner.plugins[].module` (switchboard) | `${projectRoot}`, `${userData}`, relative data paths: stores stay in the project |
 | a cli host's Cli: `config.package`, or without it the package's own `./cli` | drive ids, the `.ph/` tree, `PH_USER_DATA_DIR` |
+| `${package}`: the package's root | |
+
+A package's host names its own files with `${package}`: the package's real
+folder, so `runner.outDir: "${package}/dist/connect"` serves the Connect the
+package built, not the project's. For a project host `${package}` is the
+project root, so one host file serves both the package's own repository and
+the projects that install it. In a compound each member gets its own: the
+root of the package that supplies that member's host (a project member of a
+package's compound gets the project root). `{ $env: "package" }` reads the
+same value, and `ph run <host> --explain outputs` prints it for a host that
+names it.
 
 So a package names the runners its hosts use as its own dependencies; one
 that must match the project's tools, such as

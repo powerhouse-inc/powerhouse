@@ -11,6 +11,7 @@ import {
   findDeadConnectConfig,
   formatPath,
   hostFileLabel,
+  isBuiltinEnvName,
   isToken,
   loadHost,
   loadProducers,
@@ -50,8 +51,9 @@ import {
  * same declared validation `ph run` does first (so a printed explain is a
  * host that loads). `drives`: the merged drive plan with provenance
  * (browser-only plugins listed as unresolvable). `outputs`: the resolution
- * plan — consumed outputs and their producers, `$env` names, the compound
- * start order the tokens imply, which producers are running and, for a
+ * plan — consumed outputs and their producers, `$env` names, where
+ * `${package}` points, the compound start order the tokens imply, which
+ * producers are running and, for a
  * running producer, the value each token resolves to now. A `$map` in
  * `reactor.drives` is shown as the token and, when its producer runs, as the
  * drives it renders.
@@ -81,8 +83,10 @@ interface MemberView {
   specifier: string;
   file: string;
   /** Where its plugin specifiers resolve from: its package, else the
-   * project. */
+   * project. Also what `${package}` is in it. */
   moduleRoot: string;
+  /** The package that supplies its host. */
+  packageName?: string;
   /** Where the effective `config` lives (a wrapper `config` is a full
    * statement in the compound's file). */
   configWhere: string;
@@ -93,8 +97,10 @@ interface LoadedView {
   runner: RunnerModule;
   specifier: string;
   file: string;
-  /** Where its plugin specifiers resolve from. */
+  /** Where its plugin specifiers resolve from, and `${package}`. */
   moduleRoot: string;
+  /** The package that supplies the host. */
+  packageName?: string;
   /** Set for a compound. */
   members?: MemberView[];
   /** Where tokens resolve NOW (for printing values): a standalone host's
@@ -130,7 +136,15 @@ async function loadView(
       producers,
       projectName: readProjectName(projectRoot),
     });
-    return { host: loaded.host, runner, specifier, file, moduleRoot, source };
+    return {
+      host: loaded.host,
+      runner,
+      specifier,
+      file,
+      moduleRoot,
+      ...(scope ? { packageName: scope.name } : {}),
+      source,
+    };
   }
   validateDeclaredHost(runner, specifier, loaded.host, file);
   validateHost(runner, specifier, loaded.host, file, { tokens: "allow" });
@@ -153,6 +167,7 @@ async function loadView(
       specifier: memberSpecifier,
       file: memberFile,
       moduleRoot: memberRoot,
+      ...(member.package ? { packageName: member.package.name } : {}),
       configWhere:
         wrapper.config !== undefined
           ? `${file} (children.${key}.config)`
@@ -199,6 +214,7 @@ async function loadView(
     specifier,
     file,
     moduleRoot,
+    ...(scope ? { packageName: scope.name } : {}),
     members,
     source,
   };
@@ -403,7 +419,7 @@ function printConsumes(
   }
   const { env: processEnv } = processResolveEnv(process.cwd());
   for (const site of env) {
-    const builtin = site.name === "userData" || site.name === "projectRoot";
+    const builtin = isBuiltinEnvName(site.name);
     const state =
       builtin || processEnv?.[site.name] !== undefined
         ? "set"
@@ -416,11 +432,29 @@ function printConsumes(
   }
 }
 
+/** Where `${package}` points, for a host that names it (as `"${package}"`
+ * sugar or `{ $env: "package" }`): a path, never a secret. */
+function printPackageRoot(
+  host: unknown,
+  indent: string,
+  view: { moduleRoot: string; packageName?: string },
+): void {
+  const named =
+    JSON.stringify(host).includes("${package}") ||
+    envSitesOf(host).some((site) => site.name === "package");
+  if (!named) return;
+  const whose = view.packageName
+    ? `the root of ${view.packageName}, which supplies the host`
+    : "the project root: a project host";
+  console.log(`${indent}\${package} = ${view.moduleRoot} (${whose})`);
+}
+
 function explainOutputs(name: string, view: LoadedView): void {
   if (!view.members) {
     const source = view.source;
     console.log(`[${name}] ${view.specifier}`);
     console.log(`  produces: ${outputKeys(view.runner)}`);
+    printPackageRoot(view.host, "  ", view);
     printConsumes(
       view.host,
       "  ",
@@ -510,6 +544,7 @@ function explainOutputs(name: string, view: LoadedView): void {
     if (!m) continue;
     console.log(`[${name} › ${key} (${m.wrapper.host})] ${m.specifier}`);
     console.log(`  produces: ${outputKeys(m.runner)}`);
+    printPackageRoot(m.host, "  ", m);
     printConsumes(
       m.host,
       "  ",

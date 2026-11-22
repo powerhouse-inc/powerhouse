@@ -210,7 +210,7 @@ export function prepareMemberStorage(
   if (storage?.kind !== "path" || !storage.dataDir) return;
   // `ph run` resolves `$env` and the `${userData}` sugar before the verb;
   // an unresolved one here would mkdir a literal "${userData}" folder.
-  if (/\$\{(userData|projectRoot)\}/.test(storage.dataDir)) {
+  if (/\$\{(userData|projectRoot|package)\}/.test(storage.dataDir)) {
     throw new Error(
       `${hostFileLabel}: storage.dataDir "${storage.dataDir}" was not resolved; resolve the host (resolveHostOutputs) before starting it.`,
     );

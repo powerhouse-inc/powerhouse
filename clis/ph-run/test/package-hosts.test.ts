@@ -8,6 +8,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -45,6 +46,19 @@ export async function run(host, ctx) {
   return { outputs: { origin: "http://localhost:1", who: "${who}" }, shutdown: async () => clearInterval(keep) };
 }
 `;
+
+/** A port the OS gave out, free again: what the Connect is asked to bind. */
+function freePort(): Promise<number> {
+  return new Promise((done, fail) => {
+    const probe = createServer();
+    probe.once("error", fail);
+    probe.listen(0, "127.0.0.1", () => {
+      const address = probe.address();
+      const port = typeof address === "object" && address ? address.port : 0;
+      probe.close(() => done(port));
+    });
+  });
+}
 
 function write(file: string, source: string) {
   mkdirSync(path.dirname(file), { recursive: true });
@@ -140,6 +154,35 @@ describe("ph-run run <package>/<host>", () => {
     write(
       path.join(tools, "hosts", "sb", "host.js"),
       `export default { name: "sb", runner: { module: "kit-runner" } };`,
+    );
+    // A Connect the package built, served by ph-run's own runner (the
+    // package's dependency), next to a Connect build of the project's.
+    write(
+      path.join(tools, "hosts", "connect", "host.js"),
+      `export default ${JSON.stringify({
+        name: "connect",
+        runner: {
+          module: "@powerhousedao/ph-run/runners/connect",
+          outDir: "${package}/dist/connect",
+          strictPort: true,
+        },
+      })};`,
+    );
+    write(
+      path.join(tools, "dist", "connect", "index.html"),
+      "<!doctype html><title>the package's build</title>",
+    );
+    write(
+      path.join(project, "dist", "connect", "index.html"),
+      "<!doctype html><title>the project's build</title>",
+    );
+    mkdirSync(path.join(tools, "node_modules", "@powerhousedao"), {
+      recursive: true,
+    });
+    symlinkSync(
+      path.dirname(path.dirname(PH_RUN)),
+      path.join(tools, "node_modules", "@powerhousedao", "ph-run"),
+      "junction",
     );
     mkdirSync(path.join(project, "node_modules", "@acme"), { recursive: true });
     symlinkSync(
@@ -237,6 +280,24 @@ describe("ph-run run <package>/<host>", () => {
     expect(readRunRecord(project, "@acme/tools/tool-sb")).toBeUndefined();
   }, 90_000);
 
+  it("serves the Connect build at ${package}/dist/connect: the package's, not the project's", async () => {
+    const port = await freePort();
+    const run = phRun(["@acme/tools/connect", "serve", "--port", String(port)]);
+    await waitFor(
+      () => readRunRecord(project, "@acme/tools/connect") !== undefined,
+      run.output,
+    );
+    const outputs = readRunRecord(project, "@acme/tools/connect")?.outputs;
+    const origin = (outputs as { origin?: string } | undefined)?.origin;
+    expect(origin).toBe(`http://127.0.0.1:${port}`);
+    const page = await fetch(`${origin}/`, {
+      headers: { accept: "text/html" },
+    });
+    expect(await page.text()).toContain("the package's build");
+    expect(once(["@acme/tools/connect", "--stop"]).status).toBe(0);
+    expect(await run.exited).not.toBeNull();
+  }, 90_000);
+
   it("says what is wrong with a ref, naming the package and the host", () => {
     const missing = once(["@acme/nope/sb"]);
     expect(missing.status).toBe(1);
@@ -246,7 +307,7 @@ describe("ph-run run <package>/<host>", () => {
     const unknown = once(["@acme/tools/studio"]);
     expect(unknown.status).toBe(1);
     expect(unknown.stderr).toContain(
-      'Package "@acme/tools" supplies no host "studio". Its hosts: sb.',
+      'Package "@acme/tools" supplies no host "studio". Its hosts: connect, sb.',
     );
     const bare = once(["@acme/tools"]);
     expect(bare.status).toBe(1);

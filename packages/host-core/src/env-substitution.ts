@@ -1,18 +1,23 @@
 /**
  * Pure built-in `$env` substitution: the `"${userData}"` / `"${projectRoot}"`
- * string sugar, deep-applied to a JSON-shaped value. No node imports, so it
- * ships in `./schema`; the node default for userData is placeholders.ts.
+ * / `"${package}"` string sugar, deep-applied to a JSON-shaped value. No node
+ * imports, so it ships in `./schema`; the node default for userData is
+ * placeholders.ts.
  */
 
 export interface BuiltinEnv {
   userData?: string;
   projectRoot?: string;
+  /** The root of the package that supplies the host (its real folder); the
+   * project root for a project host. */
+  package?: string;
 }
 
 /** The always-resolvable `$env` names (also the `"${name}"` sugar). */
 export const BUILTIN_ENV_NAMES: readonly (keyof BuiltinEnv)[] = [
   "userData",
   "projectRoot",
+  "package",
 ];
 
 export function isBuiltinEnvName(name: string): name is keyof BuiltinEnv {

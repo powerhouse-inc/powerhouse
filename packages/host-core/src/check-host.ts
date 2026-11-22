@@ -123,6 +123,7 @@ export async function checkHost(
     runner,
     specifier,
     verb,
+    hostPackage,
     outputsSchemaOf: producerOutputsSchemas(producers),
     self: "outputs",
   });
@@ -194,7 +195,11 @@ async function checkSubject(
   const issue = issuer(result, subject.file);
   const { runner, specifier, file } = subject;
   const declared = checkDeclared(result, subject, subject.outputsSchemaOf);
-  const resolveEnv = processResolveEnv(options.projectRoot, options.env);
+  const resolveEnv = processResolveEnv(
+    options.projectRoot,
+    options.env,
+    subject.hostPackage,
+  );
   const patch = subject.patch ?? ((host) => host);
 
   // A one-shot verb (build) resolves nothing; its verb gets the declared host.
@@ -388,6 +393,7 @@ async function checkCompound(
       host: m.draft,
       runner: m.runner,
       specifier: m.specifier,
+      ...(m.hostPackage ? { hostPackage: m.hostPackage } : {}),
       verb: isForeground
         ? (m.draft.runner.defaultVerb ?? "run")
         : memberVerbOf(verb, m.draft.runner),
