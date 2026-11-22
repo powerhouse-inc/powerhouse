@@ -1,10 +1,11 @@
 import {
   ANALYTICS_ENGINE_CORE_PACKAGE,
+  CLI_ENTRY,
   FEATURE_DEPENDENCIES,
   REACTOR_API_PACKAGE,
   RELATIONAL_DB_PROCESSOR_CLASS,
 } from "@powerhousedao/shared/clis";
-import { readdirSync, readFileSync, statSync } from "fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { join } from "path";
 import { type PackageJson, readPackage } from "read-pkg";
 import { writePackage } from "write-package";
@@ -86,6 +87,10 @@ export function detectFeatures(projectDir: string): Feature[] {
   const piecesStat = statSync(piecesDir, { throwIfNoEntry: false });
   if (piecesStat?.isDirectory() && hasPiece(piecesDir)) {
     features.push("piece");
+  }
+  // The test `ph build`'s Cli pass makes, so detection and the build agree.
+  if (existsSync(join(projectDir, CLI_ENTRY))) {
+    features.push("cli");
   }
   return features;
 }

@@ -18,10 +18,8 @@ const entry = [
   "scalars/index.ts",
 ];
 
-// The module a package's ./cli export is built from: its `defineCli` result.
-// Node-only like ./pieces: a Cli runs in a terminal, never in Connect. It is
-// its own build (buildCliBuildConfig), not an entry of the node build.
-export const CLI_ENTRY = "cli/index.ts";
+// The module a package's ./cli export is built from (see constants.ts).
+export { CLI_ENTRY } from "./constants.js";
 
 // ./pieces is node-only for the same reason ./reactor is browser-only: a piece
 // is loaded and run by a host process, never by the browser. Only the list of

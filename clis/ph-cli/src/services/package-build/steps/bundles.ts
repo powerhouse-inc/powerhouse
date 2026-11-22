@@ -15,13 +15,14 @@ import {
   projectPath,
   undeclaredExternalDependencies,
 } from "@powerhousedao/shared/build-pieces";
+import { CLINT_PACKAGE } from "@powerhousedao/shared/clis/constants";
 import {
   EXTERNALIZABLE_SHARED_SPECIFIERS,
   findSharedImports,
 } from "@powerhousedao/shared/connect";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { readPackage } from "read-pkg";
+import { type NormalizedPackageJson, readPackage } from "read-pkg";
 import { build as tsdownBuild, type InlineConfig } from "tsdown";
 import { noConnectImports } from "../../../utils/offered-routes-imports.js";
 import { offeredRoutesManifest } from "../../../utils/offered-routes-manifest.js";
@@ -29,6 +30,7 @@ import {
   HOST_ROUTES_DIR,
   OFFERED_ROUTES_MODULE,
 } from "../../../utils/sync-connect-routes.js";
+import { BuildRefusal } from "../pipeline/steps.js";
 import type { StandardBuildStep } from "./context.js";
 import { stageLogger } from "./stage-logger.js";
 
@@ -204,6 +206,22 @@ function importedPackages(
   };
 }
 
+const CLINT_PEER_MISSING = `a package with a Cli declares \`${CLINT_PACKAGE}\` as a peer: run \`ph migrate\`, or add it`;
+
+// The Cli build leaves clint to the host (CLINT_EXTERNAL), so a published Cli
+// without it among the package's peers imports a package nobody promised. A
+// plain build warns; `--release` refuses.
+function assertClintDeclared(pkg: NormalizedPackageJson, release: boolean) {
+  if (
+    pkg.peerDependencies?.[CLINT_PACKAGE] !== undefined ||
+    pkg.dependencies?.[CLINT_PACKAGE] !== undefined
+  ) {
+    return;
+  }
+  if (release) throw new BuildRefusal(`✘ ${CLINT_PEER_MISSING}`);
+  console.warn(`⚠ ${CLINT_PEER_MISSING}`);
+}
+
 // After the node bundle, which empties node/: the Cli lands in node/cli,
 // which no other step writes. A package without a cli/index.ts has no pass.
 export const cliBundleStep: StandardBuildStep = {
@@ -213,6 +231,7 @@ export const cliBundleStep: StandardBuildStep = {
     const entry = join(projectRoot, CLI_ENTRY);
     if (!existsSync(entry)) return;
     const pkg = findings.pkg ?? (await readPackage({ cwd: projectRoot }));
+    assertClintDeclared(pkg, args.release);
     const declared = declaredPackages(pkg);
     // Only what the declared set leaves to the bundler reaches the detector,
     // so a native or WebAssembly package found here is undeclared.

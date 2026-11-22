@@ -1,4 +1,5 @@
 import {
+  CLINT_PACKAGE,
   packageJsonExports,
   packageScripts,
 } from "@powerhousedao/shared/clis/constants";
@@ -168,6 +169,44 @@ describe("the dependencies of a migrated project", () => {
       workspacePackageNames: [],
     });
     expect(again).toEqual(managed);
+  });
+});
+
+describe("the dependencies of a migrated project with a Cli", () => {
+  const NEXT = "6.3.0-dev.1";
+  const migrateCli = (packageJson: PackageJson) =>
+    resolveManagedDependencies({
+      packageJson,
+      features: ["cli"],
+      fullyQualifiedVersion: NEXT,
+      workspacePackageNames: [],
+    });
+
+  it("adds clint as a peer at the migrated version, beside its dev pin", () => {
+    const { peerDependencies, devDependencies } = migrateCli({
+      peerDependencies: { "document-model": "6.0.0" },
+      devDependencies: { [CLINT_PACKAGE]: "6.0.0" },
+    });
+    expect(peerDependencies).toHaveProperty(CLINT_PACKAGE, NEXT);
+    expect(devDependencies).toHaveProperty(CLINT_PACKAGE, NEXT);
+  });
+
+  it("moves clint out of dependencies to its peer and dev pin", () => {
+    const managed = migrateCli({
+      dependencies: { [CLINT_PACKAGE]: "6.0.0", luxon: "^3.0.0" },
+    });
+    expect(managed.dependencies).toEqual({ luxon: "^3.0.0" });
+    expect(managed.peerDependencies).toHaveProperty(CLINT_PACKAGE, NEXT);
+    expect(managed.devDependencies).toHaveProperty(CLINT_PACKAGE, NEXT);
+  });
+
+  it("keeps a catalog: ref", () => {
+    const { peerDependencies, devDependencies } = migrateCli({
+      peerDependencies: { [CLINT_PACKAGE]: "catalog:" },
+      devDependencies: { [CLINT_PACKAGE]: "catalog:" },
+    });
+    expect(peerDependencies).toHaveProperty(CLINT_PACKAGE, "catalog:");
+    expect(devDependencies).toHaveProperty(CLINT_PACKAGE, "catalog:");
   });
 });
 

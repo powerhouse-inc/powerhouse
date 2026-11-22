@@ -1,4 +1,6 @@
 import {
+  CLI_ENTRY,
+  CLINT_PACKAGE,
   FEATURE_DEPENDENCIES,
   KYSELY_PACKAGE,
   PIECES_FRAMEWORK_PACKAGE,
@@ -208,6 +210,61 @@ describe("migrate and connect-core", () => {
     });
     expect(peerDependencies["@powerhousedao/connect-core"]).toBe("6.3.0-dev.1");
     expect(devDependencies["@powerhousedao/connect-core"]).toBe("6.3.0-dev.1");
+  });
+});
+
+function writeCli(dir: string): void {
+  mkdirSync(join(dir, "cli"), { recursive: true });
+  writeFileSync(join(dir, CLI_ENTRY), "export const cli = {};\n");
+}
+
+describe("cli feature", () => {
+  // The dev pin every project gets (VERSIONED_DEV_DEPENDENCIES), at a version
+  // of its own so the test tells it from the document-model pin.
+  const DEV_PIN = "6.2.3-dev.9";
+
+  it("is not detected without a cli/index.ts", () => {
+    const dir = makeProject();
+    mkdirSync(join(dir, "cli"));
+    writeFileSync(join(dir, "cli", "commands.ts"), "export {};\n");
+    expect(detectFeatures(dir)).not.toContain("cli");
+  });
+
+  it("is detected from a cli/index.ts", () => {
+    const dir = makeProject();
+    writeCli(dir);
+    expect(detectFeatures(dir)).toEqual(["cli"]);
+  });
+
+  it("declares clint as a versioned peer", () => {
+    expect(FEATURE_DEPENDENCIES.cli).toEqual({
+      peerVersioned: [CLINT_PACKAGE],
+      peerExternal: {},
+      devVersioned: [],
+    });
+  });
+
+  it("adds clint as a peer at the document-model pin and keeps the dev pin", async () => {
+    const dir = makeProject({
+      devDependencies: { "document-model": PIN, [CLINT_PACKAGE]: DEV_PIN },
+    });
+    writeCli(dir);
+
+    expect(await syncFeatureDependencies(detectFeatures(dir), dir)).toEqual([
+      CLINT_PACKAGE,
+    ]);
+    const manifest = readManifest(dir);
+    expect(manifest.peerDependencies?.[CLINT_PACKAGE]).toBe(PIN);
+    expect(manifest.devDependencies?.[CLINT_PACKAGE]).toBe(DEV_PIN);
+  });
+
+  it("leaves the package.json untouched on a second run", async () => {
+    const dir = makeProject();
+    writeCli(dir);
+    await syncFeatureDependencies(detectFeatures(dir), dir);
+    const afterFirst = readFileSync(join(dir, "package.json"), "utf-8");
+    expect(await syncFeatureDependencies(detectFeatures(dir), dir)).toEqual([]);
+    expect(readFileSync(join(dir, "package.json"), "utf-8")).toBe(afterFirst);
   });
 });
 

@@ -98,8 +98,15 @@ export const ANALYTICS_ENGINE_CORE_PACKAGE =
 export const GRAPHQL_PACKAGE = "graphql";
 export const GRAPHQL_TAG_PACKAGE = "graphql-tag";
 export const PIECES_FRAMEWORK_PACKAGE = "@powerhousedao/pieces-framework";
+export const CLINT_PACKAGE = "@powerhousedao/clint";
 export const KYSELY_PACKAGE = "kysely";
 export const RELATIONAL_DB_PROCESSOR_CLASS = "RelationalDbProcessor";
+
+// The module a package's ./cli export is built from: its `defineCli` result.
+// Node-only like ./pieces: a Cli runs in a terminal, never in Connect. It is
+// its own build (buildCliBuildConfig), not an entry of the node build. Here,
+// not in build-config, so codegen detects a Cli by the file the build reads.
+export const CLI_ENTRY = "cli/index.ts";
 
 // External peerDependencies of every generated project.
 // `peer` is the consumer-facing range; `dev` is the exact build-tested pin.
@@ -145,6 +152,13 @@ export const FEATURE_DEPENDENCIES = {
     peerExternal: {},
     devVersioned: [PIECES_FRAMEWORK_PACKAGE],
   },
+  // A Cli runs on the host's clint: the build leaves every clint import
+  // external (CLINT_EXTERNAL), so the package must name it for its consumers.
+  cli: {
+    peerVersioned: [CLINT_PACKAGE],
+    peerExternal: {},
+    devVersioned: [],
+  },
 } as const satisfies Record<
   string,
   {
@@ -158,6 +172,7 @@ export const VERSIONED_DEPENDENCIES = [
   ...VERSIONED_PEER_DEPENDENCIES,
   ...FEATURE_DEPENDENCIES.analyticsProcessor.peerVersioned,
   ...FEATURE_DEPENDENCIES.subgraph.peerVersioned,
+  ...FEATURE_DEPENDENCIES.cli.peerVersioned,
 ];
 
 // Transitive dependencies whose postinstall scripts the generated project

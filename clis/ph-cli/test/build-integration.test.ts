@@ -35,6 +35,9 @@ import {
   vi,
 } from "vitest";
 import { runBuild } from "../src/services/build.js";
+import { BuildRefusal } from "../src/services/package-build/pipeline/steps.js";
+import { buildPackage } from "../src/services/package-build/run-build.js";
+import { standardBuildSteps } from "../src/services/package-build/steps/standard.js";
 import type { BuildArgs } from "../src/types.js";
 import { treeDigest } from "./staged-build-project.js";
 
@@ -435,7 +438,8 @@ describe("runBuild on a package that exports a Cli", () => {
     expect(printed).toEqual(["Hello, Ada!"]);
     expect(exitCode).toBeUndefined();
 
-    // tsc found the Cli's types through the linked clint: no warning.
+    // tsc found the Cli's types through the linked clint, and the package
+    // declares clint as a peer: no warning.
     expect(warnings).toEqual([]);
   }, 120_000);
 });
@@ -520,7 +524,10 @@ describe("runBuild on a Cli that imports declared and dev-only packages", () => 
         license: "MIT",
         type: "module",
         dependencies: { "declared-a": "1.0.0" },
-        peerDependencies: { "unused-peer": "^1.0.0" },
+        peerDependencies: {
+          "@powerhousedao/clint": "*",
+          "unused-peer": "^1.0.0",
+        },
         devDependencies: { "dev-b": "1.0.0" },
       }),
     );
@@ -598,13 +605,13 @@ describe("runBuild on a Cli that imports declared and dev-only packages", () => 
       expect(built, file).not.toContain("PROJECT_SOURCE_MARKER");
     }
 
-    // One line counts what the Cli leaves to the install: the unused peer is
-    // declared, but the Cli imports nothing of it.
+    // One line counts what the Cli leaves to the install, declared-a and
+    // clint: the unused peer is declared, but the Cli imports nothing of it.
     const logged = vi
       .mocked(console.log)
       .mock.calls.map((parts) => parts.map(String).join(" "));
     expect(logged).toContain(
-      "cli: 1 declared package stays external, installed with the package",
+      "cli: 2 declared packages stay external, installed with the package",
     );
     expect(readJson<Manifest>(join(dist, "powerhouse.manifest.json")).cli).toBe(
       true,
@@ -624,6 +631,88 @@ describe("runBuild on a Cli that imports declared and dev-only packages", () => 
       "DECLARED_ROOT DECLARED_SUB DEV_ONLY_ROOT PROJECT_SOURCE_MARKER",
     ]);
     expect(warnings).toEqual([]);
+  }, 120_000);
+});
+
+// clint stays external to every Cli build, so a package that does not declare
+// it publishes a Cli importing a package nobody promised to install.
+describe("runBuild on a Cli whose package does not declare clint", () => {
+  let fixture: string;
+  const clint = join(
+    import.meta.dirname,
+    "..",
+    "..",
+    "..",
+    "packages",
+    "clint",
+  );
+  const missingPeer =
+    "a package with a Cli declares `@powerhousedao/clint` as a peer: run `ph migrate`, or add it";
+
+  beforeAll(() => {
+    if (!existsSync(join(clint, "dist", "index.mjs"))) {
+      throw new Error(
+        "Build @powerhousedao/clint first: the fixture's Cli is defined with it.",
+      );
+    }
+    fixture = mkdtempSync(join(fixtures, ".cli-no-clint-build-"));
+    cpSync(join(fixtures, "cli-package"), fixture, {
+      recursive: true,
+      filter: (source) =>
+        !/[\\/](node_modules|dist)$|\.tsbuildinfo$/.test(source),
+    });
+    // clint only as the dev pin every project gets, which no install of the
+    // package brings.
+    writeFileSync(
+      join(fixture, "package.json"),
+      JSON.stringify({
+        name: "@fixture/cli-package",
+        version: "1.0.0",
+        private: true,
+        license: "MIT",
+        type: "module",
+        devDependencies: { "@powerhousedao/clint": "*" },
+      }),
+    );
+    mkdirSync(join(fixture, "node_modules", "@powerhousedao"), {
+      recursive: true,
+    });
+    symlinkSync(
+      clint,
+      join(fixture, "node_modules", "@powerhousedao", "clint"),
+      linkType,
+    );
+  });
+
+  afterAll(() => {
+    if (fixture) rmSync(fixture, { recursive: true, force: true });
+  });
+
+  it("warns, and still builds the Cli", async () => {
+    process.chdir(fixture);
+
+    await runBuild(args);
+
+    expect(warnings).toEqual([`⚠ ${missingPeer}`]);
+    expect(existsSync(join(fixture, "dist", "node", "cli", "index.mjs"))).toBe(
+      true,
+    );
+  }, 120_000);
+
+  it("refuses under --release, leaving the previous output", async () => {
+    process.chdir(fixture);
+    const before = treeDigest(fixture, ["dist"]);
+    // Without the release steps that record the package's files and check
+    // its definitions in a worker: only the Cli pass's answer is under test.
+    const steps = standardBuildSteps.filter(
+      ({ id }) => id !== "release-start" && id !== "definitions",
+    );
+
+    const built = buildPackage({ ...args, release: true }, { steps });
+
+    await expect(built).rejects.toThrow(new BuildRefusal(`✘ ${missingPeer}`));
+    expect(warnings).toEqual([]);
+    expect(treeDigest(fixture, ["dist"])).toEqual(before);
   }, 120_000);
 });
 
