@@ -6,23 +6,37 @@ type Packument = {
   "dist-tags"?: Record<string, string>;
 };
 
-// Non-private package names under the release project globs.
-export async function listPublishablePackages(
+export type PublishableManifest = { name: string; version?: string };
+
+// Name and version of the non-private packages under the release project globs.
+export async function listPublishableManifests(
   globs: string[],
   cwd = process.cwd(),
-): Promise<string[]> {
-  const names: string[] = [];
+): Promise<PublishableManifest[]> {
+  const manifests: PublishableManifest[] = [];
   for (const pattern of globs) {
     const glob = new Bun.Glob(`${pattern}/package.json`);
     for await (const path of glob.scan({ cwd })) {
       const pkg = (await Bun.file(`${cwd}/${path}`).json()) as {
         name?: string;
+        version?: string;
         private?: boolean;
       };
-      if (pkg.name && !pkg.private) names.push(pkg.name);
+      if (pkg.name && !pkg.private) {
+        manifests.push({ name: pkg.name, version: pkg.version });
+      }
     }
   }
-  return names.sort();
+  return manifests.sort((a, b) => (a.name < b.name ? -1 : 1));
+}
+
+// Non-private package names under the release project globs.
+export async function listPublishablePackages(
+  globs: string[],
+  cwd = process.cwd(),
+): Promise<string[]> {
+  const manifests = await listPublishableManifests(globs, cwd);
+  return manifests.map((manifest) => manifest.name).sort();
 }
 
 // Same abbreviated packument pnpm/npm resolve from, so "visible" here means

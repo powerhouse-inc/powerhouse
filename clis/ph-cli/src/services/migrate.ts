@@ -15,7 +15,7 @@ import { findNodeProjectRoot, isPowerhouseProject } from "../utils.js";
 import { unifiedDiff } from "./migrate-subgraphs.js";
 
 // Dist-tags a prerelease version can name its channel by.
-const PRERELEASE_TAGS = ["dev", "staging", "rc"];
+const PRERELEASE_TAGS = ["dev", "staging", "rc", "next"];
 
 // Set on the re-executed migrate, so the version check runs once.
 const VERSION_CHECKED_ENV = "PH_MIGRATE_VERSION_CHECKED";
@@ -74,7 +74,7 @@ export function inferReleaseTag(packageJson: ProjectPackageJson): {
   }
   return {
     tag: "latest",
-    reason: `the project is on ${pinned}, ${channel === undefined ? "a stable release" : "not on a dev, staging or rc channel"}`,
+    reason: `the project is on ${pinned}, ${channel === undefined ? "a stable release" : "not on a dev, staging, rc or next channel"}`,
   };
 }
 

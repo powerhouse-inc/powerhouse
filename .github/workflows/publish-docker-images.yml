@@ -1,8 +1,32 @@
 name: Build and Publish Docker Images
 
+# Both inputs are optional on both triggers. release-branch.yml passes the tag
+# it just released and that release's npm tag. A bare manual dispatch still
+# works: the tag is then the newest one of the branch's channel, and the
+# channel is read from the tag.
 on:
   workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: false
+        default: ""
+      channel:
+        type: string
+        required: false
+        default: ""
   workflow_dispatch:
+    inputs:
+      tag:
+        type: string
+        required: false
+        default: ""
+        description: "Release tag, e.g. v6.3.0-dev.8. Empty: newest tag of this branch's channel."
+      channel:
+        type: string
+        required: false
+        default: ""
+        description: "npm tag of that release: dev, rc, staging, latest or next. Empty: read from the tag."
 
 permissions:
   contents: write
@@ -33,24 +57,32 @@ jobs:
             harbor_only: true
     outputs:
       tag: ${{ steps.get-tag.outputs.tag }}
+      channel: ${{ steps.get-tag.outputs.channel }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Get tags
         run: git fetch --tags origin
-      - name: Set last tag
+      - name: Set tag and channel
         id: get-tag
         env:
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_CHANNEL: ${{ inputs.channel }}
           BRANCH: ${{ github.ref_name }}
         run: |
-          # Pick the most recent tag for the channel matching this branch.
-          # Same channel logic as `determine-downstream-params` in
-          # release-branch.yml. The previous "tail of all tags" picker would
-          # grab a tag from a sibling channel whenever, say, a
-          # `release/staging/*` cut happened after the most recent `-dev` tag —
-          # the nightly main pipeline would then build with that staging tag
-          # and overwrite Harbor's `staging` floating tag with main-branch code.
-          if [[ "$BRANCH" == "main" ]]; then
+          if [[ -n "$INPUT_TAG" ]]; then
+            # The caller names the release to build.
+            TAG="$INPUT_TAG"
+            if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+              echo "::error::Tag $TAG does not exist"
+              exit 1
+            fi
+          # No tag given (manual dispatch): pick the most recent tag for the
+          # channel matching this branch. A picker over all tags would grab a
+          # tag from a sibling channel whenever, say, a `release/staging/*`
+          # cut happened after the most recent `-dev` tag, and then overwrite
+          # Harbor's `staging` floating tag with main-branch code.
+          elif [[ "$BRANCH" == "main" ]]; then
             TAG=$(git tag --sort=-creatordate --list '*-dev.*' | head -n 1)
           elif [[ "$BRANCH" == release/rc/* ]]; then
             TAG=$(git tag --sort=-creatordate --list '*-rc.*' | head -n 1)
@@ -59,11 +91,31 @@ jobs:
           elif [[ "$BRANCH" == release/production/* ]]; then
             TAG=$(git tag --sort=-creatordate | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
           else
-            echo "::error::Unknown branch '$BRANCH' — refusing to guess a tag"
+            echo "::error::Unknown branch '$BRANCH' — refusing to guess a tag. Give the tag input."
             exit 1
           fi
+
+          # The channel is the floating image tag and decides what the jobs
+          # below update. Without the input it is read from the tag; a tag
+          # that fits no channel gets no floating tag and updates nothing.
+          CHANNEL="$INPUT_CHANNEL"
+          if [[ -z "$CHANNEL" ]]; then
+            if   [[ "$TAG" == *"-dev."* ]];     then CHANNEL=dev
+            elif [[ "$TAG" == *"-rc."* ]];      then CHANNEL=rc
+            elif [[ "$TAG" == *"-staging."* ]]; then CHANNEL=staging
+            elif [[ "$TAG" == *"-next."* ]];    then CHANNEL=next
+            elif [[ "$TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then CHANNEL=latest
+            fi
+          fi
+          case "$CHANNEL" in
+            dev|rc|staging|next|latest|"") ;;
+            *) echo "::error::channel must be dev, rc, staging, latest or next (got '$CHANNEL')"; exit 1 ;;
+          esac
+
           echo "GITHUB_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "ADDITIONAL_TAG=$CHANNEL" >> "$GITHUB_ENV"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
       - name: Validate tag
         run: |
           if [ -z "${{ env.GITHUB_TAG }}" ]; then
@@ -71,23 +123,11 @@ jobs:
             exit 1
           fi
           echo "Using tag: ${{ env.GITHUB_TAG }}"
+          echo "Using channel: ${{ env.ADDITIONAL_TAG }}"
       - name: Set image paths
         run: |
           HARBOR_PROJECT="${GITHUB_REPOSITORY//\//-}"
           echo "HARBOR_PATH=${HARBOR_PROJECT}/${{ matrix.image }}" >> $GITHUB_ENV
-      - name: Determine additional tag
-        run: |
-          if [[ "${{ env.GITHUB_TAG }}" == *"-dev."* ]]; then
-            echo "ADDITIONAL_TAG=dev" >> $GITHUB_ENV
-          elif [[ "${{ env.GITHUB_TAG }}" == *"-rc."* ]]; then
-            echo "ADDITIONAL_TAG=rc" >> $GITHUB_ENV
-          elif [[ "${{ env.GITHUB_TAG }}" == *"-staging."* ]]; then
-            echo "ADDITIONAL_TAG=staging" >> $GITHUB_ENV
-          elif [[ "${{ env.GITHUB_TAG }}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "ADDITIONAL_TAG=latest" >> $GITHUB_ENV
-          else
-            echo "ADDITIONAL_TAG=" >> $GITHUB_ENV
-          fi
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -139,6 +179,7 @@ jobs:
       - name: Notify cloud switchboard
         env:
           TAG: ${{ needs.build.outputs.tag }}
+          CHANNEL: ${{ needs.build.outputs.channel }}
           WEBHOOK_URL: ${{ secrets.CLOUD_AUTO_UPDATE_WEBHOOK_URL }}
           WEBHOOK_SECRET: ${{ secrets.CLOUD_AUTO_UPDATE_WEBHOOK_SECRET }}
         run: |
@@ -146,11 +187,12 @@ jobs:
             echo "No webhook URL configured, skipping"
             exit 0
           fi
-          CHANNEL=""
-          if [[ "$TAG" == *"-dev."* ]]; then CHANNEL="dev"
-          elif [[ "$TAG" == *"-rc."* ]]; then CHANNEL="rc"
-          elif [[ "$TAG" == *"-staging."* ]]; then CHANNEL="staging"
-          else CHANNEL="latest"; fi
+          # The cloud has environments for these channels only; a next build
+          # (or a tag that fits no channel) notifies nobody.
+          case "$CHANNEL" in
+            dev|rc|staging|latest) ;;
+            *) echo "No auto-update channel for '$CHANNEL', skipping"; exit 0 ;;
+          esac
 
           echo "Notifying auto-update: tag=$TAG, channel=$CHANNEL"
           curl -sf -X POST "$WEBHOOK_URL" \
@@ -167,12 +209,12 @@ jobs:
       - name: Determine target environments
         id: env
         env:
-          TAG: ${{ needs.build.outputs.tag }}
+          CHANNEL: ${{ needs.build.outputs.channel }}
         run: |
-          if [[ "$TAG" == *"-dev."* ]]; then
+          if [[ "$CHANNEL" == "dev" ]]; then
             echo "targets=dev" >> $GITHUB_OUTPUT
           else
-            echo "Skipping k8s update — switchboard+connect auto-bump is scoped to the -dev. channel only"
+            echo "Skipping k8s update — switchboard+connect auto-bump is scoped to the dev channel only (channel: '$CHANNEL')"
           fi
 
       - name: Update switchboard + connect image tags in k8s-hosting
@@ -215,17 +257,18 @@ jobs:
         id: env
         env:
           TAG: ${{ needs.build.outputs.tag }}
+          CHANNEL: ${{ needs.build.outputs.channel }}
         run: |
-          if [[ "$TAG" == *"-dev."* ]]; then
+          if [[ "$CHANNEL" == "dev" ]]; then
             echo "targets=dev" >> $GITHUB_OUTPUT
-          elif [[ "$TAG" == *"-staging."* ]]; then
+          elif [[ "$CHANNEL" == "staging" ]]; then
             echo "targets=staging" >> $GITHUB_OUTPUT
-          elif [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          elif [[ "$CHANNEL" == "latest" ]]; then
             # Production release: roll out the prod registry (vetra tenant,
             # registry.vetra.io) to the image this release just pushed.
             echo "targets=vetra" >> $GITHUB_OUTPUT
           else
-            echo "Skipping k8s update for non-release tag $TAG"
+            echo "Skipping k8s update for tag $TAG (channel: '$CHANNEL')"
           fi
 
       - name: Update registry image tag in k8s-hosting

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/workflow",
-  "version": "6.3.0-dev.6",
+  "version": "6.3.0-dev.9",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": [

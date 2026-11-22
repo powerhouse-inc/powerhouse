@@ -20,6 +20,7 @@ You do **not** manually edit `package.json` versions or `CHANGELOG.md` files, **
 - [How `release_mode` maps to a semver bump](#how-release_mode-maps-to-a-semver-bump)
 - [Triggering a release](#triggering-a-release)
 - [Dev releases (main)](#dev-releases-main)
+- [Branch releases (next)](#branch-releases-next)
 - [Staging releases](#staging-releases)
   - [Case 1 — Fresh staging line, target reachable in one semver step](#case-1--fresh-staging-line-target-reachable-in-one-semver-step-from-main)
   - [Case 2 — Next prerelease on an existing staging branch](#case-2--next-prerelease-on-an-existing-staging-branch)
@@ -41,15 +42,16 @@ You do **not** manually edit `package.json` versions or `CHANGELOG.md` files, **
 
 ## Channels
 
-| Branch                       | Channel    | npm dist-tag | Version shape     |
-| ---------------------------- | ---------- | ------------ | ----------------- |
-| `main`                       | dev        | `dev`        | `X.Y.Z-dev.N`     |
-| `release/staging/<label>`    | staging    | `staging`    | `X.Y.Z-staging.N` |
-| `release/production/<label>` | production | `latest`     | `X.Y.Z`           |
+| Branch                              | Channel    | npm dist-tag | Version shape     |
+| ----------------------------------- | ---------- | ------------ | ----------------- |
+| `main`                              | dev        | `dev`        | `X.Y.Z-dev.N`     |
+| `release/staging/<label>`           | staging    | `staging`    | `X.Y.Z-staging.N` |
+| `release/production/<label>`        | production | `latest`     | `X.Y.Z`           |
+| any other branch + `version_prefix` | next       | `next`       | `X.Y.Z-next.N`    |
 
 The `<label>` is a human-readable hint — Nx does **not** parse it. The actual published version comes from the current workspace `package.json` plus the `release_mode` input. Pick a label that matches what you intend to ship (e.g. `release/staging/6.0.3`) so the branch is readable in the GitHub UI.
 
-Any branch name that doesn't match the three patterns above will cause the release script to throw.
+A branch that doesn't match the first three patterns releases only when you give the `version_prefix` input; see [Branch releases (next)](#branch-releases-next). Without it the release script throws. On `main` and `release/*` a `version_prefix` is refused.
 
 ## Version numbers
 
@@ -79,8 +81,10 @@ The tooling still uses the semver names `major`, `minor` and `patch` for the thr
 | dev / staging | `patch` / `minor` / `major` | `prepatch` / `preminor` / `premajor` | `dev` / `staging` |
 | production    | `prerelease`                | **rejected — throws**                | —                 |
 | production    | `patch` / `minor` / `major` | `patch` / `minor` / `major`          | none              |
+| next          | `prerelease`                | the exact version `X.Y.Z-next.N`     | `next`            |
+| next          | `patch` / `minor` / `major` | **rejected — throws**                | —                 |
 
-Prerelease counters in this repo start at `.1`, not `.0` (verifiable from existing tags like `v5.3.0-staging.1`). So `inc('6.0.0-dev.X', 'prerelease', 'staging')` lands on `6.0.0-staging.1`.
+Prerelease counters start at `.0` (see the tags `v6.2.3-staging.0` and `v6.2.0-rc.0`). So `inc('6.0.0-dev.X', 'prerelease', 'staging')` lands on `6.0.0-staging.0`. Older lines such as `v5.3.0-staging.1` started at `.1`.
 
 ## Triggering a release
 
@@ -89,10 +93,15 @@ GitHub → **Actions** → **Release Branch** → **Run workflow**:
 - Set **Use workflow from** to the release branch you want to publish from.
 - Pick `release_mode`.
 - Optionally toggle `dry_run` to simulate with no npm/git side effects.
+- For a branch release only: fill in `version_prefix` (see [Branch releases (next)](#branch-releases-next)).
+- `deploy` decides whether the deploy stage runs after the publish (see [After the release job](#after-the-release-job)):
+  - `auto` (default): on for `main` and `release/*`, off for every other branch.
+  - `always`: on.
+  - `never`: off.
 
 The other inputs (`skip_publish`, `skip_changelog`, `skip_push`, `skip_git_tag`, `skip_stage`, `skip_commit`, `verbose`) are **recovery flags** for reruns after partial failures — leave them off for normal runs.
 
-Concurrency is per-branch (`group: release-monorepo-${{ github.ref_name }}`) and **queues** rather than cancelling, so back-to-back runs on the same branch serialize safely.
+Concurrency is per-branch (`group: release-monorepo-${{ github.ref_name }}`) and **queues** rather than cancelling, so back-to-back runs on the same branch serialize safely. All runs with a `version_prefix` share one queue (`release-monorepo-next`), so two branches cannot pick the same `-next.N`.
 
 ---
 
@@ -101,6 +110,42 @@ Concurrency is per-branch (`group: release-monorepo-${{ github.ref_name }}`) and
 Main auto-releases every night at **02:00 UTC** via the cron defined in the workflow. No action needed.
 
 If you need an immediate dev release (e.g. another team is blocked waiting on it), run **Release Branch** on `main` with `release_mode=prerelease`. It publishes `X.Y.Z-dev.N+1`.
+
+---
+
+## Branch releases (next)
+
+A long-lived branch that is not `main` and not `release/*` (for example `next/6.4`) can publish its own builds: versions `X.Y.Z-next.N` under the npm dist-tag `next`. There is no nightly for these; every branch release is run by hand.
+
+Run **Release Branch** on the branch with `release_mode=prerelease` and a `version_prefix`:
+
+| `version_prefix` | Line it releases on                                                              |
+| ---------------- | -------------------------------------------------------------------------------- |
+| `6.4.1`          | `6.4.1`                                                                          |
+| `6.4`            | the highest `6.4.Z` that already has a `-next` build, else `6.4.0`               |
+| `6`              | the highest `6.Y.Z` that already has a `-next` build; refused when there is none |
+
+`N` is one more than the highest `-next.N` of that line on npm (over all released packages) and in the git tags, or `0` for a new line. A run that failed halfway therefore takes the next number on the rerun.
+
+The run is refused when:
+
+- the line is lower than the version in the branch's `package.json` files,
+- the stable `X.Y.Z` of that line is already published,
+- the resulting version is not higher than the version in the branch's `package.json` files,
+- the `package.json` versions of the released packages differ from each other (the tree is mid-merge).
+
+By default a branch release publishes to npm, creates the tag and the GitHub pre-release with the `ph` binaries, and runs the package manager test against the `next` tag. It does **not** deploy: no Docker images and no downstream trigger. Set `deploy=always` to build and push the Docker images, tagged `vX.Y.Z-next.N` and `next`; nothing else follows a `next` release yet.
+
+To use a branch release: `ph init --next`, `ph use next`, or `ph migrate next`. A project on a `-next` version stays on that line with `ph update`, and `ph self-update` of a `-next` build follows the `next` tag.
+
+### Merging `main` into the branch, and the branch into `main`
+
+After a branch release, every merge with `main` conflicts on the `"version"` field of every `package.json`, on the `CHANGELOG.md` heads and on the version in the `COMMANDS.md` titles, because both sides have been bumped.
+
+- **`main` into the branch:** keep the branch side (`X.Y.Z-next.N`), the same rule as for staging.
+- **The branch into `main`:** take the branch's `X.Y.Z-next.N`. The next nightly on `main` then publishes `X.Y.Z-dev.0`.
+
+A wrong resolution on the branch does not break the count: the next run reads the highest `-next.N` from npm.
 
 ---
 
@@ -354,13 +399,20 @@ If you push manual edits to any of those files on a release branch **outside** o
 
 ## After the release job
 
-When `release_mode` is not a dry run, the workflow also runs:
+When `release_mode` is not a dry run, the workflow also runs two stages.
+
+Publish stage, after every release that published:
 
 - **Sentry sourcemap upload** for `powerhouse` and `ph-cli` projects.
 - **publish-ph-binaries** — compiles `ph` for Mac/Linux/Windows and uploads them to the GitHub Release.
-- **publish-docker** — builds and pushes Docker images for connect, switchboard, etc.
 - **test-package-managers** — verifies npm/yarn/pnpm/bun can install the just-published packages.
-- **trigger-downstream-packages** — fans out to dependent repos.
+
+Deploy stage, only when the `deploy` switch is on (`auto` turns it on for `main` and `release/*`):
+
+- **publish-docker** — builds and pushes Docker images for connect, switchboard, etc., from the exact tag this run created.
+- **trigger-downstream-packages** — fans out to dependent repos (dev, staging and production releases only).
+
+The deploy stage needs a version that was published and tagged in this run. A run with `skip_publish` or `skip_git_tag` therefore skips it, whatever `deploy` says. To build images for an existing tag, dispatch **Build and Publish Docker Images** with that tag.
 
 A failure in any of those steps posts to Discord via the `DISCORD_FAILURES` webhook. **None of them roll back the npm publish** — once npm has the version, the version is burned. Operator action is required to recover.
 
@@ -379,7 +431,8 @@ npm trust github <pkg> --file release-branch.yml --repo powerhouse-inc/powerhous
 ## Troubleshooting
 
 - **"Cannot do a prerelease on production"** — you triggered the workflow on `release/production/*` with `release_mode=prerelease`. Use `patch`.
-- **"Branch ... is invalid" / "must start with release/" / "invalid tag"** — branch name doesn't match `main`, `release/staging/<label>`, or `release/production/<label>`.
+- **"Branch ... is invalid" / "must start with release/" / "invalid tag"** — branch name doesn't match `main`, `release/staging/<label>`, or `release/production/<label>`, and no `version_prefix` was given. For a branch release, give one.
+- **"version_prefix ... resolves to the X.Y.Z line, lower than ..."** and the other `version_prefix` refusals — see the list in [Branch releases (next)](#branch-releases-next). The message names a prefix that works.
 - **npm publish fails with 404/permission error for one package** — its trusted publisher config on npmjs.com is missing or doesn't match (`npm trust list <pkg>` to inspect). See [npm authentication](#npm-authentication).
 - **"npm did not serve <version> within …s for: <packages>"** — publish succeeded but the registry did not expose the version to installs within the wait (`releases/npm-propagation.ts`). The git side is complete. Once `npm view <pkg>@<version>` resolves, dispatch **Build and Publish Docker Images** and **Test Package Managers** manually from the Actions tab; do not rerun the release job, which would cut a new version.
 - **"No version changes detected — skipping release"** — Nx didn't find new commits worth releasing on this branch since the last tag. Confirm there are real commits since the last release tag.
@@ -393,6 +446,7 @@ npm trust github <pkg> --file release-branch.yml --repo powerhouse-inc/powerhous
 | ------------------------------------------------- | -------------------------------- | ------------ | -------------------------------------------------------------------------- |
 | Nightly dev                                       | `main`                           | (cron)       | Auto at 02:00 UTC                                                          |
 | Manual dev                                        | `main`                           | `prerelease` |                                                                            |
+| Branch release `X.Y.Z-next.N`                     | e.g. `next/X.Y`                  | `prerelease` | `version_prefix=X.Y`; no deploy unless `deploy=always`                     |
 | Start `X.Y.Z-staging` from main `X.Y.Z-dev.*`     | `release/staging/X.Y.Z`          | `prerelease` | Case 1                                                                     |
 | Start `X.Y.(Z+1)-staging` from main `X.Y.Z-dev.*` | `release/staging/X.Y.(Z+1)`      | `patch`      | Case 1                                                                     |
 | Start `X.(Y+1).0-staging` from main `X.Y.Z-dev.*` | `release/staging/X.(Y+1).0`      | `minor`      | Case 1                                                                     |

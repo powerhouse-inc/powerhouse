@@ -14,6 +14,11 @@ describe("getStream", () => {
     expect(getStream("6.2.0-rc.8")).toBe("dev");
   });
 
+  it("returns next for branch releases", () => {
+    expect(getStream("6.4.0-next.0")).toBe("next");
+    expect(getStream("6.4.1-next.12")).toBe("next");
+  });
+
   it("falls back to latest for unparseable versions (never nag with a dev target)", () => {
     expect(getStream("unknown")).toBe("latest");
     expect(getStream("")).toBe("latest");

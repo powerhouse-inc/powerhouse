@@ -41,6 +41,7 @@ export default defineConfig({
       "clis/retired-flags.test.ts",
       "clis/deprecations.test.ts",
       "clis/args/vetra-ports.test.ts",
+      "clis/file-system/dependencies.test.ts",
       "clis/file-system/spawn-async.test.ts",
       "clis/file-system/package-manager.test.ts",
       "clis/file-system/write-layer.test.ts",

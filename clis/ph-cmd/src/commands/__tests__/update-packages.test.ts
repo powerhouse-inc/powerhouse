@@ -7,6 +7,7 @@ import {
   applyVersionBumps,
   findOutdatedPackages,
   isDistTag,
+  pickLatestSameLine,
   updateInstalledPackages,
   type ConfigPackage,
   type OutdatedPackage,
@@ -106,6 +107,48 @@ describe("applyVersionBumps", () => {
     const config = { packages: [{ packageName: "@a/pkg", version: "1.0.0" }] };
     applyVersionBumps(config, []);
     expect(config.packages[0]?.version).toBe("1.0.0");
+  });
+});
+
+describe("pickLatestSameLine", () => {
+  const cases: Array<[string, string[], string | null]> = [
+    // stable stays stable
+    ["6.2.3", ["6.2.3", "6.2.4", "6.3.0-dev.8", "6.4.0-next.0"], "6.2.4"],
+    ["6.2.3", ["6.2.3", "6.3.0-dev.8"], null],
+    // dev stays on dev
+    [
+      "6.3.0-dev.6",
+      ["6.2.4", "6.3.0", "6.3.0-dev.8", "6.4.0-next.0"],
+      "6.3.0-dev.8",
+    ],
+    // next stays on next, across base versions within the major
+    [
+      "6.4.0-next.1",
+      ["6.4.0", "6.4.0-dev.3", "6.4.0-next.2", "6.4.1-next.0"],
+      "6.4.1-next.0",
+    ],
+    ["6.4.0-next.1", ["6.4.0-next.9", "6.4.0-next.10"], "6.4.0-next.10"],
+    ["6.4.0-next.1", ["6.4.0-next.1"], null],
+    ["6.4.0-next.1", ["7.0.0-next.0"], null],
+    // other pre-release lines
+    ["6.2.3-staging.0", ["6.2.3-staging.1", "6.2.4"], "6.2.3-staging.1"],
+    ["6.2.0-rc.8", ["6.2.0", "6.3.0-rc.0"], "6.3.0-rc.0"],
+    ["6.2.3-dev.56", ["6.2.3-dev.57", "6.2.3-debug.1"], "6.2.3-dev.57"],
+    ["1.0.0-alpha.1", ["1.0.0-beta.0"], null],
+    ["0.0.2", ["0.0.3", "0.1.0-dev.113", "6.4.0-next.0"], "0.0.3"],
+    // input clean-up
+    ["v6.2.3", ["6.2.4"], "6.2.4"],
+    ["not-a-version", ["6.2.4"], null],
+  ];
+
+  it.each(cases)("%s among %j -> %s", (current, versions, expected) => {
+    expect(pickLatestSameLine(current, versions, semver)).toBe(expected);
+  });
+
+  it("ignores entries that are not versions", () => {
+    expect(pickLatestSameLine("6.2.3", ["latest", "", "6.2.5"], semver)).toBe(
+      "6.2.5",
+    );
   });
 });
 

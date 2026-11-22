@@ -1,3 +1,31 @@
+## 6.3.0-dev.9 (2026-11-22)
+
+### 🚀 Features
+
+- **ph-cmd,ph-cli,shared:** next release tag ([ec65d6e6f4](https://github.com/powerhouse-inc/powerhouse/commit/ec65d6e6f4))
+- **releases:** next channel from version_prefix ([1f9a926b5a](https://github.com/powerhouse-inc/powerhouse/commit/1f9a926b5a))
+- **releases:** next-version function for branch releases ([83ffbebba7](https://github.com/powerhouse-inc/powerhouse/commit/83ffbebba7))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
+## 6.3.0-dev.8 (2026-11-22)
+
+### 🩹 Fixes
+
+- **builder-tools:** keep own vendor packages in one chunk on windows ([fed216d3cf](https://github.com/powerhouse-inc/powerhouse/commit/fed216d3cf))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
+## 6.3.0-dev.7 (2026-11-21)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
 ## 6.3.0-dev.6 (2026-11-20)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.

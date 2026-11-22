@@ -36,6 +36,18 @@ on:
       skip_git_tag:
         type: boolean
         default: false
+      version_prefix:
+        type: string
+        default: ""
+        description: "Branch releases only (not main, not release/*): 6, 6.4 or 6.4.1. Publishes X.Y.Z-next.N under npm tag next."
+      deploy:
+        type: choice
+        options:
+          - auto
+          - always
+          - never
+        default: auto
+        description: "Docker images, k8s-hosting bump, cloud auto-update webhook, downstream trigger. auto = on for main and release/*, off for other branches."
   schedule:
     - cron: "0 2 * * *"
 
@@ -48,8 +60,11 @@ permissions:
 # versions, both publish to npm (one claiming the next dev.X tag, the other
 # failing on republish), and race on git push. Queue rather than cancel —
 # releases shouldn't be aborted mid-publish.
+# Branch releases (version_prefix given) all share one queue: they count
+# X.Y.Z-next.N from the same npm versions, so two of them running at once on
+# different branches could pick the same N.
 concurrency:
-  group: release-monorepo-${{ github.ref_name }}
+  group: release-monorepo-${{ inputs.version_prefix && 'next' || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -63,9 +78,22 @@ jobs:
       # is set, or when release.ts exits early — downstream jobs (notably
       # publish-ph-binaries) gate on this so they only run for real releases.
       tag: ${{ steps.run-release.outputs.tag }}
+      # What the run released, also written by release.ts. version has no
+      # leading v. npm_tag is dev, rc, staging, next or latest. published is
+      # 'true' only when the packages went to npm (not a dry run, not
+      # skip_publish).
+      version: ${{ steps.run-release.outputs.version }}
+      channel: ${{ steps.run-release.outputs.channel }}
+      npm_tag: ${{ steps.run-release.outputs.npm_tag }}
+      published: ${{ steps.run-release.outputs.published }}
+      # 'true' when the deploy stage (docker images, k8s-hosting, auto-update
+      # webhook, downstream trigger) is switched on for this run.
+      deploy: ${{ steps.deploy.outputs.deploy }}
     steps:
       - name: Log inputs
         run: |
+          echo "version_prefix=${{ inputs.version_prefix }}"
+          echo "deploy=${{ inputs.deploy || 'auto' }}"
           echo "release_mode=${{ inputs.release_mode }}"
           echo "dry_run=${{ inputs.dry_run }}"
           echo "verbose=${{ inputs.verbose }}"
@@ -86,6 +114,26 @@ jobs:
 
       - name: Install release tool dependencies
         run: bun install
+        working-directory: releases
+
+      # Scheduled runs have no inputs, so the switch defaults to auto.
+      - name: Resolve deploy switch
+        id: deploy
+        env:
+          DEPLOY: ${{ inputs.deploy || 'auto' }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          case "$DEPLOY" in
+            always) ON=true ;;
+            never)  ON=false ;;
+            auto)   if [[ "$BRANCH" == "main" || "$BRANCH" == release/* ]]; then ON=true; else ON=false; fi ;;
+            *) echo "::error::deploy must be auto, always or never (got '$DEPLOY')"; exit 1 ;;
+          esac
+          echo "deploy=$ON" >> "$GITHUB_OUTPUT"
+          echo "deploy=$ON"
+
+      - name: Test release tool
+        run: bun test
         working-directory: releases
 
       - name: Set git config
@@ -130,6 +178,9 @@ jobs:
           NX_PREFER_NODE_STRIP_TYPES: "true"
           # Nx's isolated plugin workers run under bun (process.execPath) and segfault intermittently.
           NX_ISOLATE_PLUGINS: "false"
+          # Read by release.ts as the default of --version-prefix. Passed as
+          # env so an empty input never becomes an empty flag value.
+          RELEASE_VERSION_PREFIX: ${{ inputs.version_prefix }}
         run: |
           pnpm run run-release -- \
           --release-mode="${{ inputs.release_mode || 'prerelease' }}" \
@@ -248,8 +299,12 @@ jobs:
           # nx-release normally creates the GitHub release alongside the
           # changelog. Create it ourselves if it isn't there yet (e.g. when
           # skip_changelog was set), so the upload below has somewhere to land.
+          # A tag with a pre-release part (-dev.N, -next.N, ...) gets a
+          # prerelease, as release.ts would have made it.
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "$TAG" --notes ""
+            PRERELEASE_FLAG=()
+            if [[ "$TAG" == *-* ]]; then PRERELEASE_FLAG=(--prerelease); fi
+            gh release create "$TAG" --title "$TAG" --notes "" "${PRERELEASE_FLAG[@]}"
           fi
           # --clobber lets reruns replace the same file names.
           gh release upload "$TAG" \
@@ -261,79 +316,65 @@ jobs:
             artifacts/checksums.txt \
             --clobber
 
-  publish-docker:
-    name: Build and Publish Docker Images
-    needs: release
-    if: ${{ inputs.dry_run != true }}
-    uses: "./.github/workflows/publish-docker-images.yml"
-    secrets: inherit
-
+  # Smoke test of what was just published: installs ph-cmd@<npm tag> and
+  # scaffolds a project with it. Part of the publish stage, so it also runs
+  # for branch releases (npm tag next).
   test-package-managers:
     name: Test Package Managers
     needs: release
-    if: ${{ inputs.dry_run != true && inputs.skip_publish != true }}
+    if: ${{ needs.release.outputs.published == 'true' }}
     uses: "./.github/workflows/test-package-managers.yml"
     with:
-      tag: ${{ github.ref_name == 'main' && 'dev' || startsWith(github.ref_name, 'release/rc') && 'rc' || startsWith(github.ref_name, 'release/staging') && 'staging' || startsWith(github.ref_name, 'release/production') && 'latest' || 'dev' }}
+      tag: ${{ needs.release.outputs.npm_tag }}
+    secrets: inherit
+
+  # ---- Deploy stage ----
+  # publish-docker and determine-downstream-params (with trigger-downstream)
+  # run only when the deploy switch is on and this run published a tagged
+  # release. They get that release's tag and npm tag; nothing is guessed from
+  # the branch name or from the newest git tag.
+  publish-docker:
+    name: Build and Publish Docker Images
+    needs: release
+    if: ${{ needs.release.outputs.deploy == 'true' && needs.release.outputs.published == 'true' && needs.release.outputs.tag != '' }}
+    uses: "./.github/workflows/publish-docker-images.yml"
+    with:
+      tag: ${{ needs.release.outputs.tag }}
+      channel: ${{ needs.release.outputs.npm_tag }}
     secrets: inherit
 
   determine-downstream-params:
     name: Determine Downstream Parameters
     needs: release
-    if: ${{ inputs.dry_run != true }}
+    if: ${{ needs.release.outputs.deploy == 'true' && needs.release.outputs.published == 'true' && needs.release.outputs.tag != '' }}
     runs-on: ubuntu-latest
     outputs:
       channel: ${{ steps.params.outputs.channel }}
       version: ${{ steps.params.outputs.version }}
       skip: ${{ steps.params.outputs.skip }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
       - name: Determine channel and version
         id: params
+        env:
+          TAG: ${{ needs.release.outputs.tag }}
+          NPM_TAG: ${{ needs.release.outputs.npm_tag }}
         run: |
-          # Determine channel based on branch
-          # main = dev, release/staging/* = staging, release/production/* = latest.
-          # release/rc/* publishes to npm only and does NOT trigger downstream packages.
-          BRANCH="${{ github.ref_name }}"
-          if [[ "$BRANCH" == "main" ]]; then
-            CHANNEL="dev"
-          elif [[ "$BRANCH" == release/rc/* ]]; then
-            echo "rc releases do not trigger downstream packages, skipping"
-            echo "skip=true" >> $GITHUB_OUTPUT
-            exit 0
-          elif [[ "$BRANCH" == release/staging/* ]]; then
-            CHANNEL="staging"
-          elif [[ "$BRANCH" == release/production/* ]]; then
-            CHANNEL="latest"
-          else
-            echo "Unknown branch pattern: $BRANCH, skipping downstream trigger"
-            echo "skip=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Get the latest version tag for this channel
-          if [[ "$CHANNEL" == "dev" ]]; then
-            VERSION=$(git tag --sort=-v:refname | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+-dev\.[0-9]+$" | head -1)
-          elif [[ "$CHANNEL" == "staging" ]]; then
-            VERSION=$(git tag --sort=-v:refname | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+-staging\.[0-9]+$" | head -1)
-          else
-            VERSION=$(git tag --sort=-v:refname | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | head -1)
-          fi
-
-          if [[ -z "$VERSION" ]]; then
-            echo "Could not determine version for channel $CHANNEL"
-            echo "skip=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "channel=$CHANNEL" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "skip=false" >> $GITHUB_OUTPUT
-          echo "Triggering downstream with channel=$CHANNEL version=$VERSION"
+          # Downstream packages follow dev, staging and latest. rc and next
+          # releases publish to npm only and do NOT trigger them.
+          case "$NPM_TAG" in
+            dev|staging|latest)
+              {
+                echo "channel=$NPM_TAG"
+                echo "version=$TAG"
+                echo "skip=false"
+              } >> "$GITHUB_OUTPUT"
+              echo "Triggering downstream with channel=$NPM_TAG version=$TAG"
+              ;;
+            *)
+              echo "$NPM_TAG releases do not trigger downstream packages, skipping"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
 
   trigger-downstream:
     name: Trigger Downstream Packages

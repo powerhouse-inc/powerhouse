@@ -60,7 +60,7 @@ Initialize a new project
 
 **Package Manager** - Package manager that installs the project: `npm`, `pnpm`, `yarn` or `bun`. Defaults to the one that launched ph (npx, pnpm dlx, bunx), else the one that installed ph (unless npm), else bun, then pnpm 10.14 or later if installed, else npm. - Usage: `--package-manager, -p <value>`
 
-**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc". - Usage: `--tag, -t <value>`
+**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", "rc", or "next". - Usage: `--tag, -t <value>`
 
 **Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
@@ -86,6 +86,8 @@ Initialize a new project
 
 **Rc** - Use the `rc` release tag. - Usage: `--rc`
 
+**Next** - Use the `next` release tag. - Usage: `--next`
+
 **Uniform Runners** - Deprecated: no longer needed, `ph init` always scaffolds the hosts/ folder. Accepted with a warning; will be removed in a future release. - Usage: `--uniform-runners`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -103,13 +105,13 @@ Specify the release version of Powerhouse dependencies to use.
 ## Parameters
 
 ### Arguments
-**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc". - Usage: `[tag]`
+**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", "rc", or "next". - Usage: `[tag]`
 
 
 
 
 ### Options
-**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc". - Usage: `--tag, -t <value>`
+**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", "rc", or "next". - Usage: `--tag, -t <value>`
 
 **Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
@@ -145,7 +147,7 @@ Update the globally installed ph to the newest version of its release stream
 
 
 ### Options
-**Tag** - dist-tag to install (defaults to the running build's stream; e.g. latest, dev) - Usage: `--tag, -t <str>`
+**Tag** - dist-tag to install (defaults to the running build's stream; e.g. latest, dev, next) - Usage: `--tag, -t <str>`
 
 
 
@@ -176,7 +178,7 @@ Initialize a new global project
 
 **Package Manager** - Package manager that installs the project: `npm`, `pnpm`, `yarn` or `bun`. Defaults to the one that launched ph (npx, pnpm dlx, bunx), else the one that installed ph (unless npm), else bun, then pnpm 10.14 or later if installed, else npm. - Usage: `--package-manager, -p <value>`
 
-**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc". - Usage: `--tag, -t <value>`
+**Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", "rc", or "next". - Usage: `--tag, -t <value>`
 
 **Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
@@ -201,6 +203,8 @@ Initialize a new global project
 **Staging** - Use the `staging` release tag. - Usage: `--staging, -s`
 
 **Rc** - Use the `rc` release tag. - Usage: `--rc`
+
+**Next** - Use the `next` release tag. - Usage: `--next`
 
 **Uniform Runners** - Deprecated: no longer needed, `ph init` always scaffolds the hosts/ folder. Accepted with a warning; will be removed in a future release. - Usage: `--uniform-runners`
 
@@ -1029,13 +1033,13 @@ Run migrations
 ## Parameters
 
 ### Arguments
-**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages. - Usage: `[version]`
+**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `next`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages. - Usage: `[version]`
 
 
 
 
 ### Options
-**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages. - Usage: `--version, -v <str>`
+**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `next`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages. - Usage: `--version, -v <str>`
 
 **Subgraph** - Convert only this directory of subgraphs/ into a code-first subgraph. Repeat it for more directories. Implies --subgraphs. - Usage: `--subgraph <str>`
 

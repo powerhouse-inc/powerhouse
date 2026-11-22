@@ -86,7 +86,9 @@ export async function getFullyQualifiedWorkspacePackageVersion(
   const isTag =
     versionOrTag === "latest" ||
     versionOrTag === "staging" ||
-    versionOrTag === "dev";
+    versionOrTag === "dev" ||
+    versionOrTag === "rc" ||
+    versionOrTag === "next";
 
   if (!isTag) return versionOrTag;
   const tagged = await Promise.all(
