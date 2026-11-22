@@ -12,6 +12,7 @@ import type {
   ExecutionJobPlan,
   IDriveNodeSource,
   IDriveReadClient,
+  IReactorWriteClient,
   JobInfo,
   JobResultSummary,
   JobStatus,
@@ -115,6 +116,10 @@ import {
 } from "./operations.js";
 import { prepareSignedActions, signStampedAction } from "./signing.js";
 import { resolveDocumentModelModule } from "./static-package-manager.js";
+import {
+  addRelationshipAction,
+  removeRelationshipAction,
+} from "./system-actions.js";
 import {
   describeGraphQLDocument,
   SubgraphSdkRegistry,
@@ -293,6 +298,19 @@ export interface GraphQLReactorReadClient extends IReactorBrowserReadClient {
 }
 
 /**
+ * The write half of {@link GraphQLReactorClient}: the hooks' writes plus
+ * `rename` and the relationship writes, each a client-signed action over
+ * `executeAsync`.
+ */
+export interface GraphQLReactorWriteClient
+  extends
+    IReactorBrowserWriteClient,
+    Pick<
+      IReactorWriteClient,
+      "rename" | "addRelationship" | "removeRelationship"
+    > {}
+
+/**
  * A light implementation of {@link IReactorBrowserClient} that talks plain
  * GraphQL to a Switchboard, with no reactor in the bundle.
  *
@@ -338,11 +356,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * The write half. `execute` submits through `executeAsync` and hands back a
    * handle whose `written` and `readable` resolve from `jobStatus`, woken by
    * the `jobChanges` subscription when realtime is on, and whose `document()`
-   * runs the `document` query bounded by the receipt's token. `create` and
-   * `deleteDocument` have no asynchronous mutation: they run the synchronous
-   * ones and hand back a settled handle.
+   * runs the `document` query bounded by the receipt's token. `rename`,
+   * `addRelationship` and `removeRelationship` are `execute`s of the action
+   * the in-process client would sign. `create` and `deleteDocument` have no
+   * asynchronous mutation: they run the synchronous ones and hand back a
+   * settled handle.
    */
-  readonly write: IReactorBrowserWriteClient;
+  readonly write: GraphQLReactorWriteClient;
 
   constructor(options: GraphQLReactorClientOptions) {
     this.tokenProvider = options.tokenProvider ?? ambientRenownTokenProvider;
@@ -407,6 +427,49 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         this.submitCreate(document, parentIdentifier, signal),
       deleteDocument: (identifier, propagate, signal) =>
         this.submitDeleteDocument(identifier, propagate, signal),
+      rename: (documentIdentifier, name, branch = "main", signal) =>
+        this.submitExecute(
+          documentIdentifier,
+          branch,
+          [actions.setName(name)],
+          signal,
+        ),
+      addRelationship: (
+        sourceIdentifier,
+        targetIdentifier,
+        relationshipType,
+        metadata,
+        branch = "main",
+        signal,
+      ) =>
+        this.submitRelationship(
+          sourceIdentifier,
+          targetIdentifier,
+          branch,
+          (sourceId, targetId) =>
+            addRelationshipAction(
+              sourceId,
+              targetId,
+              relationshipType,
+              metadata,
+            ),
+          signal,
+        ),
+      removeRelationship: (
+        sourceIdentifier,
+        targetIdentifier,
+        relationshipType,
+        branch = "main",
+        signal,
+      ) =>
+        this.submitRelationship(
+          sourceIdentifier,
+          targetIdentifier,
+          branch,
+          (sourceId, targetId) =>
+            removeRelationshipAction(sourceId, targetId, relationshipType),
+          signal,
+        ),
     };
   }
 
@@ -1274,6 +1337,72 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     );
   }
 
+  /**
+   * Renames a document with a client-signed `SET_NAME`, as the in-process
+   * client does: the write half's `rename`, read back once readable.
+   */
+  async rename(
+    documentIdentifier: string,
+    name: string,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    const handle = await this.write.rename(
+      documentIdentifier,
+      name,
+      branch,
+      signal,
+    );
+    return handle.document();
+  }
+
+  /**
+   * Adds a relationship with a client-signed `ADD_RELATIONSHIP` on the
+   * source, as the in-process client does: the write half's
+   * `addRelationship`, resolving with the source once readable. The
+   * Switchboard's own `addRelationship` mutation is not used: it signs with
+   * the Switchboard's key.
+   */
+  async addRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    metadata?: Record<string, unknown>,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    const handle = await this.write.addRelationship(
+      sourceIdentifier,
+      targetIdentifier,
+      relationshipType,
+      metadata,
+      branch,
+      signal,
+    );
+    return handle.document();
+  }
+
+  /**
+   * Removes a relationship with a client-signed `REMOVE_RELATIONSHIP` on the
+   * source; see {@link addRelationship}.
+   */
+  async removeRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    const handle = await this.write.removeRelationship(
+      sourceIdentifier,
+      targetIdentifier,
+      relationshipType,
+      branch,
+      signal,
+    );
+    return handle.document();
+  }
+
   /** The `Drive-Id` header for a call: the client's own proof, else the hook's. */
   private driveIdHeaders(
     call: DriveIdCall,
@@ -1651,6 +1780,78 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     signal?: AbortSignal,
   ): Promise<GraphQLJobWriteHandle> {
     const document = await this.get(documentIdentifier, { branch }, signal);
+    return this.submitOnDocument(
+      documentIdentifier,
+      document,
+      branch,
+      actions,
+      signal,
+    );
+  }
+
+  /**
+   * The write half's relationship writes: the source is read for the id the
+   * action names and is signed for, and the target is resolved by
+   * {@link relationshipTargetId}, as the in-process write client resolves
+   * both before it signs.
+   */
+  private async submitRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    branch: string,
+    build: (sourceId: string, targetId: string) => Action,
+    signal?: AbortSignal,
+  ): Promise<GraphQLJobWriteHandle> {
+    const source = await this.get(sourceIdentifier, { branch }, signal);
+    const targetId = await this.relationshipTargetId(
+      targetIdentifier,
+      branch,
+      signal,
+    );
+    return this.submitOnDocument(
+      source.header.id,
+      source,
+      branch,
+      [build(source.header.id, targetId)],
+      signal,
+    );
+  }
+
+  /**
+   * The id a relationship's target names: a slug becomes its document's id,
+   * and an identifier the Switchboard answers NOT_FOUND for is taken as
+   * given, so a document still in flight names itself, as on the in-process
+   * write side. Only the `document` scope is read.
+   */
+  private async relationshipTargetId(
+    identifier: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+  ): Promise<string> {
+    let result: GetDocumentQuery;
+    try {
+      result = await this.sdk.GetDocument(
+        { idOrSlug: identifier, view: { branch, scopes: ["document"] } },
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      if (answersNotFound(error)) {
+        return identifier;
+      }
+      throw error;
+    }
+    return result.document?.document.id ?? identifier;
+  }
+
+  /** Signs `actions` against `document` and submits them through `executeAsync`. */
+  private async submitOnDocument(
+    documentIdentifier: string,
+    document: PHDocument,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<GraphQLJobWriteHandle> {
     const preparedActions = await prepareActionsForPush(
       actions,
       document,
@@ -2165,6 +2366,20 @@ function refusesConsistencyArgument(error: unknown): boolean {
         message.includes('"ConsistencyTokenInput"'))
     );
   });
+}
+
+/** Whether the Switchboard refused a read because the document does not exist. */
+function answersNotFound(error: unknown): boolean {
+  const errors = (error as { response?: { errors?: unknown } } | null)?.response
+    ?.errors;
+  if (!Array.isArray(errors)) {
+    return false;
+  }
+  return errors.some(
+    (entry) =>
+      (entry as { extensions?: { code?: unknown } } | null)?.extensions
+        ?.code === "NOT_FOUND",
+  );
 }
 
 /** {@link GraphQLReactorClient.nodeSource}, as a function. */

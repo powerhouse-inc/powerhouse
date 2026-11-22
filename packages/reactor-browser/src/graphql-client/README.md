@@ -192,14 +192,18 @@ interface:
 | `getJob(jobId, signal?)`                                | One `jobStatus` read, no polling; `undefined` when the server answers none.                                                                          |
 | `waitForJob(jobOrId, signal?)`                          | Polls `jobStatus` until READ_READY or FAILED.                                                                                                        |
 | `setPreferredEditor(identifier, editor, branch?)`       | A signed `SET_PREFERRED_EDITOR` through `execute`.                                                                                                   |
+| `rename(identifier, name, branch?)`                     | A signed `SET_NAME` through `write.rename`, read back once readable.                                                                                |
+| `addRelationship(source, target, type, metadata?, branch?)` | A signed `ADD_RELATIONSHIP` on the source through `write.addRelationship`; resolves with the source once readable. Not the Switchboard's `addRelationship` mutation, which signs with the Switchboard's key. |
+| `removeRelationship(source, target, type, branch?)`     | A signed `REMOVE_RELATIONSHIP`, as `addRelationship`.                                                                                                |
+| `write.rename`, `write.addRelationship`, `write.removeRelationship` | `write.execute` of the action above: a handle once the job is accepted. The source is read first for the id the action names and is signed for; the target is resolved by a `document`-scope read, and one the Switchboard answers `NOT_FOUND` for is taken as given. |
 | `getCreateSignaturePolicy`                              | Read from `createDefaults`. A Switchboard without that query throws `GraphQLOperationNotSupportedError`. |
 | `getCreateProtocolVersions`                             | What the Switchboard's `createDefaults` selects for the type and parent, as given: capped at what this build runs (a version of another known protocol it does not run, or a malformed answer, is refused) and fitted down to what this client's `documentModels` can predict. A Switchboard from before per-type selection answers reactor-wide; one without the query gives base-reducer 2, though `getCreateSignaturePolicy` refuses there. |
 | `newDocument`                                           | Heads a model's new document with `getCreateProtocolVersions` and `getCreateSignaturePolicy`; the module comes from `documentModels`, or the built-in drive model. |
 | `read.drives.getNode(driveId, nodeId, signal?)`         | Asks `driveNode`. Any drive type; the legacy `Node` shape. Absent or withheld throws.                                                                |
 | `read.drives.listNodes(driveId, parentFolder?, ...)`    | Asks `driveNodes`, paged; `next()` follows the cursor. Omit `parentFolder` for every node, `null` for the root level.                                |
 
-`resolveIdOrSlug`, `rename`, `createEmpty`, `write.drives` and the
-document-model module getters are not implemented here.
+`resolveIdOrSlug`, `createEmpty`, `updateRelationship`, `moveRelationship`,
+`write.drives` and the document-model module getters are not implemented here.
 
 Plus what only this client has:
 
