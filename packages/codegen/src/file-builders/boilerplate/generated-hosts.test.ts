@@ -200,7 +200,6 @@ describe("writeGeneratedHostsFiles", () => {
     );
     expect(cli).not.toContain('path: ["endpoints", "graphql"]');
     expect(cli).not.toContain("127.0.0.1");
-    expect(cli).not.toContain("@powerhousedao/clint/clint-runner");
   });
 
   it("is preserve-on-migrate: never clobbers an existing host file", async () => {
@@ -350,7 +349,6 @@ describe("typed hosts: ph generate hosts + tsc -p hosts", () => {
       "@powerhousedao/ph-cli/runners/connect",
       "@powerhousedao/ph-cli/runners/switchboard",
       "@powerhousedao/clint/mastra-runner",
-      "@powerhousedao/clint/clint-runner",
       "@powerhousedao/clint/cli-runner",
       "@powerhousedao/desktop/runner",
       "@powerhousedao/switchboard/plugins/workflows",

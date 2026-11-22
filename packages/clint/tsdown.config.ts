@@ -4,7 +4,6 @@ import { dtsExportList } from "../../tsdown.dts.mjs";
 export default defineConfig({
   entry: [
     "src/index.ts",
-    "src/runners/clint-runner.ts",
     "src/runners/mastra-runner.ts",
     "src/runners/cli-runner.ts",
     "src/runners/proxy-runner.ts",

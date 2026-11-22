@@ -351,7 +351,8 @@ interface HostPlugin<THooks, TConfig> {
 
 **`appliesTo` and the host-type hierarchy.** Compatibility walks a parent
 chain: `connect`, `switchboard`, and `mastra` all extend `reactor`, while
-`compound` is its own branch (plugins over a *member set*, like a proxy). A
+`compound` is its own branch (plugins over a *member set*; no runner loads
+them today). A
 plugin with `appliesTo: "reactor"` composes onto any reactor host; one with
 `appliesTo: "switchboard"` is rejected elsewhere — at boot, with both names
 in the error.
@@ -630,10 +631,11 @@ element's key (the index for an array) and `{ $item: ["url"] }` — or the
 typed `server.drives.$item.url` from `outputs.js` — reads a path of the
 element. Records are visited in key-sorted order, so the result is
 deterministic. A nested map names outer bindings with `as` and
-`{ $item: { as, path } }` / `{ $key: "<as>" }`. Compound-level plugins
-(`appliesTo: "compound"`) act on the member set — the clint proxy is the
-reference example: one front port, routes declared per member, resolved from
-each child's `runner.{host, port}`.
+`{ $item: { as, path } }` / `{ $key: "<as>" }`. A proxy in front of the
+members is itself a member: `@powerhousedao/clint/proxy-runner` serves one
+front port whose routes name the other members' outputs as tokens (e.g.
+`upstream: switchboard.origin`), so it starts after them and stops before
+them.
 
 ## Hosts from a package
 

@@ -228,7 +228,7 @@ export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/connect",
   "@powerhousedao/design-system",
   // uniform-runners: the runner modules the scaffolded hosts/*/host.js
-  // files name (desktop runner, clint-runner/mastra-runner, and the generic
+  // files name (desktop runner, mastra-runner/cli-runner, and the generic
   // compound they build on); dormant in classic projects until the feature
   // flag defaults on.
   "@powerhousedao/host-core",

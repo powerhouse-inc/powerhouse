@@ -10,6 +10,7 @@ import {
   build,
   type ProxyHandle,
 } from "../src/runners/proxy-runner.js";
+import { buildProxyRouteTable } from "../src/runners/proxy-route-table.js";
 
 // A7 — the proxy as a compound member: the host schemas, and the verb over a
 // real upstream (in-process sockets only; the stack test covers the
@@ -64,6 +65,31 @@ describe("proxy-runner host schemas", () => {
     );
     expect(outputsSchema.safeParse({}).success).toBe(false);
     expect([...verbs].toSorted()).toEqual(["build", "dev", "run", "serve"]);
+  });
+});
+
+// The route table is pure: each resolved upstream (+ path) passes through.
+describe("buildProxyRouteTable", () => {
+  it("passes each upstream through (trailing slash trimmed + path)", () => {
+    expect(
+      buildProxyRouteTable({
+        "/graphql": { upstream: "http://127.0.0.1:7064", ws: true },
+        "/ext": { upstream: "https://api.x.com/", path: "/v2" },
+      }),
+    ).toEqual([
+      {
+        prefix: "/graphql",
+        upstream: "http://127.0.0.1:7064",
+        ws: true,
+        source: "upstream:http://127.0.0.1:7064",
+      },
+      {
+        prefix: "/ext",
+        upstream: "https://api.x.com/v2",
+        ws: false,
+        source: "upstream:https://api.x.com/",
+      },
+    ]);
   });
 });
 

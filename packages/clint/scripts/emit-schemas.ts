@@ -3,7 +3,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { emitHostJsonSchema } from "@powerhousedao/host-core";
 import { declaredHostSchema as cliHostSchema } from "../src/runners/cli-runner.js";
-import { declaredHostSchema as clintHostSchema } from "../src/runners/clint-runner.js";
 import { declaredHostSchema as mastraHostSchema } from "../src/runners/mastra-runner.js";
 import { declaredHostSchema as proxyHostSchema } from "../src/runners/proxy-runner.js";
 
@@ -18,10 +17,6 @@ const emitted = {
   "host-mastra-runner.schema.json": emitHostJsonSchema(
     "host-mastra-runner",
     mastraHostSchema,
-  ),
-  "host-clint-runner.schema.json": emitHostJsonSchema(
-    "host-clint-runner",
-    clintHostSchema,
   ),
   "host-cli-runner.schema.json": emitHostJsonSchema(
     "host-cli-runner",

@@ -1,7 +1,7 @@
 import type { RunnerContext, RunnerHandle } from "@powerhousedao/host-core";
 import { defineHostSchemas } from "@powerhousedao/host-core/schema";
 import { z } from "zod";
-import { buildProxyRouteTable } from "./proxy-plugin.js";
+import { buildProxyRouteTable } from "./proxy-route-table.js";
 
 /**
  * proxy-runner (A7): the same-origin proxy as a member of a generic compound.
@@ -82,10 +82,7 @@ export async function run(
   host: ProxyHost,
   _ctx: RunnerContext,
 ): Promise<ProxyHandle> {
-  const table = buildProxyRouteTable({
-    port: host.runner.port ?? 0,
-    routes: host.config.routes,
-  });
+  const table = buildProxyRouteTable(host.config.routes);
   const { createProxyServer } = await import("../core/proxy.js");
   const instance = await createProxyServer({
     port: host.runner.port ?? 0,
