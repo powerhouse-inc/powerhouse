@@ -3,8 +3,7 @@
 // specs' Connect must not share `dist/` with the package build (`ph build`).
 import connect from "../connect/host.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   ...connect,
   runner: { ...connect.runner, outDir: "dist-connect" },
-};
+});

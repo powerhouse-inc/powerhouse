@@ -4,8 +4,7 @@
 // the reactor in the page itself, where the tests reach its sync manager.
 import connect from "../connect/host.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   ...connect,
   runner: {
     ...connect.runner,
@@ -18,4 +17,4 @@ export default {
     ...connect.reactor,
     backends: { main: { kind: "in-process" } },
   },
-};
+});

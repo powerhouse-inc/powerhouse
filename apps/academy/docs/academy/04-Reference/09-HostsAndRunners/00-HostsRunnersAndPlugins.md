@@ -587,8 +587,7 @@ replaces `reactor`; each member wraps a sibling host by folder name:
 import connect from "../connect/host.js";
 import { outputs as server } from "../switchboard/outputs.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "desktop",
   runner: { module: "@powerhousedao/desktop/runner" },
   children: {
@@ -609,7 +608,7 @@ export default {
       },
     },
   },
-};
+});
 ```
 
 Wrapper semantics are **full-statement** for `config` and `reactor`: a

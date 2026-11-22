@@ -7,8 +7,7 @@
 // Requires @powerhousedao/clint in devDependencies (the scaffold includes it).
 import config from "../../powerhouse.config.json" with { type: "json" };
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "versioned-documents-assistant",
 
   runner: {
@@ -53,4 +52,4 @@ export default {
     // apiKey: { $env: "OPENROUTER_API_KEY" },
     prompts: { skillsDir: "agents", outDir: "dist/skills" },
   },
-};
+});

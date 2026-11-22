@@ -163,8 +163,7 @@ included, by \`$map\` over its \`drives\` output.
 // runtime behavior lives in the runner module named below.
 import config from "../../powerhouse.config.json" with { type: "json" };
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "${projectName}-connect",
 
   // \`ph run connect\` (sugar: \`ph connect\` once hosts are active) imports
@@ -230,14 +229,13 @@ export default {
     },
     drives: [{ slug: "powerhouse", name: "${projectName}" }],
   },
-};
+});
 `;
 
   const switchboardHost = `// @ts-check
 import config from "../../powerhouse.config.json" with { type: "json" };
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "${projectName}-switchboard",
 
   runner: {
@@ -264,7 +262,7 @@ ${switchboardPluginLines}
     // the drive is OWNED in exactly one place.
     drives: [{ slug: "powerhouse", name: "${projectName}" }],
   },
-${switchboardConfig}};
+${switchboardConfig}});
 `;
 
   const vetraHost = `// @ts-check
@@ -280,8 +278,7 @@ import config from "../../powerhouse.config.json" with { type: "json" };
 import switchboard from "../switchboard/host.js";
 import connect from "../connect/host.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "vetra",
 
   runner: {
@@ -370,7 +367,7 @@ export default {
       },
     },
   },
-};
+});
 `;
 
   const desktopHost = `// @ts-check
@@ -389,8 +386,7 @@ import config from "../../powerhouse.config.json" with { type: "json" };
 import switchboard from "../switchboard/host.js";
 import connect from "../connect/host.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "desktop",
 
   runner: {
@@ -482,7 +478,7 @@ export default {
       },
     },
   },
-};
+});
 `;
 
   const assistantHost = `// @ts-check
@@ -494,8 +490,7 @@ export default {
 // Requires @powerhousedao/clint in devDependencies (the scaffold includes it).
 import config from "../../powerhouse.config.json" with { type: "json" };
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "${projectName}-assistant",
 
   runner: {
@@ -535,7 +530,7 @@ export default {
     // apiKey: { $env: "OPENROUTER_API_KEY" },
     prompts: { skillsDir: "agents", outDir: "dist/skills" },
   },
-};
+});
 `;
 
   const cliHost = `// @ts-check
@@ -549,8 +544,7 @@ export default {
 // store.) Standalone \`ph run connect\` is untouched — still a local reactor.
 import connect from "../connect/host.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "cli",
 
   // run → each member starts at "run": switchboard = server, Connect = studio
@@ -604,7 +598,7 @@ export default {
       },
     },
   },
-};
+});
 `;
 
   const agentsReadme = `# agents/

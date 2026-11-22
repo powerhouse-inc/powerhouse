@@ -3,8 +3,7 @@
 // runtime behavior lives in the runner module named below.
 import config from "../../powerhouse.config.json" with { type: "json" };
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "my-project-connect",
 
   // `ph run connect` (sugar: `ph connect` once hosts are active) imports
@@ -70,4 +69,4 @@ export default {
     },
     drives: [{ slug: "powerhouse", name: "my-project" }],
   },
-};
+});

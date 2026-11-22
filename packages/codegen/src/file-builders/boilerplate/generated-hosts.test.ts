@@ -391,20 +391,44 @@ describe("typed hosts: ph generate hosts + tsc -p hosts", () => {
       readFileSync(join(dir, "powerhouse.config.d.json.ts"), "utf-8"),
     ).toContain("PowerhouseConfig");
 
-    // every scaffold host carries `@satisfies {PHHost}`, so the clean tsc
-    // run above type-checked each against its runner's declared schema
-    for (const host of [
+    // every scaffold host carries the checked form, `export default
+    // /** @satisfies {PHHost} */ ({...})`: TypeScript ignores a `@satisfies`
+    // tag placed before `export default`
+    const scaffoldHosts = [
       "connect",
       "switchboard",
       "vetra",
       "desktop",
       "assistant",
       "cli",
-    ]) {
-      expect(
-        readFileSync(join(dir, "hosts", host, "host.js"), "utf-8"),
-      ).toMatch(/^\/\*\* @satisfies \{PHHost\} \*\/\nexport default \{/m);
+    ];
+    const originals = new Map<string, string>();
+    for (const host of scaffoldHosts) {
+      const file = join(dir, "hosts", host, "host.js");
+      const source = readFileSync(file, "utf-8");
+      originals.set(file, source);
+      expect(source).toMatch(
+        /^export default \/\*\* @satisfies \{PHHost\} \*\/ \(\{$/m,
+      );
+      expect(source).not.toMatch(/^\/\*\* @satisfies \{PHHost\} \*\/$/m);
     }
+
+    // ...so a wrong field in any scaffold host fails `tsc -p hosts`
+    for (const [file, source] of originals) {
+      writeFileSync(
+        file,
+        source.replace(/^( {2}name: )/m, "  notAHostKey: 1,\n$1"),
+      );
+    }
+    const broken = tscHosts(dir);
+    expect(broken.status).not.toBe(0);
+    for (const host of scaffoldHosts) {
+      expect(
+        broken.errors.some((line) => line.includes(`${host}/host.js(`)),
+      ).toBe(true);
+    }
+    for (const [file, source] of originals) writeFileSync(file, source);
+    expect(tscHosts(dir)).toEqual({ status: 0, errors: [] });
 
     // a typed host consuming the generated tokens checks clean...
     writeFixture(
@@ -416,8 +440,7 @@ import { outputs as switchboard } from "../switchboard/outputs.js";
 /** @type {{ $output: { host: string; path: (string | number)[] } }} */
 export const workflowsUrl = switchboard.drives.workflows.url;
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "lab",
   runner: {
     module: "@powerhousedao/ph-cli/runners/switchboard",
@@ -425,7 +448,7 @@ export default {
     plugins: ["@powerhousedao/switchboard/plugins/workflows"],
   },
   reactor: { drives: [{ slug: "lab", name: "Lab" }] },
-};
+});
 `,
     );
     // ...while a typo, a wrong token path and a wrong plugin config fail.
@@ -442,8 +465,7 @@ export default {
       `// @ts-check
 import { outputs as switchboard } from "../switchboard/outputs.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "labconnect",
   runner: {
     module: "@powerhousedao/ph-cli/runners/connect",
@@ -464,7 +486,7 @@ export default {
     },
     renown: { switchboardUrl: switchboard.endpoints.graphql },
   },
-};
+});
 `,
     );
     writeFixture(
@@ -473,14 +495,13 @@ export default {
       `// @ts-check
 import { outputs as switchboard } from "../switchboard/outputs.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "badconfig",
   runner: { module: "@powerhousedao/ph-cli/runners/connect" },
   config: {
     drives: { defaultDrives: [{ url: switchboard.drives.workflows }] },
   },
-};
+});
 `,
     );
     writeFixture(
@@ -489,12 +510,11 @@ export default {
       `// @ts-check
 import { outputs as switchboard } from "../switchboard/outputs.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "badrenown",
   runner: { module: "@powerhousedao/ph-cli/runners/connect" },
   config: { renown: { url: switchboard.endpoints.graphql } },
-};
+});
 `,
     );
     writeFixture(
@@ -503,8 +523,7 @@ export default {
       `// @ts-check
 import { outputs as switchboard } from "../switchboard/outputs.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "baddrive",
   runner: {
     module: "@powerhousedao/ph-cli/runners/connect",
@@ -515,19 +534,18 @@ export default {
       },
     ],
   },
-};
+});
 `,
     );
     writeFixture(
       dir,
       "typo",
       `// @ts-check
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "typo",
   runner: { module: "@powerhousedao/ph-cli/runners/switchboard" },
   reactor: { drive: [{ slug: "lab", name: "Lab" }] },
-};
+});
 `,
     );
     writeFixture(
@@ -544,8 +562,7 @@ export default { name: "badpath", runner: { module: "x" } };
       dir,
       "badplugin",
       `// @ts-check
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "badplugin",
   runner: {
     module: "@powerhousedao/ph-cli/runners/connect",
@@ -553,7 +570,7 @@ export default {
       { module: "@powerhousedao/connect/plugins/generic", config: { allowAddDrives: true } },
     ],
   },
-};
+});
 `,
     );
     // $map (T4): the cli shape — every drive the switchboard serves, by a
@@ -569,8 +586,7 @@ export default {
 import connect from "../connect/host.js";
 import { outputs as switchboard } from "../switchboard/outputs.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "mapcli",
   runner: { module: "@powerhousedao/host-core/runners/compound" },
   children: {
@@ -591,7 +607,7 @@ export default {
       },
     },
   },
-};
+});
 `,
     );
     writeFixture(
@@ -600,8 +616,7 @@ export default {
       `// @ts-check
 import { outputs as switchboard } from "../switchboard/outputs.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "mapbad",
   runner: { module: "@powerhousedao/ph-cli/runners/connect" },
   reactor: {
@@ -612,7 +627,7 @@ export default {
       },
     },
   },
-};
+});
 `,
     );
     const { status, errors } = tscHosts(dir);

@@ -9,8 +9,7 @@
 // store.) Standalone `ph run connect` is untouched — still a local reactor.
 import connect from "../connect/host.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "cli",
 
   // run → each member starts at "run": switchboard = server, Connect = studio
@@ -81,4 +80,4 @@ export default {
       },
     },
   },
-};
+});
