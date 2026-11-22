@@ -12,7 +12,7 @@ import type { ChatSessionAction } from "document-models/chat-session";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { ChatSession } from "../ChatSession.js";
 
-const REF = `attachment://v1:${"a".repeat(64)}`;
+const REF = `attachment://v1:${"a".repeat(64)}` as const;
 
 class ResizeObserverStub {
   observe(): void {}

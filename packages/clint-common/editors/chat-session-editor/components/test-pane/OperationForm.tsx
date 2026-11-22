@@ -1,5 +1,5 @@
 import { generateId } from "document-model";
-import type { ContentPartType } from "document-models/chat-session";
+import type { ContentPartType, Scalars } from "document-models/chat-session";
 import { useState, useCallback } from "react";
 import { cn } from "../../lib/utils.js";
 import { useAttachmentService } from "../ContentPartRenderer.js";
@@ -313,6 +313,8 @@ function FieldInput({ field, value, onChange }: FieldInputProps) {
   }
 }
 
+type AttachmentRef = Scalars["AttachmentRef"]["input"];
+
 export interface UserContentPartFormData {
   [key: string]: unknown;
   id: string;
@@ -320,7 +322,7 @@ export interface UserContentPartFormData {
   text?: string;
   mediaType?: string;
   url?: string;
-  attachment?: string;
+  attachment?: AttachmentRef;
   filename?: string;
 }
 
@@ -334,7 +336,7 @@ export interface AssistantContentPartFormData {
   args?: string;
   mediaType?: string;
   url?: string;
-  attachment?: string;
+  attachment?: AttachmentRef;
   filename?: string;
   error?: string;
 }
@@ -350,11 +352,11 @@ export interface ToolResultPartFormData {
   text?: string;
   mediaType?: string;
   url?: string;
-  attachment?: string;
+  attachment?: AttachmentRef;
 }
 
 interface ImageFileValue {
-  attachment: string;
+  attachment: AttachmentRef;
 }
 
 function ImageFilePicker({

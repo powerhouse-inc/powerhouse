@@ -5,12 +5,20 @@ import {
   updateUsageSummary,
   utils,
 } from "document-models/chat-session/v1";
-import type { ChatSessionDocument } from "document-models/chat-session/v1";
+import type {
+  ChatSessionDocument,
+  Scalars,
+} from "document-models/chat-session/v1";
 
 export const T0 = "2026-01-01T00:00:00.000Z";
 export const T1 = "2026-01-01T00:00:01.000Z";
 export const T2 = "2026-01-01T00:00:02.000Z";
 export const T3 = "2026-01-01T00:00:03.000Z";
+
+/** A well-formed attachment ref: v1 and 64 times the hex digit `digit`. */
+export function testRef(digit: string): Scalars["AttachmentRef"]["input"] {
+  return `attachment://v1:${digit.repeat(64)}`;
+}
 
 /** A started session (1 operation) with one USER message `u1` (2 operations). */
 export function sessionWithUserMessage(): ChatSessionDocument {

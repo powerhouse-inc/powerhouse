@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type {
   ReactorContext,
   AgentProvider,
+  AttachmentRef,
   Logger,
   DocumentRegistry,
   RegistryEntry,
@@ -37,7 +38,7 @@ type AttachmentService = NonNullable<
 
 // Per-agent avatar upload, memoized: bytes are identical across sessions, so
 // upload once and reuse the ref. Failures aren't cached, so they retry.
-const avatarRefCache = new Map<string, Promise<string | null>>();
+const avatarRefCache = new Map<string, Promise<AttachmentRef | null>>();
 
 async function resolveImageSource(
   image: string,
@@ -68,7 +69,7 @@ async function uploadAvatar(
   service: AttachmentService,
   image: string,
   agentId: string,
-): Promise<string> {
+): Promise<AttachmentRef> {
   const signal = AbortSignal.timeout(AVATAR_TIMEOUT_MS);
   const work = (async () => {
     const { mimeType, stream } = await resolveImageSource(image, signal);
@@ -99,7 +100,7 @@ function resolveAvatarRef(
   image: string,
   agentId: string,
   log?: Logger,
-): Promise<string | null> {
+): Promise<AttachmentRef | null> {
   let cached = avatarRefCache.get(agentId);
   if (!cached) {
     cached = uploadAvatar(service, image, agentId).catch((err) => {

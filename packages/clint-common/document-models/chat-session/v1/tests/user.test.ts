@@ -23,14 +23,17 @@ import {
   sessionWithUserMessage,
   T2,
   T3,
+  testRef,
   withUsage,
 } from "./session-fixtures.js";
 
 describe("UserOperations", () => {
   it("should handle addUserMessage operation", () => {
     const document = utils.createDocument();
+    // zocker cannot invent an AttachmentRef, so the parts are given.
     const input = generateMock(AddUserMessageInputSchema(), {
       createdAt: "2024-01-01T00:00:00.000Z",
+      content: [{ id: "u1-f", type: "FILE", attachment: testRef("a") }],
     });
 
     const updatedDocument = reducer(document, addUserMessage(input));

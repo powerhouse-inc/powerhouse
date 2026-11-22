@@ -4,6 +4,7 @@ import {
 } from "document-models/chat-session/v1";
 import type { ContentPart } from "document-models/chat-session/v1";
 import { describe, expect, it } from "vitest";
+import { testRef } from "./session-fixtures.js";
 
 const part = (
   overrides: Partial<ContentPart> & Pick<ContentPart, "type">,
@@ -43,12 +44,12 @@ describe("hasMessageContent", () => {
   it("is true for IMAGE and FILE attachment parts", () => {
     expect(
       hasMessageContent({
-        content: [part({ type: "IMAGE", attachment: "a1" })],
+        content: [part({ type: "IMAGE", attachment: testRef("1") })],
       }),
     ).toBe(true);
     expect(
       hasMessageContent({
-        content: [part({ type: "FILE", attachment: "a2" })],
+        content: [part({ type: "FILE", attachment: testRef("2") })],
       }),
     ).toBe(true);
   });

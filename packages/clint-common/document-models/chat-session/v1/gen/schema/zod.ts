@@ -143,7 +143,11 @@ export function AddUserMessageInputSchema(): z.ZodObject<
 export function AgentInfoSchema(): z.ZodObject<Properties<AgentInfo>> {
   return z.object({
     __typename: z.literal("AgentInfo").optional(),
-    attachment: z.string().nullish(),
+    attachment: z
+      .custom<`attachment://v${number}:${string}`>((val) =>
+        /^attachment:\/\/v\d+:.+$/.test(val as string),
+      )
+      .nullish(),
     description: z.string().nullish(),
     id: z.string().nullish(),
     model: z.string().nullish(),
@@ -176,7 +180,11 @@ export function AssistantContentPartInputSchema(): z.ZodObject<
 > {
   return z.object({
     args: z.string().nullish(),
-    attachment: z.string().nullish(),
+    attachment: z
+      .custom<`attachment://v${number}:${string}`>((val) =>
+        /^attachment:\/\/v\d+:.+$/.test(val as string),
+      )
+      .nullish(),
     error: z.string().nullish(),
     filename: z.string().nullish(),
     id: z.string(),
@@ -220,7 +228,11 @@ export function ContentPartSchema(): z.ZodObject<Properties<ContentPart>> {
   return z.object({
     __typename: z.literal("ContentPart").optional(),
     args: z.string().nullish(),
-    attachment: z.string().nullish(),
+    attachment: z
+      .custom<`attachment://v${number}:${string}`>((val) =>
+        /^attachment:\/\/v\d+:.+$/.test(val as string),
+      )
+      .nullish(),
     error: z.string().nullish(),
     filename: z.string().nullish(),
     id: z.string(),
@@ -344,7 +356,11 @@ export function SetAgentImageInputSchema(): z.ZodObject<
   Properties<SetAgentImageInput>
 > {
   return z.object({
-    attachment: z.string().nullish(),
+    attachment: z
+      .custom<`attachment://v${number}:${string}`>((val) =>
+        /^attachment:\/\/v\d+:.+$/.test(val as string),
+      )
+      .nullish(),
   });
 }
 
@@ -385,7 +401,11 @@ export function ToolResultPartInputSchema(): z.ZodObject<
   Properties<ToolResultPartInput>
 > {
   return z.object({
-    attachment: z.string().nullish(),
+    attachment: z
+      .custom<`attachment://v${number}:${string}`>((val) =>
+        /^attachment:\/\/v\d+:.+$/.test(val as string),
+      )
+      .nullish(),
     id: z.string(),
     isError: z.boolean().nullish(),
     mediaType: z.string().nullish(),
@@ -450,7 +470,11 @@ export function UserContentPartInputSchema(): z.ZodObject<
   Properties<UserContentPartInput>
 > {
   return z.object({
-    attachment: z.string().nullish(),
+    attachment: z
+      .custom<`attachment://v${number}:${string}`>((val) =>
+        /^attachment:\/\/v\d+:.+$/.test(val as string),
+      )
+      .nullish(),
     filename: z.string().nullish(),
     id: z.string(),
     mediaType: z.string().nullish(),

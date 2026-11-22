@@ -4,11 +4,7 @@
  */
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import type {
-  Logger,
-  IAttachmentService,
-  AttachmentRef,
-} from "@powerhousedao/clint";
+import type { Logger, IAttachmentService } from "@powerhousedao/clint";
 import type {
   ContentPart,
   Message,
@@ -152,9 +148,7 @@ export async function extractAttachments(
         }
         // The document authorizes the read: a switchboard serves an
         // attachment only through a document that references it.
-        const resp = await service.get(part.attachment as AttachmentRef, {
-          documentId,
-        });
+        const resp = await service.get(part.attachment, { documentId });
         buf = Buffer.from(await new Response(resp.body).arrayBuffer());
         // Use the authoritative mediaType from the service header.
         resolvedMediaType = resp.header.mimeType;

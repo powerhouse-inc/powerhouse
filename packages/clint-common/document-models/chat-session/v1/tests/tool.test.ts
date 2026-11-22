@@ -9,12 +9,23 @@ import {
   utils,
 } from "document-models/chat-session/v1";
 import { describe, expect, it } from "vitest";
+import { testRef } from "./session-fixtures.js";
 
 describe("ToolOperations", () => {
   it("should handle addToolResult operation", () => {
     const document = utils.createDocument();
+    // zocker cannot invent an AttachmentRef, so the parts are given.
     const input = generateMock(AddToolResultInputSchema(), {
       createdAt: "2024-01-01T00:00:00.000Z",
+      content: [
+        {
+          id: "tr1-p",
+          type: "TOOL_RESULT",
+          toolCallId: "tc1",
+          toolName: "read",
+          attachment: testRef("a"),
+        },
+      ],
     });
 
     const updatedDocument = reducer(document, addToolResult(input));

@@ -30,7 +30,15 @@ import type {
   ChatSessionDocument,
 } from "document-models/chat-session/v1";
 import { describe, expect, it } from "vitest";
-import { T0, T1, T2, T3 } from "./session-fixtures.js";
+import { T0, T1, T2, T3, testRef } from "./session-fixtures.js";
+
+const AVATAR = testRef("a");
+const USER_FILE = testRef("1");
+const ASSISTANT_IMAGE = testRef("2");
+const APPENDED = testRef("3");
+const TOOL_RESULT = testRef("4");
+const USER_IMAGE = testRef("5");
+const IMAGE = testRef("6");
 
 function apply(
   doc: ChatSessionDocument,
@@ -52,7 +60,7 @@ describe("chat-session scenarios", () => {
         agent: { id: "ag", name: "Agent", model: "m1", description: "d" },
         startedAt: T0,
       }),
-      setAgentImage({ attachment: "avatar" }),
+      setAgentImage({ attachment: AVATAR }),
       addSystemMessage({ id: "s1", text: "You are helpful", createdAt: T0 }),
       addUserMessage({
         id: "u0",
@@ -69,7 +77,7 @@ describe("chat-session scenarios", () => {
             type: "FILE",
             mediaType: "text/plain",
             url: "https://example.com/a.txt",
-            attachment: "att-1",
+            attachment: USER_FILE,
             filename: "a.txt",
           },
         ],
@@ -92,7 +100,7 @@ describe("chat-session scenarios", () => {
             type: "IMAGE",
             mediaType: "image/png",
             url: "https://example.com/i.png",
-            attachment: "att-2",
+            attachment: ASSISTANT_IMAGE,
             filename: "i.png",
           },
         ],
@@ -117,7 +125,7 @@ describe("chat-session scenarios", () => {
           text: "partial",
           mediaType: "text/plain",
           url: "https://example.com/x",
-          attachment: "x",
+          attachment: APPENDED,
           filename: "x",
         },
       }),
@@ -153,7 +161,7 @@ describe("chat-session scenarios", () => {
             text: "ok",
             mediaType: "text/plain",
             url: "https://example.com/r",
-            attachment: "r",
+            attachment: TOOL_RESULT,
           },
         ],
         stepIndex: 1,
@@ -192,7 +200,7 @@ describe("chat-session scenarios", () => {
       name: "Agent",
       model: "m1",
       description: "d",
-      attachment: "avatar",
+      attachment: AVATAR,
     });
     expect(s.messages.map((m) => m.id)).toStrictEqual([
       "s1",
@@ -214,7 +222,7 @@ describe("chat-session scenarios", () => {
     expect(user.pickedUpAt).toBe(T1);
     expect(user.content[1]).toMatchObject({
       type: "FILE",
-      attachment: "att-1",
+      attachment: USER_FILE,
       filename: "a.txt",
     });
     expect(assistant.content.map((p) => p.id)).toStrictEqual([
@@ -246,7 +254,7 @@ describe("chat-session scenarios", () => {
       addSystemMessage({ id: "s1", text: "sys", createdAt: T0 }),
       addUserMessage({
         id: "u1",
-        content: [{ id: "u1-i", type: "IMAGE", attachment: "att" }],
+        content: [{ id: "u1-i", type: "IMAGE", attachment: USER_IMAGE }],
         createdAt: T0,
       }),
       addAssistantMessage({
@@ -324,7 +332,7 @@ describe("chat-session scenarios", () => {
     });
 
     doc = apply(utils.createDocument(), [
-      setAgentImage({ attachment: "img" }),
+      setAgentImage({ attachment: IMAGE }),
       setAgentInfo({ name: "only-name" }),
       updateUsageSummary({}),
     ]);
@@ -333,7 +341,7 @@ describe("chat-session scenarios", () => {
       name: "only-name",
       model: null,
       description: null,
-      attachment: "img",
+      attachment: IMAGE,
     });
     expect(doc.state.global.usage).toStrictEqual({
       totalPromptTokens: 0,

@@ -101,7 +101,7 @@ export type AddUserMessageInput = {
 };
 
 export type AgentInfo = {
-  attachment: Maybe<Scalars["String"]["output"]>;
+  attachment: Maybe<Scalars["AttachmentRef"]["output"]>;
   description: Maybe<Scalars["String"]["output"]>;
   id: Maybe<Scalars["String"]["output"]>;
   model: Maybe<Scalars["String"]["output"]>;
@@ -122,7 +122,7 @@ export type AppendAssistantContentInput = {
 
 export type AssistantContentPartInput = {
   args?: InputMaybe<Scalars["String"]["input"]>;
-  attachment?: InputMaybe<Scalars["String"]["input"]>;
+  attachment?: InputMaybe<Scalars["AttachmentRef"]["input"]>;
   error?: InputMaybe<Scalars["String"]["input"]>;
   filename?: InputMaybe<Scalars["String"]["input"]>;
   id: Scalars["OID"]["input"];
@@ -154,7 +154,7 @@ export type ClearRetryRequestInput = {
 
 export type ContentPart = {
   args: Maybe<Scalars["String"]["output"]>;
-  attachment: Maybe<Scalars["String"]["output"]>;
+  attachment: Maybe<Scalars["AttachmentRef"]["output"]>;
   error: Maybe<Scalars["String"]["output"]>;
   filename: Maybe<Scalars["String"]["output"]>;
   id: Scalars["OID"]["output"];
@@ -247,7 +247,7 @@ export type SetAgentDescriptionInput = {
 };
 
 export type SetAgentImageInput = {
-  attachment?: InputMaybe<Scalars["String"]["input"]>;
+  attachment?: InputMaybe<Scalars["AttachmentRef"]["input"]>;
 };
 
 export type SetAgentInfoInput = {
@@ -272,7 +272,7 @@ export type StartSessionInput = {
 };
 
 export type ToolResultPartInput = {
-  attachment?: InputMaybe<Scalars["String"]["input"]>;
+  attachment?: InputMaybe<Scalars["AttachmentRef"]["input"]>;
   id: Scalars["OID"]["input"];
   isError?: InputMaybe<Scalars["Boolean"]["input"]>;
   mediaType?: InputMaybe<Scalars["String"]["input"]>;
@@ -319,7 +319,7 @@ export type UsageSummary = {
 };
 
 export type UserContentPartInput = {
-  attachment?: InputMaybe<Scalars["String"]["input"]>;
+  attachment?: InputMaybe<Scalars["AttachmentRef"]["input"]>;
   filename?: InputMaybe<Scalars["String"]["input"]>;
   id: Scalars["OID"]["input"];
   mediaType?: InputMaybe<Scalars["String"]["input"]>;

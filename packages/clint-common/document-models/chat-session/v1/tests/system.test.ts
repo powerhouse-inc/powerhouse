@@ -20,7 +20,7 @@ import {
   utils,
 } from "document-models/chat-session/v1";
 import { describe, expect, it } from "vitest";
-import { sessionWithUserMessage, T2 } from "./session-fixtures.js";
+import { sessionWithUserMessage, T2, testRef } from "./session-fixtures.js";
 
 describe("SystemOperations", () => {
   it("should handle startSession operation", () => {
@@ -116,7 +116,10 @@ describe("SystemOperations", () => {
 
   it("should handle setAgentImage operation", () => {
     const document = utils.createDocument();
-    const input = generateMock(SetAgentImageInputSchema());
+    // zocker cannot invent an AttachmentRef, so the ref is given.
+    const input = generateMock(SetAgentImageInputSchema(), {
+      attachment: testRef("a"),
+    });
 
     const updatedDocument = reducer(document, setAgentImage(input));
 

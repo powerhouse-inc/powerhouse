@@ -42,6 +42,13 @@ const DRIVE_TYPE = "powerhouse/document-drive";
 // switchboard loads by path.
 const ATTACHMENT_NOTE = path.join(here, "fixtures", "attachment-note");
 const NOTE_TYPE = "clint-test/attachment-note";
+// clint-common's chat-session model, from its build, loaded the same way.
+const CHAT_SESSION = path.join(here, "fixtures", "chat-session");
+const CHAT_SESSION_BUILD = path.resolve(
+  CLINT_ROOT,
+  "../clint-common/dist/node/document-models/index.mjs",
+);
+const CHAT_TYPE = "powerhouse/chat-session";
 // clint-common's chat reader. clint cannot depend on the package that depends
 // on it, so the reader's source is loaded by path.
 const EXTRACT_ATTACHMENTS = path.resolve(
@@ -293,6 +300,7 @@ describe("cli-runner", () => {
     for (const [file, what] of [
       [RUNNER, "@powerhousedao/clint"],
       [PH_RUN, "@powerhousedao/ph-run"],
+      [CHAT_SESSION_BUILD, "@powerhousedao/clint-common"],
     ]) {
       if (!existsSync(file)) {
         throw new Error(`Build ${what} first: ${file} is missing.`);
@@ -313,7 +321,7 @@ describe("cli-runner", () => {
         server: { port: 0, host: "127.0.0.1" },
         storage: { inMemory: true, userDataDir: path.join(root, "user") },
         features: { workflows: false, mcp: false },
-        packages: { disableLocal: true, list: [ATTACHMENT_NOTE] },
+        packages: { disableLocal: true, list: [ATTACHMENT_NOTE, CHAT_SESSION] },
         identity: { keypairPath: path.join(root, "identity.json") },
         drive: { slug: "lab", global: { name: "Lab" } },
       },
@@ -551,6 +559,26 @@ describe("cli-runner", () => {
       workspace: createMemoryWorkdirStore(),
     });
 
+    // The attachment commands with no `folders`: the context of a Cli that
+    // does not serve. The attached reactor is what lets them reach the service.
+    function attachmentCommands(
+      reactor: Awaited<ReturnType<typeof attachDefaultReactor>>,
+    ) {
+      const context = {
+        workdir: root,
+        reactorAttached: true,
+        reactor: () => Promise.resolve(reactor),
+      } as unknown as CommandContext;
+      return async (id: string, input: object) => {
+        const command = createAttachmentCommands().find((c) => c.id === id)!;
+        return (
+          (await command.execute(input as never, context)) as {
+            text: string;
+          }
+        ).text;
+      };
+    }
+
     it("attaches with no _module, on the drive the address names, and releases once", async () => {
       const reactor = await attachDefaultReactor(setup(), { url });
       expect(reactor._module).toBeUndefined();
@@ -591,21 +619,7 @@ describe("cli-runner", () => {
       const file = path.join(root, "note.txt");
       const content = `attached at ${Date.now()}`;
       writeFileSync(file, content);
-      // No `folders`: the context of a Cli that does not serve. The attached
-      // reactor is what lets the commands reach the service.
-      const context = {
-        workdir: root,
-        reactorAttached: true,
-        reactor: () => Promise.resolve(reactor),
-      } as unknown as CommandContext;
-      const run = async (id: string, input: object) => {
-        const command = createAttachmentCommands().find((c) => c.id === id)!;
-        return (
-          (await command.execute(input as never, context)) as {
-            text: string;
-          }
-        ).text;
-      };
+      const run = attachmentCommands(reactor);
 
       const uploaded = await run("attachment-upload", { filePath: file });
       const ref = /^ref: (\S+)$/m.exec(uploaded)?.[1];
@@ -688,6 +702,92 @@ describe("cli-runner", () => {
       ]);
       expect(await exitCodeOf(oneShot)).toBe(0);
       expect(oneShot.output()).toContain("status: available");
+    }, 120_000);
+
+    it("reads an attachment sent in a chat message through the chat document, from the change event on", async () => {
+      const reactor = await attachDefaultReactor(setup(), { url });
+      const run = attachmentCommands(reactor);
+      const workdir = mkdtempSync(path.join(root, "chat-"));
+      const file = path.join(workdir, "chat.txt");
+      const content = `sent in a chat at ${Date.now()}`;
+      writeFileSync(file, content);
+      const ref = /^ref: (\S+)$/m.exec(
+        await run("attachment-upload", { filePath: file }),
+      )?.[1];
+      expect(ref).toMatch(/^attachment:\/\/v1:[0-9a-f]{64}$/);
+
+      const { extractAttachments } = (await import(
+        pathToFileURL(EXTRACT_ATTACHMENTS).href
+      )) as { extractAttachments: ExtractAttachments };
+      const chatId = (await switchboard.reactor.createEmpty(CHAT_TYPE)).header
+        .id;
+      type ChatMessage = { id: string; content: object[] };
+      const messagesOf = (document: unknown) =>
+        (document as { state: { global: { messages: ChatMessage[] } } }).state
+          .global.messages;
+
+      // The chat watch reads a message when the change event reaches the Cli,
+      // and these are the events the switchboard's documentChanges feed
+      // relays. A read started from the event, with no wait, is the watch's.
+      const readOnChange = new Promise<Awaited<ReturnType<ExtractAttachments>>>(
+        (resolve, reject) => {
+          const unsubscribe = switchboard.reactor.subscribe({}, (event) => {
+            const chat = event.documents?.find((d) => d.header.id === chatId);
+            const message = chat && messagesOf(chat).find((m) => m.id === "u1");
+            if (event.type !== "updated" || !message) return;
+            unsubscribe();
+            extractAttachments(message, {
+              workdir,
+              documentId: chatId,
+              service: reactor.attachments,
+            }).then(resolve, reject);
+          });
+        },
+      );
+
+      const sent = await switchboard.reactor.execute(chatId, "main", [
+        {
+          id: randomUUID(),
+          type: "ADD_USER_MESSAGE",
+          scope: "global",
+          input: {
+            id: "u1",
+            content: [
+              {
+                id: "u1-file",
+                type: "FILE",
+                mediaType: "text/plain",
+                attachment: ref,
+                filename: "chat.txt",
+              },
+            ],
+            createdAt: new Date().toISOString(),
+          },
+          timestampUtcMs: new Date().toISOString(),
+        },
+      ]);
+      expect(messagesOf(sent)).toEqual([
+        expect.objectContaining({
+          content: [expect.objectContaining({ attachment: ref })],
+        }),
+      ]);
+
+      // The switchboard indexed the ref from the chat operation: the event
+      // came after it, and so does every read through the chat id.
+      const extracted = await readOnChange;
+      expect(extracted).toHaveLength(1);
+      expect(extracted[0].mediaType).toBe("text/plain");
+      expect(path.dirname(extracted[0].localPath)).toBe(
+        path.join(workdir, "downloads"),
+      );
+      expect(readFileSync(extracted[0].localPath, "utf8")).toBe(content);
+
+      const copy = path.join(workdir, "chat-copy.txt");
+      expect(
+        await run("attachment-get", { ref, documentId: chatId, outPath: copy }),
+      ).toContain(`Wrote ${content.length} bytes to ${copy}`);
+      expect(readFileSync(copy, "utf8")).toBe(content);
+      await reactor.shutdown();
     }, 120_000);
 
     it("creates, links, names and unlinks documents in folders on the switchboard", async () => {

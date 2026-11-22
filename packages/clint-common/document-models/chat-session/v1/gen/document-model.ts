@@ -20,7 +20,7 @@ export const documentModel: DocumentModelGlobalState = {
         },
         global: {
           schema:
-            "enum SessionStatus {\n  ACTIVE\n  COMPLETED\n  ABORTED\n  ERROR\n}\n\nenum MessageRole {\n  SYSTEM\n  USER\n  ASSISTANT\n  TOOL\n}\n\nenum ContentPartType {\n  TEXT\n  IMAGE\n  FILE\n  TOOL_CALL\n  TOOL_RESULT\n  REASONING\n  ERROR\n}\n\ntype AgentInfo {\n  id: String\n  name: String\n  model: String\n  description: String\n  attachment: String\n}\n\ntype MessageUsage {\n  promptTokens: Int\n  completionTokens: Int\n  totalTokens: Int\n}\n\ntype UsageSummary {\n  totalPromptTokens: Int!\n  totalCompletionTokens: Int!\n  totalTokens: Int!\n  totalSteps: Int!\n  totalMessages: Int!\n  totalToolCalls: Int!\n}\n\ntype ContentPart {\n  id: OID!\n  type: ContentPartType!\n  text: String\n  toolCallId: String\n  toolName: String\n  args: String\n  result: String\n  isError: Boolean\n  mediaType: String\n  url: URL\n  attachment: String\n  filename: String\n  error: String\n}\n\ntype TurnFailure {\n  userMessageId: OID!\n  code: String!\n  message: String!\n  retryable: Boolean!\n  failedAt: DateTime!\n}\n\ntype Message {\n  id: OID!\n  role: MessageRole!\n  content: [ContentPart!]!\n  stepIndex: Int\n  createdAt: DateTime!\n  usage: MessageUsage\n  finishedAt: DateTime\n  finishReason: String\n  pickedUpAt: DateTime\n  failure: TurnFailure\n}\n\ntype ChatSessionState {\n  threadId: String\n  resourceId: String\n  agent: AgentInfo\n  status: SessionStatus!\n  startedAt: DateTime\n  endedAt: DateTime\n  messages: [Message!]!\n  usage: UsageSummary\n  interruptRequested: Boolean\n  retryRequestedFor: OID\n  retryRequestedAt: DateTime\n}",
+            "enum SessionStatus {\n  ACTIVE\n  COMPLETED\n  ABORTED\n  ERROR\n}\n\nenum MessageRole {\n  SYSTEM\n  USER\n  ASSISTANT\n  TOOL\n}\n\nenum ContentPartType {\n  TEXT\n  IMAGE\n  FILE\n  TOOL_CALL\n  TOOL_RESULT\n  REASONING\n  ERROR\n}\n\ntype AgentInfo {\n  id: String\n  name: String\n  model: String\n  description: String\n  attachment: AttachmentRef\n}\n\ntype MessageUsage {\n  promptTokens: Int\n  completionTokens: Int\n  totalTokens: Int\n}\n\ntype UsageSummary {\n  totalPromptTokens: Int!\n  totalCompletionTokens: Int!\n  totalTokens: Int!\n  totalSteps: Int!\n  totalMessages: Int!\n  totalToolCalls: Int!\n}\n\ntype ContentPart {\n  id: OID!\n  type: ContentPartType!\n  text: String\n  toolCallId: String\n  toolName: String\n  args: String\n  result: String\n  isError: Boolean\n  mediaType: String\n  url: URL\n  attachment: AttachmentRef\n  filename: String\n  error: String\n}\n\ntype TurnFailure {\n  userMessageId: OID!\n  code: String!\n  message: String!\n  retryable: Boolean!\n  failedAt: DateTime!\n}\n\ntype Message {\n  id: OID!\n  role: MessageRole!\n  content: [ContentPart!]!\n  stepIndex: Int\n  createdAt: DateTime!\n  usage: MessageUsage\n  finishedAt: DateTime\n  finishReason: String\n  pickedUpAt: DateTime\n  failure: TurnFailure\n}\n\ntype ChatSessionState {\n  threadId: String\n  resourceId: String\n  agent: AgentInfo\n  status: SessionStatus!\n  startedAt: DateTime\n  endedAt: DateTime\n  messages: [Message!]!\n  usage: UsageSummary\n  interruptRequested: Boolean\n  retryRequestedFor: OID\n  retryRequestedAt: DateTime\n}",
           examples: [],
           initialValue:
             '{"threadId": null, "resourceId": null, "agent": null, "status": "ACTIVE", "startedAt": null, "endedAt": null, "messages": [], "usage": null, "interruptRequested": false, "retryRequestedFor": null, "retryRequestedAt": null}',
@@ -112,7 +112,8 @@ export const documentModel: DocumentModelGlobalState = {
               id: "op-set-agent-image",
               name: "SET_AGENT_IMAGE",
               description: "Set or clear the agent avatar attachment ref.",
-              schema: "input SetAgentImageInput {\n  attachment: String\n}",
+              schema:
+                "input SetAgentImageInput {\n  attachment: AttachmentRef\n}",
               template: "Set or clear the agent avatar attachment ref.",
               reducer:
                 "if (!state.agent) {\n  state.agent = { id: null, name: null, model: null, description: null, attachment: null };\n}\nstate.agent.attachment = action.input.attachment || null;",
@@ -147,7 +148,7 @@ export const documentModel: DocumentModelGlobalState = {
               description:
                 "Add a user message with text, image, and/or file content parts.",
               schema:
-                "input UserContentPartInput {\n  id: OID!\n  type: ContentPartType!\n  text: String\n  mediaType: String\n  url: URL\n  attachment: String\n  filename: String\n}\n\ninput AddUserMessageInput {\n  id: OID!\n  content: [UserContentPartInput!]!\n  createdAt: DateTime!\n}",
+                "input UserContentPartInput {\n  id: OID!\n  type: ContentPartType!\n  text: String\n  mediaType: String\n  url: URL\n  attachment: AttachmentRef\n  filename: String\n}\n\ninput AddUserMessageInput {\n  id: OID!\n  content: [UserContentPartInput!]!\n  createdAt: DateTime!\n}",
               template:
                 "Add a user message with text, image, and/or file content parts.",
               reducer:
@@ -292,7 +293,7 @@ export const documentModel: DocumentModelGlobalState = {
               description:
                 "Add a complete assistant message with text, tool calls, reasoning, and/or file content parts.",
               schema:
-                "input AssistantContentPartInput {\n  id: OID!\n  type: ContentPartType!\n  text: String\n  toolCallId: String\n  toolName: String\n  args: String\n  mediaType: String\n  url: URL\n  attachment: String\n  filename: String\n  error: String\n}\n\ninput AddAssistantMessageInput {\n  id: OID!\n  content: [AssistantContentPartInput!]!\n  stepIndex: Int\n  createdAt: DateTime!\n}",
+                "input AssistantContentPartInput {\n  id: OID!\n  type: ContentPartType!\n  text: String\n  toolCallId: String\n  toolName: String\n  args: String\n  mediaType: String\n  url: URL\n  attachment: AttachmentRef\n  filename: String\n  error: String\n}\n\ninput AddAssistantMessageInput {\n  id: OID!\n  content: [AssistantContentPartInput!]!\n  stepIndex: Int\n  createdAt: DateTime!\n}",
               template:
                 "Add a complete assistant message with text, tool calls, reasoning, and/or file content parts.",
               reducer:
@@ -495,7 +496,7 @@ export const documentModel: DocumentModelGlobalState = {
               description:
                 "Add a tool result message containing one or more result parts (success or error). Links back to a tool call via toolCallId.",
               schema:
-                "input ToolResultPartInput {\n  id: OID!\n  type: ContentPartType!\n  toolCallId: String!\n  toolName: String!\n  result: String\n  isError: Boolean\n  text: String\n  mediaType: String\n  url: URL\n  attachment: String\n}\n\ninput AddToolResultInput {\n  id: OID!\n  content: [ToolResultPartInput!]!\n  stepIndex: Int\n  createdAt: DateTime!\n}",
+                "input ToolResultPartInput {\n  id: OID!\n  type: ContentPartType!\n  toolCallId: String!\n  toolName: String!\n  result: String\n  isError: Boolean\n  text: String\n  mediaType: String\n  url: URL\n  attachment: AttachmentRef\n}\n\ninput AddToolResultInput {\n  id: OID!\n  content: [ToolResultPartInput!]!\n  stepIndex: Int\n  createdAt: DateTime!\n}",
               template:
                 "Add a tool result message containing one or more result parts (success or error). Links back to a tool call via toolCallId.",
               reducer:

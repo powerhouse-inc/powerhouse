@@ -1,6 +1,7 @@
+import { createHash } from "node:crypto";
 import { existsSync, rmSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { StreamChunk } from "@powerhousedao/clint";
+import type { AttachmentRef, StreamChunk } from "@powerhousedao/clint";
 import {
   abortSession,
   addAssistantMessage,
@@ -43,6 +44,10 @@ import {
 } from "./steer.js";
 
 const T2 = "2026-01-01T00:00:02.000Z";
+
+/** A well-formed attachment ref, one per seed. */
+const fileRef = (seed: string): AttachmentRef =>
+  `attachment://v1:${createHash("sha256").update(seed).digest("hex")}`;
 
 async function runPass(
   fake: FakeReactor,
@@ -1060,7 +1065,7 @@ describe("chat-session-watch — steering", () => {
           {
             id: `${id}-p2`,
             type: "FILE",
-            attachment: "ref-1",
+            attachment: fileRef("ref-1"),
             filename: "logo.svg",
             mediaType: "image/svg+xml",
           },
@@ -1404,7 +1409,7 @@ describe("chat-session-watch — steering", () => {
         {
           id: `${id}-file`,
           type: "FILE",
-          attachment: `ref-${id}`,
+          attachment: fileRef(id),
           filename: "logo.svg",
           mediaType: "image/svg+xml",
         },
@@ -1754,7 +1759,7 @@ describe("chat-session-watch — steering", () => {
           {
             id: `${att}-p2`,
             type: "FILE",
-            attachment: "ref-2",
+            attachment: fileRef("ref-2"),
             filename: "logo.svg",
             mediaType: "image/svg+xml",
           },

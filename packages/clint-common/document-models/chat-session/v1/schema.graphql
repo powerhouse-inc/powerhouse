@@ -48,7 +48,7 @@ type AgentInfo {
   name: String
   model: String
   description: String
-  attachment: String
+  attachment: AttachmentRef
 }
 
 type MessageUsage {
@@ -77,7 +77,7 @@ type ContentPart {
   isError: Boolean
   mediaType: String
   url: URL
-  attachment: String
+  attachment: AttachmentRef
   filename: String
   error: String
 }
@@ -161,7 +161,7 @@ input AddSystemMessageInput {
 }
 
 input SetAgentImageInput {
-  attachment: String
+  attachment: AttachmentRef
 }
 
 input SetAgentDescriptionInput {
@@ -176,7 +176,7 @@ input UserContentPartInput {
   text: String
   mediaType: String
   url: URL
-  attachment: String
+  attachment: AttachmentRef
   filename: String
 }
 
@@ -218,7 +218,7 @@ input AssistantContentPartInput {
   args: String
   mediaType: String
   url: URL
-  attachment: String
+  attachment: AttachmentRef
   filename: String
   error: String
 }
@@ -286,7 +286,7 @@ input ToolResultPartInput {
   text: String
   mediaType: String
   url: URL
-  attachment: String
+  attachment: AttachmentRef
 }
 
 input AddToolResultInput {

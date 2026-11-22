@@ -22,13 +22,15 @@ import {
   utils,
 } from "document-models/chat-session/v1";
 import { describe, expect, it } from "vitest";
-import { sessionWithUserMessage, T2 } from "./session-fixtures.js";
+import { sessionWithUserMessage, T2, testRef } from "./session-fixtures.js";
 
 describe("AgentOperations", () => {
   it("should handle addAssistantMessage operation", () => {
     const document = utils.createDocument();
+    // zocker cannot invent an AttachmentRef, so the parts are given.
     const input = generateMock(AddAssistantMessageInputSchema(), {
       createdAt: "2024-01-01T00:00:00.000Z",
+      content: [{ id: "a1-i", type: "IMAGE", attachment: testRef("a") }],
     });
 
     const updatedDocument = reducer(document, addAssistantMessage(input));
@@ -46,7 +48,10 @@ describe("AgentOperations", () => {
 
   it("should handle appendAssistantContent operation", () => {
     const document = utils.createDocument();
-    const input = generateMock(AppendAssistantContentInputSchema());
+    // zocker cannot invent an AttachmentRef, so the part is given.
+    const input = generateMock(AppendAssistantContentInputSchema(), {
+      part: { id: "a1-i", type: "IMAGE", attachment: testRef("a") },
+    });
 
     const updatedDocument = reducer(document, appendAssistantContent(input));
 
