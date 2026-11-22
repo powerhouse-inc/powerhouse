@@ -49,6 +49,8 @@ async function getDriveNodes(
  * Folders are nodes inside the drive document's `state.global.nodes` array,
  * created via `ADD_FOLDER` and `ADD_FILE` drive operations executed on the
  * personal drive. This is separate from the document relationship graph.
+ * Only calls the remote `GraphQLReactorClient` has too are made, so the same
+ * operations work on an embedded and on an attached reactor.
  */
 export function createFolderOperations(
   client: TypedReactorClient<any>,
@@ -211,13 +213,33 @@ export function createFolderOperations(
       parentIdentifier: personalDriveId,
       name,
     });
+    const documentId = doc.header.id;
 
-    await client.drives.addFile(personalDriveId, doc, parentFolderId);
+    // What `drives.addFile` does, in calls the remote client has too: the
+    // document first, so the drive never names a file whose create failed;
+    // then its file node and its place in the document graph.
+    await (
+      await client.write.create(doc)
+    ).readable;
+    const actions = await getDriveActions();
+    await (
+      await client.write.execute(personalDriveId, "main", [
+        actions.addFile({
+          id: documentId,
+          name: doc.header.name || documentId,
+          documentType: doc.header.documentType,
+          parentFolder: parentFolderId,
+        }),
+      ])
+    ).readable;
+    await (
+      await client.write.addRelationship(personalDriveId, documentId, "child")
+    ).readable;
 
     log?.debug(
-      `${TAG} createDocument ${doc.header.id.slice(0, 8)}… created in folder ${parentFolderId.slice(0, 8)}…`,
+      `${TAG} createDocument ${documentId.slice(0, 8)}… created in folder ${parentFolderId.slice(0, 8)}…`,
     );
-    return { documentId: doc.header.id };
+    return { documentId };
   }
 
   async function removeDocument(

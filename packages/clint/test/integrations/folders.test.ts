@@ -280,6 +280,78 @@ describe("createFolderOperations", () => {
   });
 });
 
+// ── On the calls the remote client has ───────────────────────────
+
+/** What the folder operations may call: what GraphQLReactorClient has too. */
+const FOLDER_CLIENT_METHODS = ["get", "newDocument"] as const;
+const FOLDER_WRITE_METHODS = [
+  "create",
+  "execute",
+  "addRelationship",
+  "removeRelationship",
+  "rename",
+] as const;
+
+/** The client reduced to those methods, so a call outside them fails here. */
+function remoteShaped(client: any) {
+  const pick = (source: any, names: readonly string[]) =>
+    Object.fromEntries(
+      names.map((name) => [name, source[name].bind(source)] as const),
+    );
+  return {
+    ...pick(client, FOLDER_CLIENT_METHODS),
+    write: pick(client.write, FOLDER_WRITE_METHODS),
+  };
+}
+
+describe("createFolderOperations on the remote client's calls", () => {
+  const childIds = async (client: any) =>
+    (await client.getOutgoingRelationships(driveId, "child")).results.map(
+      (c: any) => c.header.id,
+    );
+
+  it("createDocument creates the document, its file node in the folder and its child edge", async () => {
+    const client = reactorModule.client as any;
+    const ops = createFolderOperations(remoteShaped(client), driveId);
+
+    const { documentId } = await ops.createDocument(
+      "powerhouse/document-model",
+      "remote/created",
+      "Created remotely",
+    );
+
+    const folderId = await ops.ensureFolder("remote/created");
+    const nodes = (await client.get(driveId)).state.global.nodes;
+    expect(nodes.filter((n: any) => n.id === documentId)).toEqual([
+      expect.objectContaining({
+        kind: "file",
+        name: "Created remotely",
+        documentType: "powerhouse/document-model",
+        parentFolder: folderId,
+      }),
+    ]);
+    expect(await childIds(client)).toContain(documentId);
+    const document = await client.get(documentId);
+    expect(document.header.name).toBe("Created remotely");
+  });
+
+  it("addDocument names the document, and removeDocument unlinks it", async () => {
+    const client = reactorModule.client as any;
+    const ops = createFolderOperations(remoteShaped(client), driveId);
+    const doc = await client.createEmpty("powerhouse/document-model");
+    const docId = doc.header.id;
+
+    await ops.addDocument(docId, "remote/linked", "Linked remotely");
+    expect((await client.get(docId)).header.name).toBe("Linked remotely");
+    expect(await childIds(client)).toContain(docId);
+
+    await ops.removeDocument(docId);
+    const nodes = (await client.get(driveId)).state.global.nodes;
+    expect(nodes.find((n: any) => n.id === docId)).toBeUndefined();
+    expect(await childIds(client)).not.toContain(docId);
+  });
+});
+
 // ── createFolderCommands tests ───────────────────────────────────
 // These test the command wrappers — they use a thin FolderOperations
 // interface, not the reactor directly. This is not mocking; it's testing

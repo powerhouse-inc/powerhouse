@@ -9,7 +9,8 @@ import { GraphQLReactorClient } from "@powerhousedao/reactor-browser/graphql-cli
 import { describe, expect, it } from "vitest";
 
 /** What `attachDefaultReactor`, `ensureDrive`, the change trigger, the
- * subscription bridge and the read tools call on the facade. */
+ * subscription bridge, the read tools and the folder operations call on the
+ * facade. */
 const FACADE_CALLS = [
   "get",
   "find",
@@ -19,8 +20,14 @@ const FACADE_CALLS = [
   "notifyCredentialsChanged",
 ] as const;
 
-/** What they call on the write half. */
-const WRITE_CALLS = ["create", "execute", "rename"] as const;
+/** What they and the folder operations call on the write half. */
+const WRITE_CALLS = [
+  "create",
+  "execute",
+  "rename",
+  "addRelationship",
+  "removeRelationship",
+] as const;
 
 function remoteClient(): GraphQLReactorClient {
   // Nothing is requested until a call is made.

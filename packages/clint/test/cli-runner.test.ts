@@ -17,11 +17,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { readRunRecord } from "@powerhousedao/host-core";
 import { packageJsonExports } from "@powerhousedao/shared/clis/constants";
 import type * as SwitchboardServer from "@powerhousedao/switchboard/server";
-import type { ILogger } from "document-model";
+import { documentModelDocumentModelModule, type ILogger } from "document-model";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createMemoryWorkdirStore } from "../src/core/store.js";
 import type { CommandContext } from "../src/core/types.js";
 import { createAttachmentCommands } from "../src/integrations/powerhouse/attachment-commands.js";
+import { createFolderOperations } from "../src/integrations/powerhouse/folders.js";
 import { attachDefaultReactor } from "../src/integrations/powerhouse/index.js";
 
 // The Cli runner end to end: a real switchboard in this process, and the real
@@ -593,6 +594,54 @@ describe("cli-runner", () => {
       // remote service refuses the read before any request.
       const stat = await run("attachment-stat", { ref });
       expect(stat).toContain(`Not found or error for ${ref}`);
+      await reactor.shutdown();
+    }, 60_000);
+
+    it("creates, links, names and unlinks documents in folders on the switchboard", async () => {
+      // The light client heads a new document with the model it is given.
+      const reactor = await attachDefaultReactor(setup(), {
+        url,
+        drive: { name: "Folders" },
+        documentModels: [documentModelDocumentModelModule],
+      });
+      const driveId = reactor.personalDriveId!;
+      const folders = createFolderOperations(reactor.client, driveId);
+      const server = switchboard.reactor;
+      const nodes = async () =>
+        (
+          (await server.get(driveId)) as unknown as {
+            state: { global: { nodes: Array<Record<string, unknown>> } };
+          }
+        ).state.global.nodes;
+      const children = async () =>
+        (await server.getOutgoingRelationships(driveId, "child")).results.map(
+          (child) => child.header.id,
+        );
+
+      const { documentId } = await folders.createDocument(
+        "powerhouse/document-model",
+        "specs/remote",
+        "Spec A",
+      );
+      const folderId = await folders.ensureFolder("specs/remote");
+      expect((await nodes()).filter((n) => n.id === documentId)).toEqual([
+        expect.objectContaining({
+          kind: "file",
+          name: "Spec A",
+          parentFolder: folderId,
+        }),
+      ]);
+      expect(await children()).toContain(documentId);
+
+      const linked = (await server.createEmpty("powerhouse/document-model"))
+        .header.id;
+      await folders.addDocument(linked, "specs/remote", "Spec B");
+      expect((await server.get(linked)).header.name).toBe("Spec B");
+      expect(await children()).toContain(linked);
+
+      await folders.removeDocument(linked);
+      expect((await nodes()).some((n) => n.id === linked)).toBe(false);
+      expect(await children()).not.toContain(linked);
       await reactor.shutdown();
     }, 60_000);
 
