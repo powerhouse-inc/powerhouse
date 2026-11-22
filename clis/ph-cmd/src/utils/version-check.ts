@@ -12,21 +12,27 @@ import { dirname, join } from "node:path";
  * stream is derived from its own version (see `getStream`); users can
  * override it with `--tag`.
  */
-export const PH_CMD_STREAMS = ["latest", "dev"] as const;
+export const PH_CMD_STREAMS = ["latest", "dev", "next"] as const;
 export type PhCmdStream = (typeof PH_CMD_STREAMS)[number];
+
+function isStream(value: unknown): value is PhCmdStream {
+  return (PH_CMD_STREAMS as readonly unknown[]).includes(value);
+}
 
 /**
  * Which release stream a version belongs to: stable versions (no semver
- * prerelease tag) live on `latest`, everything else (dev, staging, rc,
- * test builds) on `dev` — the active development stream. A dev build must
- * not be nagged toward an older stable release. Unparseable versions fall
- * back to `latest` so a broken version string can never trigger a dev
- * target.
+ * prerelease tag) live on `latest`, branch releases (`X.Y.Z-next.N`) on
+ * `next`, everything else (dev, staging, rc, test builds) on `dev` — the
+ * active development stream. A dev build must not be nagged toward an older
+ * stable release, and a next build must not be moved to the older dev line.
+ * Unparseable versions fall back to `latest` so a broken version string can
+ * never trigger a pre-release target.
  */
 export function getStream(version: string): PhCmdStream {
   const parsed = semver.parse(version);
   if (!parsed) return "latest";
-  return parsed.prerelease.length > 0 ? "dev" : "latest";
+  if (parsed.prerelease.length === 0) return "latest";
+  return parsed.prerelease[0] === "next" ? "next" : "dev";
 }
 
 /**
@@ -74,7 +80,7 @@ function parseCache(raw: unknown): VersionCheckResult | null {
   )
     return null;
   if (typeof obj.target !== "string" || !semver.valid(obj.target)) return null;
-  if (obj.stream !== "latest" && obj.stream !== "dev") return null;
+  if (!isStream(obj.stream)) return null;
   return { checkedAt: obj.checkedAt, stream: obj.stream, target: obj.target };
 }
 

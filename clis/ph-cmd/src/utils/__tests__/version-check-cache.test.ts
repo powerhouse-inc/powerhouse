@@ -125,6 +125,37 @@ describe("checkForNewerVersion", () => {
     expect(fetchCalls).toHaveLength(1); // fresh timestamp but wrong stream
   });
 
+  it("accepts a fresh cache on the next stream without fetching", async () => {
+    const { deps, fetchCalls } = makeDeps({
+      cachePath,
+      readFile: () =>
+        Promise.resolve(
+          JSON.stringify({
+            checkedAt: new Date(999_000).toISOString(),
+            stream: "next",
+            target: "6.4.0-next.3",
+          }),
+        ),
+    });
+    const result = await checkForNewerVersion({
+      currentVersion: "6.4.0-next.1",
+      deps,
+    });
+    expect(result?.stream).toBe("next");
+    expect(result?.target).toBe("6.4.0-next.3");
+    expect(fetchCalls).toHaveLength(0);
+  });
+
+  it("resolves the next stream from a branch release version", async () => {
+    const { deps, fetchCalls } = makeDeps({ cachePath });
+    const result = await checkForNewerVersion({
+      currentVersion: "6.4.0-next.1",
+      deps,
+    });
+    expect(result?.stream).toBe("next");
+    expect(fetchCalls[0].url).toBe(`${REGISTRY}/ph-cmd/next`);
+  });
+
   it("keeps a stale cache when the fetch fails (silent, no throw)", async () => {
     const { deps, fetchCalls } = makeDeps({
       cachePath,

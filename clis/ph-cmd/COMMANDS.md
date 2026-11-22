@@ -146,7 +146,7 @@ show help<br><br>
 Update the globally installed ph to the newest version of its release stream
 ### options
 #### Tag <br>
-dist-tag to install (defaults to the running build's stream; e.g. latest, dev)<br><br>
+dist-tag to install (defaults to the running build's stream; e.g. latest, dev, next)<br><br>
 **usage:** `--tag, -t <str>`<br>
 
 
