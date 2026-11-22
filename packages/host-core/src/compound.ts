@@ -40,6 +40,7 @@ import {
   getVerb,
   isSchemaLike,
   ONE_SHOT_VERBS,
+  packageBuildRefusal,
   resolveRunnerModule,
   RunnerError,
   validateDeclaredHost,
@@ -549,6 +550,33 @@ export async function runCompound(
     }
     foreground = planned.foreground;
     order = planned.order;
+
+    // A package's hosts are built by the package: a build here would write
+    // into the installed package. Refused before any member builds; the
+    // foreground member, which a build skips, does not count.
+    if (oneShotCompound) {
+      const supplied = scope
+        ? [{ ref: recordKey, hostPackage: scope, where: compoundFile }]
+        : prepared.flatMap((m) =>
+            m.hostPackage && m.key !== foreground
+              ? [
+                  {
+                    ref: m.ref,
+                    hostPackage: m.hostPackage,
+                    where: `${compoundFile} (member "${m.key}")`,
+                  },
+                ]
+              : [],
+          );
+      const [first] = supplied;
+      if (first) {
+        const refusal = packageBuildRefusal(first.ref, first.hostPackage, verb);
+        throw new RunnerError(
+          `${first.where}: ${refusal.message}`,
+          refusal.hint,
+        );
+      }
+    }
 
     // This invocation's arguments, per member: one no member accepts fails
     // with nothing running.

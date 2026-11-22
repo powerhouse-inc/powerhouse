@@ -734,7 +734,11 @@ package's `studio` and a project host named `studio` never meet:
 | Connect's Vite cache | `node_modules/.vite-<name>` | `node_modules/.vite-@acme+tools+<name>` |
 
 `ph run @acme/tools/studio --stop` stops it, and `ph host check
-@acme/tools/studio` checks it. A ref that names no host, a package that is
+@acme/tools/studio` checks it. `build` is refused on a package's host, and
+on a project compound with a package's member: a package's hosts are built
+by the package, and a build in the project would write into the installed
+package. In the package's own repository they are project hosts and build
+as usual. A ref that names no host, a package that is
 not installed or has no `hosts/`, and a compound that is, through its
 compound members, its own member fail before anything starts, naming the
 package and the host.

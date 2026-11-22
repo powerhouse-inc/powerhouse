@@ -17,6 +17,7 @@ import {
   moduleRootOf,
   ONE_SHOT_VERBS,
   outputRefsOf,
+  packageBuildRefusal,
   parseHostRef,
   probeRun,
   processResolveEnv,
@@ -118,6 +119,15 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   );
   const typed = commandOfVerb(runner, args);
   const verb = typed.verb ?? "run";
+  // A package's hosts are built by the package: a build here would write
+  // into the installed package, or build the project in its name.
+  if (ONE_SHOT_VERBS.has(verb) && hostPackage) {
+    const refusal = packageBuildRefusal(args.host, hostPackage, verb);
+    throw new RunnerError(
+      `${hostFileLabel(path.basename(loaded.dir), hostPackage)}: ${refusal.message}`,
+      refusal.hint,
+    );
+  }
   const storeVerb = STORE_VERBS.has(verb);
   if (storeVerb && runner.kind === "compound") {
     throw new RunnerError(

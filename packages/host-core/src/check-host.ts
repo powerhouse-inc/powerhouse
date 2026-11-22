@@ -48,6 +48,7 @@ import {
   hostSchemaIssues,
   kindShapeIssues,
   ONE_SHOT_VERBS,
+  packageBuildRefusal,
   resolveRunnerModule,
   type HostSchemaLike,
   type RunnerIssue,
@@ -102,6 +103,14 @@ export async function checkHost(
     return result;
   }
   const specifier = host.runner.module;
+  // As `ph run` refuses it: a package's hosts are built by the package.
+  if (hostPackage && ONE_SHOT_VERBS.has(verb)) {
+    issuer(result, file)(
+      "declared",
+      packageBuildRefusal(name, hostPackage, verb),
+    );
+    return result;
+  }
 
   if (runner.kind === "compound") {
     await checkCompound(result, options, {
@@ -387,6 +396,13 @@ async function checkCompound(
     // and not at all at a one-shot verb.
     const isForeground = m.key === foreground;
     if (isForeground && ONE_SHOT_VERBS.has(verb)) continue;
+    if (m.hostPackage && ONE_SHOT_VERBS.has(verb)) {
+      issue("declared", {
+        ...packageBuildRefusal(m.ref, m.hostPackage, verb),
+        path: `children.${m.key}`,
+      });
+      continue;
+    }
     const csp = wiring.cspRegistrySync === true && takesCspRegistrySync(m);
     await checkSubject(result, options, {
       file: m.file,

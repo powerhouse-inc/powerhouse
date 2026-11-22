@@ -290,6 +290,23 @@ export async function resolveRunnerModule(
  * the empty collection, see `emptyMaps`). */
 export const ONE_SHOT_VERBS: ReadonlySet<string> = new Set(["build"]);
 
+/** Why a one-shot verb (build) does not run on a host an installed package
+ * supplies (`ref`, as the project addresses it): the package ships its hosts
+ * built, and a build here would write into the installed package (a
+ * Connect's outDir) or build the project in its name. The package's own
+ * repository builds them, where they are project hosts. */
+export function packageBuildRefusal(
+  ref: string,
+  hostPackage: HostPackage,
+  verb: string,
+): RunnerIssue {
+  return {
+    path: "",
+    message: `${ref} is a host ${hostPackage.name} supplies, and a package's hosts are built by the package: "${verb}" does not run on it.`,
+    hint: `${hostPackage.name} ships them built; its own repository builds them, where they are project hosts. Build this project's own hosts by their bare names.`,
+  };
+}
+
 /** Verbs that work on a host's stores and start nothing (`migrate`,
  * `migrate-status`, `reset`). Their host is resolved as for `run`, so they
  * address the stores `run` opens; they take no lock and return nothing, so

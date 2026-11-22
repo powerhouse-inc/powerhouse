@@ -293,13 +293,16 @@ afterAll(() => {
 const calls = () => globalThis.__kitCalls ?? [];
 
 /** `ph run <ref>` up to the compound runner: what start-run hands it. */
-async function startCompound(ref: string): Promise<RunCompoundResult> {
+async function startCompound(
+  ref: string,
+  verb = "run",
+): Promise<RunCompoundResult> {
   const loaded = await loadHost(project, ref);
   const result = await runCompound(
     loaded.host,
     {
       projectRoot: project,
-      verb: "run",
+      verb,
       env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot },
       ...(loaded.package ? { hostPackage: loaded.package } : {}),
     },
@@ -619,6 +622,54 @@ describe("rule 4: a package host's state is in a folder named after the package"
       path.join(project, ".ph", "services", "@acme", "tools", "switchboard"),
     );
     expect(path.basename(file)).toMatch(/^switchboard\.\d+\.log$/);
+  });
+});
+
+describe("build: a package's hosts are built by the package", () => {
+  const refusal = (ref: string) =>
+    `${ref} is a host @acme/tools supplies, and a package's hosts are built by the package: "build" does not run on it.`;
+
+  it("refuses a package's compound and a project compound with a package's member, before any member builds", async () => {
+    await expect(startCompound("@acme/tools/stack", "build")).rejects.toThrow(
+      `@acme/tools/hosts/stack: ${refusal("@acme/tools/stack")}`,
+    );
+    await expect(startCompound("full", "build")).rejects.toThrow(
+      `hosts/full (member "tool"): ${refusal("@acme/tools/sb")}`,
+    );
+    expect(calls()).toEqual([]);
+    expect(listRunRecords(project)).toEqual([]);
+  });
+
+  it("reports the same in ph host check", async () => {
+    const own = await checkHost("@acme/tools/sb", {
+      projectRoot: project,
+      env: {},
+      verb: "build",
+    });
+    expect(own.issues).toEqual([
+      expect.objectContaining({
+        stage: "declared",
+        file: "@acme/tools/hosts/sb/host.js",
+        message: refusal("@acme/tools/sb"),
+      }),
+    ]);
+    const full = await checkHost("full", {
+      projectRoot: project,
+      env: {},
+      verb: "build",
+    });
+    expect(full.issues).toContainEqual(
+      expect.objectContaining({
+        file: "hosts/full/host.js",
+        path: "children.tool",
+        message: refusal("@acme/tools/sb"),
+      }),
+    );
+    // At run, nothing of it.
+    expect(
+      (await checkHost("@acme/tools/sb", { projectRoot: project, env: {} }))
+        .issues,
+    ).toEqual([]);
   });
 });
 

@@ -45,6 +45,9 @@ export async function run(host, ctx) {
   });
   return { outputs: { origin: "http://localhost:1", who: "${who}" }, shutdown: async () => clearInterval(keep) };
 }
+export async function build(host, ctx) {
+  console.log("built " + JSON.stringify({ who: "${who}", name: host.name, cwd: process.cwd() }));
+}
 `;
 
 /** A port the OS gave out, free again: what the Connect is asked to bind. */
@@ -107,9 +110,9 @@ describe("ph-run run <package>/<host>", () => {
     }
   }
 
-  const once = (args: string[]) =>
+  const once = (args: string[], cwd = project) =>
     spawnSync(process.execPath, [PH_RUN, "run", ...args], {
-      cwd: project,
+      cwd,
       env: childEnv(),
       encoding: "utf8",
       windowsHide: true,
@@ -154,6 +157,28 @@ describe("ph-run run <package>/<host>", () => {
     write(
       path.join(tools, "hosts", "sb", "host.js"),
       `export default { name: "sb", runner: { module: "kit-runner" } };`,
+    );
+    // A compound of the package's: its build is refused before its runner
+    // is asked.
+    write(
+      path.join(tools, "node_modules", "kit-compound", "package.json"),
+      JSON.stringify({
+        name: "kit-compound",
+        type: "module",
+        main: "index.js",
+      }),
+    );
+    write(
+      path.join(tools, "node_modules", "kit-compound", "index.js"),
+      `export const kind = "compound";
+export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
+export async function run() { console.log("compound ran"); }
+export async function build() { console.log("compound built"); }
+`,
+    );
+    write(
+      path.join(tools, "hosts", "stack", "host.js"),
+      `export default { name: "stack", runner: { module: "kit-compound" }, children: { sb: { host: "sb" } } };`,
     );
     // A Connect the package built, served by ph-run's own runner (the
     // package's dependency), next to a Connect build of the project's.
@@ -298,6 +323,27 @@ describe("ph-run run <package>/<host>", () => {
     expect(await run.exited).not.toBeNull();
   }, 90_000);
 
+  it("refuses to build a package's host, standalone and compound; the package's own repository builds it", () => {
+    for (const ref of ["@acme/tools/sb", "@acme/tools/stack"]) {
+      const refused = once([ref, "build"]);
+      expect(refused.status, refused.stdout).toBe(1);
+      expect(refused.stderr).toContain(
+        `@acme/tools/hosts/${ref.split("/").at(-1)}/host.js: ${ref} is a host @acme/tools supplies, and a package's hosts are built by the package: "build" does not run on it.`,
+      );
+      expect(refused.stdout).not.toContain("built");
+    }
+    // In the package's own folder its hosts are the project's: they build.
+    const own = once(["sb", "build"], tools);
+    expect(own.status, own.stderr).toBe(0);
+    expect(own.stdout).toContain(
+      `built ${JSON.stringify({ who: "package", name: "sb", cwd: tools })}`,
+    );
+    // And a project host builds as before.
+    const ours = once(["sb", "build"]);
+    expect(ours.status, ours.stderr).toBe(0);
+    expect(ours.stdout).toContain('built {"who":"project"');
+  }, 90_000);
+
   it("says what is wrong with a ref, naming the package and the host", () => {
     const missing = once(["@acme/nope/sb"]);
     expect(missing.status).toBe(1);
@@ -307,7 +353,7 @@ describe("ph-run run <package>/<host>", () => {
     const unknown = once(["@acme/tools/studio"]);
     expect(unknown.status).toBe(1);
     expect(unknown.stderr).toContain(
-      'Package "@acme/tools" supplies no host "studio". Its hosts: connect, sb.',
+      'Package "@acme/tools" supplies no host "studio". Its hosts: connect, sb, stack.',
     );
     const bare = once(["@acme/tools"]);
     expect(bare.status).toBe(1);
