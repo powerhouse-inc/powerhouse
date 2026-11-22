@@ -1,0 +1,601 @@
+import type { DocumentModelGlobalState } from "document-model";
+
+export const documentModel: DocumentModelGlobalState = {
+  id: "powerhouse/brand-sheet",
+  name: "Brand Sheet",
+  author: {
+    name: "Claude",
+    website: "https://powerhouse.inc",
+  },
+  extension: "brs",
+  description:
+    "The Brand Sheet is used by product builders in Vetra Studio to define a product's identity: its name, positioning maxim, concept narrative, visual system (logos, a color palette keyed by role, typography), voice (tone qualities, writing guidance, and a prefer/avoid vocabulary), and imagery direction with reference images. Logos and imagery references hold their assets inline as base64 data, with an optional URL fallback. Agents may attach feedback suggestions that the builder accepts or dismisses.\n\nThe Brand Sheet holds positioning only \u2014 what the product does lives on the Problem Sheet and who it is for on the Audience Sheet. There is exactly one Brand Sheet per product, addressing the whole audience; alternative positionings are explored as separate Brand Sheet documents promoted at the drive level, not modeled here.",
+  specifications: [
+    {
+      state: {
+        local: {
+          schema: "",
+          examples: [],
+          initialValue: "",
+        },
+        global: {
+          schema:
+            "type BrandSheetState {\n  name: String\n  maxim: String\n  concept: String\n  logos: [Logo!]!\n  colors: [Color!]!\n  typography: [Typeface!]!\n  voice: Voice\n  imagery: Imagery\n  agentFeedback: AgentFeedback!\n}\n\ntype Logo {\n  id: OID!\n  description: String!\n  markType: MarkType!\n  assetData: String\n  assetMediaType: String\n  assetFilename: String\n  assetUrl: URL\n}\n\nenum MarkType {\n  WORDMARK\n  SYMBOL\n  COMBINATION\n}\n\ntype Color {\n  id: OID!\n  role: ColorRole!\n  name: String!\n  hex: String!\n  usage: String!\n}\n\nenum ColorRole {\n  PRIMARY\n  SURFACE\n  ACCENT\n  SECONDARY\n  TEXT\n}\n\ntype Typeface {\n  id: OID!\n  role: TypeRole!\n  family: String!\n  alternatives: [String!]!\n  notes: String\n}\n\nenum TypeRole {\n  HEADLINE\n  BODY\n  UI\n  NUMERALS\n}\n\ntype Voice {\n  qualities: [String!]!\n  guidance: String!\n  vocabulary: Vocabulary!\n}\n\ntype Vocabulary {\n  prefer: [String!]!\n  avoid: [String!]!\n}\n\ntype Imagery {\n  direction: String\n  include: [String!]!\n  avoid: [String!]!\n  references: [ImageRef!]!\n}\n\ntype ImageRef {\n  id: OID!\n  data: String\n  mediaType: String\n  filename: String\n  url: URL\n}\n\ntype AgentFeedback {\n  readyForFeedback: Boolean!\n  suggestions: [Suggestion!]!\n}\n\ntype Suggestion {\n  id: OID!\n  createdAt: DateTime!\n  agent: String!\n  content: String!\n  resolution: SuggestionResolution\n}\n\ntype SuggestionResolution {\n  resolvedAt: DateTime!\n  decision: SuggestionDecision!\n  comment: String\n  changeApplied: Boolean!\n}\n\nenum SuggestionDecision {\n  ACCEPTED\n  DISMISSED\n}",
+          examples: [],
+          initialValue:
+            '{\n  "name": null,\n  "maxim": null,\n  "concept": null,\n  "logos": [],\n  "colors": [],\n  "typography": [],\n  "voice": null,\n  "imagery": null,\n  "agentFeedback": {\n    "readyForFeedback": false,\n    "suggestions": []\n  }\n}',
+        },
+      },
+      modules: [
+        {
+          id: "mod-identity",
+          name: "identity",
+          description: "Set and clear the product name, maxim, and concept.",
+          operations: [
+            {
+              id: "op-set-product-name",
+              name: "SET_PRODUCT_NAME",
+              description: "Set the product name.",
+              schema: "input SetProductNameInput {\n  name: String!\n}",
+              template: "Set the product name.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-clear-product-name",
+              name: "CLEAR_PRODUCT_NAME",
+              description: "Clear the product name.",
+              schema: "input ClearProductNameInput {\n  _: Boolean\n}",
+              template: "Clear the product name.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-set-maxim",
+              name: "SET_MAXIM",
+              description: "Set the positioning maxim.",
+              schema: "input SetMaximInput {\n  maxim: String!\n}",
+              template: "Set the positioning maxim.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-clear-maxim",
+              name: "CLEAR_MAXIM",
+              description: "Clear the positioning maxim.",
+              schema: "input ClearMaximInput {\n  _: Boolean\n}",
+              template: "Clear the positioning maxim.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-set-concept",
+              name: "SET_CONCEPT",
+              description: "Set the concept narrative.",
+              schema: "input SetConceptInput {\n  concept: String!\n}",
+              template: "Set the concept narrative.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-clear-concept",
+              name: "CLEAR_CONCEPT",
+              description: "Clear the concept narrative.",
+              schema: "input ClearConceptInput {\n  _: Boolean\n}",
+              template: "Clear the concept narrative.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+        {
+          id: "mod-logos",
+          name: "logos",
+          description: "Manage logo variants and their inline base64 assets.",
+          operations: [
+            {
+              id: "op-add-logo",
+              name: "ADD_LOGO",
+              description: "Add a logo variant, optionally before another.",
+              schema:
+                "input AddLogoInput {\n  id: OID!\n  description: String!\n  markType: MarkType!\n  insertBefore: OID\n}",
+              template: "Add a logo variant, optionally before another.",
+              reducer: "",
+              errors: [
+                {
+                  id: "err-duplicate-logo-id",
+                  name: "DuplicateLogoIdError",
+                  code: "DUPLICATE_LOGO_ID",
+                  description: "A logo with this id already exists.",
+                  template: "",
+                },
+              ],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-update-logo",
+              name: "UPDATE_LOGO",
+              description: "Update a logo's description or mark type.",
+              schema:
+                "input UpdateLogoInput {\n  id: OID!\n  description: String\n  markType: MarkType\n}",
+              template: "Update a logo's description or mark type.",
+              reducer: "",
+              errors: [
+                {
+                  id: "err-logo-not-found",
+                  name: "LogoNotFoundError",
+                  code: "LOGO_NOT_FOUND",
+                  description: "No logo with the given id was found.",
+                  template: "",
+                },
+              ],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-set-logo-asset",
+              name: "SET_LOGO_ASSET",
+              description:
+                "Set a logo's inline asset (base64 data and/or URL).",
+              schema:
+                "input SetLogoAssetInput {\n  logoId: OID!\n  data: String\n  mediaType: String\n  filename: String\n  url: URL\n}",
+              template: "Set a logo's inline asset (base64 data and/or URL).",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-clear-logo-asset",
+              name: "CLEAR_LOGO_ASSET",
+              description: "Clear a logo's asset.",
+              schema: "input ClearLogoAssetInput {\n  logoId: OID!\n}",
+              template: "Clear a logo's asset.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-remove-logo",
+              name: "REMOVE_LOGO",
+              description: "Remove a logo variant.",
+              schema: "input RemoveLogoInput {\n  id: OID!\n}",
+              template: "Remove a logo variant.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-reorder-logos",
+              name: "REORDER_LOGOS",
+              description:
+                "Reorder logos by moving the given ids before an anchor (or to the end when null).",
+              schema:
+                "input ReorderLogosInput {\n  ids: [OID!]!\n  insertBefore: OID\n}",
+              template:
+                "Reorder logos by moving the given ids before an anchor (or to the end when null).",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+        {
+          id: "mod-colors",
+          name: "colors",
+          description: "Manage the color palette keyed by role.",
+          operations: [
+            {
+              id: "op-add-color",
+              name: "ADD_COLOR",
+              description:
+                "Add a color to the palette, optionally before another.",
+              schema:
+                "input AddColorInput {\n  id: OID!\n  role: ColorRole!\n  name: String!\n  hex: String!\n  usage: String!\n  insertBefore: OID\n}",
+              template:
+                "Add a color to the palette, optionally before another.",
+              reducer: "",
+              errors: [
+                {
+                  id: "err-duplicate-color-id",
+                  name: "DuplicateColorIdError",
+                  code: "DUPLICATE_COLOR_ID",
+                  description: "A color with this id already exists.",
+                  template: "",
+                },
+              ],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-update-color",
+              name: "UPDATE_COLOR",
+              description: "Update a color's fields.",
+              schema:
+                "input UpdateColorInput {\n  id: OID!\n  role: ColorRole\n  name: String\n  hex: String\n  usage: String\n}",
+              template: "Update a color's fields.",
+              reducer: "",
+              errors: [
+                {
+                  id: "err-color-not-found",
+                  name: "ColorNotFoundError",
+                  code: "COLOR_NOT_FOUND",
+                  description: "No color with the given id was found.",
+                  template: "",
+                },
+              ],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-remove-color",
+              name: "REMOVE_COLOR",
+              description: "Remove a color from the palette.",
+              schema: "input RemoveColorInput {\n  id: OID!\n}",
+              template: "Remove a color from the palette.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-reorder-colors",
+              name: "REORDER_COLORS",
+              description:
+                "Reorder colors by moving the given ids before an anchor (or to the end when null).",
+              schema:
+                "input ReorderColorsInput {\n  ids: [OID!]!\n  insertBefore: OID\n}",
+              template:
+                "Reorder colors by moving the given ids before an anchor (or to the end when null).",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+        {
+          id: "mod-typography",
+          name: "typography",
+          description: "Manage typefaces keyed by role.",
+          operations: [
+            {
+              id: "op-add-typeface",
+              name: "ADD_TYPEFACE",
+              description: "Add a typeface, optionally before another.",
+              schema:
+                "input AddTypefaceInput {\n  id: OID!\n  role: TypeRole!\n  family: String!\n  alternatives: [String!]!\n  notes: String\n  insertBefore: OID\n}",
+              template: "Add a typeface, optionally before another.",
+              reducer: "",
+              errors: [
+                {
+                  id: "err-duplicate-typeface-id",
+                  name: "DuplicateTypefaceIdError",
+                  code: "DUPLICATE_TYPEFACE_ID",
+                  description: "A typeface with this id already exists.",
+                  template: "",
+                },
+              ],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-update-typeface",
+              name: "UPDATE_TYPEFACE",
+              description: "Update a typeface's fields.",
+              schema:
+                "input UpdateTypefaceInput {\n  id: OID!\n  role: TypeRole\n  family: String\n  alternatives: [String!]\n  notes: String\n}",
+              template: "Update a typeface's fields.",
+              reducer: "",
+              errors: [
+                {
+                  id: "err-typeface-not-found",
+                  name: "TypefaceNotFoundError",
+                  code: "TYPEFACE_NOT_FOUND",
+                  description: "No typeface with the given id was found.",
+                  template: "",
+                },
+              ],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-remove-typeface",
+              name: "REMOVE_TYPEFACE",
+              description: "Remove a typeface.",
+              schema: "input RemoveTypefaceInput {\n  id: OID!\n}",
+              template: "Remove a typeface.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-reorder-typefaces",
+              name: "REORDER_TYPEFACES",
+              description:
+                "Reorder typefaces by moving the given ids before an anchor (or to the end when null).",
+              schema:
+                "input ReorderTypefacesInput {\n  ids: [OID!]!\n  insertBefore: OID\n}",
+              template:
+                "Reorder typefaces by moving the given ids before an anchor (or to the end when null).",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+        {
+          id: "mod-voice",
+          name: "voice",
+          description:
+            "Define the voice block: qualities, guidance, and prefer/avoid vocabulary.",
+          operations: [
+            {
+              id: "op-set-voice",
+              name: "SET_VOICE",
+              description:
+                "Set (or replace) the voice block. Vocabulary starts empty.",
+              schema:
+                "input SetVoiceInput {\n  qualities: [String!]!\n  guidance: String!\n}",
+              template:
+                "Set (or replace) the voice block. Vocabulary starts empty.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-update-voice",
+              name: "UPDATE_VOICE",
+              description: "Update the voice qualities or guidance.",
+              schema:
+                "input UpdateVoiceInput {\n  qualities: [String!]\n  guidance: String\n}",
+              template: "Update the voice qualities or guidance.",
+              reducer: "",
+              errors: [
+                {
+                  id: "err-voice-not-set",
+                  name: "VoiceNotSetError",
+                  code: "VOICE_NOT_SET",
+                  description: "No voice block exists to update.",
+                  template: "",
+                },
+              ],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-set-voice-vocabulary",
+              name: "SET_VOICE_VOCABULARY",
+              description:
+                "Set the prefer/avoid vocabulary lists on the voice block.",
+              schema:
+                "input SetVoiceVocabularyInput {\n  prefer: [String!]!\n  avoid: [String!]!\n}",
+              template:
+                "Set the prefer/avoid vocabulary lists on the voice block.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-clear-voice",
+              name: "CLEAR_VOICE",
+              description: "Clear the voice block.",
+              schema: "input ClearVoiceInput {\n  _: Boolean\n}",
+              template: "Clear the voice block.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+        {
+          id: "mod-imagery",
+          name: "imagery",
+          description:
+            "Define imagery direction, include/avoid guidance, and reference images.",
+          operations: [
+            {
+              id: "op-set-imagery-direction",
+              name: "SET_IMAGERY_DIRECTION",
+              description:
+                "Set the imagery direction (creates the imagery block if absent).",
+              schema:
+                "input SetImageryDirectionInput {\n  direction: String!\n}",
+              template:
+                "Set the imagery direction (creates the imagery block if absent).",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-clear-imagery-direction",
+              name: "CLEAR_IMAGERY_DIRECTION",
+              description: "Clear the imagery direction.",
+              schema: "input ClearImageryDirectionInput {\n  _: Boolean\n}",
+              template: "Clear the imagery direction.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-set-imagery-guidance",
+              name: "SET_IMAGERY_GUIDANCE",
+              description:
+                "Set the imagery include/avoid guidance lists (creates the imagery block if absent).",
+              schema:
+                "input SetImageryGuidanceInput {\n  include: [String!]!\n  avoid: [String!]!\n}",
+              template:
+                "Set the imagery include/avoid guidance lists (creates the imagery block if absent).",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-add-imagery-reference",
+              name: "ADD_IMAGERY_REFERENCE",
+              description:
+                "Add a reference image (inline base64 and/or URL), creating the imagery block if absent.",
+              schema:
+                "input AddImageryReferenceInput {\n  id: OID!\n  data: String\n  mediaType: String\n  filename: String\n  url: URL\n  insertBefore: OID\n}",
+              template:
+                "Add a reference image (inline base64 and/or URL), creating the imagery block if absent.",
+              reducer: "",
+              errors: [
+                {
+                  id: "err-duplicate-image-reference-id",
+                  name: "DuplicateImageReferenceIdError",
+                  code: "DUPLICATE_IMAGE_REFERENCE_ID",
+                  description:
+                    "An image reference with this id already exists.",
+                  template: "",
+                },
+              ],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-remove-imagery-reference",
+              name: "REMOVE_IMAGERY_REFERENCE",
+              description: "Remove a reference image.",
+              schema: "input RemoveImageryReferenceInput {\n  id: OID!\n}",
+              template: "Remove a reference image.",
+              reducer: "",
+              errors: [
+                {
+                  id: "err-image-reference-not-found",
+                  name: "ImageReferenceNotFoundError",
+                  code: "IMAGE_REFERENCE_NOT_FOUND",
+                  description:
+                    "No image reference with the given id was found.",
+                  template: "",
+                },
+              ],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-reorder-imagery-references",
+              name: "REORDER_IMAGERY_REFERENCES",
+              description:
+                "Reorder reference images by moving the given ids before an anchor (or to the end when null).",
+              schema:
+                "input ReorderImageryReferencesInput {\n  ids: [OID!]!\n  insertBefore: OID\n}",
+              template:
+                "Reorder reference images by moving the given ids before an anchor (or to the end when null).",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+        {
+          id: "mod-agent-feedback",
+          name: "agent_feedback",
+          description:
+            "Builder readiness signal and the agent suggestion workflow.",
+          operations: [
+            {
+              id: "op-set-ready-for-feedback",
+              name: "SET_READY_FOR_FEEDBACK",
+              description:
+                "Set whether the document is open to agent feedback.",
+              schema: "input SetReadyForFeedbackInput {\n  ready: Boolean!\n}",
+              template: "Set whether the document is open to agent feedback.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-add-suggestion",
+              name: "ADD_SUGGESTION",
+              description: "Add an agent suggestion.",
+              schema:
+                "input AddSuggestionInput {\n  id: OID!\n  createdAt: DateTime!\n  agent: String!\n  content: String!\n}",
+              template: "Add an agent suggestion.",
+              reducer: "",
+              errors: [
+                {
+                  id: "err-duplicate-suggestion-id",
+                  name: "DuplicateSuggestionIdError",
+                  code: "DUPLICATE_SUGGESTION_ID",
+                  description: "A suggestion with this id already exists.",
+                  template: "",
+                },
+              ],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-resolve-suggestion",
+              name: "RESOLVE_SUGGESTION",
+              description:
+                "Resolve a suggestion (accept or dismiss), optionally with a comment.",
+              schema:
+                "input ResolveSuggestionInput {\n  id: OID!\n  resolvedAt: DateTime!\n  decision: SuggestionDecision!\n  comment: String\n  changeApplied: Boolean!\n}",
+              template:
+                "Resolve a suggestion (accept or dismiss), optionally with a comment.",
+              reducer: "",
+              errors: [
+                {
+                  id: "err-suggestion-not-found",
+                  name: "SuggestionNotFoundError",
+                  code: "SUGGESTION_NOT_FOUND",
+                  description: "No suggestion with the given id was found.",
+                  template: "",
+                },
+                {
+                  id: "err-suggestion-already-resolved",
+                  name: "SuggestionAlreadyResolvedError",
+                  code: "SUGGESTION_ALREADY_RESOLVED",
+                  description: "The suggestion has already been resolved.",
+                  template: "",
+                },
+              ],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "op-remove-suggestion",
+              name: "REMOVE_SUGGESTION",
+              description: "Remove a suggestion.",
+              schema: "input RemoveSuggestionInput {\n  id: OID!\n}",
+              template: "Remove a suggestion.",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+      ],
+      version: 1,
+      changeLog: [],
+    },
+  ],
+};

@@ -539,7 +539,8 @@
               "custom-class",
               "hover-bg-transparent",
               "skeleton-loader",
-              "home-screen"
+              "home-screen",
+              "^(text|via)-vetra-primary$"
             ]
           }
         ],

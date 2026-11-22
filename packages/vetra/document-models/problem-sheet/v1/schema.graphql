@@ -1,0 +1,380 @@
+scalar Unknown
+scalar DateTime
+scalar Attachment
+scalar Address
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+type ProblemSheetState {
+  context: String
+  coreJob: JobStatement
+  coreJobSteps: [JobStep!]!
+  roles: [Role!]!
+  outcomes: [Outcome!]!
+  constraints: [Constraint!]!
+  agentFeedback: AgentFeedback!
+}
+
+type JobStatement {
+  motivation: Motivation!
+  verb: String!
+  object: String!
+  clarifier: String
+}
+
+enum Motivation {
+  LOVE_TO
+  WANT_TO
+  NEED_TO
+  HAVE_TO
+  HATE_TO
+  CANNOT
+}
+
+type JobStep {
+  id: OID!
+  name: String!
+  category: JobMapStep!
+  description: String
+}
+
+enum JobMapStep {
+  DEFINE
+  LOCATE
+  PREPARE
+  CONFIRM
+  EXECUTE
+  MONITOR
+  MODIFY
+  CONCLUDE
+}
+
+type Role {
+  id: OID!
+  name: String!
+  description: String
+  context: String
+  kind: RoleKind!
+  specializedJob: SpecializedJob
+}
+
+enum RoleKind {
+  PRIMARY
+  SUPPORT
+}
+
+type SpecializedJob {
+  motivation: Motivation!
+  verb: String!
+  object: String!
+  clarifier: String
+  steps: [JobStep!]!
+}
+
+type Outcome {
+  id: OID!
+  direction: OutcomeDirection!
+  metric: String
+  object: String!
+  clarifier: String
+  scope: OutcomeScope!
+  role: OID
+  relatedStep: OID
+  notes: String
+}
+
+enum OutcomeDirection {
+  INCREASE
+  DECREASE
+  SATISFY
+  AVOID
+}
+
+enum OutcomeScope {
+  CORE
+  SPECIALIZED
+  OPERATIONAL
+}
+
+type Constraint {
+  id: OID!
+  description: String!
+  severity: Severity!
+  notes: String
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+type AgentFeedback {
+  readyForFeedback: Boolean!
+  suggestions: [Suggestion!]!
+}
+
+type Suggestion {
+  id: OID!
+  createdAt: DateTime!
+  agent: String!
+  content: String!
+  resolution: SuggestionResolution
+}
+
+type SuggestionResolution {
+  resolvedAt: DateTime!
+  decision: SuggestionDecision!
+  comment: String
+  changeApplied: Boolean!
+}
+
+enum SuggestionDecision {
+  ACCEPTED
+  DISMISSED
+}
+
+# context
+
+input SetContextInput {
+  context: String!
+}
+
+input ClearContextInput {
+  _: Boolean
+}
+
+# core_job
+
+input SetCoreJobInput {
+  motivation: Motivation!
+  verb: String!
+  object: String!
+  clarifier: String
+}
+
+input UpdateCoreJobInput {
+  motivation: Motivation
+  verb: String
+  object: String
+  clarifier: String
+}
+
+input ClearCoreJobInput {
+  _: Boolean
+}
+
+# job_steps
+
+input AddJobStepInput {
+  id: OID!
+  name: String!
+  category: JobMapStep!
+  description: String
+  insertBefore: OID
+}
+
+input UpdateJobStepInput {
+  id: OID!
+  name: String
+  category: JobMapStep
+  description: String
+}
+
+input RemoveJobStepInput {
+  id: OID!
+}
+
+input ReorderJobStepsInput {
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+# roles
+
+input AddRoleInput {
+  id: OID!
+  name: String!
+  kind: RoleKind!
+  description: String
+  context: String
+  insertBefore: OID
+}
+
+input UpdateRoleInput {
+  id: OID!
+  name: String
+  kind: RoleKind
+  description: String
+  context: String
+}
+
+input RemoveRoleInput {
+  id: OID!
+}
+
+input ReorderRolesInput {
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+input SetRoleSpecializedJobInput {
+  roleId: OID!
+  motivation: Motivation!
+  verb: String!
+  object: String!
+  clarifier: String
+}
+
+input UpdateRoleSpecializedJobInput {
+  roleId: OID!
+  motivation: Motivation
+  verb: String
+  object: String
+  clarifier: String
+}
+
+input ClearRoleSpecializedJobInput {
+  roleId: OID!
+}
+
+input AddSpecializedJobStepInput {
+  roleId: OID!
+  id: OID!
+  name: String!
+  category: JobMapStep!
+  description: String
+  insertBefore: OID
+}
+
+input UpdateSpecializedJobStepInput {
+  roleId: OID!
+  id: OID!
+  name: String
+  category: JobMapStep
+  description: String
+}
+
+input RemoveSpecializedJobStepInput {
+  roleId: OID!
+  id: OID!
+}
+
+input ReorderSpecializedJobStepsInput {
+  roleId: OID!
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+# outcomes
+
+input AddOutcomeInput {
+  id: OID!
+  direction: OutcomeDirection!
+  object: String!
+  scope: OutcomeScope!
+  metric: String
+  clarifier: String
+  role: OID
+  relatedStep: OID
+  notes: String
+  insertBefore: OID
+}
+
+input UpdateOutcomeInput {
+  id: OID!
+  direction: OutcomeDirection
+  object: String
+  scope: OutcomeScope
+  metric: String
+  clarifier: String
+  role: OID
+  relatedStep: OID
+  notes: String
+}
+
+input RemoveOutcomeInput {
+  id: OID!
+}
+
+input ReorderOutcomesInput {
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+input ClearOutcomeMetricInput {
+  id: OID!
+}
+
+input ClearOutcomeRoleInput {
+  id: OID!
+}
+
+input ClearOutcomeStepInput {
+  id: OID!
+}
+
+# constraints
+
+input AddConstraintInput {
+  id: OID!
+  description: String!
+  severity: Severity!
+  notes: String
+  insertBefore: OID
+}
+
+input UpdateConstraintInput {
+  id: OID!
+  description: String
+  severity: Severity
+  notes: String
+}
+
+input RemoveConstraintInput {
+  id: OID!
+}
+
+input ReorderConstraintsInput {
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+# agent_feedback
+
+input SetReadyForFeedbackInput {
+  ready: Boolean!
+}
+
+input AddSuggestionInput {
+  id: OID!
+  createdAt: DateTime!
+  agent: String!
+  content: String!
+}
+
+input ResolveSuggestionInput {
+  id: OID!
+  resolvedAt: DateTime!
+  decision: SuggestionDecision!
+  comment: String
+  changeApplied: Boolean!
+}
+
+input RemoveSuggestionInput {
+  id: OID!
+}

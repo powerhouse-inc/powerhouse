@@ -3,6 +3,9 @@
 @source "./dist";
 
 @theme {
+  /* Vetra brand color, the accent of the spec document editors. */
+  --color-vetra-primary: #04c161;
+
   /* You can customize the theme by overriding the theme variables here */
   /* See https://tailwindcss.com/docs/theme#using-a-custom-theme for details */
 
