@@ -1,13 +1,17 @@
 import {
   browserEntry,
   buildBrowserBuildConfig,
+  buildCliBuildConfig,
   buildNodeBuildConfig,
+  CLI_ENTRY,
+  declaredPackages,
   findBundledSharedDeps,
 } from "@powerhousedao/shared/build-config";
 import type { ExternalDependency } from "@powerhousedao/shared/build-pieces";
 import {
   expandEntryGlobs,
   externalDepsPlugin,
+  packageNameOf,
   projectPath,
   undeclaredExternalDependencies,
 } from "@powerhousedao/shared/build-pieces";
@@ -18,7 +22,7 @@ import {
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readPackage } from "read-pkg";
-import { build as tsdownBuild } from "tsdown";
+import { build as tsdownBuild, type InlineConfig } from "tsdown";
 import { noConnectImports } from "../../../utils/offered-routes-imports.js";
 import { offeredRoutesManifest } from "../../../utils/offered-routes-manifest.js";
 import {
@@ -176,6 +180,74 @@ export const nodeBundleStep: StandardBuildStep = {
       [...findings.external.values()],
       findings.pkg,
     );
+  },
+};
+
+type Plugin = NonNullable<InlineConfig["plugins"]>;
+
+/** Adds to `found` each of `declared` that the built chunks import. */
+function importedPackages(
+  declared: readonly string[],
+  found: Set<string>,
+): Plugin {
+  return {
+    name: "ph:cli-declared-imports",
+    generateBundle(_options, bundle) {
+      for (const output of Object.values(bundle)) {
+        if (output.type !== "chunk") continue;
+        for (const specifier of [...output.imports, ...output.dynamicImports]) {
+          const name = packageNameOf(specifier);
+          if (name && declared.includes(name)) found.add(name);
+        }
+      }
+    },
+  };
+}
+
+// After the node bundle, which empties node/: the Cli lands in node/cli,
+// which no other step writes. A package without a cli/index.ts has no pass.
+export const cliBundleStep: StandardBuildStep = {
+  id: "cli-bundle",
+  run: async (ctx) => {
+    const { args, projectRoot, session, trace, detection, findings } = ctx;
+    const entry = join(projectRoot, CLI_ENTRY);
+    if (!existsSync(entry)) return;
+    const pkg = findings.pkg ?? (await readPackage({ cwd: projectRoot }));
+    const declared = declaredPackages(pkg);
+    // Only what the declared set leaves to the bundler reaches the detector,
+    // so a native or WebAssembly package found here is undeclared.
+    const external = new Map<string, ExternalDependency>();
+    const imported = new Set<string>();
+    await tsdownBuild({
+      ...buildCliBuildConfig({
+        entry,
+        outDir: join(session.stage(), "node", "cli"),
+        declared,
+        sharedDeps: !args.noSharedDeps,
+        plugins: [
+          externalDepsPlugin(trace, external, {
+            root: projectRoot,
+            ignoreDirs: ["editors"],
+            forbidDirs: ["document-models", "scalars"],
+            cache: detection,
+          }),
+          importedPackages(declared, imported),
+        ],
+      }),
+      customLogger: stageLogger(ctx),
+    });
+    assertExternalDependenciesDeclared(
+      projectRoot,
+      [...external.values()],
+      pkg,
+    );
+    if (imported.size > 0) {
+      console.log(
+        imported.size === 1
+          ? "cli: 1 declared package stays external, installed with the package"
+          : `cli: ${imported.size} declared packages stay external, installed with the package`,
+      );
+    }
   },
 };
 

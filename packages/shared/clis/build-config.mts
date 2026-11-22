@@ -19,7 +19,8 @@ const entry = [
 ];
 
 // The module a package's ./cli export is built from: its `defineCli` result.
-// Node-only like ./pieces: a Cli runs in a terminal, never in Connect.
+// Node-only like ./pieces: a Cli runs in a terminal, never in Connect. It is
+// its own build (buildCliBuildConfig), not an entry of the node build.
 export const CLI_ENTRY = "cli/index.ts";
 
 // ./pieces is node-only for the same reason ./reactor is browser-only: a piece
@@ -34,7 +35,6 @@ const nodeEntry = [
   "subgraphs/index.ts",
   "subgraphs/*/index.ts",
   "pieces/index.ts",
-  CLI_ENTRY,
 ];
 
 // Where a package's pieces live, one directory per piece, as the node entry
@@ -145,9 +145,21 @@ const sourcemap = true;
 // Only the specifiers the vendor publishes are externalized — see
 // EXTERNALIZABLE_SHARED_SPECIFIERS. Externalizing one the import map has no
 // entry for would leave an unresolvable bare specifier in the output.
-const sharedNeverBundle = EXTERNALIZABLE_SHARED_SPECIFIERS.map(
-  (s) => new RegExp(`^${s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(/.*)?$`),
-);
+const sharedNeverBundle = EXTERNALIZABLE_SHARED_SPECIFIERS.map(withSubpaths);
+
+/** Matches `specifier` and every subpath of it, and nothing else. */
+function withSubpaths(specifier: string): RegExp {
+  return new RegExp(
+    `^${specifier.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(/.*)?$`,
+  );
+}
+
+// What the node build and the Cli leave to the host.
+const nodeExternals = (sharedDeps: boolean) => [
+  ...nodeNeverBundle,
+  CLINT_EXTERNAL,
+  ...(sharedDeps ? sharedNeverBundle : []),
+];
 
 type Plugin = NonNullable<InlineConfig["plugins"]>;
 
@@ -344,16 +356,11 @@ function noBrowserCodeOnHosts(editorExports: boolean) {
 export function buildNodeBuildConfig(
   options: NodeBuildConfigOptions = {},
 ): InlineConfig {
-  const sharedDeps = options.sharedDeps ?? true;
   return {
     entry: nodeEntry,
     deps: {
       alwaysBundle,
-      neverBundle: [
-        ...nodeNeverBundle,
-        CLINT_EXTERNAL,
-        ...(sharedDeps ? sharedNeverBundle : []),
-      ],
+      neverBundle: nodeExternals(options.sharedDeps ?? true),
     },
     platform: "node",
     plugins: [
@@ -370,6 +377,79 @@ export function buildNodeBuildConfig(
 
 // Kept for existing callers: the default (shared deps externalized).
 export const nodeBuildConfig: InlineConfig = buildNodeBuildConfig();
+
+/** The fields of a package.json that name what its consumers install. */
+export type DeclaredDependencies = Partial<
+  Record<
+    "dependencies" | "optionalDependencies" | "peerDependencies",
+    Partial<Record<string, string>>
+  >
+>;
+
+/**
+ * The packages a package.json has its consumers install: dependencies,
+ * optionalDependencies and peerDependencies, sorted. devDependencies are
+ * skipped by every install of the package, so they are not among them.
+ */
+export function declaredPackages(pkg: DeclaredDependencies): string[] {
+  return [
+    ...new Set([
+      ...Object.keys(pkg.dependencies ?? {}),
+      ...Object.keys(pkg.optionalDependencies ?? {}),
+      ...Object.keys(pkg.peerDependencies ?? {}),
+    ]),
+  ].sort();
+}
+
+export type CliBuildConfigOptions = {
+  /** The Cli's source entry: `<project>/cli/index.ts`. */
+  entry: string;
+  /** Where the Cli lands: `<outDir>/node/cli`. */
+  outDir: string;
+  /** The packages the project declares for its consumers (declaredPackages). */
+  declared: readonly string[];
+  /** Externalize the shared dependency set (default: true). */
+  sharedDeps?: boolean;
+  /** Extra bundler plugins, such as the external dependency detector. */
+  plugins?: InlineConfig["plugins"];
+};
+
+/**
+ * The package's Cli, built on its own. No host's package loader reads it: a
+ * Cli runner imports it from the installed package, with the package's
+ * dependencies installed beside it, so every package the project declares
+ * for its consumers stays a bare import, root and subpaths alike. As a node
+ * entry, a Cli took its whole third-party graph into the bundle (an agent
+ * framework and its model providers). Everything else is as in the node
+ * build: the project's source and what it imports only from devDependencies
+ * are inlined, and clint and the shared set stay the host's.
+ *
+ * The document models a Cli imports are inlined here a second time. That is
+ * no second identity that matters: they are data and functions, which a
+ * reactor registers by document type.
+ */
+export function buildCliBuildConfig(
+  options: CliBuildConfigOptions,
+): InlineConfig {
+  return {
+    entry: { index: options.entry },
+    outDir: options.outDir,
+    deps: {
+      alwaysBundle,
+      neverBundle: [
+        ...nodeExternals(options.sharedDeps ?? true),
+        ...options.declared.map(withSubpaths),
+      ],
+    },
+    platform: "node",
+    plugins: [noBrowserCodeOnHosts(false), options.plugins],
+    loader,
+    config,
+    clean,
+    dts,
+    sourcemap,
+  };
+}
 
 export type PieceBuildConfigOptions = {
   /** The piece's source entry, relative to the project: `pieces/<dir>/index.ts`. */

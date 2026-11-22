@@ -14,7 +14,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { isBuiltin } from "node:module";
-import { delimiter, join } from "node:path";
+import { delimiter, join, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   generatePiece,
@@ -440,6 +440,193 @@ describe("runBuild on a package that exports a Cli", () => {
   }, 120_000);
 });
 
+// The Cli is its own pass: a host runs it from the installed package, so what
+// package.json declares stays a bare import that install provides, while a
+// devDependency, which no install of the package brings, is inlined like the
+// project's own source.
+describe("runBuild on a Cli that imports declared and dev-only packages", () => {
+  let fixture: string;
+  let dist: string;
+  const clint = join(
+    import.meta.dirname,
+    "..",
+    "..",
+    "..",
+    "packages",
+    "clint",
+  );
+
+  function write(file: string, content: string) {
+    mkdirSync(join(fixture, file, ".."), { recursive: true });
+    writeFileSync(join(fixture, file), content);
+  }
+
+  // An ESM package with a root and a ./sub export, each exporting `name`.
+  function install(pkg: string, name: string, marker: string) {
+    const dir = `node_modules/${pkg}`;
+    write(
+      `${dir}/package.json`,
+      JSON.stringify({
+        name: pkg,
+        version: "1.0.0",
+        type: "module",
+        exports: {
+          ".": { types: "./index.d.ts", default: "./index.js" },
+          "./sub": { types: "./sub.d.ts", default: "./sub.js" },
+        },
+      }),
+    );
+    for (const [file, value] of [
+      ["index", `${marker}_ROOT`],
+      ["sub", `${marker}_SUB`],
+    ]) {
+      write(`${dir}/${file}.js`, `export const ${name} = "${value}";\n`);
+      write(`${dir}/${file}.d.ts`, `export declare const ${name}: string;\n`);
+    }
+  }
+
+  // Every built .mjs under dir, by path relative to it.
+  function bundles(dir: string): Map<string, string> {
+    const out = new Map<string, string>();
+    for (const entry of readdirSync(dir, { recursive: true })) {
+      const file = String(entry);
+      if (file.endsWith(".mjs")) {
+        out.set(file, readFileSync(join(dir, file), "utf8"));
+      }
+    }
+    return out;
+  }
+
+  beforeAll(() => {
+    if (!existsSync(join(clint, "dist", "index.mjs"))) {
+      throw new Error(
+        "Build @powerhousedao/clint first: the fixture's Cli is defined with it.",
+      );
+    }
+    fixture = mkdtempSync(join(fixtures, ".cli-deps-build-"));
+    dist = join(fixture, "dist");
+    cpSync(join(fixtures, "cli-package"), fixture, {
+      recursive: true,
+      filter: (source) =>
+        !/[\\/](node_modules|dist)$|\.tsbuildinfo$/.test(source),
+    });
+    // A peer the Cli never imports: declared, but not one the Cli leaves out.
+    write(
+      "package.json",
+      JSON.stringify({
+        name: "@fixture/cli-package",
+        version: "1.0.0",
+        private: true,
+        license: "MIT",
+        type: "module",
+        dependencies: { "declared-a": "1.0.0" },
+        peerDependencies: { "unused-peer": "^1.0.0" },
+        devDependencies: { "dev-b": "1.0.0" },
+      }),
+    );
+    install("declared-a", "declared", "DECLARED");
+    install("dev-b", "dev", "DEV_ONLY");
+    mkdirSync(join(fixture, "node_modules", "@powerhousedao"), {
+      recursive: true,
+    });
+    symlinkSync(
+      clint,
+      join(fixture, "node_modules", "@powerhousedao", "clint"),
+      linkType,
+    );
+    write("cli/own.ts", 'export const own = "PROJECT_SOURCE_MARKER";\n');
+    write(
+      "cli/index.ts",
+      [
+        'import { defineCli, defineCommand } from "@powerhousedao/clint";',
+        'import { declared } from "declared-a";',
+        'import { declared as declaredSub } from "declared-a/sub";',
+        'import { dev } from "dev-b";',
+        'import { z } from "zod";',
+        'import { own } from "./own.js";',
+        "",
+        "const markers = defineCommand({",
+        '  id: "markers",',
+        '  description: "Print what each import gave",',
+        "  inputSchema: z.object({}),",
+        "  execute: () =>",
+        '    Promise.resolve([declared, declaredSub, dev, own].join(" ")),',
+        "});",
+        "",
+        "export const cli = defineCli({",
+        '  name: "fixture-deps-cli",',
+        '  version: "1.0.0",',
+        '  description: "A Cli with every kind of import",',
+        "  commands: [markers],",
+        "});",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  afterAll(() => {
+    if (fixture) rmSync(fixture, { recursive: true, force: true });
+  });
+
+  it("leaves the declared package to the install and inlines the rest", async () => {
+    process.chdir(fixture);
+
+    await runBuild(args);
+
+    const cli = bundles(join(dist, "node", "cli"));
+    expect([...cli.keys()]).toContain("index.mjs");
+    const code = [...cli.values()].join("\n");
+    const imported = bareImports(code);
+    // The root and the subpath stay bare imports; so does clint, the host's.
+    expect(imported).toEqual(
+      expect.arrayContaining([
+        "declared-a",
+        "declared-a/sub",
+        "@powerhousedao/clint",
+      ]),
+    );
+    expect(code).not.toContain("DECLARED_ROOT");
+    expect(code).not.toContain("DECLARED_SUB");
+    // The devDependency and the project's own module are inlined.
+    expect(imported).not.toContain("dev-b");
+    expect(code).toContain("DEV_ONLY_ROOT");
+    expect(code).toContain("PROJECT_SOURCE_MARKER");
+
+    // The node build no longer takes the Cli: nothing outside node/cli has it.
+    for (const [file, built] of bundles(join(dist, "node"))) {
+      if (file.startsWith(`cli${sep}`)) continue;
+      expect(built, file).not.toContain("PROJECT_SOURCE_MARKER");
+    }
+
+    // One line counts what the Cli leaves to the install: the unused peer is
+    // declared, but the Cli imports nothing of it.
+    const logged = vi
+      .mocked(console.log)
+      .mock.calls.map((parts) => parts.map(String).join(" "));
+    expect(logged).toContain(
+      "cli: 1 declared package stays external, installed with the package",
+    );
+    expect(readJson<Manifest>(join(dist, "powerhouse.manifest.json")).cli).toBe(
+      true,
+    );
+
+    // The built Cli runs, its bare imports resolved from node_modules.
+    const { cli: built } = (await import(
+      pathToFileURL(join(dist, "node", "cli", "index.mjs")).href
+    )) as { cli: BuiltCli };
+    const printed: string[] = [];
+    await built.run(["node", "fixture-deps-cli", "markers"], {
+      stdout: (message) => printed.push(message),
+      stderr: (message) => printed.push(message),
+      exit: () => {},
+    });
+    expect(printed).toEqual([
+      "DECLARED_ROOT DECLARED_SUB DEV_ONLY_ROOT PROJECT_SOURCE_MARKER",
+    ]);
+    expect(warnings).toEqual([]);
+  }, 120_000);
+});
+
 // The common case, and the one this work must leave alone: no pieces/ at all,
 // so nothing the piece pass does may show up in the output or the manifest.
 describe("runBuild on a package with no pieces", () => {
@@ -473,8 +660,9 @@ describe("runBuild on a package with no pieces", () => {
     expect(existsSync(join(dist, "types", "index.d.ts"))).toBe(true);
     expect(existsSync(join(dist, "style.css"))).toBe(true);
 
-    // No piece directory, and the manifest copy is the source byte for byte.
+    // No piece or Cli directory, and the manifest copy is the source byte for byte.
     expect(existsSync(join(dist, "node", "pieces"))).toBe(false);
+    expect(existsSync(join(dist, "node", "cli"))).toBe(false);
     expect(existsSync(join(dist, "node", "scalars"))).toBe(false);
     expect(existsSync(join(dist, "browser", "scalars"))).toBe(false);
     expect(

@@ -42,7 +42,7 @@ export type BuildContext = {
   /** Check the definitions without `--release` too (definitions). */
   readonly checkDefinitions: boolean;
   readonly pieces: readonly PiecePlan[];
-  /** Shared by the browser, node and piece builds: nothing is traced twice. */
+  /** Shared by the browser, node, Cli and piece builds: nothing is traced twice. */
   readonly detection: DetectionCache;
   readonly trace: TraceFiles;
   readonly findings: BuildFindings;

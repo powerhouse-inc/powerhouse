@@ -77,6 +77,11 @@ ph build --no-shared-deps
 Use this when the package must run in a host that does not provide the
 shared set (or does not provide it at compatible versions).
 
+A `./cli` export is the exception: it is built on its own and runs from the
+installed package, so every package `package.json` declares (dependencies,
+peerDependencies, optionalDependencies) stays external, with or without the
+flag. The flag bundles only the shared imports the package does not declare.
+
 ## Version compatibility
 
 Each Connect build records the resolved version of every shared package in
