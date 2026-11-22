@@ -59,7 +59,7 @@ export const buildArgs = {
     type: boolean,
     long: "release",
     description:
-      "Experimental: check every document model as for a release and stop the build, previous output intact, when the check finds them invalid or cannot run; then write the release approval ph publish verifies",
+      "Experimental: check every document model as for a release and stop the build, previous output intact, when the check finds them invalid or cannot run; then write the release approval ph publish verifies; also refuse a package with a Cli that does not declare @powerhousedao/clint",
     defaultValue: () => false as const,
     defaultValueIsSerializable: true,
   }),

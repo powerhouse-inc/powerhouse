@@ -707,7 +707,7 @@ can load and still fail at runtime, so don't publish it.
 **Ignore Type Errors** - Unsafe: build even when tsc reports type errors, without asking. The package can load and still fail at runtime - Usage: `--ignore-type-errors`
 
 **Default:** `false`
-**Release** - Experimental: check every document model as for a release and stop the build, previous output intact, when the check finds them invalid or cannot run; then write the release approval ph publish verifies - Usage: `--release`
+**Release** - Experimental: check every document model as for a release and stop the build, previous output intact, when the check finds them invalid or cannot run; then write the release approval ph publish verifies; also refuse a package with a Cli that does not declare @powerhousedao/clint - Usage: `--release`
 
 **Default:** `false`
 **Debug** - Log arguments passed to this command - Usage: `--debug`

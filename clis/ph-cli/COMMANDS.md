@@ -547,7 +547,7 @@ Unsafe: build even when tsc reports type errors, without asking. The package can
 **usage:** `--ignore-type-errors`<br>
 **default**: `false`
 #### Release <br>
-Experimental: check every document model as for a release and stop the build, previous output intact, when the check finds them invalid or cannot run; then write the release approval ph publish verifies<br><br>
+Experimental: check every document model as for a release and stop the build, previous output intact, when the check finds them invalid or cannot run; then write the release approval ph publish verifies; also refuse a package with a Cli that does not declare @powerhousedao/clint<br><br>
 **usage:** `--release`<br>
 **default**: `false`
 #### Debug <br>
