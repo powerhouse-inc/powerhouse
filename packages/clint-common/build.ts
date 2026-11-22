@@ -17,7 +17,7 @@ await build({
 
 // Hosts get no browser code: the node build stubs the document models' hooks.
 // This package's editors barrel also exports the chat components, which use
-// those hooks, so it is a browser-only export and left out here.
+// those hooks, so it is left out here and built in the next step.
 const nodeConfig = buildNodeBuildConfig();
 await build({
   ...nodeConfig,
@@ -25,6 +25,20 @@ await build({
     (entry) => entry !== "editors/index.ts",
   ),
   outDir: join("dist", "node"),
+});
+
+// The editors barrel for Node, built as written: a package's ./editors
+// resolves under the node condition, which vitest resolves with, also in
+// happy-dom tests that render the chat components. Without the host stubs:
+// `editorExports` would keep the hook stub, and the chat editor reads the
+// model's generated hook. No host loads this: a host takes `editors` from
+// the package root.
+console.log("\n▶ Building the editors for Node...");
+await build({
+  ...nodeConfig,
+  entry: { index: "editors/index.ts" },
+  outDir: join("dist", "node", "editors"),
+  plugins: [],
 });
 
 // The chat module (watch trigger, stream bridge, steer processor) is Node only

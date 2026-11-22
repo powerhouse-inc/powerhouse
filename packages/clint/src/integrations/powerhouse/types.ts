@@ -186,6 +186,7 @@ export interface TypedReactorClient<R extends DocumentRegistry> extends Omit<
     sourceIdentifier: string,
     targetIdentifier: string,
     relationshipType: string,
+    metadata?: Record<string, unknown>,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<R[T]["document"]>;
@@ -366,6 +367,28 @@ export interface ReactorWrites {
 }
 
 /**
+ * What `ensureDrive` and a `DriveConfig.resolveId` call on a client. Both an
+ * `IReactorClient` (embedded or remote) and a Cli's `ReactorContext.client`
+ * fit it as they are: the typed client is the same object, and these
+ * members read any document as a plain `PHDocument`.
+ */
+export interface EnsureDriveClient {
+  get(
+    identifier: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<PHDocument>;
+  find(
+    search: SearchFilter,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<PHDocument>>;
+  newDocument: IReactorClient["newDocument"];
+  write: Pick<IReactorClient["write"], "create">;
+}
+
+/**
  * Drive configuration for the Powerhouse integration.
  */
 export interface DriveConfig {
@@ -383,9 +406,10 @@ export interface DriveConfig {
   /**
    * Resolve the drive's id before anything else (for example from a pointer
    * the host keeps for a drive whose id it cannot fix in advance). An id that
-   * resolves wins; undefined falls through to `id` and the name match.
+   * resolves wins; undefined falls through to `id` and the name match. It
+   * gets the client `ensureDrive` was given.
    */
-  resolveId?: (client: IReactorClient) => Promise<string | undefined>;
+  resolveId?: (client: EnsureDriveClient) => Promise<string | undefined>;
   /** Match an existing drive by name when no id resolves. Default: true. */
   matchByName?: boolean;
   /**
@@ -463,7 +487,7 @@ export interface PowerhouseIntegrationOptions<
   R extends DocumentRegistry = AnyRegistry,
 > {
   /** Document model modules to register with the Reactor. */
-  documentModels: DocumentModelModule[];
+  documentModels: readonly DocumentModelModule<any>[];
   /** Document registry for typed client narrowing. Usually built with `defineRegistry([...modules] as const)`. */
   registry?: R;
   /** Default drive to create/find on startup. */
@@ -530,7 +554,8 @@ export interface ReactorConfiguration<
  * to bridge to the event bus. No drive: the drive the address names.
  */
 export interface RemoteReactorConfig<R extends DocumentRegistry = AnyRegistry> {
-  documentModels?: DocumentModelModule[];
+  /** Any model module fits, as for the reactor and its clients. */
+  documentModels?: readonly DocumentModelModule<any>[];
   /** Single drive (sugar for drives: [{ ...drive, role: 'personal' }]). */
   drive?: DriveConfig;
   /** First 'personal' drive = personalDriveId = driveId. */

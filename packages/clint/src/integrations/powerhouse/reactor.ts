@@ -8,7 +8,7 @@ import type { ReactorClientModule } from "./types.js";
 
 /** Structural type for the @powerhousedao/reactor ReactorBuilder (fluent API). */
 interface ReactorBuilderLike {
-  withDocumentModelSources(m: DocumentModelModule[]): ReactorBuilderLike;
+  withDocumentModelSources(m: DocumentModelModule<any>[]): ReactorBuilderLike;
   withKysely(k: unknown): ReactorBuilderLike;
 }
 
@@ -30,7 +30,7 @@ interface SwitchboardServerEntry {
     reactorBuilder: unknown,
     clientBuilder: unknown,
     options?: {
-      documentModels?: DocumentModelModule[];
+      documentModels?: DocumentModelModule<any>[];
       includeBaseModels?: boolean;
       includeVetraModels?: boolean;
       signalHandlers?: boolean;
@@ -39,8 +39,9 @@ interface SwitchboardServerEntry {
 }
 
 export interface BuildReactorOptions {
-  /** Document model modules to register. */
-  documentModels: DocumentModelModule[];
+  /** Document model modules to register. Any model module fits, as for the
+   * reactor itself. */
+  documentModels: readonly DocumentModelModule<any>[];
   /** Absolute path to the persistent PGlite directory. */
   storagePath: string;
   /**
@@ -125,7 +126,7 @@ export async function buildReactor(
     const sw =
       (await import("@powerhousedao/switchboard/server")) as unknown as SwitchboardServerEntry;
     sw.applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
-      documentModels: options.documentModels,
+      documentModels: [...options.documentModels],
       signalHandlers: false,
     });
   } else {

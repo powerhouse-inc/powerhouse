@@ -39,7 +39,8 @@
     "./editors": {
       "source": "./editors/index.ts",
       "types": "./dist/types/editors/index.d.ts",
-      "browser": "./dist/browser/editors/index.js"
+      "browser": "./dist/browser/editors/index.js",
+      "node": "./dist/node/editors/index.mjs"
     },
     "./editors/*": {
       "source": "./editors/*/module.ts",

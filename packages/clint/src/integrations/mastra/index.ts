@@ -113,10 +113,7 @@ export function createMastraHelpers(ctx: AgentSetupContext): MastraHelpers {
       // lifecycle hook (e.g. observability) contributes wrap.tool.
       const wrapped: Record<string, any> = {};
       for (const [name, tool] of Object.entries(filtered)) {
-        wrapped[name] = ctx.wraps.tool(
-          name,
-          tool as { execute: (...args: unknown[]) => unknown },
-        );
+        wrapped[name] = ctx.wraps.tool(name, tool);
       }
       return wrapped;
     },
@@ -204,12 +201,7 @@ export function createMastraHelpers(ctx: AgentSetupContext): MastraHelpers {
           for (const [name, tool] of Object.entries(tools ?? {})) {
             const t = tool as { execute?: (...args: unknown[]) => unknown };
             wrapped[name] =
-              typeof t.execute === "function"
-                ? ctx.wraps.tool(
-                    name,
-                    t as { execute: (...args: unknown[]) => unknown },
-                  )
-                : tool;
+              typeof t.execute === "function" ? ctx.wraps.tool(name, t) : tool;
           }
           return wrapped;
         };

@@ -895,8 +895,13 @@ export interface WrapRegistry {
   /**
    * Wraps each agent tool's execute function. Implementations must forward
    * every invocation argument — Mastra invokes `execute(args, toolContext)`.
+   *
+   * Any tool fits as it is, a Mastra `Tool` included: `execute` may be
+   * absent (Mastra's is optional, so an implementation returns such a tool
+   * unwrapped), and it is declared as a method so an `execute` with typed
+   * arguments fits as well.
    */
-  tool<T extends { execute: (...args: unknown[]) => unknown }>(
+  tool<T extends { execute?(...args: unknown[]): unknown }>(
     name: string,
     tool: T,
   ): T;

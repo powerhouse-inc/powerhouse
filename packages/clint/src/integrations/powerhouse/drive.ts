@@ -2,9 +2,12 @@
  * Drive management — find or create drives on startup.
  */
 
-import type { IReactorClient } from "@powerhousedao/reactor";
 import type { PHBaseState, PHDocument } from "document-model";
-import type { DriveConfig, ReactorClientModule } from "./types.js";
+import type {
+  DriveConfig,
+  EnsureDriveClient,
+  ReactorClientModule,
+} from "./types.js";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive" as const;
 
@@ -17,7 +20,8 @@ const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive" as const;
  * with `client.newDocument()` and created, already named, with one
  * `client.write.create()`. Those three are what both the embedded
  * `IReactorClient` and `GraphQLReactorClient` (which has no
- * `write.createEmpty` or `write.rename`) offer.
+ * `write.createEmpty` or `write.rename`) offer. A Cli passes its own
+ * `ReactorContext.client` as it is (see `EnsureDriveClient`).
  *
  * @param client - The reactor client the drive is looked up and created with
  * @param driveConfig - Optional drive name/icon configuration and hooks
@@ -25,7 +29,7 @@ const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive" as const;
  *   held back a drive that does not exist yet
  */
 export async function ensureDrive(
-  client: IReactorClient,
+  client: EnsureDriveClient,
   driveConfig?: DriveConfig,
 ): Promise<{ id: string; name: string; deferred?: boolean }> {
   const driveName = driveConfig?.name ?? "default";
@@ -91,7 +95,7 @@ export async function ensureDrive(
 }
 
 /** Every drive document the client serves, across result pages. */
-async function findDrives(client: IReactorClient): Promise<PHDocument[]> {
+async function findDrives(client: EnsureDriveClient): Promise<PHDocument[]> {
   const drives: PHDocument[] = [];
   let page = await client.find({ type: DRIVE_DOCUMENT_TYPE });
   drives.push(...page.results);

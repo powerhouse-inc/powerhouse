@@ -113,6 +113,7 @@ export type {
   ReactorConfiguration,
   RemoteReactorConfig,
   DriveConfig,
+  EnsureDriveClient,
   ReactorWrites,
   DriveEntry,
   FolderEntry,

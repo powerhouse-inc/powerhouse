@@ -16,6 +16,7 @@ export type {
   RemoteReactorConfig,
   PowerhouseIntegrationOptions,
   DriveConfig,
+  EnsureDriveClient,
   DriveEntry,
   FolderEntry,
   FolderOperations,
@@ -98,8 +99,9 @@ import type {
 export interface BuildDefaultReactorOptions<
   R extends DocumentRegistry = AnyRegistry,
 > {
-  /** Document model modules to register with the Reactor. */
-  documentModels: DocumentModelModule[];
+  /** Document model modules to register with the Reactor. Any model module
+   * fits, as for the reactor and its clients. */
+  documentModels: readonly DocumentModelModule<any>[];
   /** Single drive (sugar for drives: [{ ...drive, role: 'personal' }]). */
   drive?: DriveConfig;
   /** Multi-drive configuration. First 'personal' drive = personalDriveId = driveId. */

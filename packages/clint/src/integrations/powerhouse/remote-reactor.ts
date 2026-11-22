@@ -25,7 +25,7 @@ export interface AttachRemoteReactorOptions {
    */
   url: string;
   /** Document models the client signs/reduces with. */
-  documentModels: DocumentModelModule[];
+  documentModels: readonly DocumentModelModule<any>[];
   /**
    * What this agent expects of the fleet it joins (the host file's
    * reactor.protocol). Reachability and inspection facts are checked at
