@@ -2,6 +2,7 @@
 export const PACKAGES_DEPENDENCIES = [
   "@powerhousedao/builder-tools",
   "@powerhousedao/clint",
+  "@powerhousedao/clint-common",
   "@powerhousedao/codegen",
   "@powerhousedao/common",
   "@powerhousedao/config",
