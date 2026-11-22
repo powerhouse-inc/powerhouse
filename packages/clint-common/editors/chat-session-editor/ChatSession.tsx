@@ -152,7 +152,10 @@ export function ChatSession({
   }, [toggleTestPane]);
 
   return (
-    <AttachmentServiceProvider service={attachments}>
+    <AttachmentServiceProvider
+      service={attachments}
+      documentId={document.header.id}
+    >
       <ToolRenderersProvider renderers={toolRenderers}>
         <ChatActionsProvider value={chatActions}>
           <div

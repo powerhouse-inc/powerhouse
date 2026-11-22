@@ -1501,6 +1501,7 @@ export function defineCli<
 
     // Wire lazy accessors onto the context
     if (runReactor) context.reactor = runtime.getReactor;
+    if (supplyReactor) context.reactorAttached = true;
     context.agent = runtime.getAgent;
 
     // Handle --meta: output metadata JSON and exit (ignoring all other args)

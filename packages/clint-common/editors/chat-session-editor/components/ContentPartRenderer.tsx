@@ -35,16 +35,24 @@ const AttachmentServiceContext = createContext<IAttachmentService | undefined>(
   undefined,
 );
 
+// The document the rendered attachments are read through: a switchboard
+// serves an attachment only through a document that references it.
+const AttachmentDocumentContext = createContext<string | undefined>(undefined);
+
 export function AttachmentServiceProvider({
   service,
+  documentId,
   children,
 }: {
   service: IAttachmentService | undefined;
+  documentId?: string;
   children: ReactNode;
 }) {
   return (
     <AttachmentServiceContext.Provider value={service}>
-      {children}
+      <AttachmentDocumentContext.Provider value={documentId}>
+        {children}
+      </AttachmentDocumentContext.Provider>
     </AttachmentServiceContext.Provider>
   );
 }
@@ -58,6 +66,7 @@ export function useAttachmentUrl(
   fallbackUrl?: string | null,
 ): string | undefined {
   const service = useContext(AttachmentServiceContext);
+  const documentId = useContext(AttachmentDocumentContext);
   const [objectUrl, setObjectUrl] = useState<string | undefined>(undefined);
 
   useEffect(() => {
@@ -73,6 +82,7 @@ export function useAttachmentUrl(
       try {
         const { body, header } = await service.get(
           attachment as Parameters<typeof service.get>[0],
+          documentId === undefined ? undefined : { documentId },
         );
         const chunks: Uint8Array[] = [];
         const reader = body.getReader();
@@ -98,7 +108,7 @@ export function useAttachmentUrl(
         URL.revokeObjectURL(createdUrl);
       }
     };
-  }, [attachment, service]);
+  }, [attachment, service, documentId]);
 
   return objectUrl ?? fallbackUrl ?? undefined;
 }

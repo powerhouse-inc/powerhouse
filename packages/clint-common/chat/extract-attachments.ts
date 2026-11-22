@@ -29,6 +29,7 @@ export interface ExtractedAttachment {
 
 export interface ExtractAttachmentsOptions {
   workdir: string;
+  /** The chat document: the dedup key, and the document `service.get` reads through. */
   documentId: string;
   log?: Logger;
   /** Attachment service for resolving attachment:// refs. When omitted, ref-based parts are skipped. */
@@ -149,7 +150,11 @@ export async function extractAttachments(
           );
           continue;
         }
-        const resp = await service.get(part.attachment as AttachmentRef);
+        // The document authorizes the read: a switchboard serves an
+        // attachment only through a document that references it.
+        const resp = await service.get(part.attachment as AttachmentRef, {
+          documentId,
+        });
         buf = Buffer.from(await new Response(resp.body).arrayBuffer());
         // Use the authoritative mediaType from the service header.
         resolvedMediaType = resp.header.mimeType;

@@ -142,6 +142,12 @@ export interface CommandContext<
   folders?: import("../integrations/powerhouse/types.js").FolderOperations;
   /** Lazy reactor accessor — returns the ReactorContext or undefined if not configured. */
   reactor?: () => Promise<ReactorContext<R> | undefined>;
+  /**
+   * True when the run's reactor is the one `RunOptions.reactor` supplies (a
+   * host runner's attach to a switchboard): `reactor()` then boots no
+   * embedded reactor, in a one-shot command too.
+   */
+  reactorAttached?: boolean;
   /** Lazy agent accessor — returns the AgentProvider or undefined if not configured. */
   agent?: () => Promise<AgentProvider | undefined>;
   /**

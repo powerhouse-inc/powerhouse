@@ -1,9 +1,11 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import {
   copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   realpathSync,
   rmSync,
   symlinkSync,
@@ -15,6 +17,7 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { readRunRecord } from "@powerhousedao/host-core";
+import type { IAttachmentService } from "@powerhousedao/reactor-attachments";
 import { packageJsonExports } from "@powerhousedao/shared/clis/constants";
 import type * as SwitchboardServer from "@powerhousedao/switchboard/server";
 import { documentModelDocumentModelModule, type ILogger } from "document-model";
@@ -35,6 +38,24 @@ const FIXTURES = path.join(here, "fixtures", "cli-runner");
 const PH_RUN = path.resolve(CLINT_ROOT, "../../clis/ph-run/dist/cli.mjs");
 const RUNNER = path.join(CLINT_ROOT, "dist", "runners", "cli-runner.mjs");
 const DRIVE_TYPE = "powerhouse/document-drive";
+// A package whose model references an attachment (`setAttachment`), which the
+// switchboard loads by path.
+const ATTACHMENT_NOTE = path.join(here, "fixtures", "attachment-note");
+const NOTE_TYPE = "clint-test/attachment-note";
+// clint-common's chat reader. clint cannot depend on the package that depends
+// on it, so the reader's source is loaded by path.
+const EXTRACT_ATTACHMENTS = path.resolve(
+  CLINT_ROOT,
+  "../clint-common/chat/extract-attachments.ts",
+);
+type ExtractAttachments = (
+  message: object,
+  options: {
+    workdir: string;
+    documentId: string;
+    service?: IAttachmentService;
+  },
+) => Promise<Array<{ localPath: string; mediaType: string | null }>>;
 
 function quietLogger(): ILogger {
   const noop = () => undefined;
@@ -292,7 +313,7 @@ describe("cli-runner", () => {
         server: { port: 0, host: "127.0.0.1" },
         storage: { inMemory: true, userDataDir: path.join(root, "user") },
         features: { workflows: false, mcp: false },
-        packages: { disableLocal: true },
+        packages: { disableLocal: true, list: [ATTACHMENT_NOTE] },
         identity: { keypairPath: path.join(root, "identity.json") },
         drive: { slug: "lab", global: { name: "Lab" } },
       },
@@ -564,15 +585,17 @@ describe("cli-runner", () => {
       await again.shutdown();
     }, 60_000);
 
-    it("uploads attachments through the switchboard's own service", async () => {
+    it("reads an attachment through the switchboard's service, by a document that references it", async () => {
       const reactor = await attachDefaultReactor(setup(), { url });
       expect(reactor.attachments).toBeDefined();
       const file = path.join(root, "note.txt");
-      writeFileSync(file, `attached at ${Date.now()}`);
+      const content = `attached at ${Date.now()}`;
+      writeFileSync(file, content);
+      // No `folders`: the context of a Cli that does not serve. The attached
+      // reactor is what lets the commands reach the service.
       const context = {
         workdir: root,
-        // The commands run only where the Cli serves, which `folders` marks.
-        folders: {},
+        reactorAttached: true,
         reactor: () => Promise.resolve(reactor),
       } as unknown as CommandContext;
       const run = async (id: string, input: object) => {
@@ -589,13 +612,83 @@ describe("cli-runner", () => {
       expect(ref).toMatch(/^attachment:\/\/v1:[0-9a-f]{64}$/);
       expect(uploaded).toContain("status: available");
 
-      // A switchboard serves an attachment's metadata and bytes only through
-      // a document that references it, and the commands name none: the
-      // remote service refuses the read before any request.
-      const stat = await run("attachment-stat", { ref });
-      expect(stat).toContain(`Not found or error for ${ref}`);
+      // The switchboard indexes the ref from the operation that carries it.
+      const noteId = (await switchboard.reactor.createEmpty(NOTE_TYPE)).header
+        .id;
+      await switchboard.reactor.execute(noteId, "main", [
+        {
+          id: randomUUID(),
+          type: "SET_ATTACHMENT",
+          scope: "global",
+          input: { attachment: ref },
+          timestampUtcMs: new Date().toISOString(),
+        },
+      ]);
+
+      const stat = await run("attachment-stat", { ref, documentId: noteId });
+      expect(stat).toContain("status: available");
+      expect(stat).toContain("fileName: note.txt");
+      expect(stat).toContain(`sizeBytes: ${content.length}`);
+
+      const copy = path.join(root, "note-copy.txt");
+      const got = await run("attachment-get", {
+        ref,
+        documentId: noteId,
+        outPath: copy,
+      });
+      expect(got).toContain(`Wrote ${content.length} bytes to ${copy}`);
+      expect(readFileSync(copy, "utf8")).toBe(content);
+
+      // Without a document the read is refused, and the answer says why; a
+      // document that does not reference the attachment serves nothing.
+      for (const id of ["attachment-stat", "attachment-get"]) {
+        expect(await run(id, { ref, outPath: copy })).toContain(
+          "pass documentId",
+        );
+      }
+      expect(await run("attachment-stat", { ref, documentId })).toContain(
+        `Not found or error for ${ref}`,
+      );
+
+      // The chat reader reads through the document it is given.
+      const { extractAttachments } = (await import(
+        pathToFileURL(EXTRACT_ATTACHMENTS).href
+      )) as { extractAttachments: ExtractAttachments };
+      const extracted = await extractAttachments(
+        {
+          id: "msg-1",
+          role: "USER",
+          content: [
+            {
+              id: "part-file-1",
+              type: "FILE",
+              attachment: ref,
+              filename: "note.txt",
+              mediaType: "text/plain",
+            },
+          ],
+        },
+        { workdir: root, documentId: noteId, service: reactor.attachments },
+      );
+      expect(extracted).toHaveLength(1);
+      expect(extracted[0].mediaType).toBe("text/plain");
+      expect(readFileSync(extracted[0].localPath, "utf8")).toBe(content);
       await reactor.shutdown();
-    }, 60_000);
+
+      // One-shot through the runner: the attach alone gives the command the
+      // service.
+      const oneShot = phRun([
+        "cli",
+        "--",
+        "attachment-stat",
+        "--ref",
+        ref!,
+        "--documentId",
+        noteId,
+      ]);
+      expect(await exitCodeOf(oneShot)).toBe(0);
+      expect(oneShot.output()).toContain("status: available");
+    }, 120_000);
 
     it("creates, links, names and unlinks documents in folders on the switchboard", async () => {
       // The light client heads a new document with the model it is given.

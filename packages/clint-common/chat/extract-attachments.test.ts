@@ -214,6 +214,32 @@ describe("extractAttachments", () => {
     expect(results[0].bytes.equals(FIXTURE_BYTES)).toBe(true);
   });
 
+  it("reads each attachment through the document it extracts for", async () => {
+    const part = makePart({
+      id: "bydoc1abcdef",
+      type: "IMAGE",
+      mediaType: "image/png",
+      attachment: TEST_REF,
+    });
+    const service = makeService(FIXTURE_BYTES);
+    const reads: unknown[][] = [];
+    const get = service.get.bind(service);
+    service.get = (...args) => {
+      reads.push(args);
+      return get(...args);
+    };
+
+    await extractAttachments(makeMessage([part]), {
+      workdir,
+      documentId: "doc-reads",
+      service,
+    });
+
+    // A switchboard serves an attachment only through a document that
+    // references it.
+    expect(reads).toEqual([[TEST_REF, { documentId: "doc-reads" }]]);
+  });
+
   it("skips a part with attachment ref when no service is provided", async () => {
     const part = makePart({
       id: "noservice1abc",

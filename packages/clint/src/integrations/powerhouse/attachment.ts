@@ -4,10 +4,15 @@ import { extname } from "node:path";
 import type { CommandContext } from "../../core/types.js";
 import type { AttachmentRef, IAttachmentService } from "./types.js";
 
+/**
+ * The attachment service of the run's reactor. Never boots an embedded
+ * reactor for it: only where the Cli serves (`folders` marks that) or where
+ * its reactor is attached to a switchboard, which reaching boots nothing.
+ */
 export async function getAttachmentService(
-  ctx: Pick<CommandContext, "folders" | "reactor">,
+  ctx: Pick<CommandContext, "folders" | "reactor" | "reactorAttached">,
 ): Promise<IAttachmentService | undefined> {
-  if (!ctx.folders) return undefined; // daemon-only; never boot a reactor for this
+  if (!ctx.folders && !ctx.reactorAttached) return undefined;
   const rc = await ctx.reactor?.();
   return rc?.attachments;
 }

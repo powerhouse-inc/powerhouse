@@ -132,6 +132,50 @@ describe("createAttachmentCommands (local service, end-to-end)", () => {
     expect(readFileSync(outPath, "utf8")).toBe(CONTENT);
   });
 
+  it("stat and get take a documentId, which the in-process service ignores", async () => {
+    const out = parse(
+      await run(
+        "attachment-stat",
+        { ref: EXPECTED_REF, documentId: "any-document" },
+        ctx,
+      ),
+    );
+    expect(out.status).toBe("available");
+    const outPath = join(workdir, "by-document.txt");
+    const text = await run(
+      "attachment-get",
+      { ref: EXPECTED_REF, outPath, documentId: "any-document" },
+      ctx,
+    );
+    expect(text).toMatch(/Wrote \d+ bytes/);
+    expect(readFileSync(outPath, "utf8")).toBe(CONTENT);
+  });
+
+  it("reaches the reactor where the Cli serves or is attached, never to boot one", async () => {
+    let reached = 0;
+    const base = {
+      ...makeCtx(workdir),
+      reactor: () => {
+        reached += 1;
+        return Promise.resolve({ attachments: service } as never);
+      },
+    } as CommandContext;
+
+    const embedded = await run("attachment-stat", { ref: EXPECTED_REF }, base);
+    expect(embedded).toMatch(/running reactor/);
+    expect(reached).toBe(0);
+
+    const attached = parse(
+      await run(
+        "attachment-stat",
+        { ref: EXPECTED_REF },
+        { ...base, reactorAttached: true },
+      ),
+    );
+    expect(attached.status).toBe("available");
+    expect(reached).toBe(1);
+  });
+
   it("re-uploading identical bytes dedups to the same ref without error", async () => {
     const out = parse(await run("attachment-upload", { filePath }, ctx));
     expect(out.ref).toBe(EXPECTED_REF);
