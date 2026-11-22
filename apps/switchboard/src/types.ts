@@ -45,6 +45,12 @@ export type IdentityOptions = {
   /** Path to the keypair file. Defaults to ~/.ph/keypair.json */
   keypairPath?: string;
   /**
+   * Path to the Renown user file (`.renown.json`), which Renown writes when
+   * it is missing. With `keypairPath`, nothing of the identity lands in the
+   * working directory's `.ph`.
+   */
+  storagePath?: string;
+  /**
    * If true, won't start without an existing keypair.
    * Use this to ensure the switchboard only runs with an authenticated identity.
    */

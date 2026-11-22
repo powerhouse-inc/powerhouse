@@ -162,6 +162,28 @@ ph switchboard --require-identity
 ph switchboard --use-identity --keypair-path /path/to/my-keypair.json
 ```
 
+### Identity Files in a Host File
+
+A switchboard host can name both of its identity files in
+`config.switchboard.identity`: `keypairPath` (the keypair) and `storagePath`
+(the Renown user, `.renown.json`, which is written when it is missing). With
+both set, the switchboard shares nothing with the project's own
+`.ph/.keypair.json` and `.ph/.renown.json`, which `ph login` writes:
+
+```js
+config: {
+  switchboard: {
+    identity: {
+      keypairPath: "${userData}/.ph/studio/switchboard/.keypair.json",
+      storagePath: "${userData}/.ph/studio/switchboard/.renown.json",
+    },
+  },
+},
+```
+
+Unset, both are in the `.ph` folder of the working directory, or of
+`PH_USER_DATA_DIR` when that is set.
+
 ## How the Switchboard Uses Identity
 
 When the Switchboard starts with identity enabled, it can:

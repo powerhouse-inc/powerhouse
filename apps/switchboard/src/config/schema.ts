@@ -274,6 +274,9 @@ const attachmentsSchema = z.object({
 
 const identitySchema = z.object({
   keypairPath: z.string().optional(),
+  /** The Renown user file (`.renown.json`); unset: in the `.ph` of
+   * `storage.userDataDir` when that is set, else `<cwd>/.ph/.renown.json`. */
+  storagePath: z.string().optional(),
   requireExisting: z.boolean().optional(),
   baseUrl: z.string().optional(),
 });

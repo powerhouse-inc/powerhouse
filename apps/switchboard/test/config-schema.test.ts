@@ -171,6 +171,20 @@ describe("switchboardConfigLayerSchema", () => {
     expect(layer.safeParse({ server: { basePath: "/x" } }).success).toBe(true);
   });
 
+  it("takes the identity's Renown user file next to its keypair", () => {
+    const identity = {
+      keypairPath: "/id/.keypair.json",
+      storagePath: "/id/.renown.json",
+    };
+    expect(layer.parse({ identity })).toEqual({ identity });
+    expect(switchboardConfigSchema.parse({ identity }).identity).toEqual(
+      identity,
+    );
+    expect(layer.safeParse({ identity: { storagePath: 1 } }).success).toBe(
+      false,
+    );
+  });
+
   it("emits a JSON Schema once the map key is omitted", () => {
     const schema = z.toJSONSchema(
       switchboardConfigLayerSchema(["processorConfig"]),

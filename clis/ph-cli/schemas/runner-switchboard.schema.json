@@ -608,6 +608,9 @@
                 "keypairPath": {
                   "type": "string"
                 },
+                "storagePath": {
+                  "type": "string"
+                },
                 "requireExisting": {
                   "type": "boolean"
                 },
