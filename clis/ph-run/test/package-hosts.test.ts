@@ -94,8 +94,9 @@ describe("ph-run run <package>/<host>", () => {
     child.stdout.on("data", (chunk: Buffer) => (text += chunk.toString()));
     child.stderr.on("data", (chunk: Buffer) => (text += chunk.toString()));
     child.stdin.on("error", () => undefined);
-    const exited = new Promise<number | null>((resolve) =>
-      child.once("exit", (code) => resolve(code)),
+    // A run ended by a signal has no code on POSIX: its signal stands in.
+    const exited = new Promise<number | NodeJS.Signals | null>((resolve) =>
+      child.once("exit", (code, signal) => resolve(code ?? signal)),
     );
     return { child, output: () => text, exited };
   }
