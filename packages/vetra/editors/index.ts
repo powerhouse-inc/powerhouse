@@ -7,5 +7,6 @@ export { ProblemSheetEditor } from "./problem-sheet-editor/module.js";
 export { ProcessorModuleEditor } from "./processor-editor/module.js";
 export { SubgraphModuleEditor } from "./subgraph-editor/module.js";
 export { VetraDriveApp } from "./vetra-drive-app/module.js";
+export { VetraExplorerApp } from "./vetra-explorer/module.js";
 export { VetraPackageEditor } from "./vetra-package/module.js";
 export { WorkBreakdownStructureEditor } from "./work-breakdown-structure-editor/module.js";
