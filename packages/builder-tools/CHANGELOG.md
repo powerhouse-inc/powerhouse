@@ -1,3 +1,14 @@
+## 6.3.0-dev.8 (2026-11-22)
+
+### 🩹 Fixes
+
+- **builder-tools:** keep own vendor packages in one chunk on windows ([fed216d3cf](https://github.com/powerhouse-inc/powerhouse/commit/fed216d3cf))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.3.0-dev.7 (2026-11-21)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.

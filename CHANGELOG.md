@@ -1,3 +1,15 @@
+## 6.3.0-dev.8 (2026-11-22)
+
+### 🩹 Fixes
+
+- **builder-tools:** keep own vendor packages in one chunk on windows ([fed216d3cf](https://github.com/powerhouse-inc/powerhouse/commit/fed216d3cf))
+- **ph-cli:** write the build journal with the patient rename ([51856bd771](https://github.com/powerhouse-inc/powerhouse/commit/51856bd771))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.3.0-dev.7 (2026-11-21)
 
 This was a version bump only, there were no code changes.

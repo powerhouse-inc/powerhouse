@@ -1,3 +1,14 @@
+## 6.3.0-dev.8 (2026-11-22)
+
+### 🩹 Fixes
+
+- **ph-cli:** write the build journal with the patient rename ([51856bd771](https://github.com/powerhouse-inc/powerhouse/commit/51856bd771))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.3.0-dev.7 (2026-11-21)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
