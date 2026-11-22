@@ -95,12 +95,33 @@ function packageJsonName(dir: string): string | undefined {
 }
 
 /**
- * The installed package `name`, found from the project root as Node finds
- * it: the first `<dir>/node_modules/<name>/package.json` on the project's
- * lookup paths, by its real path (a pnpm link leads to the package's own
- * folder, whose dependencies are its own). Not through `exports`, which may
- * not list `package.json`.
+ * The real folder of the installed package `name`, found from `fromRoot` as
+ * Node finds it: the first `<dir>/node_modules/<name>/package.json` on the
+ * lookup paths of `<fromRoot>/package.json`, by its real path (a pnpm link
+ * leads to the package's own folder, whose dependencies are its own). Not
+ * through `exports`, which may not list `package.json`. Undefined when it is
+ * not installed there.
  */
+export function resolvePackageRoot(
+  fromRoot: string,
+  name: string,
+): string | undefined {
+  const root = path.resolve(fromRoot);
+  const lookup =
+    createRequire(
+      pathToFileURL(path.join(root, "package.json")).href,
+    ).resolve.paths(name) ?? [];
+  for (const dir of lookup) {
+    const candidate = path.join(dir, name);
+    if (existsSync(path.join(candidate, "package.json"))) {
+      return realpathSync(candidate);
+    }
+  }
+  return undefined;
+}
+
+/** The installed package `name`, found from the project root
+ * (resolvePackageRoot). */
 export function findHostPackage(
   projectRoot: string,
   name: string,
@@ -113,16 +134,8 @@ export function findHostPackage(
       `Run the project's own host by its bare name: \`ph run ${host}\`.`,
     );
   }
-  const lookup =
-    createRequire(
-      pathToFileURL(path.join(root, "package.json")).href,
-    ).resolve.paths(name) ?? [];
-  for (const dir of lookup) {
-    const candidate = path.join(dir, name);
-    if (existsSync(path.join(candidate, "package.json"))) {
-      return { name, root: realpathSync(candidate) };
-    }
-  }
+  const found = resolvePackageRoot(root, name);
+  if (found !== undefined) return { name, root: found };
   throw new HostLoadError(
     `Package "${name}" is not installed in this project, so it supplies no host "${host}".`,
     `Add ${name} as a dependency of the project (looked up from ${root}).`,

@@ -1,11 +1,15 @@
+import type { SwitchboardConfigInput } from "@powerhousedao/switchboard/config";
 import type * as SwitchboardUtils from "@powerhousedao/switchboard/utils";
 import {
   defineHostSchemas,
   drivesSchema,
+  hostFileLabel,
   mergeDrivePlan,
+  PACKAGE_NAME_PATTERN,
   protocolConflicts,
   resolveDriveDeclaration,
   resolveHostPlugins,
+  resolvePackageRoot,
   seedDrives,
   type BootCheckContext,
   type BootIssue,
@@ -384,6 +388,36 @@ async function createDeclaredDrive(
   );
 }
 
+/**
+ * A package's switchboard serves the package's models: each package name in
+ * its `packages.list` is found from the package root (its own dependency, as
+ * its runner and plugins are) and handed to the server by its real folder.
+ * By name the server would look from its own install and the project. Paths
+ * stay as written, and a project host's list is unchanged.
+ */
+function packagesFromHostPackage(
+  config: SwitchboardConfigInput,
+  host: SwitchboardHostParsed,
+  hostPackage: RunnerContext["hostPackage"],
+): SwitchboardConfigInput {
+  const list = config.packages?.list;
+  if (!hostPackage || !list || list.length === 0) return config;
+  const roots = list.map((entry) => {
+    if (path.isAbsolute(entry) || !PACKAGE_NAME_PATTERN.test(entry)) {
+      return entry;
+    }
+    const root = resolvePackageRoot(hostPackage.root, entry);
+    if (root === undefined) {
+      throw new RunnerError(
+        `${hostFileLabel(host.name, hostPackage)}: config.switchboard.packages.list names "${entry}", which is not installed in ${hostPackage.name} (looked up from ${hostPackage.root}).`,
+        `Add ${entry} as a dependency of ${hostPackage.name}, or name its folder with an absolute path.`,
+      );
+    }
+    return root;
+  });
+  return { ...config, packages: { ...config.packages, list: roots } };
+}
+
 function catchUpTopFromEnv(raw: string | undefined): number | undefined {
   const top = Number(raw?.trim() || Number.NaN);
   return Number.isInteger(top) && top >= 0 ? top : undefined;
@@ -421,7 +455,11 @@ async function start(
   const args = { ...classic, https: passed.https };
   // This member's own config, under the args: nothing is written to the
   // process env, so compound members do not see each other's settings.
-  const memberConfig = await memberSwitchboardConfig(host, env, { hostFile });
+  const memberConfig = packagesFromHostPackage(
+    await memberSwitchboardConfig(host, env, { hostFile }),
+    host,
+    ctx.hostPackage,
+  );
   const noDatabase = missingPostgresUrl(host.reactor, memberConfig, hostFile);
   if (noDatabase) throw new Error(noDatabase);
 

@@ -28,7 +28,7 @@ import {
 } from "../src/compound.js";
 import { COMPOUND_MEMBER_ENV } from "../src/compound-member.js";
 import { loadHost, moduleRootOf } from "../src/host-loader.js";
-import { parseHostRef } from "../src/host-ref.js";
+import { parseHostRef, resolvePackageRoot } from "../src/host-ref.js";
 import { processResolveEnv } from "../src/resolve/node.js";
 import { resolveHostOutputs } from "../src/resolve/resolve.js";
 import {
@@ -424,6 +424,21 @@ describe("module specifiers resolve against the package, the project stays the p
       own.host.runner.module,
     );
     expect(projectRunner.who).toBe("project");
+  });
+
+  it("finds a package's own dependency from its root, by its real folder", () => {
+    const tools = path.join(store, "tools");
+    expect(resolvePackageRoot(tools, "kit-runner")).toBe(
+      path.join(tools, "node_modules", "kit-runner"),
+    );
+    expect(resolvePackageRoot(project, "kit-runner")).toBe(
+      path.join(project, "node_modules", "kit-runner"),
+    );
+    // Through the link, the package's real folder.
+    expect(resolvePackageRoot(project, "@acme/tools")).toBe(tools);
+    expect(resolvePackageRoot(path.join(store, "kit"), "@acme/tools")).toBe(
+      undefined,
+    );
   });
 });
 

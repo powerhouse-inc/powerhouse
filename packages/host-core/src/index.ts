@@ -28,6 +28,7 @@ export {
   hostFileLabel,
   locateHost,
   parseHostRef,
+  resolvePackageRoot,
   type HostLocation,
   type HostPackage,
   type HostRef,

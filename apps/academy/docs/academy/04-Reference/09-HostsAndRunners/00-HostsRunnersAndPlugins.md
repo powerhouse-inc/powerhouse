@@ -677,7 +677,7 @@ What a package's host resolves where:
 | From the package | From the project |
 | --- | --- |
 | the host file and its imports (sibling hosts, `outputs.js`, a `powerhouse.config.json` import is the package's own) | the working directory and `ctx.projectRoot` |
-| `runner.module` and `runner.plugins[].module` (switchboard) | `${projectRoot}`, `${userData}`, relative data paths: stores stay in the project |
+| `runner.module`, `runner.plugins[].module` and the package names in `config.switchboard.packages.list` (switchboard) | `${projectRoot}`, `${userData}`, relative data paths: stores stay in the project |
 | a cli host's Cli: `config.package`, or without it the package's own `./cli` | drive ids, the `.ph/` tree, `PH_USER_DATA_DIR` |
 | `${package}`: the package's root | |
 
@@ -690,6 +690,13 @@ root of the package that supplies that member's host (a project member of a
 package's compound gets the project root). `{ $env: "package" }` reads the
 same value, and `ph run <host> --explain outputs` prints it for a host that
 names it.
+
+A package's switchboard loads the package's models, not the project's:
+`packages: { disableLocal: true, list: ["${package}", "@acme/models"] }` in
+its `config.switchboard` serves the package itself and `@acme/models`, found
+from the package as its own dependency (the server gets its real folder). A
+package name the package does not have installed fails the start, naming
+both.
 
 So a package names the runners its hosts use as its own dependencies; one
 that must match the project's tools, such as
