@@ -28,7 +28,7 @@ Package manager that installs the project: `npm`, `pnpm`, `yarn` or `bun`. Defau
 **usage:** `--package-manager, -p <value>`<br>
 
 #### Tag <br>
-Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc".<br><br>
+Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", "rc", or "next".<br><br>
 **usage:** `--tag, -t <value>`<br>
 
 #### Version <br>
@@ -73,6 +73,10 @@ Use the `staging` release tag.<br><br>
 Use the `rc` release tag.<br><br>
 **usage:** `--rc`<br>
 
+#### Next <br>
+Use the `next` release tag.<br><br>
+**usage:** `--next`<br>
+
 #### Uniform Runners <br>
 Deprecated: no longer needed, `ph init` always scaffolds the hosts/ folder. Accepted with a warning; will be removed in a future release.<br><br>
 **usage:** `--uniform-runners`<br>
@@ -90,13 +94,13 @@ show help<br><br>
 Specify the release version of Powerhouse dependencies to use.
 ### arguments
 #### Tag <br>
-Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc".<br><br>
+Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", "rc", or "next".<br><br>
 **usage:** `[tag]`<br>
 
 
 ### options
 #### Tag <br>
-Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc".<br><br>
+Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", "rc", or "next".<br><br>
 **usage:** `--tag, -t <value>`<br>
 
 #### Version <br>
@@ -174,7 +178,7 @@ Package manager that installs the project: `npm`, `pnpm`, `yarn` or `bun`. Defau
 **usage:** `--package-manager, -p <value>`<br>
 
 #### Tag <br>
-Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc".<br><br>
+Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", "rc", or "next".<br><br>
 **usage:** `--tag, -t <value>`<br>
 
 #### Version <br>
@@ -218,6 +222,10 @@ Use the `staging` release tag.<br><br>
 #### Rc <br>
 Use the `rc` release tag.<br><br>
 **usage:** `--rc`<br>
+
+#### Next <br>
+Use the `next` release tag.<br><br>
+**usage:** `--next`<br>
 
 #### Uniform Runners <br>
 Deprecated: no longer needed, `ph init` always scaffolds the hosts/ folder. Accepted with a warning; will be removed in a future release.<br><br>

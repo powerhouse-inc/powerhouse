@@ -10,6 +10,7 @@
 #                     - "latest"  → newest stable release
 #                     - "staging" → newest tag matching v*-staging.*
 #                     - "dev"     → newest tag matching v*-dev.*
+#                     - "next"    → newest tag matching v*-next.*
 #                     - a literal tag, e.g. v6.0.0-dev.237
 #   PH_REPO         GitHub repo slug (default: powerhouse-inc/powerhouse)
 
@@ -50,7 +51,7 @@ case "$VERSION" in
   latest)
     release_url="${api_base}/latest"
     ;;
-  staging|dev)
+  staging|dev|next)
     # GitHub's /latest endpoint excludes prereleases, so list all releases
     # (newest first) and pick the first tag matching the channel pattern.
     info "Resolving newest '$VERSION' release"

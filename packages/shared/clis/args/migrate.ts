@@ -11,7 +11,7 @@ import {
 import { debugArgs } from "./common.js";
 
 const versionDescription =
-  "The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages.";
+  "The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `next`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages.";
 
 export const migrateArgs = {
   versionPositional: positional({

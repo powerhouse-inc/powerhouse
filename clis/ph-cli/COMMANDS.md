@@ -1293,13 +1293,13 @@ show help<br><br>
 Run migrations
 ### arguments
 #### Version <br>
-The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages.<br><br>
+The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `next`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages.<br><br>
 **usage:** `[version]`<br>
 
 
 ### options
 #### Version <br>
-The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages.<br><br>
+The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `next`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages.<br><br>
 **usage:** `--version, -v <str>`<br>
 
 #### Subgraph <br>

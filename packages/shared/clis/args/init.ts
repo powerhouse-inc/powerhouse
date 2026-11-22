@@ -32,10 +32,10 @@ export const initArgs = {
       "Package manager that installs the project: `npm`, `pnpm`, `yarn` or `bun`. Defaults to the one that launched ph (npx, pnpm dlx, bunx), else the one that installed ph (unless npm), else bun, then pnpm 10.14 or later if installed, else npm.",
   }),
   tag: option({
-    type: optional(oneOf(["latest", "staging", "dev", "rc"])),
+    type: optional(oneOf(["latest", "staging", "dev", "rc", "next"])),
     long: "tag",
     short: "t",
-    description: `Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc".`,
+    description: `Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", "rc", or "next".`,
   }),
   version: option({
     type: optional(string),
@@ -60,6 +60,11 @@ export const initArgs = {
     type: optional(boolean),
     long: "rc",
     description: "Use the `rc` release tag.",
+  }),
+  next: flag({
+    type: optional(boolean),
+    long: "next",
+    description: "Use the `next` release tag.",
   }),
   remoteDrive: option({
     type: optional(string),

@@ -112,12 +112,14 @@ export function parseTag(args: {
   dev?: boolean;
   staging?: boolean;
   rc?: boolean;
+  next?: boolean;
 }) {
-  const { tag, dev, staging, rc } = args;
+  const { tag, dev, staging, rc, next } = args;
   if (tag) return tag;
   if (dev) return "dev";
   if (staging) return "staging";
   if (rc) return "rc";
+  if (next) return "next";
   return "latest";
 }
 
@@ -159,6 +161,7 @@ export function getTagFromVersion(version: string) {
   if (version.includes("dev")) return "dev";
   if (version.includes("staging")) return "staging";
   if (version.includes("rc")) return "rc";
+  if (version.includes("next")) return "next";
   return "latest";
 }
 
