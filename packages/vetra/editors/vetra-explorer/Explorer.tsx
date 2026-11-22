@@ -49,7 +49,7 @@ export type VetraExplorerProps = {
 };
 
 const ROW =
-  "flex h-7 w-full items-center rounded-sm px-2 text-left text-sm hover:bg-accent";
+  "flex h-7 w-full items-center rounded-sm pr-2 text-left text-sm hover:bg-accent";
 const ROW_SELECTED = "bg-accent font-medium ring-1 ring-border";
 
 /**
@@ -256,7 +256,7 @@ function ExplorerRow({
             data-row="package"
             aria-current={selected || undefined}
             onClick={() => onOpenDocument(nodeId)}
-            className={`${ROW} font-medium ${current}`}
+            className={`${ROW} pl-2 font-medium ${current}`}
           >
             <span className="truncate">{row.name}</span>
           </button>
