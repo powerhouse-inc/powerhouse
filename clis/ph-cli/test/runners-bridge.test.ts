@@ -1176,6 +1176,50 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
       routes: false,
     });
   });
+
+  it("hands runner.serveFiles to every server: dev, the built-in and vite preview", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    const { runConnectServer } =
+      await import("@powerhousedao/ph-run/connect-server");
+    const { runConnectPreview } =
+      await import("../src/services/connect-preview.js");
+    const serveFiles = { "/studio.config.json": "/u/.ph/studio.config.json" };
+    const host = connect({
+      name: "lab-connect",
+      runner: { module: "m", serveFiles },
+    });
+    for (const service of [
+      runConnectStudio,
+      runConnectServer,
+      runConnectPreview,
+    ]) {
+      vi.mocked(service).mockClear();
+    }
+    await runner.dev(host, ctx);
+    expect(vi.mocked(runConnectStudio).mock.calls[0][3]).toMatchObject({
+      serveFiles,
+    });
+    await runner.serve(host, ctx);
+    expect(vi.mocked(runConnectServer).mock.calls[0][3]).toEqual({
+      proxy: undefined,
+      serveFiles,
+    });
+    vi.stubEnv("PH_CONNECT_SERVER", "vite");
+    await runner.serve(host, ctx);
+    vi.unstubAllEnvs();
+    expect(vi.mocked(runConnectPreview).mock.calls[0][3]).toEqual({
+      proxy: undefined,
+      serveFiles,
+    });
+    // Without the key, no server is handed any.
+    vi.mocked(runConnectServer).mockClear();
+    await runner.serve(connect({ name: "lab", runner: { module: "m" } }), ctx);
+    expect(vi.mocked(runConnectServer).mock.calls[0][3]).toEqual({
+      proxy: undefined,
+    });
+  });
 });
 
 describe("connect bridge runner — structural multi-reactor (P4.2/P4.3)", () => {

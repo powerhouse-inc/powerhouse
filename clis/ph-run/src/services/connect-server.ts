@@ -21,6 +21,8 @@ import {
   isProxiedRequest,
   overrideFromEnv,
   precompressedAssets,
+  resolveServedFiles,
+  servedFilesStep,
   serveOverrideStep,
   shellSwapFor,
   type ConnectMiddleware,
@@ -264,9 +266,12 @@ export async function runConnectServer(
   dirname = process.cwd(),
   {
     proxy,
+    serveFiles,
   }: {
     /** The switchboard origin whose paths this server proxies (runner.proxy). */
     proxy?: string;
+    /** Files served by name, read against `dirname` (runner.serveFiles). */
+    serveFiles?: Readonly<Record<string, string>>;
   } = {},
 ): Promise<ConnectServer> {
   serveOverride ??= overrideFromEnv();
@@ -274,6 +279,9 @@ export async function runConnectServer(
   assertConnectBuild(args.outDir, outDir, dirname);
   const base = connectBaseOf(args, outDir, dirname);
   const target = proxy ? new URL(new URL(proxy).origin) : undefined;
+  const served = serveFiles
+    ? servedFilesStep(resolveServedFiles(serveFiles, dirname), base)
+    : undefined;
 
   const server = createServer(
     inOrder([
@@ -292,6 +300,7 @@ export async function runConnectServer(
         : []),
       openCors,
       hostCheck,
+      ...(served ? [served] : []),
       ...(target ? [proxyStep(target)] : []),
       baseStep(base),
       assetsStep(outDir),

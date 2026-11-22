@@ -8,7 +8,10 @@ import {
 import { deepMerge, resolveSourceConnect } from "@powerhousedao/shared/connect";
 import { connectConfigSchemaWith } from "@powerhousedao/shared/connect/connect-config-schema";
 import { isPassthroughImageRef } from "@powerhousedao/shared/connect/image-ref";
-import { withOriginPlaceholders } from "@powerhousedao/shared/connect/origin-placeholder";
+import {
+  isSwitchboardProxyPath,
+  withOriginPlaceholders,
+} from "@powerhousedao/shared/connect/origin-placeholder";
 import {
   defaultConnectComposition,
   defineHostSchemas,
@@ -55,6 +58,36 @@ import type { ConnectServeOverride } from "../services/connect-serve.js";
 
 export const kind = "reactor";
 
+/** The paths Connect itself answers, which a served file must not shadow. */
+const CONNECT_OWN_PATHS = new Set(["/index.html", "/powerhouse.config.json"]);
+
+/**
+ * A `runner.serveFiles` path: `/` and segments of letters, digits and
+ * `-._~`, none starting with a dot (no `.` or `..` segment, nothing hidden),
+ * the last with an extension (an extensionless path is one of the app's
+ * routes). Requests match it exactly, as sent, so no request reaches any
+ * other file. Neither Connect's own files nor the switchboard's proxied
+ * paths.
+ */
+const servedFilePath = z
+  .string()
+  .regex(
+    /^(?:\/[A-Za-z0-9_~-][A-Za-z0-9._~-]*)*\/[A-Za-z0-9_~-][A-Za-z0-9._~-]*\.[A-Za-z0-9]+$/,
+    {
+      error: (issue) =>
+        `"${String(issue.input)}" is no path Connect serves a file at: write /<name>.<ext> (segments of letters, digits and -._~, none starting with a dot).`,
+    },
+  )
+  .superRefine((key, ctx) => {
+    const issue = (message: string) =>
+      ctx.addIssue({ code: "custom", message: `"${key}" ${message}` });
+    if (CONNECT_OWN_PATHS.has(key)) {
+      issue("is Connect's own file.");
+    } else if (isSwitchboardProxyPath(key)) {
+      issue("is the switchboard's path, which Connect's server proxies.");
+    }
+  });
+
 /** The connect host: the host-core reactor host with every runner option
  * this module reads declared (strict: an unknown runner key fails), and
  * `config` typed by Connect's own zod schema (the authored `connect` block),
@@ -89,6 +122,13 @@ const schemas = defineHostSchemas((s) =>
            * every call on the page's own origin. Typically a sibling's
            * `origin` output token. */
           proxy: z.strictObject({ target: s.tokenable(z.url()) }).optional(),
+          /** Files served by name, `{ "/<path>": "<file>" }`: each path under
+           * the app's base answers with its file as it reads at that request
+           * (another process may rewrite it), `Cache-Control: no-store`; a
+           * missing file is a 404, never the app. The file is read against
+           * the working directory (the project); `${package}` names the
+           * package's own. Every Connect server serves them (dev and serve). */
+          serveFiles: z.record(servedFilePath, z.string().min(1)).optional(),
         })
         .strict(),
       config: connectConfigSchemaWith(s.tokenable).optional(),
@@ -526,7 +566,7 @@ export type ConnectServerStart = (
   args: ConnectPreviewArgs,
   override?: ConnectServeOverride,
   dirname?: string,
-  options?: { proxy?: string },
+  options?: { proxy?: string; serveFiles?: Readonly<Record<string, string>> },
 ) => Promise<ListeningServer>;
 
 /** `serve` on a given server. The host's connect config (including a
@@ -576,7 +616,10 @@ export async function serveWith(
         ...(defaultComposition ? { defaultComposition } : {}),
       },
       undefined,
-      { proxy: runner.proxy?.target },
+      {
+        proxy: runner.proxy?.target,
+        ...(runner.serveFiles ? { serveFiles: runner.serveFiles } : {}),
+      },
     ),
   );
   return connectHandle(server, { host: bind, port });

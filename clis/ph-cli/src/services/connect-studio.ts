@@ -1,9 +1,13 @@
 import { getConnectBaseViteConfig } from "@powerhousedao/builder-tools";
+import {
+  resolveServedFiles,
+  servedFilesStep,
+} from "@powerhousedao/ph-run/connect-serve";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { readFileSync, watch } from "node:fs";
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import type { InlineConfig, Logger, ViteDevServer } from "vite";
+import type { InlineConfig, Logger, Plugin, ViteDevServer } from "vite";
 import { createServer, mergeConfig } from "vite";
 import type { ConnectStudioArgs } from "../types.js";
 import { buildStudioConnectOverride } from "../utils/cli-connect-override.js";
@@ -19,6 +23,9 @@ export type ConnectStudioOptions = {
   reloadOnConfigChange?: boolean;
   /** The switchboard origin whose paths this server proxies (runner.proxy). */
   proxy?: string;
+  /** Files served by name, read against the working directory at each
+   * request (runner.serveFiles), as the servers of a build serve them. */
+  serveFiles?: Readonly<Record<string, string>>;
   /** Runs before a config change replaces the server, for a caller whose
    * override follows the config too. When it rejects, the server stays. */
   beforeRestart?: () => Promise<void>;
@@ -52,6 +59,7 @@ export async function runConnectStudio(
     cacheDir,
     reloadOnConfigChange,
     proxy,
+    serveFiles,
     beforeRestart,
     restartWith,
     exposeStop,
@@ -63,6 +71,19 @@ export async function runConnectStudio(
 
   const dirname = process.cwd();
   const configFile = join(dirname, CONFIG_FILE);
+  // Ahead of vite's own middlewares (its SPA fallback among them), under the
+  // base vite serves at.
+  const servedFiles: Plugin | undefined = serveFiles && {
+    name: "ph:serve-files",
+    configureServer(server) {
+      server.middlewares.use(
+        servedFilesStep(
+          resolveServedFiles(serveFiles, dirname),
+          server.config.base,
+        ),
+      );
+    },
+  };
 
   const start = async (first: boolean) => {
     const override =
@@ -85,6 +106,7 @@ export async function runConnectStudio(
         ...(proxy ? { proxy: switchboardProxy(proxy) } : {}),
       },
       customLogger,
+      ...(servedFiles ? { plugins: [servedFiles] } : {}),
     };
     const server = await createServer(mergeConfig(baseConfig, devServerConfig));
     await server.listen();

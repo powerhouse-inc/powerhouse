@@ -68,7 +68,7 @@ export async function dev(
   const studio: { stop?: () => Promise<void> } = {};
   // A host file projects powerhouse.config.json, so a change of that file
   // changes the host: each restart of Studio serves the host as it reads
-  // then. Its port, routes and proxy stay those of the start.
+  // then. Its port, routes, proxy and served files stay those of the start.
   let override = callerOverride(host, ctx, ctx.verb);
   const { reloadHost } = ctx;
   // Without `runner.plugins`, the default composition: worked out at each
@@ -89,6 +89,9 @@ export async function dev(
       routes: host.runner.routes,
       cacheDir: viteCacheOf(host, ctx),
       proxy: host.runner.proxy?.target,
+      // Served as a build's servers serve them: a Studio's tab reads them
+      // in dev too.
+      ...(host.runner.serveFiles ? { serveFiles: host.runner.serveFiles } : {}),
       // As `ph connect studio` and `ph vetra` start it.
       reloadOnConfigChange: true,
       ...(reloadHost

@@ -4,6 +4,8 @@ import {
   connectBaseOf,
   overrideFromEnv,
   precompressedAssets,
+  resolveServedFiles,
+  servedFilesStep,
   serveOverrideStep,
   shellSwapFor,
   type ConnectMiddleware,
@@ -22,9 +24,12 @@ export async function runConnectPreview(
   dirname = process.cwd(),
   {
     proxy,
+    serveFiles,
   }: {
     /** The switchboard origin whose paths this server proxies (runner.proxy). */
     proxy?: string;
+    /** Files served by name, read against `dirname` (runner.serveFiles). */
+    serveFiles?: Readonly<Record<string, string>>;
   } = {},
 ) {
   // A supervisor can drive the preview via env when no explicit override is
@@ -88,6 +93,14 @@ export async function runConnectPreview(
                 shellSwapFor(outDirAbs, serveOverride, base),
                 proxy !== undefined,
               ),
+            ),
+          ]
+        : []),
+      ...(serveFiles
+        ? [
+            previewPlugin(
+              "ph:serve-files",
+              servedFilesStep(resolveServedFiles(serveFiles, dirname), base),
             ),
           ]
         : []),

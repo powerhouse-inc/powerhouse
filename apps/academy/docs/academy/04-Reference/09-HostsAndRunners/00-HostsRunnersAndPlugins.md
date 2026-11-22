@@ -698,6 +698,26 @@ from the package as its own dependency (the server gets its real folder). A
 package name the package does not have installed fails the start, naming
 both.
 
+A Connect host serves files that are not in its build with
+`runner.serveFiles`, for state a process writes per project next to an
+installed package's build:
+
+```js
+runner: {
+  module: "@powerhousedao/ph-cli/runners/connect",
+  outDir: "${package}/dist/connect",
+  serveFiles: { "/studio.config.json": "${userData}/.ph/studio/studio.config.json" },
+},
+```
+
+Each path, under the app's base, answers with its file as it reads at that
+request, with `Cache-Control: no-store`; a missing file is a 404, never the
+app's page. A path is `/` and segments of letters, digits and `-._~`, none
+starting with a dot, the last with an extension; Connect's own
+`/index.html` and `/powerhouse.config.json` and the switchboard's proxied
+paths are refused. A relative file is read against the working directory.
+Every Connect server serves them: `dev`, `serve` and vite's preview.
+
 So a package names the runners its hosts use as its own dependencies; one
 that must match the project's tools, such as
 `@powerhousedao/ph-cli/runners/switchboard`, is best a peer dependency. The
