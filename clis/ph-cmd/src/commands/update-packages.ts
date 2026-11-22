@@ -34,6 +34,7 @@ export interface SemverFns {
   major: (v: string) => number;
   gt: (a: string, b: string) => boolean;
   compare: (a: string, b: string) => number;
+  prerelease: (v: string) => ReadonlyArray<string | number> | null;
 }
 
 /**
@@ -103,8 +104,41 @@ export async function fetchNpmVersions(
 }
 
 /**
- * The newest published version within the same major as `currentVersion`, or
- * null when the current version is already the newest in that major.
+ * Pure: the newest of `versions` in the same major AND on the same
+ * pre-release line as `currentVersion`, or null when there is none newer.
+ * The line is the first pre-release identifier: stable only for stable, the
+ * same first pre-release identifier (dev, next, staging, rc, ...) otherwise.
+ * A stable pin is never moved to a pre-release, and a `-next.N` pin is never
+ * moved to `-dev.N` or the other way round.
+ */
+export function pickLatestSameLine(
+  currentVersion: string,
+  versions: readonly string[],
+  semver: SemverFns,
+): string | null {
+  const current = semver.clean(currentVersion);
+  if (!current || !semver.valid(current)) return null;
+  const lineOf = (v: string) => semver.prerelease(v)?.[0] ?? null;
+  const currentMajor = semver.major(current);
+  const currentLine = lineOf(current);
+  const candidates = versions
+    .map((v) => semver.clean(v))
+    .filter((v): v is string => v !== null && semver.valid(v) !== null)
+    .filter(
+      (v) =>
+        semver.major(v) === currentMajor &&
+        lineOf(v) === currentLine &&
+        semver.gt(v, current),
+    );
+  if (candidates.length === 0) return null;
+  candidates.sort(semver.compare);
+  return candidates[candidates.length - 1];
+}
+
+/**
+ * The newest published version within the same major and on the same
+ * pre-release line as `currentVersion` (see `pickLatestSameLine`), or null
+ * when the current version is already the newest there.
  */
 export async function resolveLatestSameMajor(
   name: string,
@@ -112,16 +146,11 @@ export async function resolveLatestSameMajor(
   registryUrl?: string,
 ): Promise<string | null> {
   const semver = await import("semver");
-  const current = semver.clean(currentVersion);
-  if (!current || !semver.valid(current)) return null;
-  const currentMajor = semver.major(current);
-  const candidates = (await fetchNpmVersions(name, registryUrl))
-    .map((v) => semver.clean(v))
-    .filter((v): v is string => v !== null && semver.valid(v) !== null)
-    .filter((v) => semver.major(v) === currentMajor && semver.gt(v, current));
-  if (candidates.length === 0) return null;
-  candidates.sort(semver.compare);
-  return candidates[candidates.length - 1];
+  return pickLatestSameLine(
+    currentVersion,
+    await fetchNpmVersions(name, registryUrl),
+    semver,
+  );
 }
 
 /** Interactive prompt; returns the subset of `outdated` the user accepts. */
