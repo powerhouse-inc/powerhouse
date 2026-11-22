@@ -513,6 +513,7 @@ async function buildUserPrompt(
     Record<string, unknown>,
     ChatSessionRegistry
   >,
+  options: ChatSessionWatchOptions,
   log?: Logger,
   earlier: Message[] = [],
   earlierTexts: string[] = [],
@@ -533,6 +534,9 @@ async function buildUserPrompt(
     attachments.push(
       ...(await extractAttachments(message, {
         workdir: ctx.context.workdir,
+        ...(options.downloadsDir !== undefined
+          ? { downloadsDir: options.downloadsDir }
+          : {}),
         documentId,
         log,
         service: reactor.attachments,
@@ -758,6 +762,7 @@ async function runAgentTurn(
     Record<string, unknown>,
     ChatSessionRegistry
   >,
+  options: ChatSessionWatchOptions,
   log?: Logger,
 ): Promise<void> {
   const userMessageId = plan.userMessage.id;
@@ -811,6 +816,7 @@ async function runAgentTurn(
           plan.userMessage,
           reactor,
           ctx,
+          options,
           log,
           plan.earlier,
           plan.earlierTexts,
@@ -904,6 +910,7 @@ async function runTurns(
     Record<string, unknown>,
     ChatSessionRegistry
   >,
+  options: ChatSessionWatchOptions,
   log?: Logger,
 ): Promise<void> {
   let current = plan;
@@ -916,6 +923,7 @@ async function runTurns(
       reactor,
       agent,
       ctx,
+      options,
       log,
     );
     let latest: ChatSessionState;
@@ -989,6 +997,13 @@ type ChatSessionDocumentLike = {
   state: { global: ChatSessionState };
 };
 
+/** How a Cli's chat-session watcher works in its workdir. */
+export interface ChatSessionWatchOptions {
+  /** Where files extracted from chat messages are written for the agent:
+   * absolute, or relative to the workdir. Default `downloads`. */
+  downloadsDir?: string;
+}
+
 /**
  * One watcher pass over chat-session documents: start due turns (detached),
  * clear stale retry requests and fail turns that cannot be resumed.
@@ -996,6 +1011,7 @@ type ChatSessionDocumentLike = {
 export async function processChatSessionDocs(
   docs: ChatSessionDocumentLike[],
   ctx: WatchContext,
+  options: ChatSessionWatchOptions = {},
 ): Promise<void> {
   const log = ctx.context.log;
   const reactor = await ctx.reactor();
@@ -1177,6 +1193,7 @@ export async function processChatSessionDocs(
       reactor,
       agent,
       ctx,
+      options,
       log,
     )
       .catch((err) =>
@@ -1197,15 +1214,24 @@ export async function processChatSessionDocs(
   }
 }
 
-export const chatSessionWatchTrigger = createDocumentChangeTrigger<
-  ChatSessionRegistry,
-  "powerhouse/chat-session"
->({
-  id: "chat-session-watch",
-  documentType: DOCUMENT_TYPE,
+/** The chat-session watcher, set up for a Cli (e.g. its own downloads
+ * folder). */
+export function createChatSessionWatchTrigger(
+  options: ChatSessionWatchOptions = {},
+) {
+  return createDocumentChangeTrigger<
+    ChatSessionRegistry,
+    "powerhouse/chat-session"
+  >({
+    id: "chat-session-watch",
+    documentType: DOCUMENT_TYPE,
 
-  async onChange(docs, ctx) {
-    await processChatSessionDocs(docs, ctx);
-    return null;
-  },
-});
+    async onChange(docs, ctx) {
+      await processChatSessionDocs(docs, ctx, options);
+      return null;
+    },
+  });
+}
+
+/** The watcher with the defaults: files extracted to `<workdir>/downloads`. */
+export const chatSessionWatchTrigger = createChatSessionWatchTrigger();

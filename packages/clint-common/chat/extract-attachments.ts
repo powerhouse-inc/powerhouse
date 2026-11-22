@@ -1,9 +1,10 @@
 /**
  * Extracts IMAGE and FILE content parts from chat messages and writes them
- * to {workdir}/downloads/ so the agent's tools can read them.
+ * to {workdir}/downloads/ (or `downloadsDir`) so the agent's tools can read
+ * them.
  */
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import type { Logger, IAttachmentService } from "@powerhousedao/clint";
 import type {
   ContentPart,
@@ -23,8 +24,14 @@ export interface ExtractedAttachment {
   bytes: Buffer;
 }
 
+/** Where extracted files go unless told otherwise: under the workdir. */
+export const DEFAULT_DOWNLOADS_DIR = "downloads";
+
 export interface ExtractAttachmentsOptions {
   workdir: string;
+  /** Where the files are written: absolute, or relative to `workdir`.
+   * Default {@link DEFAULT_DOWNLOADS_DIR}, `<workdir>/downloads`. */
+  downloadsDir?: string;
   /** The chat document: the dedup key, and the document `service.get` reads through. */
   documentId: string;
   log?: Logger;
@@ -116,7 +123,8 @@ export async function extractAttachments(
   }
 
   const results: ExtractedAttachment[] = [];
-  const downloadsDir = join(workdir, "downloads");
+  const dir = options.downloadsDir ?? DEFAULT_DOWNLOADS_DIR;
+  const downloadsDir = isAbsolute(dir) ? dir : join(workdir, dir);
 
   for (const part of attachmentParts) {
     const cached = seen.get(part.id);

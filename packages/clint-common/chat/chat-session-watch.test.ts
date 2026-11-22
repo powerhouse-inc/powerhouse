@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AttachmentRef, StreamChunk } from "@powerhousedao/clint";
 import {
@@ -19,6 +21,7 @@ import {
 import type { Message } from "document-models/chat-session/v1";
 import {
   CONTINUE_PROMPT,
+  createChatSessionWatchTrigger,
   processChatSessionDocs,
   waitForChatTurns,
 } from "./chat-session-watch.js";
@@ -1911,5 +1914,100 @@ describe("chat-session-watch — agent writes", () => {
     const agent = makeFakeAgent([]);
     await runPass(fake, agent);
     expect(fake.dispatched).toEqual([]);
+  });
+});
+
+describe("the watcher's downloads folder", () => {
+  const dirs: string[] = [];
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  /** A session whose first message is a file, in a workdir of its own. */
+  function fileSession() {
+    const workdir = mkdtempSync(join(tmpdir(), "chat-watch-downloads-"));
+    dirs.push(workdir);
+    const first = nextId();
+    let doc = utils.createDocument();
+    doc = reducer(
+      doc,
+      startSession({
+        threadId: "thread-1",
+        resourceId: "r1",
+        agent: { id: "agent", name: "Agent" },
+        startedAt: T0,
+      }),
+    );
+    doc = reducer(
+      doc,
+      addUserMessage({
+        id: first,
+        content: [
+          {
+            id: `${first}-file`,
+            type: "FILE",
+            attachment: fileRef(first),
+            filename: "logo.svg",
+            mediaType: "image/svg+xml",
+          },
+        ],
+        createdAt: T1,
+      }),
+    );
+    const fake = makeFakeReactor(doc);
+    Object.assign(fake.reactor, {
+      attachments: {
+        get: () =>
+          Promise.resolve({
+            body: new TextEncoder().encode("<svg/>"),
+            header: { mimeType: "image/svg+xml" },
+          }),
+      },
+    });
+    const agent = makeFakeAgent([
+      () =>
+        chunks(
+          { type: "text-delta", text: "ok" },
+          { type: "finish", finishReason: "stop" },
+        ),
+    ]);
+    const ctx = makeTriggerContext(fake, agent);
+    (ctx.context as { workdir: string }).workdir = workdir;
+    return { workdir, fake, agent, ctx };
+  }
+
+  it("extracts a message's files into downloadsDir under the workdir", async () => {
+    const { workdir, fake, agent, ctx } = fileSession();
+    await processChatSessionDocs([fake.doc()], ctx, {
+      downloadsDir: join(".ph", "vetra", "downloads"),
+    });
+    await waitForChatTurns();
+    const dir = join(workdir, ".ph", "vetra", "downloads");
+    const [saved] = readdirSync(dir);
+    expect(saved).toMatch(/^logo_.+\.svg$/);
+    expect(JSON.stringify(agent.calls[0].prompt)).toContain(
+      JSON.stringify(join(dir, saved)).slice(1, -1),
+    );
+    expect(existsSync(join(workdir, "downloads"))).toBe(false);
+  });
+
+  it("is <workdir>/downloads by default, and a trigger made with a folder uses it", async () => {
+    const plain = fileSession();
+    await processChatSessionDocs([plain.fake.doc()], plain.ctx);
+    await waitForChatTurns();
+    expect(readdirSync(join(plain.workdir, "downloads"))).toHaveLength(1);
+
+    const own = fileSession();
+    Object.assign(own.fake.reactor.client, {
+      find: () => Promise.resolve({ results: [own.fake.doc()] }),
+    });
+    const trigger = createChatSessionWatchTrigger({ downloadsDir: "files" });
+    own.ctx.state.pending = 1;
+    await trigger.poll(own.ctx);
+    await waitForChatTurns();
+    expect(readdirSync(join(own.workdir, "files"))).toHaveLength(1);
+    expect(existsSync(join(own.workdir, "downloads"))).toBe(false);
   });
 });

@@ -214,6 +214,44 @@ describe("extractAttachments", () => {
     expect(results[0].bytes.equals(FIXTURE_BYTES)).toBe(true);
   });
 
+  it("writes into downloadsDir: relative to the workdir, or absolute", async () => {
+    const part = (id: string) =>
+      makePart({
+        id,
+        type: "IMAGE",
+        mediaType: "image/png",
+        attachment: TEST_REF,
+      });
+    const service = makeService(FIXTURE_BYTES);
+
+    const relative = await extractAttachments(makeMessage([part("rel001x")]), {
+      workdir,
+      downloadsDir: join(".ph", "vetra", "downloads"),
+      documentId: "doc-rel",
+      service,
+    });
+    expect(relative[0].localPath).toBe(
+      join(workdir, ".ph", "vetra", "downloads", "attachment_rel001.png"),
+    );
+    expect(
+      (await readFileAsync(relative[0].localPath)).equals(FIXTURE_BYTES),
+    ).toBe(true);
+
+    const elsewhere = join(workdir, "elsewhere");
+    const absolute = await extractAttachments(makeMessage([part("abs001x")]), {
+      workdir: join(workdir, "unused"),
+      downloadsDir: elsewhere,
+      documentId: "doc-abs",
+      service,
+    });
+    expect(absolute[0].localPath).toBe(
+      join(elsewhere, "attachment_abs001.png"),
+    );
+    // Nothing in the default folder either way.
+    expect(existsSync(join(workdir, "downloads"))).toBe(false);
+    expect(existsSync(join(workdir, "unused"))).toBe(false);
+  });
+
   it("reads each attachment through the document it extracts for", async () => {
     const part = makePart({
       id: "bydoc1abcdef",
