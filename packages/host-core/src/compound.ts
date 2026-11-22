@@ -284,7 +284,9 @@ export function memberLogFile(
       // in use, or gone
     }
   }
-  let id = Date.now();
+  // Past the newest run seen: a run removed above must not lend its id to
+  // one started within the same millisecond.
+  let id = Math.max(Date.now(), runs.length > 0 ? runId(runs[0]) + 1 : 0);
   while (fs.existsSync(path.join(dir, `${safe}.${id}.log`))) id += 1;
   return path.join(dir, `${safe}.${id}.log`);
 }

@@ -119,6 +119,13 @@ describe("ph-run run <package>/<host>", () => {
       timeout: 60_000,
     });
 
+  // Not `once`: a stop waits for the pid to go, and on Linux an exited child
+  // stays a zombie until this process reaps it, which spawnSync blocks.
+  async function stop(ref: string) {
+    const run = phRun([ref, "--stop"]);
+    return { status: await run.exited, stdout: run.output() };
+  }
+
   beforeAll(() => {
     if (!existsSync(PH_RUN)) {
       throw new Error(
@@ -271,13 +278,13 @@ export async function build() { console.log("compound built"); }
       })}`,
     );
 
-    const stop = once(["@acme/tools/sb", "--stop"]);
-    expect(stop.stdout).toContain("Stopped @acme/tools/sb");
+    const stopped = await stop("@acme/tools/sb");
+    expect(stopped.stdout).toContain("Stopped @acme/tools/sb");
     expect(await theirs.exited).not.toBeNull();
     expect(readRunRecord(project, "@acme/tools/sb")).toBeUndefined();
     // The project's host of the same name runs on.
     expect(ours.child.exitCode).toBeNull();
-    expect(once(["sb", "--stop"]).status).toBe(0);
+    expect((await stop("sb")).status).toBe(0);
     expect(await ours.exited).not.toBeNull();
   }, 90_000);
 
@@ -319,7 +326,7 @@ export async function build() { console.log("compound built"); }
       headers: { accept: "text/html" },
     });
     expect(await page.text()).toContain("the package's build");
-    expect(once(["@acme/tools/connect", "--stop"]).status).toBe(0);
+    expect((await stop("@acme/tools/connect")).status).toBe(0);
     expect(await run.exited).not.toBeNull();
   }, 90_000);
 
