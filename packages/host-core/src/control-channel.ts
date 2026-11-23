@@ -1,3 +1,4 @@
+import { execFile } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
@@ -14,16 +15,26 @@ import type { RunRecord } from "./run-record-schema.js";
  * address and token are in the process's run record (`extra.control`).
  *
  * Same user only. Elsewhere the socket is mode 0600 in a 0700 folder of the
- * user. On Windows the pipe's default access lets only its creator,
- * administrators and the system write to it; everyone may open it to read,
- * so the server sends nothing before a request that carries the token.
+ * user. On Windows the pipe's access list is replaced once it listens: the
+ * user alone, and no caller from the network ({@link ControlChannel.ownerOnly}
+ * says whether that took). Until then, and when it did not take, the pipe has
+ * the system's default list: only its creator, administrators and the system
+ * write to it, everyone may open it to read. So the server sends nothing
+ * before a request that carries the token, and drops a caller that sends
+ * none in time.
  *
- * One request and one answer per line, as JSON:
- * `{ protocol, id, token, method, params }` and
- * `{ id, ok: true, result }` or `{ id, ok: false, error: { code, message } }`.
+ * One JSON value per line. A request is
+ * `{ protocol, id, token, method, params }`. Its answer ends with
+ * `{ id, ok: true, result }` or `{ id, ok: false, error: { code, message } }`;
+ * before that a handler may send output as it is produced:
+ * `{ id, stream: "stdout" | "stderr", data }`, in the order it was written.
+ * `{ protocol, id, token, cancel: true }` cancels the request `id` of the
+ * same connection, and so does the end of the connection.
  */
 
-export const CONTROL_PROTOCOL = 1;
+/** 2: output frames and `cancel`. A caller and a process of different
+ * protocols refuse each other, each naming both. */
+export const CONTROL_PROTOCOL = 2;
 
 /** A run record's `extra.control`. */
 export const controlRecordSchema = z.object({
@@ -39,6 +50,7 @@ export type ControlErrorCode =
   | "bad-request"
   | "unknown-method"
   | "failed"
+  | "cancelled"
   | "unreachable";
 
 export class ControlError extends Error {
@@ -51,11 +63,26 @@ export class ControlError extends Error {
   }
 }
 
-export type ControlHandler = (params: unknown) => unknown;
+export type ControlStream = "stdout" | "stderr";
+
+/** One request, as its handler sees it. */
+export interface ControlCall {
+  /** Aborted when the caller cancels, or goes away. */
+  readonly signal: AbortSignal;
+  /** Sends output to the caller now. Nothing is sent once the request is
+   * cancelled. */
+  write(stream: ControlStream, data: string): void;
+}
+
+export type ControlHandler = (params: unknown, call: ControlCall) => unknown;
 
 export interface ControlChannel {
   /** What the run record holds. */
   readonly record: ControlRecord;
+  /** Whether the system lets this user alone open the channel: the socket
+   * file's mode, or on Windows the pipe's access list once it was replaced.
+   * False: the token is what keeps other users out. */
+  readonly ownerOnly: boolean;
   /** Answers `method` from now on (replacing an earlier handler). */
   handle(method: string, handler: ControlHandler): void;
   /** Added to the answer to `hello`. */
@@ -67,9 +94,15 @@ export interface OpenControlChannelOptions {
   /** The folder of the socket file (not on Windows). Default: a folder of
    * the user under the system's temporary folder. */
   socketDir?: string;
+  /** How long a caller may take to send its first request (default 5 s). */
+  handshakeTimeoutMs?: number;
 }
 
-const MAX_LINE_BYTES = 1024 * 1024;
+/** The longest request line, and the longest line of output. */
+export const MAX_LINE_BYTES = 1024 * 1024;
+const MAX_FRAME_CHARS = 64 * 1024;
+const HANDSHAKE_TIMEOUT_MS = 5_000;
+const MAX_CONNECTIONS = 64;
 
 /** The control channel a live run of this record answers on, when it has
  * one of a protocol this version speaks. */
@@ -81,6 +114,19 @@ export function controlRecordOf(
     return undefined;
   }
   return parsed.data;
+}
+
+/** The protocol of the control channel a record names, whichever it is. */
+export function controlProtocolOf(
+  record: Pick<RunRecord, "extra"> | undefined,
+): number | undefined {
+  const parsed = controlRecordSchema.safeParse(record?.extra?.control);
+  return parsed.success ? parsed.data.protocol : undefined;
+}
+
+/** What a caller of one protocol is told about a process of another. */
+export function protocolMismatch(theirs: unknown): string {
+  return `It speaks control protocol ${JSON.stringify(theirs)}, this process speaks ${CONTROL_PROTOCOL}: both must run the same version.`;
 }
 
 function sameToken(given: unknown, token: string): boolean {
@@ -127,6 +173,71 @@ function listen(server: net.Server, address: string): Promise<void> {
   });
 }
 
+/** Windows PowerShell, by its own path: never one found through PATH. */
+function windowsPowerShell(): string {
+  return path.join(
+    process.env.SystemRoot ?? "C:\\Windows",
+    "System32",
+    "WindowsPowerShell",
+    "v1.0",
+    "powershell.exe",
+  );
+}
+
+/** `$pipe`: the pipe `name`, opened with `rights`. */
+const openPipe = (name: string, rights: string) =>
+  `$pipe = New-Object System.IO.Pipes.NamedPipeClientStream('.', '${name}', ` +
+  `[System.IO.Pipes.PipeAccessRights]'${rights}', [System.IO.Pipes.PipeOptions]::None, ` +
+  "[System.Security.Principal.TokenImpersonationLevel]::None, [System.IO.HandleInheritability]::None); " +
+  "$pipe.Connect(2000); ";
+
+function powerShell(script: string): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    execFile(
+      windowsPowerShell(),
+      ["-NoProfile", "-NonInteractive", "-Command", script],
+      { windowsHide: true, timeout: 15_000, encoding: "utf8" },
+      (error, stdout) => resolve(error ? undefined : stdout.trim()),
+    );
+  });
+}
+
+/**
+ * The access list (SDDL) of the pipe `name` (as in `\\.\pipe\<name>`);
+ * undefined when it cannot be read. Windows only.
+ */
+export function pipeAccessList(name: string): Promise<string | undefined> {
+  return powerShell(
+    "$ErrorActionPreference = 'Stop'; " +
+      openPipe(name, "ReadData, ReadPermissions") +
+      "try { $pipe.GetAccessControl().GetSecurityDescriptorSddlForm('Access') } finally { $pipe.Dispose() }",
+  );
+}
+
+/** The access list a control pipe gets: no caller from the network, and the
+ * user `sid` alone. */
+export const ownerOnlyPipeAccess = (sid: string) =>
+  `D:P(D;;FA;;;NU)(A;;FA;;;${sid})`;
+
+/**
+ * Replaces the access list of this process's pipe `name` with
+ * {@link ownerOnlyPipeAccess}. Node creates a pipe with the system's default
+ * list and has no call to set another, so a helper process of the same user
+ * does it (.NET's PipeSecurity through Windows PowerShell). Resolves false
+ * when that failed: the pipe keeps the default list.
+ */
+async function restrictPipe(name: string): Promise<boolean> {
+  const done = await powerShell(
+    "$ErrorActionPreference = 'Stop'; " +
+      "$sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; " +
+      openPipe(name, "ReadData, ReadPermissions, ChangePermissions") +
+      "try { $security = New-Object System.IO.Pipes.PipeSecurity; " +
+      `$security.SetSecurityDescriptorSddlForm('${ownerOnlyPipeAccess("' + $sid + '")}', 'Access'); ` +
+      "$pipe.SetAccessControl($security); 'restricted' } finally { $pipe.Dispose() }",
+  );
+  return done === "restricted";
+}
+
 /**
  * Opens a control channel for this process and resolves once it listens.
  * The server holds no process open. `hello` is answered by the channel
@@ -148,27 +259,46 @@ export async function openControlChannel(
     methods: [...handlers.keys()],
   }));
 
-  const answer = async (line: string): Promise<Record<string, unknown>> => {
+  /** The request a line holds, or the refusal it gets. */
+  const read = (
+    line: string,
+  ):
+    | { request: Record<string, unknown> }
+    | { refused: Record<string, unknown> } => {
     let request: Record<string, unknown>;
     try {
       const parsed: unknown = JSON.parse(line);
       if (typeof parsed !== "object" || parsed === null) throw new Error();
       request = parsed as Record<string, unknown>;
     } catch {
-      return refusal(undefined, "bad-request", "The request is not JSON.");
+      return {
+        refused: refusal(undefined, "bad-request", "The request is not JSON."),
+      };
     }
     const { id } = request;
     // Before anything else: nothing is said to a caller without the token.
     if (!sameToken(request.token, token)) {
-      return refusal(id, "unauthorized", "The token is missing or wrong.");
+      return {
+        refused: refusal(id, "unauthorized", "The token is missing or wrong."),
+      };
     }
     if (request.protocol !== CONTROL_PROTOCOL) {
-      return refusal(
-        id,
-        "protocol",
-        `This process speaks control protocol ${CONTROL_PROTOCOL}, not ${JSON.stringify(request.protocol)}.`,
-      );
+      return {
+        refused: refusal(
+          id,
+          "protocol",
+          `This process speaks control protocol ${CONTROL_PROTOCOL}, the request is of protocol ${JSON.stringify(request.protocol)}: both must run the same version.`,
+        ),
+      };
     }
+    return { request };
+  };
+
+  const answer = async (
+    request: Record<string, unknown>,
+    call: ControlCall,
+  ): Promise<Record<string, unknown>> => {
+    const { id } = request;
     const handler =
       typeof request.method === "string"
         ? handlers.get(request.method)
@@ -181,11 +311,15 @@ export async function openControlChannel(
       );
     }
     try {
-      return { id, ok: true, result: (await handler(request.params)) ?? null };
+      return {
+        id,
+        ok: true,
+        result: (await handler(request.params, call)) ?? null,
+      };
     } catch (error) {
       return refusal(
         id,
-        "failed",
+        call.signal.aborted ? "cancelled" : "failed",
         error instanceof Error ? error.message : String(error),
       );
     }
@@ -194,43 +328,95 @@ export async function openControlChannel(
   const sockets = new Set<net.Socket>();
   const server = net.createServer((socket) => {
     sockets.add(socket);
-    socket.once("close", () => sockets.delete(socket));
+    // The requests of this connection that have not ended, by id.
+    const running = new Map<unknown, AbortController>();
+    // A caller that sends nothing holds a connection for this long.
+    let handshake: NodeJS.Timeout | undefined = setTimeout(
+      () => socket.destroy(),
+      options.handshakeTimeoutMs ?? HANDSHAKE_TIMEOUT_MS,
+    );
+    handshake.unref();
+    socket.once("close", () => {
+      sockets.delete(socket);
+      clearTimeout(handshake);
+      for (const controller of running.values()) controller.abort();
+    });
     socket.on("error", () => undefined);
     socket.setEncoding("utf8");
     let pending = "";
+    let dropped = false;
     let queue = Promise.resolve();
-    socket.on("data", (chunk: string) => {
-      pending += chunk;
-      if (pending.length > MAX_LINE_BYTES) {
-        socket.destroy();
+    const send = (value: Record<string, unknown>, end = false) => {
+      if (socket.destroyed) return;
+      const text = `${JSON.stringify(value)}\n`;
+      if (end) socket.end(text);
+      else socket.write(text);
+    };
+    const take = (line: string) => {
+      if (dropped) return;
+      const parsed = read(line);
+      if ("refused" in parsed) {
+        // A caller without the token is answered once, and not heard again.
+        const { error } = parsed.refused as { error: { code: string } };
+        dropped = error.code !== "protocol";
+        queue = queue.then(() => send(parsed.refused, dropped));
         return;
       }
+      clearTimeout(handshake);
+      handshake = undefined;
+      const { request } = parsed;
+      const { id } = request;
+      // Not behind the request it cancels.
+      if (request.cancel === true) {
+        running.get(id)?.abort();
+        return;
+      }
+      const controller = new AbortController();
+      running.set(id, controller);
+      const call: ControlCall = {
+        signal: controller.signal,
+        write: (stream, data) => {
+          if (controller.signal.aborted) return;
+          for (let at = 0; at < data.length; at += MAX_FRAME_CHARS) {
+            send({ id, stream, data: data.slice(at, at + MAX_FRAME_CHARS) });
+          }
+        },
+      };
+      queue = queue.then(async () => {
+        const response = controller.signal.aborted
+          ? refusal(id, "cancelled", "The request was cancelled.")
+          : await answer(request, call);
+        running.delete(id);
+        send(response);
+      });
+    };
+    socket.on("data", (chunk: string) => {
+      pending += chunk;
       for (;;) {
         const end = pending.indexOf("\n");
         if (end === -1) break;
         const line = pending.slice(0, end);
         pending = pending.slice(end + 1);
         if (line.trim() === "") continue;
-        queue = queue.then(async () => {
-          const response = await answer(line);
-          if (socket.destroyed) return;
-          const refused =
-            response.ok === false &&
-            (response.error as { code: string }).code === "unauthorized";
-          const text = `${JSON.stringify(response)}\n`;
-          if (refused) socket.end(text);
-          else socket.write(text);
-        });
+        if (Buffer.byteLength(line) > MAX_LINE_BYTES) {
+          socket.destroy();
+          return;
+        }
+        take(line);
       }
+      if (Buffer.byteLength(pending) > MAX_LINE_BYTES) socket.destroy();
     });
   });
+  server.maxConnections = MAX_CONNECTIONS;
   server.on("error", () => undefined);
 
   let address: string;
   let socketFile: string | undefined;
+  let ownerOnly: boolean;
   if (process.platform === "win32") {
     address = `\\\\.\\pipe\\ph-control-${name}`;
     await listen(server, address);
+    ownerOnly = await restrictPipe(`ph-control-${name}`);
   } else {
     const dir = userSocketDir(options.socketDir);
     sweepSockets(dir);
@@ -248,6 +434,7 @@ export async function openControlChannel(
       if (umask !== undefined) process.umask(umask);
     }
     fs.chmodSync(address, 0o600);
+    ownerOnly = true;
   }
   server.unref();
 
@@ -259,6 +446,7 @@ export async function openControlChannel(
   let closing: Promise<void> | undefined;
   return {
     record: { protocol: CONTROL_PROTOCOL, address, token },
+    ownerOnly,
     handle(method, handler) {
       handlers.set(method, handler);
     },
@@ -333,6 +521,10 @@ export interface CallControlOptions {
   connectTimeoutMs?: number;
   /** Do not hold this process open for the answer. */
   unref?: boolean;
+  /** Output the other process sends while it works on the request. */
+  onOutput?: (stream: ControlStream, data: string) => void;
+  /** Cancels the request there; the call then rejects with `cancelled`. */
+  signal?: AbortSignal;
 }
 
 const CONNECT_TIMEOUT_MS = 2_000;
@@ -340,7 +532,9 @@ const CONNECT_TIMEOUT_MS = 2_000;
 /**
  * One request to the control channel a run record names. Resolves with the
  * result; rejects with a {@link ControlError}: `unreachable` when nothing
- * answers there, else the code the other process refused with.
+ * answers there, `protocol` when it speaks another protocol, else the code
+ * the other process refused with. A request that is cancelled, or whose
+ * caller ends, is cancelled in the other process.
  */
 export function callControl(
   control: ControlRecord,
@@ -348,19 +542,52 @@ export function callControl(
   params?: unknown,
   options: CallControlOptions = {},
 ): Promise<unknown> {
+  if (control.protocol !== CONTROL_PROTOCOL) {
+    return Promise.reject(
+      new ControlError(
+        "protocol",
+        `Cannot ask the process at ${control.address} for "${method}". ${protocolMismatch(control.protocol)}`,
+      ),
+    );
+  }
+  const { signal } = options;
+  if (signal?.aborted) {
+    return Promise.reject(
+      new ControlError("cancelled", `"${method}" was cancelled.`),
+    );
+  }
   return new Promise((resolve, reject) => {
     const socket = net.connect(control.address);
     if (options.unref) socket.unref();
     let settled = false;
+    let connected = false;
     let pending = "";
     const timers: NodeJS.Timeout[] = [];
+    const request = { protocol: CONTROL_PROTOCOL, id: 1, token: control.token };
+    const cancel = () => {
+      const stop = () =>
+        reject(new ControlError("cancelled", `"${method}" was cancelled.`));
+      if (settled) return;
+      if (!connected) {
+        settle(stop);
+        return;
+      }
+      settled = true;
+      for (const timer of timers) clearTimeout(timer);
+      // The end of the connection cancels as well; the line says so first.
+      socket.end(`${JSON.stringify({ ...request, cancel: true })}\n`);
+      setTimeout(() => socket.destroy(), 500).unref();
+      stop();
+    };
     const settle = (finish: () => void) => {
       if (settled) return;
       settled = true;
       for (const timer of timers) clearTimeout(timer);
+      signal?.removeEventListener("abort", cancel);
       socket.destroy();
       finish();
     };
+    signal?.addEventListener("abort", cancel, { once: true });
     const unreachable = (why: string) =>
       settle(() => reject(new ControlError("unreachable", why)));
     const limit = (ms: number, why: string) => {
@@ -375,6 +602,7 @@ export function callControl(
     );
     socket.setEncoding("utf8");
     socket.once("connect", () => {
+      connected = true;
       clearTimeout(connecting);
       if (options.timeoutMs !== undefined) {
         limit(
@@ -384,41 +612,55 @@ export function callControl(
       }
       socket.write(
         `${JSON.stringify({
-          protocol: CONTROL_PROTOCOL,
-          id: 1,
-          token: control.token,
+          ...request,
           method,
           ...(params === undefined ? {} : { params }),
         })}\n`,
       );
     });
-    socket.on("data", (chunk: string) => {
-      pending += chunk;
-      const end = pending.indexOf("\n");
-      if (end === -1) return;
-      let response: {
+    const take = (line: string) => {
+      let frame: {
         ok?: unknown;
         result?: unknown;
+        stream?: unknown;
+        data?: unknown;
         error?: { code?: ControlErrorCode; message?: string };
       };
       try {
-        response = JSON.parse(pending.slice(0, end)) as typeof response;
+        frame = JSON.parse(line) as typeof frame;
       } catch {
         unreachable(`The control channel ${control.address} answered no JSON.`);
         return;
       }
-      if (response.ok === true) {
-        settle(() => resolve(response.result));
+      if (frame.stream === "stdout" || frame.stream === "stderr") {
+        if (typeof frame.data === "string") {
+          options.onOutput?.(frame.stream, frame.data);
+        }
+        return;
+      }
+      if (frame.ok === true) {
+        settle(() => resolve(frame.result));
         return;
       }
       settle(() =>
         reject(
           new ControlError(
-            response.error?.code ?? "failed",
-            response.error?.message ?? `"${method}" failed.`,
+            frame.error?.code ?? "failed",
+            frame.error?.message ?? `"${method}" failed.`,
           ),
         ),
       );
+    };
+    socket.on("data", (chunk: string) => {
+      pending += chunk;
+      for (;;) {
+        if (settled) return;
+        const end = pending.indexOf("\n");
+        if (end === -1) break;
+        const line = pending.slice(0, end);
+        pending = pending.slice(end + 1);
+        if (line.trim() !== "") take(line);
+      }
     });
     socket.once("error", (error) =>
       unreachable(

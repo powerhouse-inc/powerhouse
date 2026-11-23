@@ -209,8 +209,15 @@ describe("service commands beside a Cli that keeps running", () => {
     return !isPidAlive(pid);
   }
 
-  function controlOf(host: string): ControlRecord {
-    const control = controlRecordOf(readRunRecord(project, host));
+  /** A stack writes its record once its Cli has started, after the Cli
+   * printed that it serves. */
+  async function controlOf(host: string): Promise<ControlRecord> {
+    const deadline = Date.now() + 15_000;
+    let control = controlRecordOf(readRunRecord(project, host));
+    while (!control && Date.now() < deadline) {
+      await sleep(100);
+      control = controlRecordOf(readRunRecord(project, host));
+    }
     expect(control).toBeDefined();
     return control!;
   }
@@ -291,7 +298,7 @@ describe("service commands beside a Cli that keeps running", () => {
   it("acts on the running instance: ps, start, restart, stop and start again", async () => {
     const serving = phRun(["services"]);
     await waitFor(serving, "Serving");
-    const control = controlOf("services");
+    const control = await controlOf("services");
     expect(control.protocol).toBe(CONTROL_PROTOCOL);
     expect(control.address).toContain(String(serving.child.pid));
     await expect(callControl(control, "hello")).resolves.toMatchObject({
@@ -386,7 +393,7 @@ describe("service commands beside a Cli that keeps running", () => {
     await waitFor(serving, "Serving");
     const member = readRunRecord(project, "control-upstream")?.pid;
     if (member !== undefined) reported.add(member);
-    const control = controlOf("service-stack");
+    const control = await controlOf("service-stack");
     expect(control.address).toContain(String(serving.child.pid));
 
     const start = await command("service-stack", "worker-start");

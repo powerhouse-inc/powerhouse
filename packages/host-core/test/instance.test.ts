@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { CONTROL_PROTOCOL } from "../src/control-channel.js";
 import {
   describeInstance,
   findRunningInstance,
@@ -77,7 +78,11 @@ const studio = (over: Partial<RunRecord> = {}): RunRecord => ({
     },
   },
   extra: {
-    control: { protocol: 1, address: "\\\\.\\pipe\\ph-test", token: "t0ken" },
+    control: {
+      protocol: CONTROL_PROTOCOL,
+      address: "\\\\.\\pipe\\ph-test",
+      token: "t0ken",
+    },
   },
   ...over,
 });
@@ -156,10 +161,27 @@ describe("findRunningInstance", () => {
         "connect.connect": "http://localhost:8090/",
       },
     });
+    expect(found?.controlProtocol).toBe(CONTROL_PROTOCOL);
     expect(found?.key).toEqual(instanceKey("@acme/tools/studio", project, {}));
     expect(found?.recordPath).toBe(
       runRecordPath(project, "@acme/tools/studio", {}),
     );
+  });
+
+  it("names the protocol of an instance that speaks another one", () => {
+    const project = makeProject();
+    writeRunRecord(
+      project,
+      studio({
+        extra: { control: { protocol: 1, address: "old", token: "t0ken" } },
+      }),
+    );
+    const found = findRunningInstance(project, {
+      host: "@acme/tools/studio",
+      env: {},
+    });
+    expect(found?.control).toBeUndefined();
+    expect(found?.controlProtocol).toBe(1);
   });
 
   it("reads a single host's own outputs", () => {

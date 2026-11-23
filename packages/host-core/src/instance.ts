@@ -1,4 +1,8 @@
-import { controlRecordOf, type ControlRecord } from "./control-channel.js";
+import {
+  controlProtocolOf,
+  controlRecordOf,
+  type ControlRecord,
+} from "./control-channel.js";
 import { instanceKey, type InstanceKey } from "./instance-key.js";
 import {
   listRunRecords,
@@ -42,6 +46,9 @@ export interface RunningInstance {
   pid: number;
   /** The channel its process answers commands on, when it has one. */
   control?: ControlRecord;
+  /** The protocol of the channel its record names. Set without `control`:
+   * the instance speaks another protocol than this process. */
+  controlProtocol?: number;
   /** The origin of its switchboard: the instance's own outputs for a
    * switchboard host, a member's for a compound. */
   switchboardUrl?: string;
@@ -105,6 +112,8 @@ export function instanceOfRecord(
   };
   const control = controlRecordOf(record);
   if (control) instance.control = control;
+  const controlProtocol = controlProtocolOf(record);
+  if (controlProtocol !== undefined) instance.controlProtocol = controlProtocol;
   const read = (name: string, outputs: unknown, prefix: string) => {
     if (!isRecord(outputs)) return;
     const origin =

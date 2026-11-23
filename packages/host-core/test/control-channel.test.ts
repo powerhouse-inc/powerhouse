@@ -1,4 +1,11 @@
-import { mkdtempSync, rmSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -8,12 +15,18 @@ import {
   closeProcessControlChannel,
   CONTROL_PROTOCOL,
   ControlError,
+  controlProtocolOf,
   controlRecordOf,
   ensureProcessControlChannel,
+  MAX_LINE_BYTES,
   openControlChannel,
+  ownerOnlyPipeAccess,
+  pipeAccessList,
   processControlChannel,
   type ControlChannel,
+  type OpenControlChannelOptions,
 } from "../src/control-channel.js";
+import { fileAccessList, writeOwnerOnlyFile } from "../src/owner-only.js";
 import { readRunRecord, writeRunRecord } from "../src/run-record.js";
 
 const posix = process.platform !== "win32";
@@ -33,13 +46,54 @@ function makeDir(): string {
   return dir;
 }
 
-async function open(): Promise<ControlChannel> {
-  const channel = await openControlChannel(
-    posix ? { socketDir: path.join(makeDir(), "sockets") } : {},
-  );
+async function open(
+  options: OpenControlChannelOptions = {},
+): Promise<ControlChannel> {
+  const channel = await openControlChannel({
+    ...options,
+    ...(posix ? { socketDir: path.join(makeDir(), "sockets") } : {}),
+  });
   channels.push(channel);
   return channel;
 }
+
+/** Resolves once the connection to `address` ended, with what it received;
+ * `lines` are sent when it opens. */
+function untilClosed(address: string, lines: string[] = []): Promise<string> {
+  return new Promise((resolve) => {
+    const socket = net.connect(address);
+    let text = "";
+    socket.setEncoding("utf8");
+    socket.once("connect", () => {
+      for (const line of lines) socket.write(`${line}\n`);
+    });
+    socket.on("data", (chunk: string) => (text += chunk));
+    // A dropped connection may end with an error; `close` follows.
+    socket.on("error", () => undefined);
+    socket.once("close", () => resolve(text));
+  });
+}
+
+/** The SID of the user the tests run as (Windows). */
+function userSid(): string {
+  const out = execFileSync(
+    path.join(
+      process.env.SystemRoot ?? "C:\\Windows",
+      "System32",
+      "whoami.exe",
+    ),
+    ["/user", "/fo", "csv", "/nh"],
+    { encoding: "utf8", windowsHide: true },
+  );
+  return /"(S-[\d-]+)"\s*$/.exec(out.trim())![1]!;
+}
+
+const until = async (met: () => boolean, ms = 2000) => {
+  const end = Date.now() + ms;
+  while (!met() && Date.now() < end) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+};
 
 /** What the channel answers to one raw line. */
 function raw(address: string, line: string): Promise<string> {
@@ -200,6 +254,355 @@ describe("the control channel", () => {
       ),
     );
   });
+
+  it.skipIf(posix)(
+    "lets the user alone open its pipe, and no caller from the network",
+    async () => {
+      const channel = await open();
+      expect(channel.ownerOnly).toBe(true);
+      const name = channel.record.address.slice("\\\\.\\pipe\\".length);
+      const access = await pipeAccessList(name);
+      expect(access).toBe(ownerOnlyPipeAccess(userSid()));
+      expect(access).toBe(`D:P(D;;FA;;;NU)(A;;FA;;;${userSid()})`);
+      // The user's own processes still reach it, one after another.
+      await expect(callControl(channel.record, "hello")).resolves.toBeDefined();
+      await expect(callControl(channel.record, "hello")).resolves.toBeDefined();
+    },
+  );
+
+  it.skipIf(!posix)("says its socket is the user's alone", async () => {
+    expect((await open()).ownerOnly).toBe(true);
+  });
+});
+
+describe("a request's output", () => {
+  it("arrives as it is written, stdout and stderr apart and in order", async () => {
+    const channel = await open();
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    channel.handle("build", async (_params, call) => {
+      call.write("stdout", "one\n");
+      call.write("stderr", "careful\n");
+      call.write("stdout", "two\n");
+      await held;
+      call.write("stdout", "three\n");
+      return { exitCode: 3 };
+    });
+    const seen: string[] = [];
+    const result = callControl(channel.record, "build", undefined, {
+      onOutput: (stream, data) => {
+        seen.push(`${stream}:${data}`);
+        // The first lines are here before the handler ends.
+        if (seen.length === 3) release();
+      },
+    });
+    await expect(result).resolves.toEqual({ exitCode: 3 });
+    expect(seen).toEqual([
+      "stdout:one\n",
+      "stderr:careful\n",
+      "stdout:two\n",
+      "stdout:three\n",
+    ]);
+  });
+
+  it("arrives whole when it is longer than a frame", async () => {
+    const channel = await open();
+    const text = "é".repeat(300_000);
+    channel.handle("dump", (_params, call) => {
+      call.write("stdout", text);
+      return "done";
+    });
+    let got = "";
+    let frames = 0;
+    await callControl(channel.record, "dump", undefined, {
+      onOutput: (_stream, data) => {
+        got += data;
+        frames += 1;
+      },
+    });
+    expect(got).toBe(text);
+    expect(frames).toBeGreaterThan(1);
+  });
+
+  it("is dropped by a caller that does not ask for it", async () => {
+    const channel = await open();
+    channel.handle("chatty", (_params, call) => {
+      call.write("stdout", "noise");
+      return "result";
+    });
+    await expect(callControl(channel.record, "chatty")).resolves.toBe("result");
+  });
+});
+
+describe("cancelling a request", () => {
+  /** A method that runs until it is cancelled. */
+  const endless = (channel: ControlChannel) => {
+    const state = { started: 0, aborted: 0 };
+    channel.handle(
+      "wait",
+      (_params, call) =>
+        new Promise((_resolve, reject) => {
+          state.started += 1;
+          call.signal.addEventListener("abort", () => {
+            state.aborted += 1;
+            reject(new Error("stopped"));
+          });
+        }),
+    );
+    return state;
+  };
+
+  it("reaches the handler as an abort signal, and the call says so", async () => {
+    const channel = await open();
+    const state = endless(channel);
+    const controller = new AbortController();
+    const call = code(
+      callControl(channel.record, "wait", undefined, {
+        signal: controller.signal,
+      }),
+    );
+    await until(() => state.started === 1);
+    controller.abort();
+    expect(await call).toBe("cancelled");
+    await until(() => state.aborted === 1);
+    expect(state).toEqual({ started: 1, aborted: 1 });
+  });
+
+  it("is answered `cancelled` on the connection that asked", async () => {
+    const channel = await open();
+    const state = endless(channel);
+    const base = {
+      protocol: CONTROL_PROTOCOL,
+      id: 4,
+      token: channel.record.token,
+    };
+    const socket = net.connect(channel.record.address);
+    let text = "";
+    socket.setEncoding("utf8");
+    socket.on("data", (chunk: string) => (text += chunk));
+    await new Promise((resolve) => socket.once("connect", resolve));
+    socket.write(`${JSON.stringify({ ...base, method: "wait" })}\n`);
+    await until(() => state.started === 1);
+    socket.write(`${JSON.stringify({ ...base, cancel: true })}\n`);
+    await until(() => text.includes("\n"));
+    socket.destroy();
+    expect(JSON.parse(text)).toEqual({
+      id: 4,
+      ok: false,
+      error: { code: "cancelled", message: "stopped" },
+    });
+  });
+
+  it("happens when the caller goes away", async () => {
+    const channel = await open();
+    const state = endless(channel);
+    const socket = net.connect(channel.record.address);
+    await new Promise((resolve) => socket.once("connect", resolve));
+    socket.write(
+      `${JSON.stringify({ protocol: CONTROL_PROTOCOL, id: 1, token: channel.record.token, method: "wait" })}\n`,
+    );
+    await until(() => state.started === 1);
+    socket.destroy();
+    await until(() => state.aborted === 1);
+    expect(state).toEqual({ started: 1, aborted: 1 });
+  });
+
+  it("needs the token", async () => {
+    const channel = await open();
+    const state = endless(channel);
+    const socket = net.connect(channel.record.address);
+    socket.on("error", () => undefined);
+    await new Promise((resolve) => socket.once("connect", resolve));
+    socket.write(
+      `${JSON.stringify({ protocol: CONTROL_PROTOCOL, id: 1, token: channel.record.token, method: "wait" })}\n`,
+    );
+    await until(() => state.started === 1);
+    socket.write(
+      `${JSON.stringify({ protocol: CONTROL_PROTOCOL, id: 1, token: "guess", cancel: true })}\n`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(state.aborted).toBe(0);
+    socket.destroy();
+  });
+
+  it("is refused before it connects when it was cancelled already", async () => {
+    const channel = await open();
+    const state = endless(channel);
+    const controller = new AbortController();
+    controller.abort();
+    expect(
+      await code(
+        callControl(channel.record, "wait", undefined, {
+          signal: controller.signal,
+        }),
+      ),
+    ).toBe("cancelled");
+    expect(state.started).toBe(0);
+  });
+});
+
+describe("requests at the same time", () => {
+  it("run side by side, each to its own caller", async () => {
+    const channel = await open();
+    let running = 0;
+    let most = 0;
+    channel.handle("work", async (params, call) => {
+      running += 1;
+      most = Math.max(most, running);
+      call.write("stdout", `start ${String(params)}`);
+      await until(() => most === 2, 1000);
+      running -= 1;
+      return params;
+    });
+    const output: Record<string, string[]> = { a: [], b: [] };
+    const [a, b] = await Promise.all(
+      (["a", "b"] as const).map((name) =>
+        callControl(channel.record, "work", name, {
+          onOutput: (_stream, data) => output[name]!.push(data),
+        }),
+      ),
+    );
+    expect([a, b]).toEqual(["a", "b"]);
+    expect(most).toBe(2);
+    expect(output).toEqual({ a: ["start a"], b: ["start b"] });
+  });
+
+  it("leave other methods answering while one runs", async () => {
+    const channel = await open();
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    channel.handle("long", () => held.then(() => "long done"));
+    const long = callControl(channel.record, "long");
+    await expect(callControl(channel.record, "hello")).resolves.toMatchObject({
+      pid: process.pid,
+    });
+    release();
+    await expect(long).resolves.toBe("long done");
+  });
+});
+
+describe("the bounds of a request", () => {
+  it("drops a caller that sends no request in time", async () => {
+    const channel = await open({ handshakeTimeoutMs: 100 });
+    const started = Date.now();
+    expect(await untilClosed(channel.record.address)).toBe("");
+    expect(Date.now() - started).toBeLessThan(2000);
+  });
+
+  it("drops a caller that sends half a request and stops", async () => {
+    const channel = await open({ handshakeTimeoutMs: 100 });
+    const socket = net.connect(channel.record.address);
+    const closed = new Promise((resolve) => socket.once("close", resolve));
+    socket.once("connect", () => socket.write('{"protocol":'));
+    await closed;
+    expect(socket.destroyed).toBe(true);
+  });
+
+  it("keeps a caller with the token for as long as its request takes", async () => {
+    const channel = await open({ handshakeTimeoutMs: 50 });
+    channel.handle(
+      "slow",
+      () => new Promise((resolve) => setTimeout(() => resolve("done"), 250)),
+    );
+    await expect(callControl(channel.record, "slow")).resolves.toBe("done");
+  });
+
+  it("answers a caller without the token once, then ends the connection", async () => {
+    const channel = await open();
+    let ran = 0;
+    channel.handle("stop", () => ++ran);
+    const request = (token: string) =>
+      JSON.stringify({
+        protocol: CONTROL_PROTOCOL,
+        id: 1,
+        token,
+        method: "stop",
+      });
+    const text = await untilClosed(channel.record.address, [
+      request("guess"),
+      request(channel.record.token),
+    ]);
+    const answers = text.trim().split("\n");
+    expect(answers).toHaveLength(1);
+    expect(JSON.parse(answers[0]!)).toMatchObject({
+      error: { code: "unauthorized" },
+    });
+    expect(ran).toBe(0);
+  });
+
+  it("drops a caller whose request is longer than the limit", async () => {
+    const channel = await open();
+    let ran = 0;
+    channel.handle("take", () => ++ran);
+    const line = JSON.stringify({
+      protocol: CONTROL_PROTOCOL,
+      id: 1,
+      token: channel.record.token,
+      method: "take",
+      params: "x".repeat(MAX_LINE_BYTES),
+    });
+    expect(await untilClosed(channel.record.address, [line])).toBe("");
+    expect(ran).toBe(0);
+  });
+
+  it("takes a request just under the limit", async () => {
+    const channel = await open();
+    channel.handle("size", (params) => String(params).length);
+    const size = MAX_LINE_BYTES - 1024;
+    await expect(
+      callControl(channel.record, "size", "x".repeat(size)),
+    ).resolves.toBe(size);
+  });
+
+  it("never repeats the token", async () => {
+    const channel = await open();
+    const { token } = channel.record;
+    const hello = await callControl(channel.record, "hello");
+    expect(JSON.stringify(hello)).not.toContain(token);
+    const refused = await raw(
+      channel.record.address,
+      JSON.stringify({ protocol: 99, id: 1, token, method: "hello" }),
+    );
+    expect(refused).not.toContain(token);
+    const wrong = await raw(
+      channel.record.address,
+      JSON.stringify({ protocol: CONTROL_PROTOCOL, id: 1, token: "guess" }),
+    );
+    expect(wrong).not.toContain("guess");
+  });
+});
+
+describe("a caller and a process of different protocols", () => {
+  it("are told so by the process, which names both", async () => {
+    const channel = await open();
+    const answer = JSON.parse(
+      await raw(
+        channel.record.address,
+        JSON.stringify({
+          protocol: 1,
+          id: 1,
+          token: channel.record.token,
+          method: "hello",
+        }),
+      ),
+    ) as { error: { code: string; message: string } };
+    expect(answer.error.code).toBe("protocol");
+    expect(answer.error.message).toBe(
+      `This process speaks control protocol ${CONTROL_PROTOCOL}, the request is of protocol 1: both must run the same version.`,
+    );
+  });
+
+  it("are told so by the caller, which names both and does not connect", async () => {
+    const error = await callControl(
+      { protocol: 1, address: "\\\\.\\pipe\\ph-control-nobody", token: "t" },
+      "command",
+    ).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ControlError);
+    expect((error as ControlError).code).toBe("protocol");
+    expect((error as ControlError).message).toContain(
+      `It speaks control protocol 1, this process speaks ${CONTROL_PROTOCOL}: both must run the same version.`,
+    );
+  });
 });
 
 describe("the process's control channel", () => {
@@ -245,23 +648,71 @@ describe("a run record with a control channel", () => {
   it("has none without the entry, or with another protocol", () => {
     expect(controlRecordOf(undefined)).toBeUndefined();
     expect(controlRecordOf(record())).toBeUndefined();
-    expect(
-      controlRecordOf(
-        record({ control: { protocol: 2, address: "a", token: "t" } }),
-      ),
-    ).toBeUndefined();
+    const older = record({
+      control: { protocol: CONTROL_PROTOCOL - 1, address: "a", token: "t" },
+    });
+    expect(controlRecordOf(older)).toBeUndefined();
+    expect(controlProtocolOf(older)).toBe(CONTROL_PROTOCOL - 1);
     expect(controlRecordOf(record({ control: "pipe" }))).toBeUndefined();
+    expect(controlProtocolOf(record({ control: "pipe" }))).toBeUndefined();
+    expect(controlProtocolOf(record())).toBeUndefined();
   });
+
+  const withControl = () =>
+    record({
+      control: { protocol: CONTROL_PROTOCOL, address: "a", token: "t" },
+    });
 
   it.skipIf(!posix)("is readable by the user alone", () => {
     const dir = makeDir();
     writeRunRecord(dir, record());
-    writeRunRecord(
-      dir,
-      record({ control: { protocol: 1, address: "a", token: "t" } }),
-    );
+    writeRunRecord(dir, withControl());
     expect(
       statSync(path.join(dir, ".ph", "run", "studio.json")).mode & 0o777,
     ).toBe(0o600);
+  });
+
+  it.skipIf(posix)(
+    "is open to the user alone, whatever its folder allows",
+    () => {
+      const dir = makeDir();
+      const file = path.join(dir, ".ph", "run", "studio.json");
+      // Without a token the file takes the folder's rules: more than one entry
+      // under the user's profile (the system, administrators, the user).
+      writeRunRecord(dir, record());
+      expect(fileAccessList(file).length).toBeGreaterThan(1);
+      writeRunRecord(dir, withControl());
+      const access = fileAccessList(file);
+      expect(access).toHaveLength(1);
+      expect(access[0]).toMatch(/:\(F\)$/);
+      expect(controlRecordOf(readRunRecord(dir, "studio"))).toBeDefined();
+      // A second write (a restart) keeps it so, and leaves no draft behind.
+      writeRunRecord(dir, withControl());
+      expect(fileAccessList(file)).toEqual(access);
+      expect(readdirSync(path.dirname(file))).toEqual(["studio.json"]);
+    },
+  );
+});
+
+describe("a file of the user alone", () => {
+  it("holds what was written, over an earlier one", () => {
+    const file = path.join(makeDir(), "secret.json");
+    expect(writeOwnerOnlyFile(file, "one")).toBe(true);
+    expect(writeOwnerOnlyFile(file, "two")).toBe(true);
+    expect(readFileSync(file, "utf8")).toBe("two");
+  });
+
+  it.skipIf(!posix)("has mode 0600", () => {
+    const file = path.join(makeDir(), "secret.json");
+    writeOwnerOnlyFile(file, "one");
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+  });
+
+  it.skipIf(posix)("has one access entry, the user's", () => {
+    const file = path.join(makeDir(), "secret.json");
+    writeOwnerOnlyFile(file, "one");
+    const access = fileAccessList(file);
+    expect(access).toHaveLength(1);
+    expect(access[0]).toMatch(/:\(F\)$/);
   });
 });

@@ -123,18 +123,30 @@ export {
   closeProcessControlChannel,
   CONTROL_PROTOCOL,
   ControlError,
+  controlProtocolOf,
   controlRecordOf,
   controlRecordSchema,
   ensureProcessControlChannel,
+  MAX_LINE_BYTES,
   openControlChannel,
+  ownerOnlyPipeAccess,
+  pipeAccessList,
   processControlChannel,
+  protocolMismatch,
   type CallControlOptions,
+  type ControlCall,
   type ControlChannel,
   type ControlErrorCode,
   type ControlHandler,
   type ControlRecord,
+  type ControlStream,
   type OpenControlChannelOptions,
 } from "./control-channel.js";
+export {
+  fileAccessList,
+  restrictFileToOwner,
+  writeOwnerOnlyFile,
+} from "./owner-only.js";
 export { killTree } from "./kill-tree.js";
 export {
   SPAWN_STOPPING_NOTE,

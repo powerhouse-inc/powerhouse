@@ -7,6 +7,7 @@ import {
   PACKAGE_NAME_PATTERN,
 } from "./host-schemas.js";
 import { instanceKey, instanceRunDir } from "./instance-key.js";
+import { writeOwnerOnlyFile } from "./owner-only.js";
 import { runRecordSchema, type RunRecord } from "./run-record-schema.js";
 
 export {
@@ -163,11 +164,8 @@ export function writeRunRecord(projectDir: string, record: RunRecord): void {
     fs.writeFileSync(target, text);
     return;
   }
-  // It holds the control channel's token: the user's alone where the file
-  // mode says so (on Windows the folder's access rules decide).
-  fs.rmSync(target, { force: true });
-  fs.writeFileSync(target, text, { mode: 0o600 });
-  if (process.platform !== "win32") fs.chmodSync(target, 0o600);
+  // It holds the control channel's token: the user's alone.
+  writeOwnerOnlyFile(target, text);
 }
 
 export function clearRunRecord(
