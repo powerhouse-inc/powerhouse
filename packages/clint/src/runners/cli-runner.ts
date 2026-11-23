@@ -5,7 +5,9 @@ import { pathToFileURL } from "node:url";
 import {
   clearRunRecord,
   controlRecordOf,
+  describeInstance,
   ensureProcessControlChannel,
+  instanceOfRecord,
   probeRun,
   readProjectName,
   readRunRecord,
@@ -19,7 +21,12 @@ import {
 } from "@powerhousedao/host-core";
 import { defineHostSchemas } from "@powerhousedao/host-core/schema";
 import { z } from "zod";
-import type { Cli, RunOptions, RunReactor } from "../core/types.js";
+import type {
+  Cli,
+  RunOptions,
+  RunReactor,
+  ServeAnswer,
+} from "../core/types.js";
 import {
   attachDefaultReactor,
   resolveRemoteReactorConfig,
@@ -256,7 +263,7 @@ export interface RunCliOptions {
    * {@link STOP_STREAM_LIMIT_MS}). */
   stopStreamLimitMs?: number;
   /** Called when the Cli keeps running (see `RunOptions.onServe`). */
-  onServe?: () => void | Promise<void>;
+  onServe?: RunOptions["onServe"];
   /** Stops a Cli that keeps running (see `RunOptions.signal`). */
   signal?: AbortSignal;
   /** The compound's other members (see `RunOptions.members`). */
@@ -356,16 +363,18 @@ async function recordServing(
   hostName: string,
   verb: string,
   hostPackage?: string,
-): Promise<void> {
+): Promise<void | ServeAnswer> {
   const projectName = readProjectName(projectRoot);
   // A package's host is filed, and addressed, behind its package.
   const key = runRecordKey(hostName, hostPackage);
   const probe = probeRun(projectRoot, key, projectName);
+  // One instance per (host, data folder): the one that serves is the answer.
   if (probe.status === "live" && probe.record.pid !== process.pid) {
-    throw new Error(
-      `${key} is already running for this project (pid ${probe.record.pid}). ` +
-        `Stop it with \`ph run ${key} --stop\`, or run a command beside it: \`ph run ${key} -- <command>\`.`,
-    );
+    return {
+      running:
+        `${describeInstance(instanceOfRecord(projectRoot, probe.record))}\n` +
+        `Run a command beside it with \`ph run ${key} -- <command>\`.`,
+    };
   }
   if (probe.status === "foreign") {
     throw new Error(

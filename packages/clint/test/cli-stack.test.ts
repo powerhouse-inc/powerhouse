@@ -360,9 +360,13 @@ describe("a stack of a switchboard and a Cli", () => {
     const bare = phRun(["serving-stack", "hello"]);
     expect(await exitCodeOf(bare)).toBe(1);
     expect(bare.output()).toContain('does not support the verb "hello"');
+    // A second start is the running stack: shown, and nothing starts.
     const second = phRun(["serving-stack"]);
-    expect(await exitCodeOf(second)).toBe(1);
+    expect(await exitCodeOf(second)).toBe(0);
     expect(second.output()).toContain("serving-stack is already running");
+    expect(second.output()).toContain("Nothing was started.");
+    expect(switchboardPid()).toBe(pid);
+    expect(logRuns()).toEqual(runs);
 
     const stop = phRun(["serving-stack", "--stop"]);
     expect(await exitCodeOf(stop)).toBe(0);

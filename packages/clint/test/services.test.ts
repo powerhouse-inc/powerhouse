@@ -252,14 +252,20 @@ describe("createServiceManager", () => {
       expect(logContent).toContain("listening");
     });
 
-    it("throws when starting an already-running service", async () => {
+    it("a second start is the running instance, and starts nothing", async () => {
       const mgr = createManager([readyDef]);
-      await mgr.start("test-svc");
+      const first = await mgr.start("test-svc");
 
       const statuses = mgr.list();
       trackedPids.push(statuses[0]!.pid!);
 
-      await expect(mgr.start("test-svc")).rejects.toThrow(/already running/);
+      await expect(mgr.start("test-svc")).resolves.toBe(first);
+      const after = mgr.list();
+      expect(after).toHaveLength(1);
+      expect(after[0]).toMatchObject({
+        status: "ready",
+        pid: statuses[0]!.pid,
+      });
     });
 
     it("throws for unknown service", async () => {
@@ -267,7 +273,7 @@ describe("createServiceManager", () => {
       await expect(mgr.start("nonexistent")).rejects.toThrow(/Unknown service/);
     });
 
-    it('throws "already running" when status is starting', async () => {
+    it("a second start of an instance that is starting is that instance", async () => {
       const slowDef: ServiceDefinition = {
         id: "slow-svc",
         name: "Slow Service",
@@ -291,7 +297,8 @@ describe("createServiceManager", () => {
       state.status = "starting";
       fs.writeFileSync(statePath, JSON.stringify(state));
 
-      await expect(mgr.start("slow-svc")).rejects.toThrow(/already running/);
+      await expect(mgr.start("slow-svc")).resolves.toBe("slow-svc");
+      expect(mgr.list()[0]!.pid).toBe(state.pid);
     });
 
     it("marks ready immediately when readiness.wait is false", async () => {

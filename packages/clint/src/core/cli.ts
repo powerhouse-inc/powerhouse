@@ -37,6 +37,11 @@ import {
   serveServices,
 } from "./service-control.js";
 import { processControlChannel } from "@powerhousedao/host-core/control-channel";
+import {
+  instanceDataDir,
+  instanceServicesDir,
+} from "@powerhousedao/host-core/instance";
+import { reportLegacyServiceState } from "./legacy-services.js";
 import { resolveServiceName } from "./services.js";
 import { createHelpCommand } from "./help-command.js";
 import { installSkills } from "./init.js";
@@ -938,7 +943,18 @@ export function defineCli<
     const servicesNow = options.services && options.services.length > 0;
     let processServiceManager: import("./types.js").ServiceManager | undefined;
     if (servicesNow && options.services) {
-      const svcDir = userStoreFolder(options.name, "services");
+      // Under the data folder: an instance is a host plus a data folder, so
+      // two project folders keep, and list, their own services.
+      const svcDir = instanceServicesDir(
+        { dataDir: instanceDataDir(context.workdir) },
+        options.name,
+      );
+      reportLegacyServiceState({
+        legacyDir: userStoreFolder(options.name, "services"),
+        servicesDir: svcDir,
+        workdir: context.workdir,
+        warn: (message) => log.warn(message),
+      });
       processServiceManager = createServiceManager(options.services as any[], {
         config,
         servicesDir: svcDir,
@@ -1499,7 +1515,13 @@ export function defineCli<
       // 0. The run keeps going: a host runner records it before it starts.
       if (opts.onServe) {
         try {
-          await opts.onServe();
+          const answer = await opts.onServe();
+          if (answer) {
+            await runtime.teardown();
+            stdout(answer.running);
+            exit(0);
+            return;
+          }
         } catch (err) {
           await runtime.teardown();
           stderr(err instanceof Error ? err.message : String(err));

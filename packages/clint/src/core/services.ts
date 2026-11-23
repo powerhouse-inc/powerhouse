@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { SpawnedHost } from "@powerhousedao/host-core";
+import { restartDecision } from "@powerhousedao/host-core/instance";
 import type {
   CaptureDefinition,
   EndpointType,
@@ -609,9 +610,11 @@ export function createServiceManager(
     const instanceId = resolveInstanceId(id, startOpts);
     const maxInstances = def.maxInstances ?? 1;
 
-    // A host run has no pid until its record is live.
+    // One instance per key: a second start is the instance that runs (or
+    // starts), and starts nothing. A host run has no pid until its record
+    // is live.
     if (hostStarts.has(stateFilePath(servicesDir, id, instanceId))) {
-      throw new Error(`Service ${id} is already starting`);
+      return instanceId;
     }
 
     // Check if this specific instance is already running
@@ -631,9 +634,7 @@ export function createServiceManager(
         existingState.status === "ready" ||
         existingState.status === "starting"
       ) {
-        throw new Error(
-          `Service ${id} is already running (pid ${existingState.pid})`,
-        );
+        return instanceId;
       }
     }
 
@@ -1293,15 +1294,15 @@ export function createServiceManager(
 
         // Verify PID is alive (pid <= 0 means not yet spawned — treat as dead)
         if (!state.pid || !isPidAlive(state.pid)) {
-          // Process died — check restart policy (never while stopAll runs)
-          if (
-            !closing &&
-            def.restart?.enabled &&
-            (state.restartAttempt ?? 0) < def.restart.maxRetries &&
-            state.status === "ready"
-          ) {
+          // Process died — the host layer's restart rule decides.
+          const decision = restartDecision(def.restart, {
+            attempt: state.restartAttempt ?? 0,
+            wasReady: state.status === "ready",
+            closing,
+          });
+          if (decision.action === "restart" && def.restart) {
             // Mark for restart (async, don't block list())
-            const attempt = (state.restartAttempt ?? 0) + 1;
+            const attempt = decision.attempt;
             eventBus?.emit("service:restarting", {
               id: def.id,
               instanceId: state.instanceId,
@@ -1353,7 +1354,7 @@ export function createServiceManager(
               } catch {
                 // Restart failed — dir may have been removed (test teardown)
               }
-            }, def.restart.delay);
+            }, decision.delayMs);
             restartTimers.add(timer);
 
             results.push({
@@ -1367,14 +1368,9 @@ export function createServiceManager(
             });
           } else {
             // No restart or max retries exceeded
-            const isFailed =
-              state.status === "failed" ||
-              (def.restart?.enabled &&
-                (state.restartAttempt ?? 0) >= def.restart.maxRetries);
-            if (
-              def.restart?.enabled &&
-              (state.restartAttempt ?? 0) >= def.restart.maxRetries
-            ) {
+            const gaveUp = decision.action === "give-up";
+            const isFailed = state.status === "failed" || gaveUp;
+            if (gaveUp) {
               eventBus?.emit("service:failed", {
                 id: def.id,
                 instanceId: state.instanceId,

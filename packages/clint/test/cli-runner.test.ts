@@ -430,11 +430,15 @@ describe("cli-runner", () => {
     expect(await exitCodeOf(beside)).toBe(0);
     expect(beside.output()).toContain("Hello, Ada!");
 
+    // A second start is the running instance: shown, and nothing starts.
     const second = phRun(["serving"]);
-    expect(await exitCodeOf(second)).toBe(1);
+    expect(await exitCodeOf(second)).toBe(0);
     expect(second.output()).toContain(
-      `serving is already running for this project (pid ${serving.child.pid})`,
+      `serving is already running for this project (pid ${serving.child.pid},`,
     );
+    expect(second.output()).toContain("Nothing was started.");
+    expect(second.output()).not.toContain("Serving");
+    expect(readRunRecord(project, "serving")?.pid).toBe(serving.child.pid);
 
     const stop = phRun(["serving", "--stop"]);
     expect(await exitCodeOf(stop)).toBe(0);
@@ -458,9 +462,9 @@ describe("cli-runner", () => {
     expect(readRunRecord(project, "serving")).toBeUndefined();
 
     const second = phRun(["@fixture/tool-pack/serving"]);
-    expect(await exitCodeOf(second)).toBe(1);
+    expect(await exitCodeOf(second)).toBe(0);
     expect(second.output()).toContain(
-      `@fixture/tool-pack/serving is already running for this project (pid ${serving.child.pid})`,
+      `@fixture/tool-pack/serving is already running for this project (pid ${serving.child.pid},`,
     );
 
     const stop = phRun(["@fixture/tool-pack/serving", "--stop"]);

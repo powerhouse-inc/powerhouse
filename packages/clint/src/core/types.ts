@@ -1127,6 +1127,12 @@ export interface CliOptions<
  * For interactive mode testing, `interactiveInput` provides a headless REPL
  * that reads from the iterable instead of rendering Ink.
  */
+/** What `RunOptions.onServe` answers when an instance serves already. */
+export interface ServeAnswer {
+  /** That instance, described for the terminal. */
+  running: string;
+}
+
 export interface RunOptions {
   exit?: (code: number) => void;
   stdout?: (message: string) => void;
@@ -1153,9 +1159,11 @@ export interface RunOptions {
    * Called once when the CLI keeps running (interactive, or serving its
    * routine), before it starts anything for that; never for a one-shot
    * command. A host runner writes its run record here. A rejection ends the
-   * run: its message on stderr, exit code 1.
+   * run: its message on stderr, exit code 1. So does `{ running }`, the
+   * description of an instance that serves already: it goes to stdout, and
+   * the run ends with exit code 0 having started nothing.
    */
-  onServe?: () => void | Promise<void>;
+  onServe?: () => void | ServeAnswer | Promise<void | ServeAnswer>;
   /**
    * Stops a run that keeps going as SIGINT or SIGTERM would: the headless
    * keep-alive and the ink shell end, and the CLI tears down. An abort

@@ -1,7 +1,7 @@
 // @ts-nocheck — NOTE(port): the ph-clint repo never typechecked its test suite
 // (jest ran transpile-only); this file carries pre-existing type drift. Runtime
 // assertions are unchanged. Tighten opportunistically when touching the file.
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -459,14 +459,17 @@ describe("createServiceCommands — with real services", () => {
       trackedPids.push(...collectPids(servicesDir));
     });
 
-    it("reports error for already running service", async () => {
+    it("a second start reports the running instance and starts nothing", async () => {
       await mgr.start("test-svc", { workdir: tmpDir });
-      trackedPids.push(...collectPids(servicesDir));
+      const pids = collectPids(servicesDir);
+      trackedPids.push(...pids);
 
       const cmds = createServiceCommands(readyDef);
       const startCmd = cmds.find((c) => c.id === "test-svc-start")!;
       const result = (await startCmd.execute({}, makeContext())) as any;
-      expect(result.text).toContain("already running");
+      expect(result.text).toContain("ready");
+      expect(result.text).not.toContain("✗");
+      expect(collectPids(servicesDir)).toEqual(pids);
     });
 
     it("extracts paramsSchema fields from input when starting", async () => {
@@ -729,16 +732,10 @@ describe("auto-injected service commands in CLI", () => {
   });
 
   afterEach(() => {
-    // Services now live in user-scope (~/.ph/{name}/services/)
-    const userSvcDir = path.join(os.homedir(), ".ph", "svc", "services");
+    // Service state is under the data folder: <workdir>/.ph/{name}/services
     const localSvcDir = path.join(tmpDir, ".ph", "svc", "services");
-    const pids = [
-      ...trackedPids,
-      ...collectPids(userSvcDir),
-      ...collectPids(localSvcDir),
-    ];
+    const pids = [...trackedPids, ...collectPids(localSvcDir)];
     for (const pid of pids) safeKill(pid);
-    fs.rmSync(userSvcDir, { recursive: true, force: true });
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -799,6 +796,122 @@ describe("auto-injected service commands in CLI", () => {
     const cap = capture();
     await cli.run(["node", "svc", "test-svc-ps"], cap.options);
     expect(cap.output.join("")).toContain("idle");
+  });
+
+  describe("service state is under the data folder", () => {
+    let home: string;
+    let other: string;
+
+    const svcCli = () =>
+      defineCli({
+        name: "svc",
+        version: "1.0.0",
+        description: "test",
+        commands: [],
+        services: [svcDef],
+        interactive: { welcome: "Hello" },
+      });
+
+    const ps = async (workdir: string) => {
+      const cap = capture();
+      await svcCli().run(["node", "svc", "test-svc-ps"], {
+        ...cap.options,
+        workdir,
+      });
+      return cap;
+    };
+
+    beforeEach(() => {
+      home = makeTmpDir();
+      other = makeTmpDir();
+      // os.homedir() reads these: nothing here may reach the real one.
+      vi.stubEnv("USERPROFILE", home);
+      vi.stubEnv("HOME", home);
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      fs.rmSync(home, { recursive: true, force: true });
+      fs.rmSync(other, { recursive: true, force: true });
+    });
+
+    it("two project folders run the same Cli and neither lists the other's services", async () => {
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => (release = resolve));
+      let started!: () => void;
+      const up = new Promise<void>((resolve) => (started = resolve));
+      const output: string[] = [];
+      const session = svcCli().run(["node", "svc", "-i"], {
+        stdout: (msg) => output.push(msg),
+        stderr: () => {},
+        exit: () => {},
+        workdir: tmpDir,
+        interactiveInput: (async function* () {
+          yield "/test-svc-start";
+          started();
+          await held;
+          yield "/exit";
+        })(),
+      });
+      try {
+        await up;
+        const stateDir = path.join(tmpDir, ".ph", "svc", "services");
+        const pids = collectPids(stateDir);
+        trackedPids.push(...pids);
+        expect(pids).toHaveLength(1);
+        expect(output.join("")).toContain("ready");
+
+        // The other project folder: the same Cli, its own (empty) list.
+        const there = await ps(other);
+        expect(there.output.join("")).toContain("idle");
+        expect(collectPids(path.join(other, ".ph", "svc", "services"))).toEqual(
+          [],
+        );
+        // This one's is seen from its own folder.
+        const here = await ps(tmpDir);
+        expect(here.output.join("")).not.toContain("idle");
+        // Nothing was kept in the user's folder.
+        expect(fs.existsSync(path.join(home, ".ph"))).toBe(false);
+      } finally {
+        release();
+        await session;
+      }
+    });
+
+    it("reports state at the old location once, reads none of it and deletes none", async () => {
+      const legacyDir = path.join(home, ".ph", "svc", "services", "test-svc");
+      fs.mkdirSync(legacyDir, { recursive: true });
+      const legacyFile = path.join(legacyDir, "test-svc.json");
+      const legacyState = JSON.stringify({
+        serviceId: "test-svc",
+        instanceId: "test-svc",
+        name: "Test Service",
+        pid: process.pid,
+        status: "ready",
+        startedAt: new Date().toISOString(),
+        command: "node x",
+        workdir: tmpDir,
+      });
+      fs.writeFileSync(legacyFile, legacyState);
+
+      const first = await ps(tmpDir);
+      // Not read: the old state says ready, this project's list is empty.
+      expect(first.output.join("")).toContain("idle");
+      expect(first.errors.join("")).toContain(
+        "Service state of an earlier version is at",
+      );
+      expect(first.errors.join("")).toContain("Nothing was deleted or moved");
+
+      const second = await ps(tmpDir);
+      expect(second.errors.join("")).not.toContain("earlier version");
+
+      // Another project's state there is not this one's to report.
+      const there = await ps(other);
+      expect(there.errors.join("")).not.toContain("earlier version");
+
+      expect(fs.readFileSync(legacyFile, "utf-8")).toBe(legacyState);
+      expect(fs.readdirSync(legacyDir)).toEqual(["test-svc.json"]);
+    });
   });
 
   it("test-svc-start via run() is refused: the service would end with the command", async () => {
