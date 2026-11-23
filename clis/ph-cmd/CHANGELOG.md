@@ -1,3 +1,21 @@
+## 6.3.0-dev.10 (2026-11-23)
+
+### 🚀 Features
+
+- **ph-cmd:** next self-update stream ([f6b3f8871a](https://github.com/powerhouse-inc/powerhouse/commit/f6b3f8871a))
+- **ph-cmd,ph-cli,shared:** next release tag ([ec65d6e6f4](https://github.com/powerhouse-inc/powerhouse/commit/ec65d6e6f4))
+- **releases:** next channel from version_prefix ([1f9a926b5a](https://github.com/powerhouse-inc/powerhouse/commit/1f9a926b5a))
+- **releases:** next-version function for branch releases ([83ffbebba7](https://github.com/powerhouse-inc/powerhouse/commit/83ffbebba7))
+
+### 🩹 Fixes
+
+- **ph-cmd:** config package updates stay on their pre-release line ([fb379fb41c](https://github.com/powerhouse-inc/powerhouse/commit/fb379fb41c))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.3.0-dev.9 (2026-11-22)
 
 ### 🚀 Features
