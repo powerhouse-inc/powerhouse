@@ -228,7 +228,21 @@ function warnIgnoredFlushInterval(logger: ILogger): void {
  * the port is free, false if the OS reports it in use. Any other error is
  * surfaced so we don't silently mask real issues (permissions, bad host, …).
  */
-export async function isPortAvailable(port: number): Promise<boolean> {
+export async function isPortAvailable(
+  port: number,
+  host?: string,
+): Promise<boolean> {
+  // The host the server binds, first: on Windows a wildcard bind succeeds
+  // beside another process's listener on one address (127.0.0.1).
+  if (host !== undefined && host !== "::" && host !== "0.0.0.0") {
+    let free: boolean;
+    try {
+      free = await probePort(port, host);
+    } catch (error) {
+      throw portProbeError(port, error);
+    }
+    if (!free) return false;
+  }
   try {
     // `::` is dual-stack on most systems, so it sees IPv6 and IPv4 listeners.
     return await probePort(port, "::");
@@ -318,12 +332,13 @@ async function resolveServerPort(
   requested: number,
   strictPort: boolean,
   logger: ILogger,
+  host?: string,
 ): Promise<number> {
   // 0 asks the OS for a free port at bind time: nothing to probe.
   if (requested === 0 || strictPort) return requested;
   for (let i = 0; i < PORT_FALLBACK_ATTEMPTS; i++) {
     const candidate = requested + i;
-    if (await isPortAvailable(candidate)) {
+    if (await isPortAvailable(candidate, host)) {
       if (candidate !== requested) {
         logger.info(
           `Port ${requested} is in use. Falling back to port ${candidate}.`,
@@ -1788,6 +1803,7 @@ export const startSwitchboard = async (
     config.server.port,
     config.server.strictPort,
     logger,
+    config.server.host,
   );
 
   const options = serverOptionsOf(config, deps);
