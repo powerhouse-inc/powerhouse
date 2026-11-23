@@ -1442,6 +1442,9 @@ export function defineCli<
         context.services =
           remote ?? refuseServiceStarts(local, opts.serveCommand);
       }
+      if (opts.remoteServices && !isBuiltinFlag) {
+        context.serving = opts.remoteServices;
+      }
       if (hasPrompt) {
         const agentProvider = await runtime.getAgent();
         if (agentProvider) {

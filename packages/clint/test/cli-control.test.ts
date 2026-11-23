@@ -285,6 +285,7 @@ describe("service commands beside a Cli that keeps running", () => {
     expect(ps.code).toBe(0);
     expect(ps.output).toContain("[idle]");
     expect(await workers("services")).toEqual([]);
+    expect((await command("services", "serving")).output).toContain("alone");
   }, 300_000);
 
   it("acts on the running instance: ps, start, restart, stop and start again", async () => {
@@ -300,6 +301,10 @@ describe("service commands beside a Cli that keeps running", () => {
     });
 
     expect((await command("services", "worker-ps")).output).toContain("[idle]");
+    // A command's own methods reach the running Cli the same way.
+    expect((await command("services", "serving")).output).toContain(
+      `beside fixture-services pid ${serving.child.pid}`,
+    );
 
     // Started from a second process, it runs in the first and stays.
     const start = await command("services", "worker-start");

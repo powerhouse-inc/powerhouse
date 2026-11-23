@@ -116,6 +116,13 @@ export interface CommandContext<
   routine?: Routine;
   processes?: ProcessManager;
   services?: ServiceManager;
+  /**
+   * The control channel of the running Cli this command runs beside (typed in
+   * a second terminal): what the Cli holds in its process is reached with
+   * `callControl(serving, method)`. Absent in the running Cli itself, and
+   * when none runs.
+   */
+  serving?: import("@powerhousedao/host-core/control-channel").ControlRecord;
   emit?: EmitFn<R>;
   on?: OnFn<R>;
   /** Folder operations on the agent's personal drive. Available when a personal drive is configured. */
