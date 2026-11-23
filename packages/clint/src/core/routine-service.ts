@@ -247,6 +247,14 @@ export function createCompositeServiceManager(
     return getManager(id).purgeStoppedInstances(id);
   }
 
+  async function supervisor(): Promise<{ pid: number } | undefined> {
+    for (const mgr of managers) {
+      const found = await mgr.supervisor?.();
+      if (found) return found;
+    }
+    return undefined;
+  }
+
   return {
     start,
     stop,
@@ -258,5 +266,6 @@ export function createCompositeServiceManager(
     watchChunks,
     scanProjects,
     purgeStoppedInstances,
+    supervisor,
   };
 }

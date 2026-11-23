@@ -208,6 +208,7 @@ export type {
   HostServiceDefinition,
   ServiceHostRun,
   ServiceStartOptions,
+  ServiceLifetime,
   ServiceInstanceStatus,
   ServiceStatus,
   ServiceManager,

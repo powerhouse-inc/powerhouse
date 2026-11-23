@@ -20,6 +20,7 @@ import type {
   ServiceDefinition,
   ServiceHostRun,
   ServiceInstanceStatus,
+  ServiceLifetime,
   ServiceManager,
   ServiceStartOptions,
 } from "./types.js";
@@ -72,6 +73,9 @@ interface ServiceStateFile {
   params?: Record<string, unknown>;
   /** Active log file for the current run, relative to the service dir. */
   logFile?: string;
+  /** Set when the user's supervisor holds the instance: its process, its
+   * handle for the instance, and how long the instance lives. */
+  supervisor?: { pid: number; handle: string; lifetime: ServiceLifetime };
 }
 
 export interface ServiceManagerOptions {
@@ -341,6 +345,32 @@ function isInstanceAlive(state: ServiceStateFile): boolean {
 }
 
 /**
+ * Whether a recorded instance is the supervisor's to manage for any tool of
+ * the user: the supervisor holds it and the manager that asked for it has
+ * ended. While that manager runs, the instance is managed there.
+ */
+function isHeldBySupervisor(state: ServiceStateFile): boolean {
+  return (
+    state.supervisor !== undefined &&
+    !isOwnerAlive(state) &&
+    isPidAlive(state.supervisor.pid) &&
+    isInstanceAlive(state)
+  );
+}
+
+type SupervisorModule = typeof import("@powerhousedao/host-core/supervisor");
+type SupervisorLease = Awaited<
+  ReturnType<SupervisorModule["holdSupervisorLease"]>
+>;
+
+/** The supervisor of this OS user, when one runs. */
+interface RunningSupervisor {
+  api: SupervisorModule;
+  pid: number;
+  control: Parameters<SupervisorModule["listSupervised"]>[0];
+}
+
+/**
  * Why a live instance this manager did not spawn is not its to manage: it
  * belongs to another running process, or it is a leftover whose owner is
  * gone. Either way it is never adopted, stopped or restarted from here (a
@@ -549,6 +579,77 @@ export function createServiceManager(
     string,
     { abort: AbortController; settled: Promise<unknown> }
   >();
+  const hasHostServices = definitions.some((def) => def.run !== undefined);
+  /** This process's lease with the supervisor: what it started there "with
+   * the caller" is stopped when the lease's connection ends. */
+  let leased: { pid: number; lease: Promise<SupervisorLease> } | undefined;
+
+  /**
+   * The user's supervisor, when one runs: host services are then its
+   * children, not this process's. One file is looked for when none is
+   * recorded, and nothing of the supervisor is loaded. A recorded supervisor
+   * that does not answer is an error: supervising here in its place could
+   * run an instance twice.
+   */
+  async function runningSupervisor(): Promise<RunningSupervisor | undefined> {
+    if (!hasHostServices) return undefined;
+    const { supervisorRecorded } =
+      await import("@powerhousedao/host-core/supervisor-record");
+    if (!supervisorRecorded()) return undefined;
+    const api = await import("@powerhousedao/host-core/supervisor");
+    const found = await api.findSupervisor();
+    if (found.status === "none") return undefined;
+    if (found.status === "silent") {
+      throw new Error(api.silentSupervisorMessage(found));
+    }
+    return { api, pid: found.record.pid, control: found.record.control };
+  }
+
+  function holdLease(supervisor: RunningSupervisor): Promise<SupervisorLease> {
+    if (leased?.pid === supervisor.pid) return leased.lease;
+    const lease = supervisor.api.holdSupervisorLease(supervisor.control);
+    const mine = { pid: supervisor.pid, lease };
+    leased = mine;
+    const forget = () => {
+      if (leased === mine) leased = undefined;
+    };
+    lease.then((held) => held.ended.then(forget), forget);
+    return lease;
+  }
+
+  /** The instance of `state` as the supervisor lists it, when it holds it. */
+  async function heldInstance(
+    supervisor: RunningSupervisor,
+    state: ServiceStateFile,
+  ): Promise<boolean> {
+    if (state.supervisor?.pid !== supervisor.pid) return false;
+    const { instances } = await supervisor.api.listSupervised(
+      supervisor.control,
+    );
+    return instances.some(
+      (i) =>
+        i.handle === state.supervisor?.handle && i.mine && i.pid === state.pid,
+    );
+  }
+
+  /** The status of an instance the supervisor holds for an ended manager. */
+  function heldStatus(
+    def: ServiceDefinition<any>,
+    state: ServiceStateFile,
+  ): ServiceInstanceStatus {
+    return {
+      serviceId: def.id,
+      instanceId: state.instanceId,
+      name: resolveServiceName(def),
+      status: state.status as ServiceInstanceStatus["status"],
+      pid: state.pid,
+      endpoints: state.endpoints,
+      endpointTypes: state.endpointTypes,
+      params: state.params,
+      workdir: state.workdir,
+      supervisor: state.supervisor,
+    };
+  }
 
   /**
    * The status of a recorded instance this manager did not spawn. One whose
@@ -626,8 +727,15 @@ export function createServiceManager(
       removeStateFile(stateFilePath(servicesDir, id, instanceId));
     } else if (existingState && isInstanceAlive(existingState)) {
       // Another process's instance (or a leftover) is never adopted, and
-      // a second copy would fight it for its port: refuse.
+      // a second copy would fight it for its port: refuse. One the
+      // supervisor holds is the instance that runs.
       if (!isMine(existingState)) {
+        if (
+          isHeldBySupervisor(existingState) &&
+          existingState.status === "ready"
+        ) {
+          return instanceId;
+        }
         throw new Error(`Service ${id}: ${notOursMessage(existingState)}`);
       }
       if (
@@ -678,6 +786,26 @@ export function createServiceManager(
       }
     }
 
+    // A host service is the supervisor's child when one runs.
+    const lifetime = startOpts?.lifetime ?? "caller";
+    const supervisor = def.run ? await runningSupervisor() : undefined;
+    if (lifetime === "supervisor" && !supervisor) {
+      throw new Error(
+        def.run
+          ? `Service ${id}: no supervisor runs for this user, so nothing can outlive this process. Start one with \`ph run supervisor\`.`
+          : `Service ${id} is no host service: it lives with the process that starts it.`,
+      );
+    }
+    const supervised = supervisor
+      ? {
+          supervisor,
+          lifetime,
+          ...(lifetime === "caller"
+            ? { lease: (await holdLease(supervisor)).id }
+            : {}),
+        }
+      : undefined;
+
     // stopAll() is running: nothing new may start (it would outlive the
     // teardown). Checked right before the spawn, after the awaits above.
     if (closing) {
@@ -715,6 +843,7 @@ export function createServiceManager(
         baseEnv: inherited,
         env: { ...def.run.env, ...(def.env ? def.env(buildCtx) : {}) },
         restartAttempt,
+        ...(supervised ? { supervised } : {}),
       });
     }
 
@@ -944,6 +1073,12 @@ export function createServiceManager(
       baseEnv: NodeJS.ProcessEnv;
       env: Record<string, string>;
       restartAttempt: number;
+      /** Set when the user's supervisor starts and holds it. */
+      supervised?: {
+        supervisor: RunningSupervisor;
+        lifetime: ServiceLifetime;
+        lease?: string;
+      };
     },
   ): Promise<string> {
     const { id } = def;
@@ -981,7 +1116,36 @@ export function createServiceManager(
     };
 
     const abort = new AbortController();
-    const spawning = (async () => {
+    const { supervised } = run;
+    let handle: string | undefined;
+    const spawning = (async (): Promise<SpawnedHost> => {
+      if (supervised) {
+        const { api, control } = supervised.supervisor;
+        const held = await api.startSupervisedHost(
+          control,
+          {
+            host: def.run.host,
+            projectDir: run.cwd,
+            dataDir: run.cwd,
+            ...(def.run.verb === undefined ? {} : { verb: def.run.verb }),
+            ...(def.run.argv ? { argv: [...def.run.argv] } : {}),
+            env: run.env,
+            baseEnv: Object.fromEntries(
+              Object.entries(run.baseEnv).filter(
+                (entry): entry is [string, string] => entry[1] !== undefined,
+              ),
+            ),
+            lifetime: supervised.lifetime,
+            ...(supervised.lease ? { lease: supervised.lease } : {}),
+            logFile: run.logPath,
+            ...(def.readiness ? { readyTimeoutMs: def.readiness.timeout } : {}),
+            ...(def.shutdown ? { stopTimeoutMs: def.shutdown.timeout } : {}),
+          },
+          { signal: abort.signal },
+        );
+        handle = held.handle;
+        return held;
+      }
       const { spawnHost } = await import("@powerhousedao/host-core");
       return spawnHost({
         projectRoot: run.cwd,
@@ -1035,6 +1199,14 @@ export function createServiceManager(
     state.pid = spawned.pid;
     state.status = "ready";
     state.restartAttempt = 0;
+    // One that ran already is not the supervisor's to stop for this manager.
+    if (supervised && handle !== undefined && !spawned.existing) {
+      state.supervisor = {
+        pid: supervised.supervisor.pid,
+        handle,
+        lifetime: supervised.lifetime,
+      };
+    }
     state.endpoints = {};
     state.endpointTypes = {};
     for (const [key, endpoint] of Object.entries(endpoints)) {
@@ -1087,6 +1259,26 @@ export function createServiceManager(
     }
 
     if (!isMine(state)) {
+      // What the supervisor holds for an ended manager is stopped there.
+      if (isHeldBySupervisor(state) && state.supervisor) {
+        const supervisor = await runningSupervisor();
+        if (supervisor && (await heldInstance(supervisor, state))) {
+          await supervisor.api.stopSupervised(
+            supervisor.control,
+            state.supervisor.handle,
+          );
+          state.status = "stopped";
+          state.pid = 0;
+          state.stoppedAt = new Date().toISOString();
+          writeStateFile(statePath, state);
+          eventBus?.emit("service:stopped", {
+            id: serviceId,
+            instanceId,
+            name: resolveServiceName(def),
+          });
+          return;
+        }
+      }
       // Never kill a process this manager did not spawn: settle stale state
       // (as list() does) or refuse.
       if (foreignStatus(def, state).status === "stopped") return;
@@ -1183,7 +1375,9 @@ export function createServiceManager(
       throw new Error(`Service ${id} is not running`);
     }
 
-    const mine = instances.filter((s) => s.status !== "stopped" && isMine(s));
+    const mine = instances.filter(
+      (s) => s.status !== "stopped" && (isMine(s) || isHeldBySupervisor(s)),
+    );
     if (mine.length === 0) {
       // Nothing of ours: a live instance of another process is refused by
       // name; stopped history (or stale state) leaves nothing to do.
@@ -1205,7 +1399,8 @@ export function createServiceManager(
 
   /** Stop every instance this manager started, gracefully (each service's
    * shutdown signal and timeout), and cancel pending restarts. Nothing
-   * starts while it runs. */
+   * starts while it runs. An instance started to live with the supervisor
+   * stays: it is the supervisor's from here on. */
   async function stopAll(): Promise<void> {
     closing = true;
     for (const timer of restartTimers) clearTimeout(timer);
@@ -1214,12 +1409,19 @@ export function createServiceManager(
       for (const def of definitions) {
         for (const state of scanInstances(servicesDir, def.id)) {
           if (state.status === "stopped" || !isMine(state)) continue;
+          if (state.supervisor?.lifetime === "supervisor") continue;
           try {
             await stopInstance(def, def.id, state.instanceId);
           } catch {
             // already gone
           }
         }
+      }
+      // Whatever still lives with this caller ends with the lease.
+      const held = leased;
+      leased = undefined;
+      if (held) {
+        await held.lease.then((lease) => lease.release()).catch(() => {});
       }
     } finally {
       closing = false;
@@ -1262,7 +1464,11 @@ export function createServiceManager(
 
         // Another process's instance, or a leftover: never adopted.
         if (!isMine(state)) {
-          results.push(foreignStatus(def, state));
+          results.push(
+            isHeldBySupervisor(state)
+              ? heldStatus(def, state)
+              : foreignStatus(def, state),
+          );
           continue;
         }
 
@@ -1350,6 +1556,9 @@ export function createServiceManager(
                   params: restartParams,
                   workdir: restartWorkdir,
                   name: restartName,
+                  ...(state.supervisor
+                    ? { lifetime: state.supervisor.lifetime }
+                    : {}),
                 });
               } catch {
                 // Restart failed — dir may have been removed (test teardown)
@@ -1420,6 +1629,7 @@ export function createServiceManager(
           restartAttempt: state.restartAttempt,
           params: state.params,
           workdir: state.workdir,
+          ...(state.supervisor ? { supervisor: state.supervisor } : {}),
         });
       }
     }
@@ -1549,5 +1759,9 @@ export function createServiceManager(
     watchChunks,
     scanProjects: scanProjectsForService,
     purgeStoppedInstances,
+    supervisor: async () => {
+      const running = await runningSupervisor();
+      return running ? { pid: running.pid } : undefined;
+    },
   };
 }

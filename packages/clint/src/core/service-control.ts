@@ -28,6 +28,7 @@ const startParamsSchema = z.object({
       cwd: z.string().optional(),
       params: z.record(z.string(), z.unknown()).optional(),
       name: z.string().optional(),
+      lifetime: z.enum(["caller", "supervisor"]).optional(),
     })
     .optional(),
 });
@@ -77,6 +78,7 @@ export async function restartService(
     cwd,
     params: instance?.params,
     name,
+    ...(instance?.supervisor ? { lifetime: instance.supervisor.lifetime } : {}),
   });
 }
 
@@ -168,10 +170,17 @@ export async function connectRemoteServices(
 
 /** Thrown by a start that cannot outlive its command. */
 export class ServiceStartRefused extends Error {
-  constructor(id: string, serveCommand: string | undefined) {
+  constructor(
+    id: string,
+    serveCommand: string | undefined,
+    supervisor?: { pid: number },
+  ) {
     super(
       `${id} was not started: a service runs as long as the process that started it, and this command ends. ` +
-        `Start it where it keeps running: ${serveCommand ? `\`${serveCommand}\`` : "`ph run <host>`"}, then run this command from a second terminal.`,
+        `Start it where it keeps running: ${serveCommand ? `\`${serveCommand}\`` : "`ph run <host>`"}, then run this command from a second terminal.` +
+        (supervisor
+          ? ` Or pass \`--lifetime supervisor\`: the supervisor (pid ${supervisor.pid}) then keeps it running.`
+          : ""),
     );
     this.name = "ServiceStartRefused";
   }
@@ -179,7 +188,9 @@ export class ServiceStartRefused extends Error {
 
 /**
  * The manager of a command that ends with nothing running to forward to:
- * everything but `start`, which is refused with where to run instead.
+ * everything but `start`, which is refused with where to run instead. A
+ * start that lives with the user's supervisor outlives the command, and is
+ * the local manager's to pass on.
  */
 export function refuseServiceStarts(
   local: ServiceManager,
@@ -187,7 +198,13 @@ export function refuseServiceStarts(
 ): ServiceManager {
   return {
     ...local,
-    start: (id: string) =>
-      Promise.reject(new ServiceStartRefused(id, serveCommand)),
+    start: async (id: string, opts?: ServiceStartOptions) => {
+      if (opts?.lifetime === "supervisor") return local.start(id, opts);
+      throw new ServiceStartRefused(
+        id,
+        serveCommand,
+        await local.supervisor?.(),
+      );
+    },
   };
 }

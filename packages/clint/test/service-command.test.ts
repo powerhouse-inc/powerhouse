@@ -82,6 +82,47 @@ function collectPids(servicesDir: string): number[] {
 }
 
 describe("formatStatus", () => {
+  it("names the supervisor that holds the instance and how long it lives", () => {
+    expect(
+      formatStatus({
+        serviceId: "svc",
+        instanceId: "svc",
+        name: "My Svc",
+        status: "ready",
+        pid: 123,
+        supervisor: { pid: 77, handle: "1", lifetime: "supervisor" },
+      }),
+    ).toContain("supervisor pid 77, lives with the supervisor");
+  });
+
+  it("offers --lifetime on the start of a host service only", async () => {
+    const [hostStart] = createServiceCommands({
+      id: "web",
+      run: { host: "web" },
+    });
+    const [shellStart] = createServiceCommands({ id: "sh", command: "x" });
+    const keys = (c: { inputSchema: unknown }) =>
+      Object.keys((c.inputSchema as { shape: object }).shape);
+    expect(keys(hostStart!)).toContain("lifetime");
+    expect(keys(shellStart!)).not.toContain("lifetime");
+
+    const starts: unknown[] = [];
+    const services = {
+      start: async (_id: string, opts: unknown) => {
+        starts.push(opts);
+        return "web";
+      },
+      list: () => [
+        { serviceId: "web", instanceId: "web", name: "Web", status: "ready" },
+      ],
+    } as unknown as ServiceManager;
+    await hostStart!.execute({ lifetime: "supervisor" }, {
+      services,
+      workdir: process.cwd(),
+    } as unknown as CommandContext);
+    expect(starts).toMatchObject([{ lifetime: "supervisor" }]);
+  });
+
   it("shows ● icon for ready status", () => {
     const result = formatStatus({
       serviceId: "svc",

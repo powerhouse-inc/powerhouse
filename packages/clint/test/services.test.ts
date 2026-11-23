@@ -2,7 +2,7 @@
 // (jest ran transpile-only); this file carries pre-existing type drift. Runtime
 // assertions are unchanged. Tighten opportunistically when touching the file.
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -16,6 +16,10 @@ import {
 import { killTree } from "../src/core/process-platform.js";
 import { createEventBus } from "../src/core/events.js";
 import { readRunRecord } from "@powerhousedao/host-core";
+import {
+  startSupervisor,
+  type Supervisor,
+} from "@powerhousedao/host-core/supervisor";
 import type {
   EventBus,
   HostServiceDefinition,
@@ -1820,5 +1824,163 @@ describe("host services", () => {
     await expect(mgr.start("web", { cwd: project })).rejects.toThrow(
       "Service web: give it a command or a host run (run), not both.",
     );
+  });
+
+  describe("beside the user's supervisor", () => {
+    let home: string;
+    let supervisor: Supervisor | undefined;
+    let homeBefore: string | undefined;
+
+    beforeEach(() => {
+      home = path.join(tmpDir, "supervisor-home");
+      homeBefore = process.env.PH_SUPERVISOR_HOME;
+      process.env.PH_SUPERVISOR_HOME = home;
+    });
+
+    afterEach(async () => {
+      await supervisor?.stop();
+      supervisor = undefined;
+      if (homeBefore === undefined) delete process.env.PH_SUPERVISOR_HOME;
+      else process.env.PH_SUPERVISOR_HOME = homeBefore;
+    });
+
+    async function supervise(): Promise<Supervisor> {
+      const result = await startSupervisor({
+        env: { PH_SUPERVISOR_HOME: home },
+        version: "0.0.0-test",
+        mode: "standalone",
+        log: () => {},
+      });
+      supervisor = result.supervisor;
+      return result.supervisor!;
+    }
+
+    const stateFile = () =>
+      path.join(
+        servicesDir,
+        "web",
+        fs
+          .readdirSync(path.join(servicesDir, "web"))
+          .find((f) => f.endsWith(".json"))!,
+      );
+
+    /** Rewrites the state as left by a manager whose process has ended. */
+    function orphan(): void {
+      const state = JSON.parse(fs.readFileSync(stateFile(), "utf8"));
+      const dead = spawnSync(process.execPath, ["-e", "0"], {
+        windowsHide: true,
+      }).pid;
+      state.owner = { pid: dead, token: "an-ended-manager" };
+      fs.writeFileSync(stateFile(), JSON.stringify(state));
+    }
+
+    it("starts a host service there, to live with the caller, and stops it with the manager", async () => {
+      makeHostProject(project, { marker, pidFile });
+      const held = await supervise();
+      const mgr = managerFor(webDef());
+      expect(await mgr.supervisor()).toEqual({ pid: process.pid });
+
+      await mgr.start("web", { cwd: project });
+      const [instance] = mgr.list("web");
+      started.push(instance.pid!);
+      expect(instance).toMatchObject({
+        status: "ready",
+        pid: runPid(),
+        supervisor: { pid: process.pid, handle: "1", lifetime: "caller" },
+      });
+      expect(held.instances()).toMatchObject([
+        { handle: "1", host: "web", pid: runPid(), lifetime: "caller" },
+      ]);
+      const record = readRunRecord(project, "web");
+      expect(instance.endpoints).toEqual({ site: record?.outputs?.origin });
+      expect(mgr.logs("web")).toContain("— Web");
+
+      await mgr.stopAll();
+      expect(fs.readFileSync(marker, "utf8")).toBe("stopped through its stop");
+      expect(isAlive(instance.pid!)).toBe(false);
+      expect(readRunRecord(project, "web")).toBeUndefined();
+      expect(mgr.list("web")[0]).toMatchObject({ status: "stopped" });
+    }, 120_000);
+
+    it("leaves one that lives with the supervisor running, and a later manager lists and stops it there", async () => {
+      makeHostProject(project, { marker, pidFile });
+      const held = await supervise();
+      const first = managerFor(webDef());
+      const instanceId = await first.start("web", {
+        cwd: project,
+        lifetime: "supervisor",
+      });
+      const pid = runPid();
+      started.push(pid);
+
+      await first.stopAll();
+      expect(isAlive(pid)).toBe(true);
+      expect(held.instances()).toMatchObject([
+        { pid, status: "running", lifetime: "supervisor" },
+      ]);
+      orphan();
+
+      const later = managerFor(webDef());
+      expect(later.list("web")).toMatchObject([
+        {
+          instanceId,
+          status: "ready",
+          pid,
+          supervisor: { handle: "1", lifetime: "supervisor" },
+        },
+      ]);
+      // The instance that runs: a second start starts nothing.
+      expect(
+        await later.start("web", { cwd: project, lifetime: "supervisor" }),
+      ).toBe(instanceId);
+      expect(runPid()).toBe(pid);
+      expect(held.instances()).toHaveLength(1);
+
+      await later.stop("web");
+      expect(fs.readFileSync(marker, "utf8")).toBe("stopped through its stop");
+      expect(isAlive(pid)).toBe(false);
+      expect(later.list("web")[0]).toMatchObject({ status: "stopped" });
+    }, 120_000);
+
+    it("starts nothing to outlive it without a supervisor", async () => {
+      makeHostProject(project, { marker, pidFile });
+      const mgr = managerFor(webDef());
+      expect(await mgr.supervisor()).toBeUndefined();
+      await expect(
+        mgr.start("web", { cwd: project, lifetime: "supervisor" }),
+      ).rejects.toThrow("no supervisor runs for this user");
+      expect(fs.existsSync(pidFile)).toBe(false);
+    });
+
+    it("says that a recorded supervisor does not answer, and starts nothing", async () => {
+      makeHostProject(project, { marker, pidFile });
+      fs.mkdirSync(home, { recursive: true });
+      fs.writeFileSync(
+        path.join(home, "supervisor.json"),
+        JSON.stringify({
+          version: 1,
+          pid: process.pid,
+          startedAt: new Date().toISOString(),
+          supervisorVersion: "0.0.0-test",
+          mode: "standalone",
+          user: "test",
+          control: {
+            protocol: 2,
+            address:
+              process.platform === "win32"
+                ? `\\\\.\\pipe\\ph-no-supervisor-${process.pid}`
+                : path.join(tmpDir, "no-supervisor.sock"),
+            token: "none",
+          },
+        }),
+      );
+      const mgr = managerFor(webDef());
+      await expect(mgr.supervisor()).rejects.toThrow("does not answer");
+      await expect(mgr.start("web", { cwd: project })).rejects.toThrow(
+        /A supervisor is recorded for this user \(pid \d+, .*\) and does not answer/,
+      );
+      expect(fs.existsSync(pidFile)).toBe(false);
+      expect(readRunRecord(project, "web")).toBeUndefined();
+    }, 60_000);
   });
 });

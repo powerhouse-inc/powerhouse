@@ -210,4 +210,26 @@ describe("a command with nothing to forward to", () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("passes on a start that lives with the supervisor, and names that way out when one runs", async () => {
+    const starts: unknown[] = [];
+    const local = {
+      start: async (id: string, opts?: unknown) => {
+        starts.push([id, opts]);
+        return id;
+      },
+      supervisor: async () => ({ pid: 4242 }),
+    } as unknown as ServiceManager;
+    const bound = refuseServiceStarts(local, "ph run studio");
+
+    expect(await bound.start("web", { lifetime: "supervisor" })).toBe("web");
+    expect(starts).toEqual([["web", { lifetime: "supervisor" }]]);
+
+    const refusal = await bound.start("web").catch((e: unknown) => e);
+    expect(refusal).toBeInstanceOf(ServiceStartRefused);
+    expect((refusal as Error).message).toContain(
+      "Or pass `--lifetime supervisor`: the supervisor (pid 4242) then keeps it running.",
+    );
+    expect(starts).toHaveLength(1);
+  });
 });

@@ -776,7 +776,14 @@ export interface ServiceStartOptions {
   cwd?: string;
   params?: Record<string, unknown>;
   name?: string;
+  /** How long a host service lives when the user's supervisor runs it:
+   * `caller` (the default) until the process that asked ends, `supervisor`
+   * until it is stopped or the supervisor ends. Without a supervisor every
+   * instance lives with the process that started it. */
+  lifetime?: ServiceLifetime;
 }
+
+export type ServiceLifetime = "caller" | "supervisor";
 
 /**
  * Runtime status of a service instance.
@@ -793,6 +800,8 @@ export interface ServiceInstanceStatus {
   restartAttempt?: number;
   workdir?: string;
   params?: Record<string, unknown>;
+  /** Set when the user's supervisor holds the instance. */
+  supervisor?: { pid: number; handle: string; lifetime: ServiceLifetime };
 }
 
 /**
@@ -843,6 +852,10 @@ export interface ServiceManager {
   ): import("./project-scanner.js").ProjectScanResult[];
   /** Remove all stopped instance state files (and their log files) for a service. */
   purgeStoppedInstances(id: string): void;
+  /** The supervisor of this OS user that host services are started through,
+   * when one runs. Rejects when one is recorded and does not answer: nothing
+   * may then be started, stopped or listed as if there were none. */
+  supervisor?(): Promise<{ pid: number } | undefined>;
 }
 
 // ── Event Bus ─────────────────────────────────────────────────────

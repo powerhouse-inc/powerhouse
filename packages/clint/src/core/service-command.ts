@@ -5,6 +5,7 @@ import type {
   CommandContext,
   ServiceDefinition,
   ServiceInstanceStatus,
+  ServiceLifetime,
 } from "./types.js";
 import { getSchemaFields } from "./schema.js";
 import { restartService, ServiceStartRefused } from "./service-control.js";
@@ -36,6 +37,11 @@ export function formatStatus(s: ServiceInstanceStatus): string {
     if (ep.length) parts.push(ep.join(" "));
   }
   if (s.workdir) parts.push(s.workdir);
+  if (s.supervisor) {
+    parts.push(
+      `supervisor pid ${s.supervisor.pid}, lives with the ${s.supervisor.lifetime}`,
+    );
+  }
   if (s.error) parts.push(`error: ${s.error}`);
   if (s.restartAttempt) parts.push(`restart #${s.restartAttempt}`);
   return parts.join("  ");
@@ -69,6 +75,16 @@ export function createServiceCommands(def: ServiceDefinition<any>): Command[] {
     .string()
     .optional()
     .describe("Working directory for the service");
+  if (def.run) {
+    startFields.lifetime = z
+      .enum(["caller", "supervisor"])
+      .optional()
+      .describe(
+        "With a supervisor running (`ph run supervisor`): `caller` (default) " +
+          "ends the service with this process, `supervisor` keeps it until " +
+          "it is stopped",
+      );
+  }
 
   // Merge paramsSchema fields into start command
   if (def.paramsSchema) {
@@ -129,6 +145,9 @@ export function createServiceCommands(def: ServiceDefinition<any>): Command[] {
           workdir: cwd,
           cwd,
           params: Object.keys(params).length > 0 ? params : undefined,
+          ...(def.run && input.lifetime !== undefined
+            ? { lifetime: input.lifetime as ServiceLifetime }
+            : {}),
         });
         const status = services
           .list(id)
@@ -197,6 +216,8 @@ export function createServiceCommands(def: ServiceDefinition<any>): Command[] {
     execute: async (_input, context: CommandContext) => {
       const services = context.services;
       if (!services) throw new Error("No services configured");
+      // A recorded supervisor that does not answer: what runs is unknown.
+      await services.supervisor?.();
       const all = services.list(id);
       if (all.length === 0) return { text: `No instances of ${id}` };
       return { text: all.map(formatStatus).join("\n"), data: all };
