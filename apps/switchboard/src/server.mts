@@ -886,24 +886,9 @@ async function initServer(
       reactorBuilder,
     );
 
-    // Subpath import keeps vetra's React editors out of the node bundle.
-    const vetraDocumentModels: DocumentModelModule[] = dev
-      ? (
-          Object.values(
-            await import("@powerhousedao/vetra/document-models"),
-          ) as unknown[]
-        ).filter(
-          (m): m is DocumentModelModule =>
-            typeof m === "object" &&
-            m !== null &&
-            "documentModel" in m &&
-            "reducer" in m,
-        )
-      : [];
-
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
       signalHandlers: options.signalHandlers,
-      documentModels: [...documentModels, ...vetraDocumentModels],
+      documentModels,
       upgradeManifests,
       // Always: an explicit undoV3 false enables nothing but must still reach
       // the reactor.
@@ -1213,13 +1198,6 @@ async function initServer(
     });
   }
 
-  // Vetra is builder-only and bundled (not CDN-loadable); lazy-load its
-  // processor only in dev, where builder tooling runs (e.g. `ph dev`).
-  const vetraProcessorFactory =
-    dev && options.codegenProcessor !== false
-      ? (await import("@powerhousedao/vetra/processors")).processorFactory
-      : undefined;
-
   // get paths to local document models
   if (!options.disableLocalPackages) {
     packages.push(basePath);
@@ -1309,9 +1287,6 @@ async function initServer(
       packages: packages,
       processorConfig: options.processorConfig,
       ...(renown ? { hostSigner: renown.signer } : {}),
-      processors: vetraProcessorFactory
-        ? { "@powerhousedao/vetra": [vetraProcessorFactory] }
-        : {},
       configFile: configPath,
       server: {
         basePath: config.server.basePath,

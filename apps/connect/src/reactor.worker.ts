@@ -92,7 +92,7 @@ import {
 console.info("[reactor.worker] module evaluating");
 
 // Common models the tab bundles as a local package; not CDN-loadable, so the
-// worker imports them directly. Vetra and workflow are flag-gated chunks.
+// worker imports them directly. Workflow is a flag-gated chunk.
 const commonBundledModels = toDocumentModelModules(
   Object.values(commonDocumentModels),
 );
@@ -106,8 +106,7 @@ type WorkerConstruct = {
   // sources that import shared deps load as blobs in the worker (import
   // maps don't apply here).
   sharedImports?: Record<string, string>;
-  studioMode?: boolean;
-  // Loads the workflow package's document models. Independent of studioMode.
+  // Loads the workflow package's document models.
   workflowsEnabled?: boolean;
   // The worker has no runtime config, so the chain its bearer tokens are scoped
   // to is passed in; leaving it unset would sign for a chain nobody issues on.
@@ -460,7 +459,6 @@ const host = new ReactorHost({
         );
       }
       const flaggedModels = await loadFlaggedDocumentModels({
-        studioMode: construct.studioMode,
         workflowsEnabled: construct.workflowsEnabled,
       });
       const staticModels = baseDocumentModels.concat(

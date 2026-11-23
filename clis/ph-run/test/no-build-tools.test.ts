@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
  * to that tree is files on every install, and Windows installs slowly by file.
  * These are what a host runs without, and need only someone to depend on them
  * for 20,000 files to come back: move one to an optional peer instead, as
- * switchboard does with vetra and vite, for a path only a developer reaches.
+ * switchboard does with vite, for a path only a developer reaches.
  */
 const NOT_ON_THE_RUN_PATH = [
   "@babel/core",

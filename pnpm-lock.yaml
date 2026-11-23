@@ -588,9 +588,6 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@powerhousedao/vetra':
-        specifier: workspace:*
-        version: link:../../packages/vetra
       '@powerhousedao/workflow':
         specifier: workspace:*
         version: link:../../packages/workflow
@@ -936,9 +933,6 @@ importers:
       '@openfeature/server-sdk':
         specifier: 'catalog:'
         version: 1.19.0(@openfeature/core@1.9.1)
-      '@powerhousedao/vetra':
-        specifier: workspace:*
-        version: link:../../packages/vetra
       '@types/express':
         specifier: ^4.17.25
         version: 4.17.25
@@ -4659,6 +4653,9 @@ importers:
       '@powerhousedao/switchboard':
         specifier: workspace:*
         version: link:../../apps/switchboard
+      '@powerhousedao/vetra':
+        specifier: workspace:*
+        version: link:../../packages/vetra
       '@powerhousedao/vetra-studio':
         specifier: workspace:*
         version: link:../../packages/vetra-studio

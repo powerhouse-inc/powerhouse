@@ -3,7 +3,6 @@
 @import "@powerhousedao/design-system/tailwind.css";
 @import "@powerhousedao/connect-core/tailwind.css";
 @import "@powerhousedao/powerhouse-vetra-packages/style.css";
-@import "@powerhousedao/vetra/style.css";
 @import "@powerhousedao/workflow/workflow.css";
 /* Third-party CSS: plain rules, which the loading screen leaves out. */
 @import "@powerhousedao/design-system/vendor.css";

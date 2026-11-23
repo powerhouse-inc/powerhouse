@@ -9,11 +9,8 @@ export const inspectorPluginConfigSchema = z.strictObject({
   /** Where the report is written: an absolute path, or one relative to the
    * working directory. */
   reportFile: z.string().min(1),
-  /**
-   * Whether a dev switchboard keeps the Vetra codegen processor, which
-   * rewrites the project's code from documents on `vetra` drives. Off: a
-   * switchboard that reports its runtime only reads the project.
-   */
+  /** @deprecated Accepted and ignored: no switchboard brings a codegen
+   * processor of its own. */
   codegen: z.boolean().default(false),
 });
 
@@ -61,10 +58,6 @@ export interface InspectorReport {
 
 export type InspectorPlugin = HostPlugin<
   {
-    transformServerOptions: (
-      options: Record<string, unknown>,
-      ctx: SwitchboardHostContext,
-    ) => Record<string, unknown>;
     onReactorReady: (ctx: SwitchboardHostContext) => void;
     onShutdown: (ctx: SwitchboardHostContext) => void;
   },
@@ -152,8 +145,6 @@ export function createInspectorPlugin(rawConfig: unknown): InspectorPlugin {
     appliesTo: "switchboard",
     configSchema: inspectorPluginConfigSchema,
     hooks: {
-      transformServerOptions: (options) =>
-        config.codegen ? options : { ...options, codegenProcessor: false },
       onReactorReady: (ctx) => {
         const { packageManager } = ctx.api as InspectedApi;
         const logger = ctx.logger as ILogger;

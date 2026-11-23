@@ -1,5 +1,4 @@
 import * as common from "@powerhousedao/powerhouse-vetra-packages";
-import * as vetra from "@powerhousedao/vetra";
 import type { DocumentModelLib, EditorModule } from "document-model";
 import { describe, expect, it } from "vitest";
 import {
@@ -7,11 +6,22 @@ import {
   getCreateDriveAppOptions,
 } from "./create-drive-app-options.js";
 
+const genericApp = () =>
+  common.editors.find((e) => e.config.id === "GenericDriveExplorer")!;
+
+// Stands in for the vetra package: its two drive apps, by id.
+const vetra: DocumentModelLib = {
+  manifest: { name: "@powerhousedao/vetra" },
+  documentModels: [],
+  editors: ["vetra-drive-app", "vetra-explorer"].map((id) => {
+    const app = genericApp();
+    return { ...app, config: { ...app.config, id, name: id } };
+  }),
+};
+
 // A project's package with a drive app, as its manifest and module describe it.
 function projectPackage(publisher?: string): DocumentModelLib {
-  const app = common.editors.find(
-    (e) => e.config.id === "GenericDriveExplorer",
-  )!;
+  const app = genericApp();
   return {
     manifest: {
       name: "routes-eval",

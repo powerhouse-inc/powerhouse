@@ -24,6 +24,7 @@ type Manifest = {
   name?: string;
   dependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
+  peerDependenciesMeta?: Record<string, { optional?: boolean }>;
 };
 
 function workspaceManifests(): Map<string, Manifest> {
@@ -39,8 +40,15 @@ function workspaceManifests(): Map<string, Manifest> {
   return manifests;
 }
 
-/** `roots` and every workspace package they depend on or peer, transitively. */
-function workspaceClosure(roots: readonly string[]): Set<string> {
+/**
+ * `roots` and every workspace package they depend on or peer, transitively.
+ * Without `optionalPeers`, a peer marked optional is not followed: an install
+ * does not bring it.
+ */
+function workspaceClosure(
+  roots: readonly string[],
+  { optionalPeers = true }: { optionalPeers?: boolean } = {},
+): Set<string> {
   const manifests = workspaceManifests();
   const seen = new Set<string>();
   const queue = [...roots];
@@ -49,28 +57,46 @@ function workspaceClosure(roots: readonly string[]): Set<string> {
     const manifest = manifests.get(name);
     if (!manifest || seen.has(name)) continue;
     seen.add(name);
-    const deps = { ...manifest.dependencies, ...manifest.peerDependencies };
-    for (const dep of Object.keys(deps)) {
+    const peers = Object.keys(manifest.peerDependencies ?? {}).filter(
+      (peer) =>
+        optionalPeers || !manifest.peerDependenciesMeta?.[peer]?.optional,
+    );
+    for (const dep of [...Object.keys(manifest.dependencies ?? {}), ...peers]) {
       if (manifests.has(dep)) queue.push(dep);
     }
   }
   return seen;
 }
 
+/** The workspace packages a scaffolded project names, features included. */
+const SCAFFOLD_ROOTS = [
+  ...VERSIONED_PEER_DEPENDENCIES,
+  ...VERSIONED_DEV_DEPENDENCIES,
+  ...Object.values(FEATURE_DEPENDENCIES).flatMap((feature) => [
+    ...feature.peerVersioned,
+    ...feature.devVersioned,
+  ]),
+];
+
 describe("WORKSPACE_PUBLISH_PACKAGES", () => {
   it("publishes every workspace package a scaffolded project installs", () => {
-    const roots = [
-      ...VERSIONED_PEER_DEPENDENCIES,
-      ...VERSIONED_DEV_DEPENDENCIES,
-      ...Object.values(FEATURE_DEPENDENCIES).flatMap((feature) => [
-        ...feature.peerVersioned,
-        ...feature.devVersioned,
-      ]),
-    ];
     const published = new Set<string>(WORKSPACE_PUBLISH_PACKAGES);
-    const missing = [...workspaceClosure(roots)].filter(
+    const missing = [...workspaceClosure(SCAFFOLD_ROOTS)].filter(
       (name) => !published.has(name),
     );
     expect(missing).toEqual([]);
+  });
+});
+
+describe("what a scaffolded project installs", () => {
+  const installed = () =>
+    workspaceClosure(SCAFFOLD_ROOTS, { optionalPeers: false });
+
+  it("the scaffold does not install @powerhousedao/vetra", () => {
+    expect([...installed()]).not.toContain("@powerhousedao/vetra");
+  });
+
+  it.skip("the scaffold does not install @powerhousedao/vetra-studio", () => {
+    expect([...installed()]).not.toContain("@powerhousedao/vetra-studio");
   });
 });

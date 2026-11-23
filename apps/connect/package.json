@@ -134,7 +134,6 @@
     "@powerhousedao/reactor-mcp": "workspace:*",
     "@powerhousedao/reactor-router": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
-    "@powerhousedao/vetra": "workspace:*",
     "@powerhousedao/workflow": "workspace:*",
     "@privy-io/react-auth": "3.35.0",
     "@rainbow-me/rainbowkit": "^2.2.11",

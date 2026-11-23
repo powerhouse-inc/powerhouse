@@ -10,5 +10,4 @@
 @source "../../packages/connect-core/src/**/*.{tsx,ts}";
 @source "../../packages/reactor-browser/src/ai/**/*.{tsx,ts}";
 @source "../../packages/powerhouse-vetra-packages/**/*.{tsx,ts}";
-@source "../../packages/vetra/**/*.{tsx,ts}";
 @source "../../packages/workflow/editors/**/*.{tsx,ts}";

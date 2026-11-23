@@ -53,7 +53,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "create:todo": "tsx scripts/create-versioned-todo.ts && ph-cli generate document-model --document ./scripts/versioned-todo.zip",
+    "create:todo": "tsx scripts/create-versioned-todo.ts && ph-cli generate document-model --dir todo",
     "tsc": "tsc && tsc -p hosts",
     "lint": "cd ../.. && oxlint test/versioned-documents",
     "test": "vitest --run",

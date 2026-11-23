@@ -57,8 +57,7 @@ export type WorkerReactorClientArgs = {
   /** Absolute-URL shared-deps import map (from the production vendor); the
    *  worker rewrites package sources to these URLs and blob-imports them. */
   sharedImports?: Record<string, string>;
-  studioMode?: boolean;
-  /** Loads the workflow package's document models. Independent of studioMode. */
+  /** Loads the workflow package's document models. */
   workflowsEnabled?: boolean;
   /** Chain the worker's bearer tokens are scoped to; matches the main thread's Renown instance. */
   renownChainId?: number;
@@ -128,7 +127,6 @@ export function buildWorkerConstruct(args: WorkerReactorClientArgs) {
     cdnUrl: args.cdnUrl,
     packageSpecs: args.packageSpecs,
     sharedImports: args.sharedImports,
-    studioMode: args.studioMode,
     workflowsEnabled: args.workflowsEnabled,
     renownChainId: args.renownChainId,
     featureFlags: args.featureFlags,

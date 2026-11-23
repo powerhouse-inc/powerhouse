@@ -85,6 +85,7 @@
     "@powerhousedao/registry": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
+    "@powerhousedao/vetra": "workspace:*",
     "@powerhousedao/vetra-studio": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "@tanstack/react-router": "1.170.41",

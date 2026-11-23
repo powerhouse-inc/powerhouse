@@ -337,7 +337,7 @@ export function buildStudioConnectOverride(
   }) as PHConnectRuntimeConfig;
 
   // Studio commands (`ph connect studio`, `ph dev`) always run in studio
-  // mode: Connect loads the vetra package and offers builder document types.
+  // mode.
   const studioOverride: PHConnectRuntimeConfig = { app: { studioMode: true } };
   const layers = [callerOverride, flagOverride, studioOverride].filter(
     (o): o is PHConnectRuntimeConfig =>

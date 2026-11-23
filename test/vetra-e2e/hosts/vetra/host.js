@@ -28,6 +28,11 @@ export default /** @satisfies {PHHost} */ ({
           { module: "@powerhousedao/vetra-studio/switchboard", verbs: ["dev"] },
         ],
       },
+      // Vetra's document models and codegen processor come from its package.
+      // Connect gets its editors from powerhouse.config.json `packages`.
+      config: {
+        switchboard: { packages: { list: ["@powerhousedao/vetra"] } },
+      },
       // The switchboard host's own drives plus the studio drives, declared
       // (projectHash keeps today's ids):
       reactor: {

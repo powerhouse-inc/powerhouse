@@ -1,8 +1,7 @@
 /**
  * The inspector plugin: what it reports (every loaded document model module,
  * all specification versions), when (ready, each package reload), where (a
- * file, gone at shutdown), and that it keeps the Vetra codegen processor out
- * of a dev switchboard.
+ * file, gone at shutdown).
  */
 import type { HostPlugin, ResolvedPlugin } from "@powerhousedao/host-core";
 import {
@@ -229,20 +228,11 @@ describe("inspector hooks", () => {
     expect(logger.warn).toHaveBeenCalledTimes(1);
   });
 
-  it("switches the codegen processor off unless asked to keep it", () => {
-    const { ctx } = stubContext(new Map());
-    expect(
-      createInspectorPlugin({ reportFile }).hooks!.transformServerOptions!(
-        { dev: true },
-        ctx,
-      ),
-    ).toEqual({ dev: true, codegenProcessor: false });
-    expect(
-      createInspectorPlugin({
-        reportFile,
-        codegen: true,
-      }).hooks!.transformServerOptions!({ dev: true }, ctx),
-    ).toEqual({ dev: true });
+  it("accepts the retired codegen setting and changes no server option", () => {
+    for (const codegen of [undefined, false, true]) {
+      const plugin = createInspectorPlugin({ reportFile, codegen });
+      expect(plugin.hooks).not.toHaveProperty("transformServerOptions");
+    }
   });
 });
 

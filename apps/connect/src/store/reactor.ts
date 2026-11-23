@@ -327,7 +327,6 @@ export async function createReactor(
   await packageManager.init(
     localPackage,
     runtimeConfig.localPackage?.version,
-    phGlobalConfig.studioMode,
     connectConfig.workflowsEnabled,
     getConnectPluginUi().commonEditors,
   );
@@ -530,7 +529,6 @@ export async function createReactor(
       cdnUrl: packageManager.cdnUrl ?? "",
       packageSpecs,
       sharedImports: sharedDeps?.imports ?? pageSharedImports(),
-      studioMode: phGlobalConfig.studioMode,
       workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,
       featureFlags: reactorFeatureFlags,

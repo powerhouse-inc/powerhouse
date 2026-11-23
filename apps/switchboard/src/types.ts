@@ -186,11 +186,6 @@ export type StartServerOptions = {
   privacy?: PrivacyOptions;
   processorConfig?: Map<string, unknown>;
   disableLocalPackages?: boolean;
-  /**
-   * False keeps the Vetra codegen processor out of a `dev` switchboard, so
-   * no drive there rewrites the project's code. Set by the inspector plugin.
-   */
-  codegenProcessor?: boolean;
   enableDocumentModelSubgraphs?: boolean;
   /**
    * When true, enables dynamic loading of document models from the registry

@@ -23,7 +23,6 @@ import {
   setOperationSchema,
   setStateSchema,
 } from "document-model";
-import { baseSaveToFile } from "document-model/node";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -31,7 +30,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function main() {
+function main() {
   console.log("Creating versioned Todo document model...\n");
 
   // Step 1: Create document and set basic metadata using actions
@@ -260,18 +259,13 @@ type Todo {
     "  - Operations: ADD_TODO, REMOVE_TODO, UPDATE_TODO, EDIT_TITLE\n",
   );
 
-  // Step 7: Export to .zip file
-  const outputPath = __dirname;
-  const filename = "versioned-todo";
+  // Step 7: Write the model where `generate document-model --dir todo` reads it
+  const modelDir = path.join(__dirname, "..", "document-models", "todo");
+  const modelPath = path.join(modelDir, "todo.json");
+  fs.mkdirSync(modelDir, { recursive: true });
+  fs.writeFileSync(modelPath, `${JSON.stringify(doc.state.global, null, 2)}\n`);
 
-  await baseSaveToFile(doc, outputPath, "phdm", filename);
-
-  // Rename from .phdm.phd to .zip
-  const phdPath = path.join(outputPath, `${filename}.phdm.phd`);
-  const zipPath = path.join(outputPath, `${filename}.zip`);
-  fs.renameSync(phdPath, zipPath);
-
-  console.log(`Document model exported to: ${zipPath}`);
+  console.log(`Document model written to: ${modelPath}`);
   console.log("\nDocument summary:");
   console.log(`  - ID: ${doc.state.global.id}`);
   console.log(`  - Name: ${doc.state.global.name}`);
@@ -284,4 +278,4 @@ type Todo {
   });
 }
 
-main().catch(console.error);
+main();

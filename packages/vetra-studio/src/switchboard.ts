@@ -22,7 +22,8 @@ import {
  * watcher), tracked as the R4 follow-up alongside external browser plugin
  * loading.
  *
- * The codegen PROCESSOR is the server's own dev-mode machinery; its config
+ * The codegen PROCESSOR comes with `@powerhousedao/vetra`, when the host lists
+ * that package (`config.switchboard.packages.list`); its config
  * (`VetraConfig`: which drive it generates from, `--interactive`) reaches it
  * through this plugin's entry config, which the ph-cli switchboard runner
  * fills in from the invocation.

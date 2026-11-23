@@ -1,5 +1,4 @@
 // @vitest-environment happy-dom
-import vetraPkg from "@powerhousedao/vetra/package.json" with { type: "json" };
 import workflowPkg from "@powerhousedao/workflow/package.json" with { type: "json" };
 import {
   createPHStore,
@@ -19,14 +18,8 @@ import {
   sharedDepMismatchWarnings,
 } from "./package-manager.js";
 
-// Both packages are reached through a lazy `import()`, so the fake stands in
-// for the code-split chunk without pulling either package's editors in here.
-vi.mock("@powerhousedao/vetra", () => ({
-  manifest: { name: "@powerhousedao/vetra" },
-  documentModels: [],
-  editors: [],
-}));
-
+// Reached through a lazy `import()`, so the fake stands in for the code-split
+// chunk without pulling the package's editors in here.
 vi.mock("@powerhousedao/workflow", () => ({
   manifest: { name: "@powerhousedao/workflow" },
   documentModels: [],
@@ -51,8 +44,8 @@ vi.mock("@powerhousedao/connect-core/router", () => ({
   },
 }));
 
-const VETRA = "@powerhousedao/vetra";
 const WORKFLOW = "@powerhousedao/workflow";
+const LISTED = "@acme/listed";
 const COMMON = "Common";
 
 const HOST_VERSIONS = {
@@ -104,39 +97,30 @@ describe("BrowserPackageManager.init — flag-gated local packages", () => {
     return new BrowserPackageManager("test", null);
   }
 
-  it("registers neither vetra nor workflow with both flags off", async () => {
+  it("does not register workflow with the flag off", async () => {
     const pm = manager();
-    await pm.init(undefined, undefined, false, false);
-    expect(pm.getPackageSource(VETRA)).toBeNull();
+    await pm.init(undefined, undefined, false);
     expect(pm.getPackageSource(WORKFLOW)).toBeNull();
   });
 
   it("registers the workflow package by manifest name and package.json version when the flag is on", async () => {
     const pm = manager();
-    await pm.init(undefined, undefined, false, true);
+    await pm.init(undefined, undefined, true);
     expect(pm.getPackageSource(WORKFLOW)).toBe("common");
     expect(pm.getPackageVersion(WORKFLOW)).toBe(workflowPkg.version);
   });
 
-  it("does not register workflow for studio mode alone", async () => {
+  it("registers a package the host lists, as the bundled packages module does", async () => {
     const pm = manager();
-    await pm.init(undefined, undefined, true, false);
-    expect(pm.getPackageSource(VETRA)).toBe("common");
-    expect(pm.getPackageVersion(VETRA)).toBe(vetraPkg.version);
-    expect(pm.getPackageSource(WORKFLOW)).toBeNull();
-  });
-
-  it("does not register vetra for workflows alone", async () => {
-    const pm = manager();
-    await pm.init(undefined, undefined, false, true);
-    expect(pm.getPackageSource(VETRA)).toBeNull();
-  });
-
-  it("registers both when both flags are on", async () => {
-    const pm = manager();
-    await pm.init(undefined, undefined, true, true);
-    expect(pm.getPackageSource(VETRA)).toBe("common");
-    expect(pm.getPackageSource(WORKFLOW)).toBe("common");
+    await pm.init(undefined, undefined, false);
+    expect(pm.getPackageSource(LISTED)).toBeNull();
+    pm.addLocalPackage(
+      LISTED,
+      { manifest: { name: LISTED }, documentModels: [], editors: [] } as never,
+      "1.2.3",
+    );
+    expect(pm.getPackageSource(LISTED)).toBe("common");
+    expect(pm.getPackageVersion(LISTED)).toBe("1.2.3");
   });
 });
 
@@ -148,7 +132,7 @@ describe("BrowserPackageManager.init — the generic chrome's editors", () => {
   // What core's views read: the store's package manager, through reactor-browser's hooks.
   async function modulesFor(genericChrome: boolean) {
     const pm = new BrowserPackageManager("test", null);
-    await pm.init(undefined, undefined, false, false, genericChrome);
+    await pm.init(undefined, undefined, false, genericChrome);
     const store = createPHStore();
     store.vetraPackageManager = pm;
     const { result } = renderHook(
