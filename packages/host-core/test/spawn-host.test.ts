@@ -365,18 +365,29 @@ describe("spawnHost", () => {
     expect(isPidAlive(a.pid) && isPidAlive(b.pid)).toBe(true);
   });
 
-  it("surfaces ph run's lock when a data dir is already in use", async () => {
+  it("a second start on a data dir in use is the running instance", async () => {
     const projectRoot = makeProject();
     const first = await start({ projectRoot });
-    const error = await rejection(
-      start({ projectRoot, dataDir: first.dataDir }),
-    );
-    expect(error.phase).toBe("exited");
-    expect(error.outputTail).toContain("already running");
+    const second = await spawnHost({
+      host: "sb",
+      projectRoot,
+      dataDir: first.dataDir,
+      readyTimeoutMs: 10_000,
+    });
+    expect(second.existing).toBe(true);
+    expect(second.pid).toBe(first.pid);
+    expect(second.record).toEqual(first.record);
+    expect(second.outputs).toMatchObject({ origin: "http://127.0.0.1:1" });
+    // Its starter owns it: the second handle's stop leaves it running.
+    await second.stop();
+    expect(isPidAlive(first.pid)).toBe(true);
     const kept = JSON.parse(
       readFileSync(recordFile(first.dataDir), "utf8"),
     ) as { pid: number };
     expect(kept.pid).toBe(first.pid);
+    // And it sees the instance end.
+    await first.stop();
+    await expect(second.exited).resolves.toMatchObject({ forced: false });
   });
 
   it("refuses a one-shot verb before spawning", async () => {

@@ -1,7 +1,14 @@
 import {
+  describeInstance,
+  isAlreadyRunning,
+  loadHost,
   ONE_SHOT_VERBS,
   readProjectName,
+  runningInstance,
+  runRecordKey,
   STORE_VERBS,
+  type AlreadyRunning,
+  type RunningInstance,
 } from "@powerhousedao/host-core";
 import { outputsSchema as connectOutputsSchema } from "@powerhousedao/ph-run/runners/connect";
 import { outputsSchema as switchboardOutputsSchema } from "@powerhousedao/ph-run/runners/switchboard";
@@ -43,16 +50,41 @@ export async function runVetraHost(args: StartRunArgs): Promise<unknown> {
       onProgress: (message) => console.log(message),
     });
   }
+  const argv = args.argv?.filter((arg) => arg !== RESTART_FLAG) ?? [];
+  // One instance per (host, data folder): a second start is the running
+  // one, shown. A stack with no run record (an earlier version's) is refused.
+  const running =
+    argv.length === 0
+      ? await runningDevHost(projectDir, args.host, projectName)
+      : undefined;
+  if (running && running.pid !== process.pid) {
+    console.log(describeInstance(running));
+    return { running } satisfies AlreadyRunning;
+  }
   const refusal = await vetraRuntimeRefusal(projectDir, projectName);
   if (refusal) throw new Error(refusal);
 
-  const result = await startRun(
-    restart
-      ? { ...args, argv: args.argv?.filter((arg) => arg !== RESTART_FLAG) }
-      : args,
-  );
+  const result = await startRun(restart ? { ...args, argv } : args);
+  if (isAlreadyRunning(result)) return result;
   publishVetraRuntime(projectDir, projectName, result);
   return result;
+}
+
+/** The live instance of the host `ref` names. A host that does not load is
+ * startRun's to report. */
+async function runningDevHost(
+  projectDir: string,
+  ref: string,
+  projectName: string,
+): Promise<RunningInstance | undefined> {
+  let key: string;
+  try {
+    const loaded = await loadHost(projectDir, ref);
+    key = runRecordKey(loaded.host.name, loaded.package?.name);
+  } catch {
+    return undefined;
+  }
+  return runningInstance(projectDir, key, { projectName });
 }
 
 /** `ph run dev --restart`, which `ph dev --restart` is sugar for. */

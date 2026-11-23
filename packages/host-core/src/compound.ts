@@ -18,6 +18,11 @@ import {
 } from "./control-channel.js";
 import { substituteBuiltinEnv } from "./env-substitution.js";
 import { loadHost, moduleRootOf } from "./host-loader.js";
+import {
+  describeInstance,
+  instanceOfRecord,
+  type RunningInstance,
+} from "./instance.js";
 import { hostFileLabel, type HostPackage } from "./host-ref.js";
 import { defaultUserDataDir } from "./placeholders.js";
 import { declaresKey, outputSitesOf } from "./resolve/declared.js";
@@ -407,6 +412,9 @@ export function memberProcessOf(
 }
 
 export interface RunCompoundResult {
+  /** The instance that ran already: nothing was started (`started` is
+   * empty). */
+  running?: RunningInstance;
   started: StartedMember[];
   /** Graceful teardown, consumers before producers (reverse dependency
    * order); memoized. */
@@ -468,6 +476,25 @@ export async function runCompound(
   // to write or clear (clearing would delete a live instance's record).
   const oneShotCompound = ONE_SHOT_VERBS.has(verb);
 
+  // Lock: one live instance per host per data folder.
+  const recordKey = runRecordKey(host.name, scope?.name);
+  const probe = oneShotCompound
+    ? undefined
+    : probeRun(projectRoot, recordKey, options.projectName);
+  const live = probe?.status === "live" ? probe.record : undefined;
+  // A second start is the running instance: it is shown and nothing starts.
+  // Only a command for its foreground member may run beside it (below).
+  if (live && (ctx.argv ?? []).length === 0) {
+    const instance = instanceOfRecord(projectRoot, live);
+    console.log(describeInstance(instance));
+    return {
+      started: [],
+      shutdown: () => Promise.resolve(),
+      handleSignal: () => Promise.resolve(),
+      running: instance,
+    };
+  }
+
   // From the start, so a stop during boot takes effect when boot finishes.
   let stopRequested = false;
   let stopFromStream: () => void = () => {
@@ -484,20 +511,13 @@ export async function runCompound(
     for (const output of outputs) output.on("error", () => undefined);
   }
 
-  // Lock: one live instance per project per host (storage-root contention).
-  const recordKey = runRecordKey(host.name, scope?.name);
-  const probe = oneShotCompound
-    ? undefined
-    : probeRun(projectRoot, recordKey, options.projectName);
-  const live = probe?.status === "live" ? probe.record : undefined;
+  // What stands in the way of arguments that are no command beside it.
   const running = live
     ? new Error(
         `${recordKey} is already running for this project (pid ${live.pid}). ` +
           `Stop it before starting another.`,
       )
     : undefined;
-  // Only a command for its foreground member may run beside it (below).
-  if (running && (ctx.argv ?? []).length === 0) throw running;
   if (probe?.status === "foreign") {
     throw new Error(
       `.ph/run/${recordKey}.json describes a live "${probe.record.projectName}", ` +

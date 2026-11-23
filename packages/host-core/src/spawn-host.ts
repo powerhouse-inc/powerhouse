@@ -11,7 +11,14 @@ import {
 import { loadHost } from "./host-loader.js";
 import { locateHost } from "./host-ref.js";
 import { killTree } from "./kill-tree.js";
-import { clearRunRecord, listRunRecords, recordKeyOf } from "./run-record.js";
+import { runningInstance, type RunningInstance } from "./instance.js";
+import {
+  clearRunRecord,
+  isPidAlive,
+  listRunRecords,
+  recordKeyOf,
+  runRecordKey,
+} from "./run-record.js";
 import type { RunRecord } from "./run-record-schema.js";
 import {
   isSchemaLike,
@@ -70,11 +77,41 @@ export interface SpawnedHost {
   record: RunRecord;
   outputs: Record<string, unknown> | undefined;
   members: RunRecord["members"];
+  /** The key ran already: this is that instance, and nothing was started.
+   * Its `stop()` leaves it running (its starter owns it; `ph run <host>
+   * --stop` stops it). */
+  existing?: true;
   /** Resolves (never rejects) when the child exits. */
   exited: Promise<HostExit>;
   /** SIGTERM (or the end of its stdin), SIGKILL after stopTimeoutMs, clear
    * a leftover record. */
   stop(): Promise<HostExit>;
+}
+
+const EXISTING_POLL_MS = 500;
+
+/** The handle of an instance another start owns: watched, never stopped. */
+function existingHost(running: RunningInstance, dataDir: string): SpawnedHost {
+  const { record } = running;
+  const exit: HostExit = { code: null, signal: null, forced: false };
+  const exited = new Promise<HostExit>((resolve) => {
+    const timer = setInterval(() => {
+      if (isPidAlive(record.pid)) return;
+      clearInterval(timer);
+      resolve(exit);
+    }, EXISTING_POLL_MS);
+    timer.unref();
+  });
+  return {
+    pid: record.pid,
+    dataDir,
+    record,
+    outputs: record.outputs,
+    members: record.members,
+    existing: true,
+    exited,
+    stop: () => Promise.resolve(exit),
+  };
 }
 
 export type SpawnHostPhase = "exited" | "timeout" | "aborted";
@@ -170,13 +207,14 @@ function resolvePhCliEntry(projectRoot: string): string {
   return path.join(path.dirname(pkgPath), "dist", "cli.mjs");
 }
 
-/** Readiness waits for a record; refuse a host/verb that writes none. */
+/** Readiness waits for a record; refuse a host/verb that writes none.
+ * Returns the key of the record it writes. */
 async function assertWritesRecord(
   projectRoot: string,
   host: string,
   verb: string | undefined,
   definition: Record<string, unknown> | undefined,
-): Promise<void> {
+): Promise<string> {
   if (
     verb !== undefined &&
     (ONE_SHOT_VERBS.has(verb) || STORE_VERBS.has(verb))
@@ -186,12 +224,14 @@ async function assertWritesRecord(
     );
   }
   const declared = (definition ?? (await loadHost(projectRoot, host)).host) as {
+    name: string;
     runner: { module: string };
     config?: { runtimeRecord?: unknown };
   };
   const specifier = declared.runner.module;
   // As the child resolves it: from the package that supplies the host.
   const supplier = locateHost(projectRoot, host).package;
+  const recordKey = runRecordKey(declared.name, supplier?.name);
   const runner = await resolveRunnerModule(
     supplier?.root ?? projectRoot,
     specifier,
@@ -203,13 +243,14 @@ async function assertWritesRecord(
         `spawnHost: hosts/${host} sets config.runtimeRecord: false, so it writes no run record to wait for.`,
       );
     }
-    return;
+    return recordKey;
   }
   if (!isSchemaLike(runner.outputsSchema)) {
     throw new Error(
       `spawnHost: hosts/${host} runs "${specifier}", which exports no outputsSchema, so it writes no run record to wait for.`,
     );
   }
+  return recordKey;
 }
 
 const sleep = (ms: number) =>
@@ -267,12 +308,22 @@ export async function spawnHost(
   if (signal?.aborted) {
     throw new SpawnHostError("spawnHost: aborted before start.", "aborted", "");
   }
-  await assertWritesRecord(
+  const recordKey = await assertWritesRecord(
     projectRoot,
     options.host,
     options.verb,
     options.definition?.host,
   );
+  // One instance per (host, data folder): a key that runs is returned as it
+  // is. A compound's member is the compound's to start.
+  if (!options.definition) {
+    const running = runningInstance(projectRoot, recordKey, {
+      env: readerEnv,
+    });
+    if (running && running.pid !== process.pid) {
+      return existingHost(running, dataDir);
+    }
+  }
   const cli = options.cli ?? resolvePhCliEntry(projectRoot);
   fs.mkdirSync(dataDir, { recursive: true });
 

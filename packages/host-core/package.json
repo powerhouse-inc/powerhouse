@@ -41,6 +41,12 @@
       "import": "./dist/control-channel.mjs",
       "default": "./dist/control-channel.mjs"
     },
+    "./instance": {
+      "source": "./src/instance.ts",
+      "types": "./dist/instance.d.mts",
+      "import": "./dist/instance.mjs",
+      "default": "./dist/instance.mjs"
+    },
     "./plugins": {
       "source": "./src/plugins.ts",
       "types": "./dist/plugins.d.mts",

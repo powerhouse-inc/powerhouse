@@ -2,6 +2,7 @@ import path from "node:path";
 import {
   checkRunnerArgv,
   clearRunRecord,
+  describeInstance,
   emptyMaps,
   findHostPackage,
   getVerb,
@@ -29,6 +30,7 @@ import {
   runRecordKey,
   runRecordOutputSource,
   RunnerError,
+  runningInstance,
   stopRun,
   stopStreamOf,
   STORE_VERBS,
@@ -38,6 +40,7 @@ import {
   validateDeclaredHost,
   validateHost,
   writeRunRecord,
+  type AlreadyRunning,
   type HostDefinition,
   type HostPackage,
   type LoadedHost,
@@ -136,6 +139,25 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
     );
   }
   const fn = getVerb(runner, specifier, verb);
+  // One instance per (host, data folder): a second start of a host that
+  // publishes outputs is the running instance, shown, and nothing starts. A
+  // compound applies the rule itself; its member is the compound's to start.
+  if (
+    !ONE_SHOT_VERBS.has(verb) &&
+    !storeVerb &&
+    !member &&
+    runner.kind !== "compound" &&
+    isSchemaLike(runner.outputsSchema)
+  ) {
+    const running = runningInstance(
+      projectRoot,
+      runRecordKey(loaded.host.name, hostPackage?.name),
+    );
+    if (running && running.pid !== process.pid) {
+      console.log(describeInstance(running));
+      return { running } satisfies AlreadyRunning;
+    }
+  }
   // Before the verb starts anything: `ph run <host> --stop` reaches it from
   // here on, on Windows too.
   if (!ONE_SHOT_VERBS.has(verb) && !storeVerb) installStopChannel();

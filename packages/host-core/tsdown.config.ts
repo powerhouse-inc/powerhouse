@@ -18,6 +18,7 @@ export default defineConfig([
       "src/runners/compound.ts",
       "src/kill-tree.ts",
       "src/control-channel.ts",
+      "src/instance.ts",
     ],
     platform: "node",
   },

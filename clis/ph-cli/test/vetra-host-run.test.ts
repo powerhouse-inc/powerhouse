@@ -1,3 +1,4 @@
+import { writeRunRecord } from "@powerhousedao/host-core";
 import { startRun } from "@powerhousedao/ph-run/start-run";
 import {
   existsSync,
@@ -242,6 +243,53 @@ describe("ph run vetra", () => {
       projectName: PROJECT_NAME,
       mcpUrl: "http://localhost:41837/mcp",
     });
+  });
+
+  it("a second start returns the running instance and starts nothing", async () => {
+    const dir = makeProject();
+    mkdirSync(join(dir, "hosts", "vetra"), { recursive: true });
+    writeFileSync(
+      join(dir, "hosts", "vetra", "host.js"),
+      'export default { name: "vetra", runner: { module: "@powerhousedao/host-core/runners/compound" }, children: {} };\n',
+    );
+    writeRunRecord(dir, {
+      version: 2,
+      host: "vetra",
+      projectName: PROJECT_NAME,
+      kind: "compound",
+      verb: "dev",
+      pid: OTHER_PID,
+      startedAt: new Date().toISOString(),
+      members: {
+        switchboard: {
+          host: "switchboard",
+          runnerModule: "m",
+          kind: "reactor",
+          verb: "dev",
+          outputs: switchboardOutputs,
+        },
+      },
+    });
+    writeVetraRuntime(dir, otherVetra());
+    answersReady();
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await expect(
+      runVetraHost({ host: "vetra", projectRoot: dir }),
+    ).resolves.toMatchObject({
+      running: {
+        pid: OTHER_PID,
+        switchboardUrl: "http://localhost:41837",
+        ports: { switchboard: 41837 },
+      },
+    });
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining(
+        `vetra is already running for this project (pid ${OTHER_PID},`,
+      ),
+    );
+    expect(startRun).not.toHaveBeenCalled();
+    expect(readVetraRuntime(dir)?.pid).toBe(OTHER_PID);
   });
 
   it("refuses while a live ph dev holds the project", async () => {

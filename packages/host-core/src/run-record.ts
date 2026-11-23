@@ -1,4 +1,3 @@
-import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -7,6 +6,7 @@ import {
   hostNameSchema,
   PACKAGE_NAME_PATTERN,
 } from "./host-schemas.js";
+import { instanceKey, instanceRunDir } from "./instance-key.js";
 import { runRecordSchema, type RunRecord } from "./run-record-schema.js";
 
 export {
@@ -45,10 +45,19 @@ export function recordKeyOf(record: Pick<RunRecord, "host" | "package">) {
   return runRecordKey(record.host, record.package);
 }
 
-// Under the project's .ph tree — relocated with it by PH_USER_DATA_DIR. The
-// readers take `env` so a launcher can read a child's records.
+// Under the data folder's .ph tree — relocated with it by PH_USER_DATA_DIR.
+// The readers take `env` so a launcher can read a child's records.
 const runDir = (projectDir: string, env: Env = process.env) =>
-  path.join(resolvePhDir(projectDir, env), "run");
+  instanceRunDir(instanceKey("", projectDir, env));
+
+/** The file of an instance's record: `(host, data folder)` is its path. */
+export function runRecordPath(
+  projectDir: string,
+  key: string,
+  env?: Env,
+): string {
+  return recordPath(projectDir, key, env);
+}
 function recordPath(projectDir: string, key: string, env?: Env): string {
   const dir = runDir(projectDir, env);
   const slash = key.lastIndexOf("/");

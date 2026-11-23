@@ -689,10 +689,29 @@ describe("the foreground member", () => {
       expect(readRunRecord(dir, "app")).toEqual(before);
     });
 
-    it("refuses a run with no command for the foreground member", async () => {
+    it("a start with no command is the running stack, and starts nothing", async () => {
       const dir = stack();
       live(dir);
-      await expect(start(dir)).rejects.toThrow(/app is already running/);
+      const before = readRunRecord(dir, "app");
+      const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+      try {
+        const result = await start(dir);
+        expect(result.started).toEqual([]);
+        expect(result.running?.pid).toBe(before?.pid);
+        expect(String(log.mock.calls[0]?.[0])).toContain(
+          "app is already running for this project",
+        );
+      } finally {
+        log.mockRestore();
+      }
+      expect(foregroundCalls()).toEqual([]);
+      expect(logsOf(dir, "switchboard")).toEqual([]);
+      expect(readRunRecord(dir, "app")).toEqual(before);
+    });
+
+    it("refuses arguments that are no command for the foreground member", async () => {
+      const dir = stack();
+      live(dir);
       await expect(start(dir, { argv: ["--sb-port", "9"] })).rejects.toThrow(
         /app is already running/,
       );

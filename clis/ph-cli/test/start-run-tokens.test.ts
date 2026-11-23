@@ -336,7 +336,7 @@ describe("standalone ph run resolves output tokens", () => {
     expect(call.host.runner.plugins?.[0].config.drive).toEqual(workflowsUrl);
   });
 
-  it("refuses a second live instance before its verb starts anything", async () => {
+  it("a second start is the live instance: its verb starts nothing", async () => {
     const { dir, sink } = makeProject({});
     liveSwitchboard(dir);
     // the live record's pid is this process: start-run tells it apart only
@@ -351,9 +351,17 @@ describe("standalone ph run resolves output tokens", () => {
       startedAt: "x",
       outputs: {},
     });
-    await expect(
-      startRun({ host: "switchboard", projectRoot: dir }),
-    ).rejects.toThrow(/lab-switchboard is already running for this project/);
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      await expect(
+        startRun({ host: "switchboard", projectRoot: dir }),
+      ).resolves.toMatchObject({ running: { pid: process.ppid } });
+      expect(String(log.mock.calls[0]?.[0])).toContain(
+        "lab-switchboard is already running for this project",
+      );
+    } finally {
+      log.mockRestore();
+    }
     expect(calls(sink)).toEqual([]);
   });
 });
