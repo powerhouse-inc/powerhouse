@@ -1,3 +1,19 @@
+## 6.4.0-next.2 (2026-11-23)
+
+### 🚀 Features
+
+- **vetra:** add the vetra explorer drive app ([31f5bb77f6](https://github.com/powerhouse-inc/powerhouse/commit/31f5bb77f6))
+
+### 🩹 Fixes
+
+- **vetra:** keep the explorer's type list while the create dialog closes ([cb9717f1de](https://github.com/powerhouse-inc/powerhouse/commit/cb9717f1de))
+- **vetra:** indent explorer rows without relying on utility order ([0057396b34](https://github.com/powerhouse-inc/powerhouse/commit/0057396b34))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.4.0-next.1 (2026-11-22)
 
 ### 🚀 Features

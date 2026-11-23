@@ -1,3 +1,23 @@
+## 6.4.0-next.2 (2026-11-23)
+
+### 🚀 Features
+
+- **clint:** give a command the control record of the cli it runs beside ([30fdb322a8](https://github.com/powerhouse-inc/powerhouse/commit/30fdb322a8))
+- **clint,host-core:** control channel so service commands reach the running cli ([2f08407d7e](https://github.com/powerhouse-inc/powerhouse/commit/2f08407d7e))
+- **switchboard:** add the inspector plugin that reports loaded document models ([d286a0f1ce](https://github.com/powerhouse-inc/powerhouse/commit/d286a0f1ce))
+- **vetra:** add the vetra explorer drive app ([31f5bb77f6](https://github.com/powerhouse-inc/powerhouse/commit/31f5bb77f6))
+
+### 🩹 Fixes
+
+- **connect:** keep the drive explorer the default in create drive ([f50030c046](https://github.com/powerhouse-inc/powerhouse/commit/f50030c046))
+- **vetra:** indent explorer rows without relying on utility order ([0057396b34](https://github.com/powerhouse-inc/powerhouse/commit/0057396b34))
+- **vetra:** keep the explorer's type list while the create dialog closes ([cb9717f1de](https://github.com/powerhouse-inc/powerhouse/commit/cb9717f1de))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.4.0-next.1 (2026-11-22)
 
 ### 🚀 Features

@@ -1,3 +1,7 @@
+## 6.4.0-next.2 (2026-11-23)
+
+This was a version bump only for compat to align it with other projects, there were no code changes.
+
 ## 6.4.0-next.1 (2026-11-22)
 
 ### 🚀 Features

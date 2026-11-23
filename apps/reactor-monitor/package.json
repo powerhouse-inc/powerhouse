@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-monitor-app",
-  "version": "6.4.0-next.1",
+  "version": "6.4.0-next.2",
   "description": "Observable lab bench SPA for provisioning and inspecting reactors outside Connect.",
   "keywords": [],
   "author": "",
