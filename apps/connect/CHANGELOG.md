@@ -1,3 +1,14 @@
+## 6.4.0-next.2 (2026-11-23)
+
+### 🩹 Fixes
+
+- **connect:** keep the drive explorer the default in create drive ([f50030c046](https://github.com/powerhouse-inc/powerhouse/commit/f50030c046))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.4.0-next.1 (2026-11-22)
 
 ### 🚀 Features

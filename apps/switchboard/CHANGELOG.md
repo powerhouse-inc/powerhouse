@@ -1,3 +1,14 @@
+## 6.4.0-next.2 (2026-11-23)
+
+### 🚀 Features
+
+- **switchboard:** add the inspector plugin that reports loaded document models ([d286a0f1ce](https://github.com/powerhouse-inc/powerhouse/commit/d286a0f1ce))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.4.0-next.1 (2026-11-22)
 
 ### 🚀 Features

@@ -1,3 +1,15 @@
+## 6.4.0-next.2 (2026-11-23)
+
+### 🚀 Features
+
+- **clint:** give a command the control record of the cli it runs beside ([30fdb322a8](https://github.com/powerhouse-inc/powerhouse/commit/30fdb322a8))
+- **clint,host-core:** control channel so service commands reach the running cli ([2f08407d7e](https://github.com/powerhouse-inc/powerhouse/commit/2f08407d7e))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.4.0-next.1 (2026-11-22)
 
 ### 🚀 Features
