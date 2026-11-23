@@ -47,7 +47,7 @@ function childrenByParent(): Map<number, number[]> {
 }
 
 /** POSIX: `pid` and all its descendants. */
-function treePids(pid: number): number[] {
+export function treePids(pid: number): number[] {
   const children = childrenByParent();
   const tree = [pid];
   for (let i = 0; i < tree.length; i++) {

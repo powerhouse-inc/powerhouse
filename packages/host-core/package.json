@@ -47,6 +47,18 @@
       "import": "./dist/instance.mjs",
       "default": "./dist/instance.mjs"
     },
+    "./supervisor": {
+      "source": "./src/supervisor.ts",
+      "types": "./dist/supervisor.d.mts",
+      "import": "./dist/supervisor.mjs",
+      "default": "./dist/supervisor.mjs"
+    },
+    "./supervisor-record": {
+      "source": "./src/supervisor-record.ts",
+      "types": "./dist/supervisor-record.d.mts",
+      "import": "./dist/supervisor-record.mjs",
+      "default": "./dist/supervisor-record.mjs"
+    },
     "./plugins": {
       "source": "./src/plugins.ts",
       "types": "./dist/plugins.d.mts",

@@ -96,6 +96,9 @@ export interface OpenControlChannelOptions {
   socketDir?: string;
   /** How long a caller may take to send its first request (default 5 s). */
   handshakeTimeoutMs?: number;
+  /** What `hello` answers as `mode` (default "ad hoc": the process
+   * supervises what it started itself). A supervisor names its own. */
+  mode?: string;
 }
 
 /** The longest request line, and the longest line of output. */
@@ -241,8 +244,7 @@ async function restrictPipe(name: string): Promise<boolean> {
 /**
  * Opens a control channel for this process and resolves once it listens.
  * The server holds no process open. `hello` is answered by the channel
- * itself: `{ protocol, pid, mode: "ad hoc", methods }` and what `describe`
- * added.
+ * itself: `{ protocol, pid, mode, methods }` and what `describe` added.
  */
 export async function openControlChannel(
   options: OpenControlChannelOptions = {},
@@ -255,7 +257,7 @@ export async function openControlChannel(
     ...description,
     protocol: CONTROL_PROTOCOL,
     pid: process.pid,
-    mode: "ad hoc",
+    mode: options.mode ?? "ad hoc",
     methods: [...handlers.keys()],
   }));
 

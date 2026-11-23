@@ -1,13 +1,12 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import {
   COMPOUND_MEMBER_ENV,
   encodeCompoundMember,
   type CompoundMemberHost,
 } from "./compound-member.js";
+import { childEnv, resolvePhCliEntry } from "./host-entry.js";
 import { loadHost } from "./host-loader.js";
 import { locateHost } from "./host-ref.js";
 import { killTree } from "./kill-tree.js";
@@ -139,73 +138,6 @@ const POLL_MS = 100;
 const TAIL_BYTES = 8 * 1024;
 // A grandchild may hold the pipes open past the child's exit.
 const CLOSE_WAIT_MS = 1_000;
-
-const BASE_ENV_KEYS = ["PATH", "HOME", "TMPDIR"];
-const WIN32_ENV_KEYS = [
-  "SystemRoot",
-  "USERPROFILE",
-  "APPDATA",
-  "LOCALAPPDATA",
-  "TEMP",
-  "TMP",
-  "ComSpec",
-  "PATHEXT",
-];
-
-/** The child's whole env: without a `baseEnv`, no other `process.env` key
- * reaches it. */
-function childEnv(
-  dataDir: string,
-  env: Record<string, string> = {},
-  baseEnv?: Readonly<Record<string, string | undefined>>,
-): Record<string, string> {
-  if ("PH_USER_DATA_DIR" in env) {
-    throw new Error(
-      "spawnHost: set the data dir with `dataDir`, not env.PH_USER_DATA_DIR.",
-    );
-  }
-  if (baseEnv) {
-    const base: Record<string, string> = {};
-    for (const [key, value] of Object.entries(baseEnv)) {
-      if (value !== undefined) base[key] = value;
-    }
-    return { ...base, PH_USER_DATA_DIR: dataDir, ...env };
-  }
-  const keys =
-    process.platform === "win32"
-      ? [...BASE_ENV_KEYS, ...WIN32_ENV_KEYS]
-      : BASE_ENV_KEYS;
-  const base: Record<string, string> = {};
-  for (const key of keys) {
-    const value = process.env[key];
-    if (value !== undefined) base[key] = value;
-  }
-  return {
-    ...base,
-    PH_USER_DATA_DIR: dataDir,
-    PH_NO_TELEMETRY: "1",
-    PH_NO_DOTENV: "1",
-    ...env,
-  };
-}
-
-/** The project's ph-cli, else its ph-run (a packaged app has only that). */
-function resolvePhCliEntry(projectRoot: string): string {
-  const require_ = createRequire(
-    pathToFileURL(path.join(projectRoot, "package.json")).href,
-  );
-  let pkgPath: string;
-  try {
-    pkgPath = require_.resolve("@powerhousedao/ph-cli/package.json");
-  } catch (error) {
-    try {
-      pkgPath = require_.resolve("@powerhousedao/ph-run/package.json");
-    } catch {
-      throw error;
-    }
-  }
-  return path.join(path.dirname(pkgPath), "dist", "cli.mjs");
-}
 
 /** Readiness waits for a record; refuse a host/verb that writes none.
  * Returns the key of the record it writes. */

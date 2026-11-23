@@ -19,6 +19,8 @@ export default defineConfig([
       "src/kill-tree.ts",
       "src/control-channel.ts",
       "src/instance.ts",
+      "src/supervisor.ts",
+      "src/supervisor-record.ts",
     ],
     platform: "node",
   },
