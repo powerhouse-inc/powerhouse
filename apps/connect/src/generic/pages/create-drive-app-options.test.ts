@@ -48,6 +48,19 @@ describe("the Create Drive apps' attribution", () => {
     });
   });
 
+  it("offers a project's apps first and the vetra drive apps last", () => {
+    const packages = [vetra, common, projectPackage()] as DocumentModelLib[];
+
+    expect(
+      getCreateDriveAppOptions(appsOf(packages), packages).map((app) => app.id),
+    ).toEqual([
+      "todo-app",
+      "GenericDriveExplorer",
+      "vetra-drive-app",
+      "vetra-explorer",
+    ]);
+  });
+
   it("credits a package's publisher when its manifest names one", () => {
     expect(appPublisher(projectPackage("Acme Inc.").manifest)).toBe(
       "Acme Inc.",

@@ -2,10 +2,11 @@ import type { AppOptions } from "@powerhousedao/design-system/connect";
 import type { DocumentModelLib, EditorModule, Manifest } from "document-model";
 
 // Create Drive picker order: installed/custom apps first (rank 0), then the
-// generic explorer, then the vetra drive app last.
+// generic explorer, then the vetra drive apps last.
 const DRIVE_APP_RANK: Record<string, number> = {
   GenericDriveExplorer: 1,
   "vetra-drive-app": 2,
+  "vetra-explorer": 3,
 };
 
 const POWERHOUSE_SCOPE = "@powerhousedao";
