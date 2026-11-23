@@ -4,7 +4,6 @@
  * Uses http-proxy for HTTP + WebSocket forwarding.
  */
 import http from "node:http";
-import httpProxy from "http-proxy";
 import type { Logger } from "./types.js";
 import type { ProxyRoute } from "./proxy-routes.js";
 import {
@@ -185,6 +184,8 @@ export async function createProxyServer(
     autoSelectFamily: false,
   });
 
+  // http-proxy loads when a proxy starts, not with the package index.
+  const { default: httpProxy } = await import("http-proxy");
   const proxy = httpProxy.createProxyServer({
     xfwd: true,
     agent: upstreamAgent,

@@ -48,7 +48,7 @@ import {
   DEFAULT_SKILL_INSTRUCTION,
 } from "./skill-commands.js";
 import type { SkillInvocation } from "./skill-commands.js";
-import { renderSkillTemplate } from "./templates.js";
+import { loadTemplates, renderSkillTemplate } from "./templates.js";
 import { createRoutine } from "./routine.js";
 import { createEventBus } from "./events.js";
 import { createProcessManager } from "./processes.js";
@@ -1392,6 +1392,7 @@ export function defineCli<
         exit(1);
         return;
       }
+      await loadTemplates();
       const prompt = renderSkillPrompt(invocation);
       const threadId = resumeId ?? randomUUID();
       for await (const chunk of agentProvider.stream(prompt, {

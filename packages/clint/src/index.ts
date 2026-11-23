@@ -60,6 +60,7 @@ export {
   registerDefaultHelpers,
   extractTemplateVars,
   renderSkillTemplate,
+  loadTemplates,
 } from "./core/templates.js";
 export type { RenderOptions, RenderResult } from "./core/templates.js";
 export { createRoutine } from "./core/routine.js";
@@ -80,7 +81,7 @@ export {
   getCompletionSuffix,
   applyCompletion,
 } from "./interactive/completions.js";
-export { renderMarkdown } from "./interactive/markdown.js";
+export { renderMarkdown, loadMarkdown } from "./interactive/markdown.js";
 export {
   attachDefaultReactor,
   resolveRemoteReactorConfig,

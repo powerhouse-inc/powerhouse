@@ -9,7 +9,7 @@ import {
   getCompletionSuffix,
 } from "./completions.js";
 import { getSchemaFields } from "../core/schema.js";
-import { renderMarkdown } from "./markdown.js";
+import { loadMarkdown, renderMarkdown } from "./markdown.js";
 import { formatStreamChunk } from "../core/stream.js";
 import { formatZodError } from "../core/errors.js";
 import {
@@ -17,7 +17,7 @@ import {
   DEFAULT_SKILL_INSTRUCTION,
 } from "../core/skill-commands.js";
 import type { SkillInvocation } from "../core/skill-commands.js";
-import { renderSkillTemplate } from "../core/templates.js";
+import { loadTemplates, renderSkillTemplate } from "../core/templates.js";
 
 /**
  * Format a command result for display.
@@ -251,6 +251,7 @@ export function createReplSession(opts: ReplSessionOptions): ReplSession {
       const result = await cli.execute(commandId, args, context);
       context.stdout = origStdout;
       if (isSkillInvocation(result)) {
+        await loadTemplates();
         return handleAgentPrompt(renderSkillPromptFromInvocation(result));
       }
       const text = formatResult(result);
@@ -267,6 +268,7 @@ export function createReplSession(opts: ReplSessionOptions): ReplSession {
         sessionRef?.onStreamChunk?.(resultChunk, streamParts.join(""));
       }
 
+      await loadMarkdown();
       const rendered = renderMarkdown(text);
       const prefix = captured.length > 0 ? captured.join("") : "";
       const combined =
@@ -674,6 +676,7 @@ export function createReplSession(opts: ReplSessionOptions): ReplSession {
       // keep tool segments as pre-formatted with ⎿ indentation.
       // Trim each segment to remove \n padding from formatStreamChunk,
       // then join with \n\n so segments have visual separation.
+      await loadMarkdown();
       const rendered = segments
         .map((seg) => {
           const trimmed = seg.content.trim();

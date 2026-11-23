@@ -49,6 +49,8 @@ const skillInputSchema = z.object({
   prompt: z.string().optional().describe("Instructions for the skill"),
 });
 
+const PROMPT_VAR = /\{\{\s*prompt\s*\}\}/;
+
 /**
  * Validate that an instructionTemplate includes the {{prompt}} variable.
  * Returns a warning string if missing, or undefined if ok.
@@ -57,6 +59,11 @@ function validateInstructionTemplate(
   skillName: string,
   template: string,
 ): string | undefined {
+  // A plain {{prompt}} mustache settles it without loading the template
+  // engine; comments, raw blocks and escapes need the real parse.
+  if (!/\{\{!|\{\{\{\{|\\\{\{/.test(template) && PROMPT_VAR.test(template)) {
+    return undefined;
+  }
   const vars = extractTemplateVars(template);
   if (!vars.has("prompt")) {
     return `Skill "${skillName}": instructionTemplate does not include {{prompt}} — the user's message will not be forwarded to the agent`;
