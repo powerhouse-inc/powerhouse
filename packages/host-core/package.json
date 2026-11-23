@@ -35,6 +35,12 @@
       "import": "./dist/kill-tree.mjs",
       "default": "./dist/kill-tree.mjs"
     },
+    "./control-channel": {
+      "source": "./src/control-channel.ts",
+      "types": "./dist/control-channel.d.mts",
+      "import": "./dist/control-channel.mjs",
+      "default": "./dist/control-channel.mjs"
+    },
     "./plugins": {
       "source": "./src/plugins.ts",
       "types": "./dist/plugins.d.mts",

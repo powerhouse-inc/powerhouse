@@ -801,7 +801,7 @@ describe("auto-injected service commands in CLI", () => {
     expect(cap.output.join("")).toContain("idle");
   });
 
-  it("test-svc-start via run() stops the service when the run ends", async () => {
+  it("test-svc-start via run() is refused: the service would end with the command", async () => {
     const cli = defineCli({
       name: "svc",
       version: "1.0.0",
@@ -810,31 +810,26 @@ describe("auto-injected service commands in CLI", () => {
       services: [svcDef],
     });
 
-    const cap = capture();
-    await cli.run(["node", "svc", "test-svc-start"], cap.options);
-    const started = cap.output.join("");
-    expect(started).toContain("ready");
-    const pid = Number(/pid (\d+)/.exec(started)?.[1]);
-    expect(pid).toBeGreaterThan(0);
-    trackedPids.push(pid);
-
-    // The one-shot run tore down what it started: nothing outlives it.
-    let alive = true;
-    try {
-      process.kill(pid, 0);
-    } catch {
-      alive = false;
+    for (const command of ["test-svc-start", "test-svc-restart"]) {
+      const cap = capture();
+      await cli.run(["node", "svc", command], {
+        ...cap.options,
+        serveCommand: "ph run svc-host",
+      });
+      expect(cap.exitCode).toBe(1);
+      expect(cap.output.join("")).not.toContain("ready");
+      expect(cap.errors.join("")).toContain("test-svc was not started");
+      expect(cap.errors.join("")).toContain("`ph run svc-host`");
     }
-    expect(alive).toBe(false);
 
-    // A later run sees the history, not a running service to adopt.
+    // Nothing was started, and the other commands still answer.
     const cap2 = capture();
     await cli.run(["node", "svc", "test-svc-ps"], cap2.options);
-    expect(cap2.output.join("")).toContain("stopped");
+    expect(cap2.output.join("")).toContain("idle");
 
     const cap3 = capture();
     await cli.run(["node", "svc", "test-svc-stop"], cap3.options);
-    expect(cap3.output.join("")).not.toContain("✗");
+    expect(cap3.output.join("")).toContain("test-svc is not running");
   });
 
   it("/test-svc-ps works in headless interactive mode", async () => {
@@ -871,14 +866,24 @@ describe("auto-injected service commands in CLI", () => {
       description: "test",
       commands: [],
       services: [svcDef],
+      interactive: { welcome: "Hello" },
       events: {
         "service:ready": (data) => receivedEvents.push(data),
       },
     });
 
-    const cap = capture();
-    await cli.run(["node", "svc", "test-svc-start"], cap.options);
-    expect(cap.output.join("")).toContain("ready");
+    const output: string[] = [];
+    await cli.run(["node", "svc", "-i"], {
+      stdout: (msg) => output.push(msg),
+      stderr: () => {},
+      exit: () => {},
+      workdir: tmpDir,
+      interactiveInput: (async function* () {
+        yield "/test-svc-start";
+        yield "/exit";
+      })(),
+    });
+    expect(output.join("")).toContain("ready");
 
     const svcDir = path.join(tmpDir, ".ph", "svc", "services");
     trackedPids.push(...collectPids(svcDir));

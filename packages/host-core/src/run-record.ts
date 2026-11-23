@@ -149,7 +149,16 @@ export function writeRunRecord(projectDir: string, record: RunRecord): void {
   const target = recordPath(projectDir, recordKeyOf(record));
   const valid = runRecordSchema.parse(record);
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, `${JSON.stringify(valid, null, 2)}\n`);
+  const text = `${JSON.stringify(valid, null, 2)}\n`;
+  if (valid.extra?.control === undefined) {
+    fs.writeFileSync(target, text);
+    return;
+  }
+  // It holds the control channel's token: the user's alone where the file
+  // mode says so (on Windows the folder's access rules decide).
+  fs.rmSync(target, { force: true });
+  fs.writeFileSync(target, text, { mode: 0o600 });
+  if (process.platform !== "win32") fs.chmodSync(target, 0o600);
 }
 
 export function clearRunRecord(

@@ -31,6 +31,12 @@ import {
   generateConfigCommandHelp,
 } from "./config-command.js";
 import { createServiceCommands } from "./service-command.js";
+import {
+  connectRemoteServices,
+  refuseServiceStarts,
+  serveServices,
+} from "./service-control.js";
+import { processControlChannel } from "@powerhousedao/host-core/control-channel";
 import { resolveServiceName } from "./services.js";
 import { createHelpCommand } from "./help-command.js";
 import { installSkills } from "./init.js";
@@ -79,6 +85,8 @@ interface ResolvedRunOptions {
   onServe?: RunOptions["onServe"];
   signal?: RunOptions["signal"];
   members?: RunOptions["members"];
+  remoteServices?: RunOptions["remoteServices"];
+  serveCommand?: RunOptions["serveCommand"];
 }
 
 /**
@@ -1134,6 +1142,8 @@ export function defineCli<
       onServe: runOptions?.onServe,
       signal: runOptions?.signal,
       members: runOptions?.members,
+      remoteServices: runOptions?.remoteServices,
+      serveCommand: runOptions?.serveCommand,
     };
     return runImpl(argv, resolved);
   }
@@ -1422,6 +1432,16 @@ export function defineCli<
 
     if (isBuiltinFlag || (!interactiveFlag && (isSubcommand || hasPrompt))) {
       // ── Command execution (any mode): subcommand or prompt without -i → execute, exit ──
+      // A command ends: the services it names are a running instance's, or
+      // none it may start (they would end with it).
+      if (context.services && isSubcommand && !isBuiltinFlag) {
+        const local = context.services;
+        const remote = opts.remoteServices
+          ? await connectRemoteServices(local, opts.remoteServices)
+          : undefined;
+        context.services =
+          remote ?? refuseServiceStarts(local, opts.serveCommand);
+      }
       if (hasPrompt) {
         const agentProvider = await runtime.getAgent();
         if (agentProvider) {
@@ -1482,6 +1502,16 @@ export function defineCli<
           exit(1);
           return;
         }
+      }
+      // Commands typed beside this run reach its services on the process's
+      // control channel, when the host runner opened one.
+      const control = processControlChannel();
+      if (control && context.services) {
+        serveServices(control, context.services, {
+          name: options.name,
+          version: options.version,
+          workdir,
+        });
       }
 
       // 1. PREAMBLE — validate interactive config, build session if needed

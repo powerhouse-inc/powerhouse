@@ -11,6 +11,11 @@ import {
   type RunnerKind,
 } from "./host-schemas.js";
 import { applyChildWrapper, type MemberDraft } from "./child-wrapper.js";
+import {
+  closeProcessControlChannel,
+  controlRecordOf,
+  ensureProcessControlChannel,
+} from "./control-channel.js";
 import { substituteBuiltinEnv } from "./env-substitution.js";
 import { loadHost, moduleRootOf } from "./host-loader.js";
 import { hostFileLabel, type HostPackage } from "./host-ref.js";
@@ -610,6 +615,12 @@ export async function runCompound(
   const keepsRecord =
     wiring.runtimeRecord !== false && !oneShotCompound && !beside;
   const members = prepared.map((m) => ({ key: m.key, host: m.member.host }));
+  // A stack with a terminal answers commands typed beside it: the channel
+  // opens before the foreground member starts, which answers on it.
+  const control =
+    keepsRecord && foreground !== undefined
+      ? (await ensureProcessControlChannel())?.record
+      : undefined;
 
   if (wiring.cspRegistrySync && !prepared.some(takesCspRegistrySync)) {
     console.warn(
@@ -657,6 +668,7 @@ export async function runCompound(
         if (status?.status === "stopping") status.status = "stopped";
       }
       if (keepsRecord) clearRunRecord(projectRoot, recordKey);
+      if (control) await closeProcessControlChannel();
     })());
 
   // An own-process member that died on its own: what to print, and (once the
@@ -767,7 +779,16 @@ export async function runCompound(
             parent: { host: host.name, verb },
             ...(argv.length > 0 ? { argv } : {}),
             ...(isForeground
-              ? { foreground: { members: othersSeen, beside } }
+              ? {
+                  foreground: {
+                    members: othersSeen,
+                    beside,
+                    stack: recordKey,
+                    ...(beside && controlRecordOf(live)
+                      ? { control: controlRecordOf(live) }
+                      : {}),
+                  },
+                }
               : {}),
           }),
           where,
@@ -836,7 +857,9 @@ export async function runCompound(
       pid: process.pid,
       startedAt: new Date().toISOString(),
       members: recordMembers,
-      ...(options.recordExtra ? { extra: options.recordExtra } : {}),
+      ...(options.recordExtra || control
+        ? { extra: { ...options.recordExtra, ...(control ? { control } : {}) } }
+        : {}),
     });
   }
 

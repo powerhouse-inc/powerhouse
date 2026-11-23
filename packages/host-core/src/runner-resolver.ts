@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import type { ControlRecord } from "./control-channel.js";
 import type { HostPackage } from "./host-ref.js";
 import { runnerKindSchema, type RunnerKind } from "./host-schemas.js";
 import {
@@ -69,6 +70,10 @@ export interface ForegroundContext {
    * for this run, which reads its outputs from the live record and must
    * end (a command beside the stack). */
   beside: boolean;
+  /** The stack as `ph run` addresses it (its run record's key). */
+  stack?: string;
+  /** Beside a stack that answers on a control channel: where. */
+  control?: ControlRecord;
 }
 
 /**

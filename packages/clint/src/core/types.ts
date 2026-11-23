@@ -1163,6 +1163,18 @@ export interface RunOptions {
    * compound owns their life.
    */
   members?: () => readonly import("@powerhousedao/host-core").MemberStatus[];
+  /**
+   * The control channel of a running instance of this CLI (from its run
+   * record). A command that ends acts on that instance's services through
+   * it: `<service>-ps`, `-start`, `-stop` and `-restart` reach what runs
+   * there.
+   */
+  remoteServices?: import("@powerhousedao/host-core/control-channel").ControlRecord;
+  /**
+   * How this CLI is started so that it keeps running (`ph run <host>`): named
+   * when a command that ends is refused a service start.
+   */
+  serveCommand?: string;
 }
 
 /** See `RunOptions.reactor`. */

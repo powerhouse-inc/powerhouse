@@ -96,6 +96,23 @@ export {
   type StopRunOptions,
   type StopRunResult,
 } from "./stop-channel.js";
+export {
+  callControl,
+  closeProcessControlChannel,
+  CONTROL_PROTOCOL,
+  ControlError,
+  controlRecordOf,
+  controlRecordSchema,
+  ensureProcessControlChannel,
+  openControlChannel,
+  processControlChannel,
+  type CallControlOptions,
+  type ControlChannel,
+  type ControlErrorCode,
+  type ControlHandler,
+  type ControlRecord,
+  type OpenControlChannelOptions,
+} from "./control-channel.js";
 export { killTree } from "./kill-tree.js";
 export {
   SPAWN_STOPPING_NOTE,

@@ -4,6 +4,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   clearRunRecord,
+  controlRecordOf,
+  ensureProcessControlChannel,
   probeRun,
   readProjectName,
   readRunRecord,
@@ -259,6 +261,10 @@ export interface RunCliOptions {
   signal?: AbortSignal;
   /** The compound's other members (see `RunOptions.members`). */
   members?: RunOptions["members"];
+  /** A running instance's control channel (see `RunOptions.remoteServices`). */
+  remoteServices?: RunOptions["remoteServices"];
+  /** How the Cli is started to keep running (see `RunOptions.serveCommand`). */
+  serveCommand?: string;
 }
 
 /**
@@ -325,6 +331,10 @@ export async function runCli(
       ...(options.onServe ? { onServe: options.onServe } : {}),
       ...(options.signal ? { signal: options.signal } : {}),
       ...(options.members ? { members: options.members } : {}),
+      ...(options.remoteServices
+        ? { remoteServices: options.remoteServices }
+        : {}),
+      ...(options.serveCommand ? { serveCommand: options.serveCommand } : {}),
     });
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
@@ -338,14 +348,15 @@ export async function runCli(
 /**
  * The record of a Cli that keeps running: what `ph run <host> --stop` reads.
  * A one-shot writes none and takes no lock, so it runs beside a serving
- * instance; a second serving instance is refused.
+ * instance; a second serving instance is refused. The record names the
+ * process's control channel, which the Cli answers service requests on.
  */
-function recordServing(
+async function recordServing(
   projectRoot: string,
   hostName: string,
   verb: string,
   hostPackage?: string,
-): void {
+): Promise<void> {
   const projectName = readProjectName(projectRoot);
   // A package's host is filed, and addressed, behind its package.
   const key = runRecordKey(hostName, hostPackage);
@@ -361,6 +372,7 @@ function recordServing(
       `.ph/run/${key}.json describes a live "${probe.record.projectName}", but this project is "${projectName}". Refusing to start a second instance.`,
     );
   }
+  const control = (await ensureProcessControlChannel())?.record;
   writeRunRecord(projectRoot, {
     version: 2,
     host: hostName,
@@ -371,6 +383,7 @@ function recordServing(
     pid: process.pid,
     startedAt: new Date().toISOString(),
     outputs: {},
+    ...(control ? { extra: { control } } : {}),
   });
   process.on("exit", () => {
     if (readRunRecord(projectRoot, key)?.pid === process.pid) {
@@ -436,8 +449,12 @@ function inStack(
     workdir: ctx.projectRoot,
     signal: stop.signal,
     members: ctx.foreground.members,
+    serveCommand: `ph run ${ctx.foreground.stack ?? stack}`,
     ...(ctx.foreground.beside
       ? {
+          ...(ctx.foreground.control
+            ? { remoteServices: ctx.foreground.control }
+            : {}),
           onServe: () => {
             throw new Error(
               `${stack} is already running: beside it, \`ph run ${stack} -- <command>\` runs a command that ends. The shell and a serving Cli run in the stack itself.`,
@@ -491,11 +508,24 @@ export async function run(
     return inStack(cli, host, { ...ctx, foreground: ctx.foreground }, url);
   }
   const stopStream = stopStreamOf(ctx.env, () => process.stdin);
+  // A command beside a serving instance of this host reaches its services.
+  const key = runRecordKey(host.name, ctx.hostPackage?.name);
+  const probe = probeRun(
+    ctx.projectRoot,
+    key,
+    readProjectName(ctx.projectRoot),
+  );
+  const remoteServices =
+    probe.status === "live" && probe.record.pid !== process.pid
+      ? controlRecordOf(probe.record)
+      : undefined;
   const code = await runCli(cli, {
     argv: ctx.argv ?? [],
     ...(url ? { url } : {}),
     workdir: ctx.projectRoot,
     ...(stopStream ? { stopStream } : {}),
+    ...(remoteServices ? { remoteServices } : {}),
+    serveCommand: `ph run ${key}`,
     onServe: () =>
       recordServing(
         ctx.projectRoot,

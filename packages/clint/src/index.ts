@@ -31,6 +31,13 @@ export {
   resolveServiceName,
 } from "./core/services.js";
 export { createServiceCommands, formatStatus } from "./core/service-command.js";
+export {
+  connectRemoteServices,
+  refuseServiceStarts,
+  restartService,
+  serveServices,
+  ServiceStartRefused,
+} from "./core/service-control.js";
 export { scanProjects, PROJECT_INDICATORS } from "./core/project-scanner.js";
 export { getProjectMapping } from "./core/project-mapping.js";
 export type { ProjectMapping } from "./core/project-mapping.js";

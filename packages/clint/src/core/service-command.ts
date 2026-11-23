@@ -7,6 +7,7 @@ import type {
   ServiceInstanceStatus,
 } from "./types.js";
 import { getSchemaFields } from "./schema.js";
+import { restartService, ServiceStartRefused } from "./service-control.js";
 import { resolveServiceName } from "./services.js";
 
 /**
@@ -134,6 +135,7 @@ export function createServiceCommands(def: ServiceDefinition<any>): Command[] {
           .find((s) => s.instanceId === instanceId);
         return { text: formatStatus(status!) };
       } catch (err: unknown) {
+        if (err instanceof ServiceStartRefused) throw err;
         const msg = err instanceof Error ? err.message : String(err);
         return { text: `✗ ${id}: ${msg}` };
       }
@@ -169,38 +171,18 @@ export function createServiceCommands(def: ServiceDefinition<any>): Command[] {
       const services = context.services;
       if (!services) throw new Error("No services configured");
       try {
-        // Stop if running, capturing its workdir/params for the restart
-        const statuses = services.list(id);
-        const running = statuses.filter(
-          (s) => s.status === "ready" || s.status === "starting",
+        const instanceId = await restartService(
+          services,
+          id,
+          input.instance as string | undefined,
+          context.workdir,
         );
-
-        let prevWorkdir: string | undefined;
-        let prevParams: Record<string, unknown> | undefined;
-        let prevName: string | undefined;
-
-        if (running.length > 0) {
-          const instance = running[0]!;
-          prevWorkdir = instance.workdir;
-          prevParams = instance.params;
-          if (instance.instanceId?.includes(":")) {
-            prevName = instance.instanceId.split(":")[1];
-          }
-          await services.stop(id, input.instance as string | undefined);
-        }
-
-        const cwd = prevWorkdir ?? context.workdir;
-        const instanceId = await services.start(id, {
-          workdir: cwd,
-          cwd,
-          params: prevParams,
-          name: prevName,
-        });
         const status = services
           .list(id)
           .find((s) => s.instanceId === instanceId);
         return { text: formatStatus(status!) };
       } catch (err: unknown) {
+        if (err instanceof ServiceStartRefused) throw err;
         const msg = err instanceof Error ? err.message : String(err);
         return { text: `✗ ${id}: ${msg}` };
       }
