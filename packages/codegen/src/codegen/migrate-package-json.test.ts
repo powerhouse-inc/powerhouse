@@ -77,7 +77,8 @@ describe("the scripts migrate manages", () => {
     });
     expect(scripts.lint).toBe(packageScripts.lint);
     expect(scripts.build).toBe(packageScripts.build);
-    expect(scripts.vetra).toBe(packageScripts.vetra);
+    expect(scripts.dev).toBe(packageScripts.dev);
+    expect(scripts).not.toHaveProperty("vetra");
     expect(kept).toEqual([]);
   });
 
@@ -88,17 +89,21 @@ describe("the scripts migrate manages", () => {
       reactor: "ph-cli reactor",
     });
     expect(scripts.connect).toBe("ph-cli run connect");
+    // No longer scripts of the scaffold, but still the values it wrote.
     expect(scripts.vetra).toBe("ph-cli run vetra");
-    // No longer a script of the scaffold, but still the value it wrote.
     expect(scripts.reactor).toBe("ph-cli run switchboard");
     expect(kept).toEqual([]);
   });
 
   it("leaves the classic commands when the project has no such host", () => {
     const own = { connect: "ph-cli connect" };
-    const { scripts, kept } = migratedScripts(own, (name) => name !== "vetra");
+    const { scripts, kept } = migratedScripts(
+      own,
+      (name) => name !== "vetra" && name !== "dev",
+    );
     expect(scripts.connect).toBe("ph-cli run connect");
-    // No vetra host: none is added.
+    // No dev or vetra host: no script is added for one.
+    expect(scripts).not.toHaveProperty("dev");
     expect(scripts).not.toHaveProperty("vetra");
     expect(
       migratedScripts({ vetra: "ph-cli vetra" }, () => false).scripts.vetra,
@@ -287,7 +292,8 @@ describe("the scripts of a new project", () => {
 
   it("run the project's hosts, with no classic command", () => {
     expect(scaffolded.scripts.connect).toBe("ph-cli run connect");
-    expect(scaffolded.scripts.vetra).toBe("ph-cli run vetra");
+    expect(scaffolded.scripts.dev).toBe("ph-cli run dev");
+    expect(scaffolded.scripts).not.toHaveProperty("vetra");
     for (const name of [
       "reactor",
       "service",

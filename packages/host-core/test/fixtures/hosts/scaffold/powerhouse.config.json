@@ -82,9 +82,6 @@
       "unsupportedStoredDocuments": "refuse"
     }
   },
-  "vetra": {
-    "connectPort": 2491
-  },
   "assistant": {
     "port": 4910
   }

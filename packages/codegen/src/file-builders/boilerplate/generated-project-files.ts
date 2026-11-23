@@ -1,4 +1,5 @@
 import {
+  LEGACY_DEV_HOST,
   packageScripts,
   projectFiles,
   writeFileEnsuringDir,
@@ -367,8 +368,8 @@ export async function writeGeneratedHostsFiles(
     templates.switchboardHost,
   );
   await seedUserOwnedFile(
-    join(projectDir, "hosts/vetra/host.js"),
-    templates.vetraHost,
+    join(projectDir, "hosts/dev/host.js"),
+    templates.devHost,
   );
   await seedUserOwnedFile(
     join(projectDir, "hosts/desktop/host.js"),
@@ -644,7 +645,7 @@ export async function applyProjectCustomizations(args: {
   // powerhouse.manifest.json: set the project name.
   await createOrUpdateManifest({ name }, projectDir);
   // powerhouse.config.json: assign this project's dev-server ports, plus the
-  // vetra remote-drive field. Written here as well as in
+  // remote-drive field. Written here as well as in
   // buildPowerhouseConfigTemplate because the `--clone` path inherits the
   // *source* project's config, and its ports would otherwise collide with it.
   const ports = deriveProjectPorts(name);
@@ -655,14 +656,18 @@ export async function applyProjectCustomizations(args: {
     ...(config.reactor as object),
     port: ports.switchboardPort,
   };
-  const vetra: Record<string, unknown> = {
-    ...(config.vetra as object),
-    connectPort: ports.vetraConnectPort,
-  };
-  if (remoteDrive) {
-    vetra.driveUrl = remoteDrive;
+  // A cloned project that has hosts/vetra keeps a port of its own for it.
+  if (
+    projectFiles.exists(join(projectDir, "hosts", LEGACY_DEV_HOST, "host.js"))
+  ) {
+    config.vetra = {
+      ...(config.vetra as object),
+      connectPort: ports.vetraConnectPort,
+    };
   }
-  config.vetra = vetra;
+  if (remoteDrive) {
+    config.vetra = { ...(config.vetra as object), driveUrl: remoteDrive };
+  }
   await writeJsonFile(configPath, config, { indent: 2 });
   // A cloned template may still point reactor-mcp at its own port.
   await migrateReactorMcpEntries(projectDir);

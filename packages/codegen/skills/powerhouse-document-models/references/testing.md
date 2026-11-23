@@ -6,40 +6,65 @@
 
 ## Coverage rule
 
-- Run `npm run test:coverage` after any reducer change. Coverage counts schema-first reducers in `document-models/**/src/reducers/**` and code-first modules in `document-models/**/v*/modules/**`.
+- Run `npm run test:coverage` after any reducer change. Coverage counts the modules in `document-models/**/v*/modules/**`, and the reducers in `document-models/**/src/reducers/**` of a model that still has a `gen/` folder.
 - Reducers stay at 95% or more on lines, branches, functions and statements. Below that, add tests in `document-models/<name>/v<n>/tests/` until it passes. Don't lower the threshold or exclude files.
-- Cover the happy path and every error defined with `ADD_OPERATION_ERROR`. Each error is a branch.
-- Import the reducer, `utils`, action creators and input schemas from `document-models/<name>/v<n>`, as the generated tests do.
-- The generated `should handle <operation> operation` tests check that the recorded operation has no `error`. They fail while the reducer is codegen's stub, and for an operation that needs existing state (e.g. a book to finish): dispatch that state first in the test.
+- Cover the happy path and every error an operation declares. Each error is a branch.
+- Import the version from the model's entry and take `actions`, `reducer` and `utils` from it, as the stub's tests do:
+
+```typescript
+import { describe, expect, it } from "vitest";
+import { OrderV1 } from "../../index.js";
+
+const { actions, reducer, utils } = OrderV1;
+
+describe("Order v1 line items", () => {
+  it("adds a line item", () => {
+    const document = reducer(
+      utils.createDocument(),
+      actions.addLineItem({ id: "item-1", label: "Margherita" }),
+    );
+    expect(document.state.global.lineItems).toStrictEqual([
+      { id: "item-1", label: "Margherita" },
+    ]);
+  });
+});
+```
+
+- An operation that needs existing state (e.g. a book to finish) gets it from earlier actions in the same test: dispatch them first.
 
 ## Testing reducer errors
 
 A reducer that throws does not throw out of `reducer`:
 
-1. The reducer throws, e.g. `throw new InvalidNameError("message")`.
+1. The reducer throws, e.g. `throw new errors.InvalidName("message")`.
 2. The operation is still recorded in `document.operations.global` (or `.local`).
 3. Its `error` property holds the error message as a string.
 4. Changes made before the throw stay in the state. The state is not rolled back.
 
-Never use `.toThrow()` or `expect(() => ...).toThrow()` for reducer errors. Read the operation instead, at the right index: the index is the number of operations dispatched before it in that scope. The first operation is `[0]`; after three earlier operations it is `[3]`.
+Never use `.toThrow()` or `expect(() => ...).toThrow()` for reducer errors. Read the recorded operation instead: `.at(-1)` is the one just dispatched.
 
 ```typescript
-it("should return error and not mutate state", () => {
+it("records the error and leaves the state alone", () => {
   const document = utils.createDocument();
-  const initialState = document.state.global.name;
+  const initialName = document.state.global.name;
 
-  const updatedDocument = reducer(document, setName({ name: "invalid" }));
+  const updated = reducer(document, actions.setName({ name: "invalid" }));
 
-  // 0 = first operation
-  expect(updatedDocument.operations.global[0].error).toBe(
-    "Name is not allowed",
-  );
+  expect(updated.operations.global.at(-1)?.error).toBe("Name is not allowed");
   // The reducer threw before changing anything
-  expect(updatedDocument.state.global.name).toBe(initialState);
+  expect(updated.state.global.name).toBe(initialName);
 });
 
-// Wrong: never use toThrow()
-expect(() => reducer(document, setName({ name: "invalid" }))).toThrow();
+// Wrong: a reducer error never reaches toThrow()
+expect(() => reducer(document, actions.setName({ name: "invalid" }))).toThrow();
+```
+
+An input that does not match the operation's declared input is a different case: the action creator itself throws, before any reducer runs.
+
+```typescript
+expect(() =>
+  actions.setName({ name: 1 as unknown as string }),
+).toThrow();
 ```
 
 This holds for the document `reducer` returns in tests. An editor in Connect gets rejected actions through `dispatch`'s `onErrors` callback instead; the powerhouse-editors skill covers it.
@@ -52,15 +77,15 @@ Write a few scenario tests first, each chaining many operations the way a real c
 
 Then sort each uncovered branch before writing a test for it:
 
-1. Wrong nullability: the type allows `null`, but the value is always set. Fix the type (e.g. `Int!` through `SET_STATE_SCHEMA` or `SET_OPERATION_SCHEMA`), and the fallback branch disappears.
-2. Missing validation: the field is required for a variant, but the reducer accepts its absence. Add a named error with `ADD_OPERATION_ERROR` and reject. The new branch is reachable and worth a test.
+1. Wrong nullability: the type allows `null`, but the value is always set. Declare the field `{ required: true }` in the state or the input, and the fallback branch disappears.
+2. Missing validation: the field is required for a variant, but the reducer accepts its absence. Declare a named error on the operation and reject. The new branch is reachable and worth a test.
 3. Wrong operator: `||` where `??` belongs, so falsy but valid values (`0`, `false`, `""`) become the fallback. Fix the operator and test with a falsy value.
 4. Real optionality: both sides are reachable with valid inputs. Vary the inputs of existing scenario tests to hit both.
 
 Then extend the scenario tests to reach the rest:
 
 - Skip initialization to reach "not yet initialized" branches.
-- Chain invalid operations and read their errors by operation index, as above.
+- Chain invalid operations and read each one's error from the operation it recorded, as above.
 - Use minimal or empty inputs for fallback-to-null branches.
 - Vary inputs so both sides of each real `??` are hit.
 

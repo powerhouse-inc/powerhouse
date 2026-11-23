@@ -234,12 +234,19 @@ export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/host-core",
   "@powerhousedao/clint",
   "@powerhousedao/desktop",
-  // the Vetra Studio plugins the scaffolded vetra host composes (verb dev)
-  "@powerhousedao/vetra-studio",
   // the switchboard plugins the scaffolded switchboard host composes
   // (workflows, mcp, …) and their PHPluginConfigs types for tsc -p hosts.
   "@powerhousedao/switchboard",
 ];
+
+// The host `ph dev` runs, and the one earlier scaffolds wrote in its place:
+// a project that has only the earlier one keeps running it.
+export const DEV_HOST = "dev" as const;
+export const LEGACY_DEV_HOST = "vetra" as const;
+
+// The plugins a project's hosts/vetra composes. `ph migrate` manages them
+// only in a project that has that host; no scaffold installs them.
+export const LEGACY_DEV_HOST_DEV_DEPENDENCIES = ["@powerhousedao/vetra-studio"];
 
 export const packageJsonExports = {
   ".": {
@@ -312,7 +319,7 @@ export const packageJsonExports = {
 
 export const packageScripts = {
   "test:watch": "vitest",
-  // Routes type-check against the tree, which Vetra or a build would write.
+  // Routes type-check against the tree, which a dev run or a build would write.
   lint: "ph-cli generate connect-routes && oxlint --type-aware --type-check",
   "lint:fix":
     "ph-cli generate connect-routes && oxlint --type-aware --type-check --fix",
@@ -324,7 +331,7 @@ export const packageScripts = {
   // The project's hosts (hosts/<name>/host.js), as `ph run <host>`.
   connect: "ph-cli run connect",
   build: "ph-cli build",
-  vetra: "ph-cli run vetra",
+  dev: "ph-cli run dev",
   // The MCP configs run it as `node --run mcp`, which needs no shell on Windows.
   mcp: "ph-cli mcp",
 } as const;
@@ -332,7 +339,7 @@ export const packageScripts = {
 // The scripts of `packageScripts` that run the host of the same name.
 export const HOST_PACKAGE_SCRIPTS: readonly (keyof typeof packageScripts)[] = [
   "connect",
-  "vetra",
+  "dev",
 ];
 
 // The values earlier scaffolds wrote for a script of `packageScripts`. `ph
@@ -354,7 +361,6 @@ export const SUPERSEDED_PACKAGE_SCRIPTS: Partial<
   build: ["npm run tsc && npm run tailwind"],
   // The classic commands, before the hosts.
   connect: ["ph-cli connect"],
-  vetra: ["ph-cli vetra"],
 };
 
 // Scripts earlier scaffolds wrote under names `packageScripts` no longer has.
@@ -370,6 +376,12 @@ export const RETIRED_PACKAGE_SCRIPTS: Record<
     values: ["ph-cli reactor"],
     replacement: "ph-cli run switchboard",
     host: "switchboard",
+  },
+  // The classic dev mode; `ph-cli vetra` opens Vetra Studio.
+  vetra: {
+    values: ["ph-cli vetra"],
+    replacement: "ph-cli run vetra",
+    host: LEGACY_DEV_HOST,
   },
   service: { values: ["ph-cli service"] },
   "service-startup": {

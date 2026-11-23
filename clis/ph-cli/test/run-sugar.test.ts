@@ -14,10 +14,10 @@ afterEach(() => {
   }
 });
 
-function makeProject(withHost?: string): string {
+function makeProject(...withHosts: string[]): string {
   const dir = mkdtempSync(path.join(tmpdir(), "ph-run-sugar-"));
   temporary.push(dir);
-  if (withHost !== undefined) {
+  for (const withHost of withHosts) {
     const hostDir = path.join(dir, "hosts", withHost);
     mkdirSync(hostDir, { recursive: true });
     writeFileSync(path.join(hostDir, "host.js"), "export default {};");
@@ -72,24 +72,39 @@ describe("applyRunSugar", () => {
     });
   });
 
-  it("routes bare `ph dev` to the vetra host in a hosts project (P0.9)", () => {
-    const project = makeProject("vetra");
+  it("routes bare `ph dev` to the dev host in a hosts project (P0.9)", () => {
+    const project = makeProject("dev");
+    expect(applyRunSugar(["dev"], KNOWN, project).args).toEqual(["run", "dev"]);
+  });
+
+  it("routes `ph dev` to hosts/vetra in a project that has it and no hosts/dev", () => {
+    const project = makeProject("vetra", "connect", "switchboard");
     expect(applyRunSugar(["dev"], KNOWN, project).args).toEqual([
       "run",
       "vetra",
     ]);
-  });
-
-  it("routes `ph dev` with a verb and flags to the vetra host, all kept", () => {
-    const project = makeProject("vetra");
     expect(applyRunSugar(["dev", "--watch"], KNOWN, project).args).toEqual([
       "run",
       "vetra",
       "--watch",
     ]);
+  });
+
+  it("routes `ph dev` to hosts/dev in a project that has both", () => {
+    const project = makeProject("vetra", "dev");
+    expect(applyRunSugar(["dev"], KNOWN, project).args).toEqual(["run", "dev"]);
+  });
+
+  it("routes `ph dev` with a verb and flags to the dev host, all kept", () => {
+    const project = makeProject("dev");
+    expect(applyRunSugar(["dev", "--watch"], KNOWN, project).args).toEqual([
+      "run",
+      "dev",
+      "--watch",
+    ]);
     expect(applyRunSugar(["dev", "dev"], KNOWN, project).args).toEqual([
       "run",
-      "vetra",
+      "dev",
       "dev",
     ]);
     expect(
@@ -100,7 +115,7 @@ describe("applyRunSugar", () => {
       ).args,
     ).toEqual([
       "run",
-      "vetra",
+      "dev",
       "--switchboard-port",
       "4001",
       "--connect-port=3001",
@@ -112,12 +127,12 @@ describe("applyRunSugar", () => {
     for (const project of [makeProject(), makeProject("desktop")]) {
       expect(applyRunSugar(["dev", "--watch"], KNOWN, project).args).toEqual([
         "run",
-        "vetra",
+        "dev",
         "--watch",
       ]);
       expect(applyRunSugar(["dev"], KNOWN, project).args).toEqual([
         "run",
-        "vetra",
+        "dev",
       ]);
       expect(
         applyRunSugar(["switchboard", "migrate"], KNOWN, project).args,
@@ -125,16 +140,8 @@ describe("applyRunSugar", () => {
     }
   });
 
-  it("routes `ph dev` to the vetra host even where hosts/dev exists", () => {
-    const project = makeProject("dev");
-    expect(applyRunSugar(["dev"], KNOWN, project).args).toEqual([
-      "run",
-      "vetra",
-    ]);
-  });
-
   // `ph vetra` is the Vetra Studio gateway, which cli.ts runs before this.
-  it("no longer routes `ph vetra` to the vetra host", () => {
+  it("does not route `ph vetra` to the vetra host", () => {
     const known = new Set(Object.keys(phCliCommands));
     for (const project of [makeProject(), makeProject("vetra")]) {
       for (const args of [["vetra"], ["vetra", "--watch"], ["vetra", "dev"]]) {

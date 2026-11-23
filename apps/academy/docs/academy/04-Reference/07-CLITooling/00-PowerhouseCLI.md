@@ -286,7 +286,7 @@ Run a host from the project's hosts/ folder: `ph run <host> [verb]`. The host's 
 ## Parameters
 
 ### Arguments
-**Host *[required]*** - Folder name under hosts/ (e.g. vetra, connect), or `<package>/<host>` for one in an installed package's hosts/ (e.g. `@acme/tools/studio`). - Usage: `<host>`
+**Host *[required]*** - Folder name under hosts/ (e.g. dev, connect), or `<package>/<host>` for one in an installed package's hosts/ (e.g. `@acme/tools/studio`). - Usage: `<host>`
 
 **Verb** - Runner verb (default: run; e.g. dev, build, serve). - Usage: `[verb]`
 
@@ -991,18 +991,20 @@ It reads the powerhouse.config.json file and shows the packages that are current
 Serve the project's reactor-mcp tools to a coding agent over stdio.
 
 Use it as the MCP server command in .mcp.json, .cursor/mcp.json and
-.gemini/settings.json. Tools are listed at once, without waiting for Vetra.
-The first tool call connects to the project's running Vetra (found through
-.ph/vetra-runtime.json), or starts one in the background and waits for it to
-be ready: `ph run vetra --strictPort`, the project's hosts/vetra host. How
+.gemini/settings.json. Tools are listed at once, without waiting for the
+project's dev stack. The first tool call connects to the running one (found
+through .ph/vetra-runtime.json), or starts one in the background and waits
+for it to be ready: `ph run dev --strictPort`, the project's hosts/dev host
+(hosts/vetra in a project that has it and no hosts/dev). How
 the start goes is reported as MCP progress notifications when the client sent a progressToken, else on
 stderr.
-Startup failures come back as tool errors carrying Vetra's output, which is
-also written to .ph/vetra.log.
+Startup failures come back as tool errors carrying the stack's output, which
+is also written to .ph/vetra.log.
 
 Beside reactor-mcp's tools it serves restartVetra, which stops the project's
-Vetra, starts it again and returns its URLs. When Vetra restarts some other
-way (stopped and started again), the next tool call connects to the new one.
+dev stack, starts it again and returns its URLs. When the stack restarts some
+other way (stopped and started again), the next tool call connects to the new
+one.
 
 
 
@@ -1010,7 +1012,7 @@ way (stopped and started again), the next tool call connects to the new one.
 ### Options
 **Project Dir** - Powerhouse project to serve. Defaults to the nearest directory above the working directory that holds powerhouse.config.json. - Usage: `--project-dir <str>`
 
-**Start Timeout** - Seconds to wait for Vetra to answer /ready after starting it on the first tool call - Usage: `--start-timeout <number>`
+**Start Timeout** - Seconds to wait for the dev host to answer /ready after starting it on the first tool call - Usage: `--start-timeout <number>`
 
 **Default:** `120`
 

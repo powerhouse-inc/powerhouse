@@ -192,23 +192,24 @@ export const sourceConfigSchema = {
     vetra: {
       type: "object",
       additionalProperties: false,
-      description: "Vetra integration coordinates.",
+      description:
+        "Settings of a project's hosts/vetra, and the remote drive `ph init --remote-drive` records. A project without that host needs none of them.",
       properties: {
         driveUrl: {
           type: "string",
           description:
-            "A remote Vetra drive `ph dev` connects to. Written by `ph init --remote-drive`; overridden by --remote-drive.",
+            "A remote drive the project was created from. Written by `ph init --remote-drive`; overridden by --remote-drive.",
         },
         connectPort: {
           type: "integer",
           description:
-            "Port `ph dev`'s Connect dev server listens on. Assigned per project by `ph init`. Overridden by PH_VETRA_CONNECT_PORT or --connect-port.",
+            "Port the Connect dev server of hosts/vetra listens on. Overridden by PH_VETRA_CONNECT_PORT or --connect-port.",
         },
         previewDrive: {
           type: "object",
           additionalProperties: false,
           description:
-            "The Vetra Preview drive `ph dev` creates in watch mode.",
+            "The Vetra Preview drive hosts/vetra creates in watch mode.",
           properties: {
             app: {
               type: "string",

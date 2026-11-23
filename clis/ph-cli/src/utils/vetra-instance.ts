@@ -1,15 +1,13 @@
 import { probeVetraRuntime } from "./vetra-runtime.js";
 
 /**
- * One Vetra per project. `ph run vetra` records its stack in
- * `.ph/run/vetra.json` and, once ready, in `.ph/vetra-runtime.json`, which is
- * what a start asks here: whether a Vetra already holds the project.
+ * One dev stack per project. `ph run dev` (hosts/vetra in a project that has
+ * only that one) records its stack in `.ph/run/<host>.json` and, once ready,
+ * in `.ph/vetra-runtime.json`, which is what a start asks here: whether a
+ * stack already holds the project.
  */
 
-/** The host folder `ph dev` runs, and the name its host file carries. */
-export const VETRA_HOST = "vetra";
-
-/** Why `ph run vetra` must not start: a live Vetra holds the project. */
+/** Why the dev host must not start: a live one holds the project. */
 export async function vetraRuntimeRefusal(
   projectDir: string,
   projectName: string,

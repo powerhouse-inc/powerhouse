@@ -1,4 +1,6 @@
 import { probeHostsFolder, splitRunArgv } from "@powerhousedao/host-core";
+import { DEV_HOST } from "@powerhousedao/shared/clis/constants";
+import { devHostOf, type DevHost } from "./dev-host.js";
 
 export interface RunSugarResult {
   args: string[];
@@ -6,21 +8,28 @@ export interface RunSugarResult {
   warning?: string;
 }
 
-/** A host every scaffold has. */
-export type SugarHost = "vetra" | "connect" | "switchboard";
+/** A host a scaffold has. */
+export type SugarHost = DevHost | "connect" | "switchboard";
 
 /**
  * The commands that run a host every scaffold has, and the host: `ph dev`,
  * `ph connect` and `ph switchboard` are `ph run <host>` and have no code of
- * their own. `ph dev` runs hosts/vetra, the dev mode. They are rewritten
+ * their own. `ph dev` runs the dev mode: hosts/dev, or hosts/vetra in a
+ * project that has only that one ({@link sugarHostOf}). They are rewritten
  * whatever the project holds, so a project without the host gets the error
  * of `ph run` (sugar-checks.ts says it first, as typed).
  */
 export const HOST_COMMANDS: Readonly<Record<string, SugarHost>> = {
-  dev: "vetra",
+  dev: DEV_HOST,
   connect: "connect",
   switchboard: "switchboard",
 };
+
+/** The host the command runs in this project. */
+export function sugarHostOf(command: string, projectRoot: string): SugarHost {
+  const host = HOST_COMMANDS[command];
+  return host === DEV_HOST ? devHostOf(projectRoot) : host;
+}
 
 /** `ph connect <subcommand>` and the verb of the connect host it stands for. */
 export const CONNECT_VERBS: Readonly<Record<string, string>> = {
@@ -70,7 +79,9 @@ export function applyRunSugar(
     return { args: connectSugar(args) };
   }
   if (Object.hasOwn(HOST_COMMANDS, first)) {
-    return { args: ["run", HOST_COMMANDS[first], ...args.slice(1)] };
+    return {
+      args: ["run", sugarHostOf(first, projectRoot), ...args.slice(1)],
+    };
   }
   if (knownCommands.has(first)) {
     return { args };

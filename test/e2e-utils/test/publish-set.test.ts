@@ -96,7 +96,7 @@ describe("what a scaffolded project installs", () => {
     expect([...installed()]).not.toContain("@powerhousedao/vetra");
   });
 
-  it.skip("the scaffold does not install @powerhousedao/vetra-studio", () => {
+  it("the scaffold does not install @powerhousedao/vetra-studio", () => {
     expect([...installed()]).not.toContain("@powerhousedao/vetra-studio");
   });
 });

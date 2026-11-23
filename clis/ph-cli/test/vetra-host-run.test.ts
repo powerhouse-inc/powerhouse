@@ -314,34 +314,37 @@ describe("ph run vetra", () => {
     expect(readVetraRuntime(dir)?.pid).toBe(OTHER_PID);
   });
 
-  it("is what the run command dispatches hosts/vetra to, and only that", async () => {
-    const dir = makeProject("vetra", "switchboard");
-    const cwd = vi.spyOn(process, "cwd").mockReturnValue(dir);
-    vi.mocked(startRun).mockResolvedValue(compoundResult(switchboardOutputs));
+  it.each(["dev", "vetra"])(
+    "is what the run command dispatches hosts/%s to, and only that",
+    async (host) => {
+      const dir = makeProject(host, "switchboard");
+      const cwd = vi.spyOn(process, "cwd").mockReturnValue(dir);
+      vi.mocked(startRun).mockResolvedValue(compoundResult(switchboardOutputs));
 
-    await runHost.handler({
-      host: "vetra",
-      verb: undefined,
-      debug: undefined,
-      stop: undefined,
-      explain: undefined,
-      argv: [],
-    });
-    expect(readVetraRuntime(dir)?.pid).toBe(process.pid);
+      await runHost.handler({
+        host,
+        verb: undefined,
+        debug: undefined,
+        stop: undefined,
+        explain: undefined,
+        argv: [],
+      });
+      expect(readVetraRuntime(dir)?.pid).toBe(process.pid);
 
-    const other = makeProject("switchboard");
-    cwd.mockReturnValue(other);
-    await runHost.handler({
-      host: "switchboard",
-      verb: undefined,
-      debug: undefined,
-      stop: undefined,
-      explain: undefined,
-      argv: [],
-    });
-    expect(startRun).toHaveBeenCalledTimes(2);
-    expect(readVetraRuntime(other)).toBeUndefined();
-  });
+      const other = makeProject("switchboard");
+      cwd.mockReturnValue(other);
+      await runHost.handler({
+        host: "switchboard",
+        verb: undefined,
+        debug: undefined,
+        stop: undefined,
+        explain: undefined,
+        argv: [],
+      });
+      expect(startRun).toHaveBeenCalledTimes(2);
+      expect(readVetraRuntime(other)).toBeUndefined();
+    },
+  );
 });
 
 describe("the guard of ph run vetra", () => {
@@ -356,8 +359,23 @@ describe("the guard of ph run vetra", () => {
 });
 
 describe("what the ph mcp launcher starts", () => {
-  it("is ph run vetra, strict port", () => {
-    expect(currentPhCliRunVetraCommand()).toEqual({
+  it("is ph run dev, strict port", () => {
+    for (const dir of [
+      makeProject("dev", "connect", "switchboard"),
+      makeProject("dev", "vetra"),
+      makeProject(),
+    ]) {
+      expect(currentPhCliRunVetraCommand(dir)).toEqual({
+        command: process.execPath,
+        args: [process.argv[1], "run", "dev", "--strictPort"],
+        label: "ph run dev",
+      });
+    }
+  });
+
+  it("is ph run vetra in a project with hosts/vetra and no hosts/dev", () => {
+    const dir = makeProject("vetra", "connect", "switchboard");
+    expect(currentPhCliRunVetraCommand(dir)).toEqual({
       command: process.execPath,
       args: [process.argv[1], "run", "vetra", "--strictPort"],
       label: "ph run vetra",

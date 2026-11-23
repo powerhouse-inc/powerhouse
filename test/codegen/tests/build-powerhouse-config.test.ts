@@ -142,26 +142,19 @@ describe("buildPowerhouseConfigTemplate", () => {
     expect(a.reactor.port).not.toBe(b.reactor.port);
   });
 
-  test("always emits `vetra` carrying the assigned connect port", async () => {
+  test("emits no `vetra` key", async () => {
     const out = await buildPowerhouseConfigTemplate({ name: NAME });
     const parsed = JSON.parse(out) as Plain;
-    // The block is no longer remote-drive-only: it is where `ph dev`'s
-    // Connect port lives, so every scaffolded project has one.
-    expect(parsed.vetra).toEqual({
-      connectPort: deriveProjectPorts(NAME).vetraConnectPort,
-    });
+    expect(parsed).not.toHaveProperty("vetra");
   });
 
-  test("emits the drive url alongside the port when remoteDrive is provided", async () => {
+  test("emits the drive url, and nothing beside it, when remoteDrive is provided", async () => {
     const remoteDrive = "https://reactor.example.com/d/vetra-abc123";
     const out = await buildPowerhouseConfigTemplate({
       name: NAME,
       remoteDrive,
     });
     const parsed = JSON.parse(out) as Plain;
-    expect(parsed.vetra).toEqual({
-      connectPort: deriveProjectPorts(NAME).vetraConnectPort,
-      driveUrl: remoteDrive,
-    });
+    expect(parsed.vetra).toEqual({ driveUrl: remoteDrive });
   });
 });

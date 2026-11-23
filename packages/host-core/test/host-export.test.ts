@@ -129,7 +129,7 @@ describe("exportHost", () => {
 
   it("projects a member's own reactor in place of its host's", async () => {
     const vetra = hostExportSchema.parse(
-      roundTrip(await exportHost(project("scaffold"), "vetra")),
+      roundTrip(await exportHost(project("legacy-vetra"), "vetra")),
     );
     expect(
       backendsToDescriptors(memberReactor(vetra, "vetra-studio")),
@@ -289,7 +289,7 @@ describe("applyChildWrapper", () => {
     };
   }
 
-  it.each(["cli", "desktop", "vetra"])(
+  it.each(["cli", "desktop", "dev"])(
     "matches the previous member draft for %s",
     async (name) => {
       const root = project("scaffold");

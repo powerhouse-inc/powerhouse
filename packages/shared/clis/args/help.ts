@@ -62,7 +62,7 @@ export const phCliHelpCommands = {
     name: "dev",
     args: debugArgs,
     description:
-      "Run the project's vetra host (hosts/vetra) in dev mode: the same as `ph run vetra`",
+      "Run the project's dev host (hosts/dev) in dev mode: the same as `ph run dev`. A project with hosts/vetra and no hosts/dev runs that host",
     handler: () => {},
   }),
   vetra: helpCommand({
@@ -122,7 +122,7 @@ export const phCliHelpCommands = {
     name: "mcp",
     args: mcpArgs,
     description:
-      "Serve the project's reactor-mcp tools over stdio, starting Vetra on the first tool call",
+      "Serve the project's reactor-mcp tools over stdio, starting the project's dev host on the first tool call",
     handler: () => {},
   }),
   keyframes: helpCommand({

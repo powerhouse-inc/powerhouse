@@ -12,7 +12,7 @@ export const mcpArgs = {
     type: number,
     long: "start-timeout",
     description:
-      "Seconds to wait for Vetra to answer /ready after starting it on the first tool call",
+      "Seconds to wait for the dev host to answer /ready after starting it on the first tool call",
     defaultValue: () => 120,
     defaultValueIsSerializable: true,
   }),

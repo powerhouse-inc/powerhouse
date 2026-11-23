@@ -8,6 +8,7 @@ import {
   restPositionals,
   string,
 } from "cmd-ts";
+import { isDevHost } from "../utils/dev-host.js";
 
 export const runHost = command({
   name: "run",
@@ -21,7 +22,7 @@ export const runHost = command({
       type: string,
       displayName: "host",
       description:
-        "Folder name under hosts/ (e.g. vetra, connect), or `<package>/<host>` " +
+        "Folder name under hosts/ (e.g. dev, connect), or `<package>/<host>` " +
         "for one in an installed package's hosts/ (e.g. `@acme/tools/studio`).",
     }),
     verb: positional({
@@ -78,9 +79,9 @@ export const runHost = command({
       debug: args.debug,
       argv: args.argv,
     };
-    // hosts/vetra is what `ph dev` is sugar for (run-sugar.ts): its stack
-    // keeps the runtime record `ph mcp` reads.
-    if (args.host === "vetra") {
+    // What `ph dev` is sugar for (run-sugar.ts): the stack keeps the runtime
+    // record `ph mcp` reads.
+    if (isDevHost(args.host)) {
       const { runVetraHost } = await import("../services/run/vetra-host.js");
       await runVetraHost(run);
       return;

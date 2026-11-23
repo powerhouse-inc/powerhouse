@@ -18,10 +18,10 @@ import {
 } from "../../utils/vetra-runtime.js";
 
 /**
- * `ph run vetra`: the vetra host is the generic compound runner over a
- * switchboard and a connect member, so nothing below `ph run` knows it is
- * Vetra. What makes the stack the project's Vetra is done here around
- * startRun: refuse while another Vetra holds
+ * `ph run dev` (and `ph run vetra` in a project with that host): the dev host
+ * is the generic compound runner over a switchboard and a connect member, so
+ * nothing below `ph run` knows it is the dev stack. What makes the stack the
+ * project's own is done here around startRun: refuse while another one holds
  * the project, publish `.ph/vetra-runtime.json` once the stack is ready,
  * clear it on exit, and correct a drifted `.mcp.json`. `--restart` is its own
  * argument, not a runner's: it stops the recorded Vetra first.
@@ -55,7 +55,7 @@ export async function runVetraHost(args: StartRunArgs): Promise<unknown> {
   return result;
 }
 
-/** `ph run vetra --restart`, which `ph dev --restart` is sugar for. */
+/** `ph run dev --restart`, which `ph dev --restart` is sugar for. */
 const RESTART_FLAG = "--restart";
 
 const startedSchema = z.object({

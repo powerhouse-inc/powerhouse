@@ -42,7 +42,7 @@ describe("writeGeneratedHostsFiles", () => {
       "hosts/README.md",
       "hosts/connect/host.js",
       "hosts/switchboard/host.js",
-      "hosts/vetra/host.js",
+      "hosts/dev/host.js",
       "hosts/desktop/host.js",
       "hosts/assistant/host.js",
       "hosts/cli/host.js",
@@ -82,39 +82,43 @@ describe("writeGeneratedHostsFiles", () => {
     expect(connect).toContain(`kind: "worker"`);
     expect(connect).toContain(`slug: "powerhouse"`);
 
-    const vetra = readFileSync(join(dir, "hosts/vetra/host.js"), "utf-8");
-    expect(vetra).toContain(`defaultVerb: "dev"`);
-    expect(vetra).toContain(`host: "connect"`);
-    expect(vetra).toContain("config.vetra?.connectPort");
-    // R4: generic compound + studio plugins (no vetra-specific runner).
-    expect(vetra).toContain("@powerhousedao/host-core/runners/compound");
-    expect(vetra).toContain("@powerhousedao/vetra-studio/switchboard");
-    expect(vetra).toContain("@powerhousedao/vetra-studio/connect");
-    expect(vetra).not.toContain("@powerhousedao/ph-cli/runners/compound");
+    // dev: the generic compound over the switchboard and Connect at the dev
+    // verb, with nothing of Vetra in it.
+    expect(existsSync(join(dir, "hosts/vetra"))).toBe(false);
+    const dev = readFileSync(join(dir, "hosts/dev/host.js"), "utf-8");
+    expect(dev).toContain(`name: "dev"`);
+    expect(dev).toContain(`defaultVerb: "dev"`);
+    expect(dev).toContain("@powerhousedao/host-core/runners/compound");
+    expect(dev).toContain('"dev-switchboard": { host: "switchboard" }');
+    expect(dev).toContain(`host: "connect"`);
+    expect(dev).not.toMatch(/vetra/i);
     // workflow plugins: the connect member reads the Workflows drive URL
     // from the switchboard member's outputs (an output token)
-    expect(vetra).toContain("@powerhousedao/connect/plugins/workflows");
-    expect(vetra).toContain(
+    expect(dev).toContain("@powerhousedao/connect/plugins/workflows");
+    expect(dev).toContain(
       `$output: { host: "switchboard", path: ["drives", "workflows", "url"] }`,
     );
-    expect(vetra).not.toContain("from:");
-    // Studio is a remote client of the switchboard member, on its Vetra
-    // drive, with the cookie banner off (as classic `ph vetra`)
-    expect(vetra).toContain(
-      `url: { $output: { host: "switchboard", path: ["drives", "vetra", "url"] } }`,
+    // Connect is a remote client of the switchboard member, on every drive
+    // it serves, with the cookie banner off
+    expect(dev).toContain(
+      `url: { $output: { host: "switchboard", path: ["drives", "powerhouse", "url"] } }`,
     );
-    expect(vetra).toContain("protocol: connect.reactor.protocol");
-    expect(vetra).toContain(
+    expect(dev).toContain(
+      '$map: {\n            over: { $output: { host: "switchboard", path: ["drives"] } },',
+    );
+    expect(dev).toContain("protocol: connect.reactor.protocol");
+    expect(dev).toContain(
       "app: { cookieBanner: false, ...connect.config.app }",
     );
-    // the vetra switchboard serves the switchboard host's drives too, next to
-    // the studio drives
-    expect(vetra).toContain("...(switchboard.reactor.drives ?? [])");
-    // the preview drive opens in the app powerhouse.config.json names; no
-    // key when it names none (a host value is never undefined)
-    expect(vetra).toContain("...(config.vetra?.previewDrive?.app");
-    expect(vetra).toContain(
-      "? { preferredEditor: config.vetra.previewDrive.app }",
+    // no host of the scaffold names Vetra
+    for (const host of readdirSync(join(dir, "hosts"))) {
+      const file = join(dir, "hosts", host, "host.js");
+      if (existsSync(file)) {
+        expect(readFileSync(file, "utf-8"), host).not.toMatch(/vetra/i);
+      }
+    }
+    expect(readFileSync(join(dir, "hosts/README.md"), "utf-8")).not.toMatch(
+      /vetra/i,
     );
 
     // P2.8: single-sourced protocol — the switchboard host references the
@@ -211,9 +215,9 @@ describe("writeGeneratedHostsFiles", () => {
     await writeGeneratedHostsFiles(dir, "my-project");
     expect(readFileSync(file, "utf-8")).toContain("user-owned edit");
     // ...while still seeding files the project lacks:
-    rmSync(join(dir, "hosts/vetra/host.js"));
+    rmSync(join(dir, "hosts/dev/host.js"));
     await writeGeneratedHostsFiles(dir, "my-project");
-    expect(existsSync(join(dir, "hosts/vetra/host.js"))).toBe(true);
+    expect(existsSync(join(dir, "hosts/dev/host.js"))).toBe(true);
   });
 });
 
@@ -395,7 +399,7 @@ describe("typed hosts: ph generate hosts + tsc -p hosts", () => {
     const scaffoldHosts = [
       "connect",
       "switchboard",
-      "vetra",
+      "dev",
       "desktop",
       "assistant",
       "cli",

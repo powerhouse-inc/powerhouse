@@ -104,6 +104,15 @@ export const CANNED: Record<string, Canned> = {
       workflows: { id: "workflows-0f1e2d3c" },
     }),
     connect: connectOutputs("http://127.0.0.1:6491"),
+  },
+  // A project made before the `dev` host: the scaffold's switchboard and
+  // connect hosts plus a `vetra` compound with the vetra-studio plugins.
+  "legacy-vetra": {
+    switchboard: switchboardOutputs("http://127.0.0.1:7491", {
+      powerhouse: { id: "powerhouse" },
+      workflows: { id: "workflows-0f1e2d3c" },
+    }),
+    connect: connectOutputs("http://127.0.0.1:6491"),
     // The vetra compound's switchboard member adds the studio drives.
     "vetra-switchboard": switchboardOutputs("http://127.0.0.1:7491", {
       powerhouse: { id: "powerhouse" },

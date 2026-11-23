@@ -29,10 +29,10 @@ type BuildPowerhouseConfigTemplateArgs = {
  *
  * The `connect` block is populated from `DEFAULT_CONNECT_CONFIG` so every
  * runtime field is present in the scaffolded file. Dev consumers that read
- * the source config directly (notably `ph run vetra`, which has no dist file)
+ * the source config directly (notably `ph run dev`, which has no dist file)
  * see fully-defined values instead of `undefined`. `connect.instance` and
- * `connect.app.cookieBanner` are the exceptions: unset, Vetra picks
- * Studio's reactor client and turns the cookie banner off for it.
+ * `connect.app.cookieBanner` are the exceptions: unset, the dev host picks
+ * its own reactor client and turns the cookie banner off.
  */
 // Kept `async` for callsite signature compatibility (callers already
 // `await` the result). The body is synchronous.
@@ -41,8 +41,8 @@ export async function buildPowerhouseConfigTemplate(
   args: BuildPowerhouseConfigTemplateArgs,
 ): Promise<string> {
   // Ports are assigned per project rather than fixed at 3000/4001, so two
-  // projects can run at once. Overridable via PH_SWITCHBOARD_PORT /
-  // PH_VETRA_CONNECT_PORT in .env.local, or the CLI flags.
+  // projects can run at once. Overridable via PH_SWITCHBOARD_PORT in
+  // .env.local, or the CLI flags.
   const ports = deriveProjectPorts(args.name);
 
   const config: Record<string, unknown> = {
@@ -59,13 +59,9 @@ export async function buildPowerhouseConfigTemplate(
     connect: SCAFFOLDED_CONNECT_CONFIG,
   };
 
-  const vetra: Record<string, unknown> = {
-    connectPort: ports.vetraConnectPort,
-  };
   if (args.remoteDrive) {
-    vetra.driveUrl = args.remoteDrive;
+    config.vetra = { driveUrl: args.remoteDrive };
   }
-  config.vetra = vetra;
   // The assistant host (hosts/assistant/host.js) reads its port from here.
   // Fixed rather than name-derived: one agent API per machine is the norm,
   // and the mastra runner defaults to the same port.

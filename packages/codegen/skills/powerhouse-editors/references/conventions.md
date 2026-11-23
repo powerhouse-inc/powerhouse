@@ -4,19 +4,19 @@ These apply to every editor and drive app. The project's `tsconfig` (`module: no
 
 ## Import document-model symbols from the barrel
 
-Each document model has one public surface, its top-level barrel `document-models/<name>`. It always points at the latest version. Import every document-model symbol from it: types, `actions.<actionName>` creators, the generated hooks and `utils`.
+Each document model has one public surface, its top-level barrel `document-models/<name>`. Its `<Name>` export is the latest version. Import the model from it and take `actions` and `utils` from the model; its document and action types are `DocumentOf<typeof Name>` and `ActionOf<typeof Name>` from `document-model`.
 
 ```typescript
 // Good
-import { actions, useSelectedTodoDocument } from "document-models/todo";
-import type { TodoAction, TodoDocument } from "document-models/todo";
+import type { ActionOf, DocumentOf } from "document-model";
+import { Todo } from "document-models/todo";
 
 // Bad: deep paths bypass the barrel and break when the version changes
-import { addTodo } from "../../document-models/todo/gen/creators.js";
-import type { Todo } from "document-models/todo/v1/gen/schema/types.js";
+import { todoItems } from "../../document-models/todo/v1/modules/items.js";
+import { todoModel } from "document-models/todo/v1/definition.js";
 ```
 
-The generated hooks are `useSelected<Name>Document`, `use<Name>DocumentById`, `use<Name>DocumentsInSelectedDrive` and `use<Name>DocumentsInSelectedFolder`. There is no `editors/hooks/` folder.
+A model that still has a `gen/` folder exports its types, `actions`, `utils` and hooks (`useSelected<Name>Document`, `use<Name>DocumentById`, `use<Name>DocumentsInSelectedDrive`, `use<Name>DocumentsInSelectedFolder`) from the same barrel; never import from its `gen/` paths. There is no `editors/hooks/` folder.
 
 ## Path aliases
 

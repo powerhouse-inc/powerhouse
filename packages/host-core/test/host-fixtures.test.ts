@@ -47,6 +47,7 @@ import {
  * type-checked against the live schema API. `scaffold/` holds oxfmt-formatted
  * copies of `buildHostsTemplates("my-project")` (codegen hosts.ts) and its
  * powerhouse.config.json: refresh them when the template changes.
+ * `legacy-vetra/` is a project that still has the `hosts/vetra` compound.
  */
 
 const CONNECT_RUNNER = "@powerhousedao/ph-cli/runners/connect";
@@ -446,7 +447,7 @@ const labDrivesAsRemotes = [
 ];
 
 interface Row {
-  project: "scaffold" | "matrix";
+  project: "scaffold" | "matrix" | "legacy-vetra";
   host: string;
   /** The 2.2 cells this row covers. */
   cells: string;
@@ -565,6 +566,44 @@ const ROWS: Row[] = [
   },
   {
     project: "scaffold",
+    host: "dev",
+    cells:
+      "compound at dev · remote-client member · $map over every switchboard drive",
+    expected: compound("dev", {
+      verb: "dev",
+      startOrder: ["dev-switchboard", "dev-connect"],
+      members: {
+        "dev-switchboard": member("switchboard", {
+          ...scaffoldSwitchboard,
+          verb: "dev",
+        }),
+        "dev-connect": member(
+          "connect",
+          reactor({
+            name: "my-project-connect",
+            verb: "dev",
+            dependsOn: ["switchboard"],
+            consumes: [
+              reads("runner.plugins[1].config.drive", "switchboard", [
+                "drives",
+                "workflows",
+                "url",
+              ]),
+              driveUrl("reactor.backends.sb.remote.url", "powerhouse"),
+              reads("reactor.drives.$map.over", "switchboard", ["drives"]),
+            ],
+            clientMode: "remote",
+            backends: [{ name: "sb", kind: "remote" }],
+            remotes: [`${SCAFFOLD_SB}/d/powerhouse`],
+            drives: scaffoldDrivesAsRemotes,
+          }),
+          ["dev-switchboard"],
+        ),
+      },
+    }),
+  },
+  {
+    project: "legacy-vetra",
     host: "vetra",
     cells:
       "compound at dev · projectHash: true · verb-scoped plugins · remote-client member on a member-declared drive",

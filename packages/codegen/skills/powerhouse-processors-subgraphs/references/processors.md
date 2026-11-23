@@ -24,7 +24,7 @@ Contents:
 
 - An omitted field matches every value.
 - Only `documentId` honours `"*"`. A `"*"` in another field matches nothing.
-- The scaffold sets `branch: ["main"]`, `documentId: ["*"]` and `documentType` from the document.
+- The scaffold sets `branch: ["main"]`, `documentId: ["*"]` and `documentType` from `--document-types`.
 - The relational scaffold also sets `scope: ["global", "document"]`; the `document` scope carries `DELETE_DOCUMENT` and `PURGE_DOCUMENT`. The analytics scaffold sets no `scope`, so it receives every scope; check `context.scope` before reading state.
 - Keep `documentType` an array of string literals: codegen reads it back when it regenerates the folder.
 

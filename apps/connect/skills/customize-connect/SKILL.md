@@ -70,7 +70,7 @@ function Inventory() {
 
 `ph` is the global Powerhouse CLI (`ph-cmd`). A project without it runs the same commands with `pnpm exec ph-cli`, e.g. `pnpm exec ph-cli build`.
 
-1. Open the route's URL in Vetra Studio: the `connectUrl` in `.ph/vetra-runtime.json`. Studio picks up a new routes folder and `powerhouse.config.json` changes without a restart. Studio shows a loading screen that fails to render over the page and in its log.
+1. Open the route's URL in the Connect that `ph dev` runs: the `connectUrl` in `.ph/vetra-runtime.json`. It picks up a new routes folder and `powerhouse.config.json` changes without a restart. It shows a loading screen that fails to render over the page and in its log.
 2. Run `ph build`. It generates `.ph/connect-routes.gen.ts` and type-checks the routes. On type errors it stops when not interactive, and in a terminal asks whether to build anyway. Unknown route ids in `createFileRoute`, `Link` or `useNavigate` mean the tree is stale or the tsconfig lacks the `route-tree` paths; see [types-and-troubleshooting.md](references/types-and-troubleshooting.md).
 3. When the layout or `_app`'s `pendingComponent` changed, run `ph connect build`. It prerenders the loading screen and fails on code that touches `window` while rendering.
 

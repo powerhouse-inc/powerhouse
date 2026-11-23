@@ -98,9 +98,9 @@ export const RESTART_VETRA_TOOL = "restartVetra";
 const restartVetraTool: Tool = {
   name: RESTART_VETRA_TOOL,
   description:
-    "Restart this project's Vetra (its Switchboard and Studio) and wait until it is ready. " +
-    "Use it after a change Vetra reads only at startup, such as the reactor or packages settings " +
-    "in powerhouse.config.json; Studio restarts by itself for connect.* changes. " +
+    "Restart this project's dev stack (its Switchboard and Connect, what `ph dev` runs) and wait until it is ready. " +
+    "Use it after a change the stack reads only at startup, such as the reactor or packages settings " +
+    "in powerhouse.config.json; Connect restarts by itself for connect.* changes. " +
     "Returns the new Connect, Switchboard and MCP URLs.",
   inputSchema: { type: "object", properties: {} },
   outputSchema: {
@@ -218,7 +218,8 @@ class Upstream {
       projectDir,
       projectName: name,
       switchboardPort: resolveSwitchboardPortDefault(),
-      command: this.options.vetraCommand ?? currentPhCliRunVetraCommand(),
+      command:
+        this.options.vetraCommand ?? currentPhCliRunVetraCommand(projectDir),
       timeoutMs: this.options.startTimeoutSeconds * 1000,
       onProgress: this.#report,
     });
@@ -262,7 +263,7 @@ export async function startMcpLauncher(options: McpLauncherOptions) {
   const projectDir = findProjectDir(
     options.projectDir ?? process.env.PH_CALLER_CWD ?? process.cwd(),
   );
-  // Port resolution and `ph run vetra` both read the project from the cwd.
+  // Port resolution and `ph run dev` both read the project from the cwd.
   if (projectDir) process.chdir(projectDir);
 
   const local = await connectLocalReactorMcp();

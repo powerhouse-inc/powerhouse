@@ -52,8 +52,8 @@ export function writeVetraRuntime(
 }
 
 /**
- * The record this process publishes for the Vetra it started. `ph dev` and
- * `ph run vetra` both build it here, so the two write the same fields. The
+ * The record this process publishes for the dev stack it started. `ph dev`
+ * and `ph run dev` both build it here, so the two write the same fields. The
  * Switchboard's URLs follow from its port unless the caller knows them.
  */
 export function vetraRuntimeRecord(input: {

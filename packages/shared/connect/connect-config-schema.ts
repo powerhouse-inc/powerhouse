@@ -213,7 +213,7 @@ export const connectAppSchema = z
     }),
     studioMode: z.boolean().optional().meta({
       description:
-        "Studio mode. Enables builder-only capabilities: Connect loads the vetra package and exposes DocumentModel (and vetra spec types) as creatable documents. Forced on by `ph dev` / `ph connect studio`; false by default.",
+        "Studio mode: Connect runs as a builder's local dev instance and skips the check for a newer deployed version. Forced on by `ph dev` / `ph connect studio`; false by default.",
       default: false,
     }),
     cookieBanner: z.boolean().optional().meta({

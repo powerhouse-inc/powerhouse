@@ -80,7 +80,7 @@ export const packageJsonTemplate = (
     "generate": "ph-cli generate",
     "connect": "ph-cli run connect",
     "build": "ph-cli build",
-    "vetra": "ph-cli run vetra",
+    "dev": "ph-cli run dev",
     "mcp": "ph-cli mcp"
   },
   "peerDependencies": {

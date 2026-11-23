@@ -82,7 +82,7 @@ async function main() {
     if ("exitCode" in gateway) process.exit(gateway.exitCode);
     typed = gateway.args;
   }
-  // `ph dev`, `ph connect` and `ph switchboard` run the hosts vetra, connect
+  // `ph dev`, `ph connect` and `ph switchboard` run the hosts dev, connect
   // and switchboard: refused here in a project without the host, and for the
   // flags `ph run` lacks.
   const { sugarError } = await import("./utils/sugar-checks.js");
@@ -100,7 +100,7 @@ async function main() {
     process.cwd(),
   );
   if (sugar.warning) console.warn(sugar.warning);
-  // A runner's own arguments (`ph run vetra --switchboard-port 4001`).
+  // A runner's own arguments (`ph run dev --switchboard-port 4001`).
   const args = forwardRunnerArgv(sugar.args);
   const command = args[0];
   const subcommand =

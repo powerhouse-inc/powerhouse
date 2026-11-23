@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
-import { VETRA_HOST } from "./vetra-instance.js";
+import { devHostOf } from "./dev-host.js";
 import {
   clearVetraRuntime,
   isPortInUse,
@@ -15,7 +15,7 @@ import {
 export type VetraCommand = {
   command: string;
   args: string[];
-  /** How messages name it; `ph run vetra` when left out. */
+  /** How messages name it; `ph run <the project's dev host>` when left out. */
   label?: string;
 };
 
@@ -49,15 +49,17 @@ const shownLogPath = (projectDir: string) =>
   path.relative(projectDir, vetraLogPath(projectDir)).split(path.sep).join("/");
 
 /**
- * What starts a project's Vetra: `ph run vetra --strictPort`, run by the
- * ph-cli executing this code. The host's own defaultVerb picks the verb. In
- * a project without the host it fails, and its output says why.
+ * What starts a project's dev stack: `ph run dev --strictPort` (hosts/vetra
+ * in a project that has only that one), run by the ph-cli executing this
+ * code. The host's own defaultVerb picks the verb. In a project without the
+ * host it fails, and its output says why.
  */
-export function currentPhCliRunVetraCommand(): VetraCommand {
+export function currentPhCliRunVetraCommand(projectDir: string): VetraCommand {
+  const host = devHostOf(projectDir);
   return {
     command: process.execPath,
-    args: [process.argv[1], "run", VETRA_HOST, "--strictPort"],
-    label: `ph run ${VETRA_HOST}`,
+    args: [process.argv[1], "run", host, "--strictPort"],
+    label: `ph run ${host}`,
   };
 }
 
@@ -164,7 +166,7 @@ async function waitForLive(
   return undefined;
 }
 
-/** This project's live Vetra, or a detached `ph run vetra` started and awaited; never a second reactor. */
+/** This project's live dev stack, or a detached `ph run dev` started and awaited; never a second reactor. */
 export async function ensureVetra(
   options: EnsureVetraOptions,
 ): Promise<VetraRuntimeRecord> {
@@ -262,7 +264,7 @@ export async function ensureVetra(
           ? `was killed by ${exit.signal}`
           : `exited with code ${exit.code}`;
       throw withOutput(
-        `\`${options.command.label ?? `ph run ${VETRA_HOST}`}\` ${how} before it was ready.`,
+        `\`${options.command.label ?? `ph run ${devHostOf(projectDir)}`}\` ${how} before it was ready.`,
         projectDir,
       );
     }

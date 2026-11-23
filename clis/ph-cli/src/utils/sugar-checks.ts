@@ -8,7 +8,13 @@ import {
   DEPRECATIONS_REMOVED_IN,
   MIGRATION_GUIDE_URL,
 } from "@powerhousedao/shared/clis/deprecations";
-import { CONNECT_VERBS, HOST_COMMANDS, type SugarHost } from "./run-sugar.js";
+import { isDevHost } from "./dev-host.js";
+import {
+  CONNECT_VERBS,
+  HOST_COMMANDS,
+  sugarHostOf,
+  type SugarHost,
+} from "./run-sugar.js";
 
 /**
  * What `ph dev`, `ph connect` and `ph switchboard` are refused for, before
@@ -47,7 +53,10 @@ interface SugarInvocation {
   flags: string[];
 }
 
-function sugarInvocation(args: readonly string[]): SugarInvocation | undefined {
+function sugarInvocation(
+  args: readonly string[],
+  projectRoot?: string,
+): SugarInvocation | undefined {
   const [command, ...rest] = args;
   if (command === undefined || !Object.hasOwn(HOST_COMMANDS, command)) {
     return undefined;
@@ -79,8 +88,11 @@ function sugarInvocation(args: readonly string[]): SugarInvocation | undefined {
       flags,
     };
   }
-  // `ph dev` runs hosts/vetra.
-  const host = HOST_COMMANDS[command];
+  // `ph dev` runs hosts/dev, or hosts/vetra where that is the one there is.
+  const host =
+    projectRoot === undefined
+      ? HOST_COMMANDS[command]
+      : sugarHostOf(command, projectRoot);
   return {
     typed: word ? `ph ${command} ${word}` : `ph ${command}`,
     host,
@@ -117,7 +129,7 @@ export function withoutHostError(
   args: readonly string[],
   projectRoot: string,
 ): string | undefined {
-  const invocation = sugarInvocation(args);
+  const invocation = sugarInvocation(args, projectRoot);
   if (!invocation) return undefined;
   const { typed, host } = invocation;
   const probe = probeHostsFolder(projectRoot);
@@ -142,20 +154,22 @@ export function withoutHostError(
 export function removedFlagsError(
   args: readonly string[],
   schemas: SugarArgSchemas,
+  projectRoot?: string,
 ): string | undefined {
-  const invocation = sugarInvocation(args);
+  const invocation = sugarInvocation(args, projectRoot);
   if (!invocation) return undefined;
   const { typed, host, replacement } = invocation;
   // A compound hands each member its arguments; a member option goes by its
   // member name there (`--switchboard-port`), never by its plain one.
-  const members =
-    host === "vetra" ? [schemas.switchboard, schemas.connect] : [schemas[host]];
+  const members = isDevHost(host)
+    ? [schemas.switchboard, schemas.connect]
+    : [schemas[host]];
   const scoped = new Set(
     members.flatMap((schema) => Object.values(schema.memberOptions ?? {})),
   );
   const accepts = (name: string): boolean =>
-    host === "vetra"
-      ? // `ph run vetra` takes --restart itself (vetra-host.ts).
+    isDevHost(host)
+      ? // `ph run dev` takes --restart itself (vetra-host.ts).
         name === "--restart" ||
         members.some(
           (schema) =>
@@ -237,7 +251,7 @@ export async function runsStockRunner(
 ): Promise<boolean> {
   const loaded = await runnerModuleOf(projectRoot, host);
   if (!loaded) return false;
-  if (host !== "vetra") return STOCK_RUNNERS[host].includes(loaded.module);
+  if (!isDevHost(host)) return STOCK_RUNNERS[host].includes(loaded.module);
   if (loaded.module !== COMPOUND_RUNNER) return false;
   const children = loaded.children;
   if (typeof children !== "object" || children === null) return false;
@@ -290,11 +304,11 @@ export async function sugarError(
   if (removed !== undefined) return removed;
   const withoutHost = withoutHostError(args, projectRoot);
   if (withoutHost !== undefined) return withoutHost;
-  const invocation = sugarInvocation(args);
+  const invocation = sugarInvocation(args, projectRoot);
   if (!invocation || invocation.flags.length === 0) return undefined;
   // A runner of the project's own takes the arguments it declares.
   if (!(await runsStockRunner(projectRoot, invocation.host))) return undefined;
   // Without the schemas the runner still refuses what it does not accept.
   const schemas = await loadArgSchemas();
-  return schemas ? removedFlagsError(args, schemas) : undefined;
+  return schemas ? removedFlagsError(args, schemas, projectRoot) : undefined;
 }

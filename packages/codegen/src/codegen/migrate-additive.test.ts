@@ -18,14 +18,7 @@ import { migrate } from "./migrate.js";
 
 const VERSION = "6.2.3-dev.73";
 
-const HOSTS = [
-  "connect",
-  "switchboard",
-  "vetra",
-  "desktop",
-  "assistant",
-  "cli",
-];
+const HOSTS = ["connect", "switchboard", "dev", "desktop", "assistant", "cli"];
 
 const MCP = "@powerhousedao/switchboard/plugins/mcp";
 const ATTACHMENTS = "@powerhousedao/switchboard/plugins/attachments";
@@ -148,7 +141,7 @@ describe("ph migrate on a project without hosts/", { timeout: 60_000 }, () => {
     await migrate(VERSION, dir, { skipInstall: true });
 
     expect(switchboardPlugins(dir)).toEqual([MCP, ATTACHMENTS, PRIVACY]);
-    for (const host of ["vetra", "desktop", "cli"]) {
+    for (const host of ["dev", "desktop", "cli"]) {
       expect(read(dir, `hosts/${host}/host.js`), host).not.toContain(
         CONNECT_WORKFLOWS,
       );
@@ -184,7 +177,7 @@ describe("ph migrate on a project without hosts/", { timeout: 60_000 }, () => {
       PRIVACY,
       WORKFLOWS,
     ]);
-    for (const host of ["vetra", "desktop", "cli"]) {
+    for (const host of ["dev", "desktop", "cli"]) {
       expect(read(dir, `hosts/${host}/host.js`), host).toContain(
         CONNECT_WORKFLOWS,
       );
@@ -219,11 +212,32 @@ describe("ph migrate on a project without hosts/", { timeout: 60_000 }, () => {
     );
     expect(pkg.scripts.lint).toBe("oxlint --deny-warnings");
     expect(pkg.scripts.deploy).toBe("node scripts/deploy.mjs");
-    expect(pkg.scripts.vetra).toBe("ph-cli run vetra");
+    expect(pkg.scripts.dev).toBe("ph-cli run dev");
     expect(pkg.dependencies).toEqual({ luxon: "^3.0.0" });
     expect(pkg.devDependencies["left-pad"]).toBe("1.3.0");
     expect(pkg.devDependencies["@powerhousedao/ph-cli"]).toBe(VERSION);
     expect(pkg.peerDependencies["document-model"]).toBe(VERSION);
+  });
+
+  it("adds nothing of Vetra: no hosts/vetra, no script, no dependency", async () => {
+    const dir = writeProject(makeTemp());
+
+    await migrate(VERSION, dir, { skipInstall: true });
+
+    expect(existsSync(join(dir, "hosts/vetra"))).toBe(false);
+    const pkg = readJson(dir, "package.json") as {
+      scripts: Record<string, string>;
+      devDependencies: Record<string, string>;
+      peerDependencies: Record<string, string>;
+    };
+    expect(pkg.scripts).not.toHaveProperty("vetra");
+    for (const name of [
+      "@powerhousedao/vetra-studio",
+      "@powerhousedao/vetra",
+    ]) {
+      expect(pkg.devDependencies).not.toHaveProperty(name);
+      expect(pkg.peerDependencies).not.toHaveProperty(name);
+    }
   });
 });
 
@@ -244,6 +258,48 @@ describe("ph migrate on a project with hosts/", { timeout: 60_000 }, () => {
       "tsc",
       "ph-cli generate connect-routes && tsc",
     );
+  });
+
+  it("keeps a hosts/vetra project on that host: its script and plugins, no hosts/dev", async () => {
+    const dir = writeProject(
+      makeTemp(),
+      {},
+      {
+        scripts: { vetra: "ph-cli vetra" },
+        devDependencies: { "@powerhousedao/vetra-studio": "6.2.3-dev.1" },
+      },
+    );
+    const own = "// the project's vetra host\nexport default {};\n";
+    write(dir, "hosts/vetra/host.js", own);
+
+    await migrate(VERSION, dir, { skipInstall: true });
+
+    expect(read(dir, "hosts/vetra/host.js")).toBe(own);
+    expect(existsSync(join(dir, "hosts/dev"))).toBe(false);
+    const pkg = readJson(dir, "package.json") as {
+      scripts: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+    expect(pkg.scripts.vetra).toBe("ph-cli run vetra");
+    expect(pkg.scripts).not.toHaveProperty("dev");
+    expect(pkg.devDependencies["@powerhousedao/vetra-studio"]).toBe(VERSION);
+  });
+
+  it("does not add the Vetra Studio plugins to a project without hosts/vetra", async () => {
+    const dir = writeProject(makeTemp());
+    write(dir, "hosts/lab/host.js", "export default {};\n");
+
+    await migrate(VERSION, dir, { skipInstall: true });
+
+    const pkg = readJson(dir, "package.json") as {
+      scripts: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+    expect(pkg.devDependencies).not.toHaveProperty(
+      "@powerhousedao/vetra-studio",
+    );
+    expect(pkg.scripts).not.toHaveProperty("vetra");
+    expect(pkg.scripts).not.toHaveProperty("dev");
   });
 });
 
