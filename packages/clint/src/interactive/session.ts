@@ -153,6 +153,10 @@ export function createReplSession(opts: ReplSessionOptions): ReplSession {
   const commandIds = commands.map((c) => c.id);
   const hasDefaultCommand = cli.hasAgent;
 
+  // The renderer loads while the session starts, so the first result does
+  // not wait for it. A failed load surfaces at the awaited call.
+  void loadMarkdown().catch(() => {});
+
   // Prompting state — null when not prompting
   let prompting: PromptingState | null = null;
 
