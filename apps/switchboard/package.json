@@ -68,6 +68,12 @@
       "types": "./dist/plugins/ai.d.mts",
       "import": "./dist/plugins/ai.mjs",
       "default": "./dist/plugins/ai.mjs"
+    },
+    "./plugins/inspector": {
+      "source": "./src/plugins/inspector.mts",
+      "types": "./dist/plugins/inspector.d.mts",
+      "import": "./dist/plugins/inspector.mjs",
+      "default": "./dist/plugins/inspector.mjs"
     }
   },
   "engines": {

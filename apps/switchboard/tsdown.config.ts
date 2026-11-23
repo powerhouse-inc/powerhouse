@@ -20,6 +20,7 @@ export default defineConfig({
     "src/plugins/privacy.mts",
     "src/plugins/workflows.mts",
     "src/plugins/ai.mts",
+    "src/plugins/inspector.mts",
   ],
   platform: "node",
   outDir: "dist",

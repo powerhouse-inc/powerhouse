@@ -1215,9 +1215,10 @@ async function initServer(
 
   // Vetra is builder-only and bundled (not CDN-loadable); lazy-load its
   // processor only in dev, where builder tooling runs (e.g. `ph dev`).
-  const vetraProcessorFactory = dev
-    ? (await import("@powerhousedao/vetra/processors")).processorFactory
-    : undefined;
+  const vetraProcessorFactory =
+    dev && options.codegenProcessor !== false
+      ? (await import("@powerhousedao/vetra/processors")).processorFactory
+      : undefined;
 
   // get paths to local document models
   if (!options.disableLocalPackages) {
