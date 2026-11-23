@@ -1,6 +1,7 @@
 import { CreateDocumentWithTypeModal } from "@powerhousedao/design-system/connect";
 import {
   addDocument,
+  dispatchActions,
   preloadEditorModule,
   useDocumentModelModules,
   useEditorModules,
@@ -8,11 +9,17 @@ import {
   useSetSelectedNode,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
-import type {
-  DocumentDriveDocument,
-  Node,
+import {
+  addFolder,
+  type DocumentDriveDocument,
+  type Node,
 } from "@powerhousedao/shared/document-drive";
 import { useMemo, useState, type ReactNode } from "react";
+import {
+  findLayoutFolder,
+  folderForDocumentType,
+  missingLayoutFolders,
+} from "../../drive-layout/index.js";
 import {
   PACKAGE_DOCUMENT_TYPE,
   treePageFor,
@@ -31,6 +38,8 @@ export type CreateDocumentInput = {
   name: string;
   documentType: string;
   version?: number;
+  /** The layout folder of the type, by node id; absent for the drive root. */
+  parentFolder?: string;
 };
 
 export type VetraExplorerProps = {
@@ -44,7 +53,10 @@ export type VetraExplorerProps = {
   pageImages?: Partial<Record<StagePageId, string>>;
   /** Where the placeholder pages' "Open in Vetra Labs" leads. */
   labsUrl?: string;
-  /** Creates a document in the drive; defaults to the app's `addDocument`. */
+  /**
+   * Creates a document in the drive, in `parentFolder`; defaults to the app's
+   * `addDocument`.
+   */
   createDocument?: (input: CreateDocumentInput) => Promise<Node | undefined>;
 };
 
@@ -54,8 +66,8 @@ const ROW_SELECTED = "bg-accent font-medium ring-1 ring-border";
 
 /**
  * The stage tree of a package's specification drive beside the open document:
- * the package row, then Ideate, Specify, Build and Deploy. Documents are filed
- * by type, wherever they sit in the drive.
+ * the package row, then Ideate, Specify, Build and Deploy. Documents show by
+ * type, wherever they sit in the drive; a new one goes in its type's folder.
  */
 export function VetraExplorer({
   document,
@@ -105,21 +117,42 @@ export function VetraExplorer({
 
   const create =
     createDocument ??
-    (({ name, documentType, version }: CreateDocumentInput) =>
+    (({ name, documentType, version, parentFolder }: CreateDocumentInput) =>
       addDocument(
         driveId,
         name,
         documentType,
-        undefined,
+        parentFolder,
         undefined,
         undefined,
         undefined,
         version,
       ));
 
+  /** The node id of the type's layout folder, made when the drive lacks it. */
+  async function layoutFolder(
+    documentType: string,
+  ): Promise<string | undefined> {
+    const path = folderForDocumentType(documentType);
+    if (!path) return undefined;
+    const missing = missingLayoutFolders(driveId, nodes, [path]);
+    if (!missing.length) return findLayoutFolder(nodes, path)?.id;
+    const written = await dispatchActions(
+      missing.map((folder) => addFolder(folder)),
+      driveId,
+    );
+    // A drive that refused the folders still takes the document, at its root.
+    return written ? missing[missing.length - 1].id : undefined;
+  }
+
+  async function createInFolder(input: CreateDocumentInput) {
+    const parentFolder = await layoutFolder(input.documentType);
+    return create({ ...input, ...(parentFolder ? { parentFolder } : {}) });
+  }
+
   function createAndOpen(input: CreateDocumentInput) {
     setCreating(null);
-    create(input).then((node) => {
+    createInFolder(input).then((node) => {
       if (node) {
         setPage(null);
         setSelectedNode(node);

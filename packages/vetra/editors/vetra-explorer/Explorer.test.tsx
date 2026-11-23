@@ -1,5 +1,6 @@
 import {
   addDocument,
+  dispatchActions,
   useDocumentModelModules,
   useSelectedNode,
   useSetSelectedNode,
@@ -11,6 +12,7 @@ import type {
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { DocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { layoutFolderId } from "../../drive-layout/index.js";
 import {
   NO_SPECIFICATIONS,
   NOTHING_SELECTED,
@@ -36,6 +38,7 @@ vi.mock("@powerhousedao/design-system/connect", () => ({
 
 vi.mock("@powerhousedao/reactor-browser", () => ({
   addDocument: vi.fn(),
+  dispatchActions: vi.fn(),
   preloadEditorModule: vi.fn(),
   useDocumentModelModules: vi.fn(),
   useEditorModules: vi.fn(() => []),
@@ -65,6 +68,8 @@ describe("vetra explorer", () => {
   beforeEach(() => {
     select.mockClear();
     vi.mocked(addDocument).mockReset();
+    vi.mocked(dispatchActions).mockReset();
+    vi.mocked(dispatchActions).mockResolvedValue({} as never);
     vi.mocked(useSetSelectedNode).mockReturnValue(select);
     vi.mocked(useSelectedNode).mockReturnValue(undefined);
     vi.mocked(useDocumentModelModules).mockReturnValue(
@@ -195,11 +200,60 @@ describe("vetra explorer", () => {
       documentType: "powerhouse/document-model",
     });
     await vi.waitFor(() => expect(select).toHaveBeenLastCalledWith(created));
-    expect(vi.mocked(addDocument).mock.calls[0].slice(0, 3)).toEqual([
+    // The drive had no layout folders: both are made, the document goes in.
+    const [actions, target] = vi.mocked(dispatchActions).mock.calls[0];
+    expect(target).toBe("drive-1");
+    expect(
+      (actions as { type: string; input: { name: string } }[]).map((action) => [
+        action.type,
+        action.input.name,
+      ]),
+    ).toEqual([
+      ["ADD_FOLDER", "specify"],
+      ["ADD_FOLDER", "document-models"],
+    ]);
+    expect(vi.mocked(addDocument).mock.calls[0].slice(0, 4)).toEqual([
       "drive-1",
       "Recipe",
       "powerhouse/document-model",
+      layoutFolderId("drive-1", "specify/document-models"),
     ]);
+  });
+
+  it("files a new document in the folder the drive already has", async () => {
+    const created = file("new", "Recipe", "powerhouse/feature");
+    vi.mocked(addDocument).mockResolvedValue(created as never);
+    const folders = [
+      { kind: "folder", id: "i", name: "ideate", parentFolder: null },
+      { kind: "folder", id: "f", name: "features", parentFolder: "i" },
+    ] as Node[];
+    render(<VetraExplorer document={drive(folders)} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "New Ideate document" }),
+    );
+    modalProps().onCreate({
+      name: "Recipe",
+      documentType: "powerhouse/feature",
+    });
+    await vi.waitFor(() => expect(select).toHaveBeenLastCalledWith(created));
+    expect(dispatchActions).not.toHaveBeenCalled();
+    expect(vi.mocked(addDocument).mock.calls[0][3]).toBe("f");
+  });
+
+  it("files at the drive root when the drive refuses the folders", async () => {
+    const created = file("new", "Recipe", "powerhouse/feature");
+    vi.mocked(addDocument).mockResolvedValue(created as never);
+    vi.mocked(dispatchActions).mockResolvedValue(undefined);
+    render(<VetraExplorer document={drive([])} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "New Ideate document" }),
+    );
+    modalProps().onCreate({
+      name: "Recipe",
+      documentType: "powerhouse/feature",
+    });
+    await vi.waitFor(() => expect(select).toHaveBeenLastCalledWith(created));
+    expect(vi.mocked(addDocument).mock.calls[0][3]).toBeUndefined();
   });
 
   it("creates through the host's function when it is given one", async () => {
@@ -219,6 +273,7 @@ describe("vetra explorer", () => {
     expect(createDocument).toHaveBeenCalledWith({
       name: "Recipe",
       documentType: "powerhouse/feature",
+      parentFolder: layoutFolderId("drive-1", "ideate/features"),
     });
     expect(addDocument).not.toHaveBeenCalled();
   });

@@ -56,6 +56,11 @@
       "types": "./dist/codegen/spec.d.ts",
       "import": "./dist/codegen/spec.js"
     },
+    "./drive-layout": {
+      "source": "./drive-layout/index.ts",
+      "types": "./dist/drive-layout/index.d.ts",
+      "import": "./dist/drive-layout/index.js"
+    },
     "./manifest": "./dist/powerhouse.manifest.json",
     "./style.css": "./style.css",
     "./package.json": "./package.json"

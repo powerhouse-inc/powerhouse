@@ -11,6 +11,7 @@ export default defineConfig({
     "processors/*/index.ts",
     "codegen/index.ts",
     "codegen/spec.ts",
+    "drive-layout/index.ts",
   ],
   platform: "neutral",
   outDir: "dist",

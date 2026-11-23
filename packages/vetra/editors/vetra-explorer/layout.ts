@@ -1,7 +1,8 @@
+import { PACKAGE_DOCUMENT_TYPE } from "../../drive-layout/layout.js";
 import { DOCUMENT_TYPES } from "../vetra-drive-app/document-types.js";
 
 /** The package document, the tree's first row. */
-export const PACKAGE_DOCUMENT_TYPE = DOCUMENT_TYPES.documentPackage;
+export { PACKAGE_DOCUMENT_TYPE };
 
 export type StageId = "ideate" | "specify" | "build" | "deploy";
 
