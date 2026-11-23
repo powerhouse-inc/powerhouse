@@ -16,7 +16,13 @@ import {
   resolvePhCliEntry,
   stopsOnStdin,
 } from "./host-entry.js";
-import { instanceOfRecord, runningInstance } from "./instance.js";
+import {
+  instanceOfRecord,
+  restartDecision,
+  runningInstance,
+  type RestartPolicy,
+  type RestartState,
+} from "./instance.js";
 import { instanceKey, instanceRunDir } from "./instance-key.js";
 import { killTree } from "./kill-tree.js";
 import { writeOwnerOnlyFile } from "./owner-only.js";
@@ -57,6 +63,13 @@ export * from "./supervisor-client.js";
  * `lease` request it keeps open: when its connection ends, however the
  * caller ended, every instance started with the caller under that lease is
  * stopped with its process tree.
+ *
+ * A `start` may carry a restart policy. The supervisor then applies it, and
+ * is the one party that does: an instance that was ready and ends on its own
+ * is started again under its handle after the policy's delay, until it has
+ * been restarted `maxRetries` times in a row without getting ready. A stop
+ * that was asked for, a caller that left, or the supervisor stopping, never
+ * restarts.
  */
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -72,8 +85,18 @@ export interface SupervisedInstance {
   verb?: string;
   projectDir: string;
   dataDir: string;
+  /** Of its last run, while it waits for a restart or after it ended. */
   pid: number;
-  status: "starting" | "running" | "stopping" | "exited";
+  /** `restarting`: it ended on its own and its restart policy starts it
+   * again after the delay. `failed`: that policy gave up; `restart.failed`
+   * says why. */
+  status:
+    | "starting"
+    | "running"
+    | "stopping"
+    | "exited"
+    | "restarting"
+    | "failed";
   /** False: it runs on a data folder this supervisor knows and was started
    * by something else. Listed from its run record, never stopped here. */
   mine: boolean;
@@ -94,6 +117,8 @@ export interface SupervisedInstance {
   missing: string[];
   /** How it ended. */
   exit?: { code: number | null; signal: string | null; forced: boolean };
+  /** Where its restart policy stands, when it was started with one. */
+  restart?: RestartState;
 }
 
 const startParamsSchema = z.object({
@@ -124,6 +149,16 @@ const startParamsSchema = z.object({
    * timeout ends counts as running (default: it is stopped, and the start
    * fails). */
   record: z.enum(["required", "optional"]).optional(),
+  /** Applied here when it ends on its own after it was ready (see
+   * `restartDecision`). The supervisor is then the one party that restarts
+   * it: its caller must not. */
+  restart: z
+    .object({
+      enabled: z.boolean().optional(),
+      maxRetries: z.number().int().min(0),
+      delay: z.number().min(0),
+    })
+    .optional(),
 });
 export type SupervisorStartParams = z.infer<typeof startParamsSchema>;
 
@@ -249,6 +284,20 @@ function missingOf(found: { record?: RunRecord } | undefined): string[] {
   return [];
 }
 
+/** The restart policy of a handle, kept across the runs it starts. */
+interface Restarts {
+  policy: RestartPolicy;
+  /** Restarts made since it last got ready. */
+  attempt: number;
+  /** A run under this handle was ready once. */
+  everReady: boolean;
+  lastExit?: RestartState["lastExit"];
+  /** The restart it waits for. */
+  timer?: NodeJS.Timeout;
+  nextAt?: string;
+  failed?: string;
+}
+
 interface Managed {
   handle: string;
   key: string;
@@ -259,7 +308,11 @@ interface Managed {
   lease?: string;
   child: ChildProcess;
   pid: number;
-  status: SupervisedInstance["status"];
+  status: "starting" | "running" | "stopping" | "exited";
+  /** Set when it was started with a restart policy. */
+  restarts?: Restarts;
+  /** A stop was asked for: it is never restarted. */
+  stopAsked: boolean;
   startedAt: string;
   logFile: string;
   runnerVersion?: string;
@@ -404,7 +457,14 @@ export async function startSupervisor(
       projectDir: m.projectDir,
       dataDir: m.dataDir,
       pid: m.pid,
-      status: m.status,
+      status:
+        m.status !== "exited"
+          ? m.status
+          : m.restarts?.timer
+            ? "restarting"
+            : m.restarts?.failed !== undefined
+              ? "failed"
+              : "exited",
       mine: true,
       lifetime: m.lifetime,
       startedAt: m.startedAt,
@@ -427,7 +487,92 @@ export async function startSupervisor(
                   ]),
             ],
       ...(m.exit ? { exit: m.exit } : {}),
+      ...(m.restarts
+        ? {
+            restart: {
+              maxRetries: m.restarts.policy.maxRetries,
+              delay: m.restarts.policy.delay,
+              attempt: m.restarts.attempt,
+              ...(m.restarts.lastExit ? { lastExit: m.restarts.lastExit } : {}),
+              ...(m.restarts.nextAt === undefined
+                ? {}
+                : { nextAt: m.restarts.nextAt }),
+              ...(m.restarts.failed === undefined
+                ? {}
+                : { failed: m.restarts.failed }),
+            },
+          }
+        : {}),
     };
+  };
+
+  const leaseHeld = (m: Managed) =>
+    m.lifetime !== "caller" || (m.lease !== undefined && leases.has(m.lease));
+
+  /** Drops the restart `m` waits for; true when there was one. */
+  const cancelRestart = (m: Managed): boolean => {
+    const waiting = m.restarts?.timer;
+    if (!m.restarts || !waiting) return false;
+    clearTimeout(waiting);
+    delete m.restarts.timer;
+    delete m.restarts.nextAt;
+    return true;
+  };
+
+  /**
+   * The restart policy of an instance, applied here and nowhere else: the
+   * run `m` ended on its own. Not after a stop that was asked for, while the
+   * supervisor stops, or for a caller that has left.
+   */
+  const afterOwnExit = (m: Managed): void => {
+    const restarts = m.restarts;
+    if (!restarts || m.stopAsked || instances.get(m.handle) !== m) return;
+    restarts.lastExit = {
+      code: m.exit?.code ?? null,
+      signal: m.exit?.signal ?? null,
+      at: new Date().toISOString(),
+    };
+    if (!leaseHeld(m)) return;
+    const decision = restartDecision(restarts.policy, {
+      attempt: restarts.attempt,
+      wasReady: restarts.everReady,
+      closing,
+    });
+    if (decision.action === "give-up") {
+      if (!restarts.everReady) return;
+      const how =
+        restarts.lastExit.signal !== null
+          ? `signal ${restarts.lastExit.signal}`
+          : `code ${restarts.lastExit.code}`;
+      restarts.failed = `it ended on its own (${how}) after ${decision.attempts} restart(s) in a row; its restart policy allows ${restarts.policy.maxRetries}`;
+      log(`[${m.handle}] ${m.params.host} is left ended: ${restarts.failed}.`);
+      return;
+    }
+    if (decision.action !== "restart") return;
+    restarts.attempt = decision.attempt;
+    restarts.nextAt = new Date(Date.now() + decision.delayMs).toISOString();
+    log(
+      `[${m.handle}] ${m.params.host} ended on its own: restart ${decision.attempt} of ${restarts.policy.maxRetries} in ${decision.delayMs} ms.`,
+    );
+    restarts.timer = setTimeout(() => {
+      delete restarts.timer;
+      delete restarts.nextAt;
+      if (closing || m.stopAsked || instances.get(m.handle) !== m) return;
+      if (!leaseHeld(m)) return;
+      // Something started it meanwhile: that one is the instance.
+      const other = [...instances.values()].some(
+        (x) => x !== m && x.key === m.key && x.status !== "exited",
+      );
+      if (other) return;
+      try {
+        const next = launch(m.params, m.handle, undefined, restarts);
+        instances.set(m.handle, next);
+        log(`[${m.handle}] restarting ${m.params.host} (pid ${next.pid}).`);
+      } catch (error) {
+        restarts.failed = `it could not be started again: ${error instanceof Error ? error.message : String(error)}`;
+        log(`[${m.handle}] ${m.params.host} is left ended: ${restarts.failed}`);
+      }
+    }, decision.delayMs);
   };
 
   const currentRecord = (m: Managed) => {
@@ -511,7 +656,10 @@ export async function startSupervisor(
   };
 
   const prune = () => {
-    const ended = [...instances.values()].filter((m) => m.status === "exited");
+    // One that waits for its restart is not history yet.
+    const ended = [...instances.values()].filter(
+      (m) => m.status === "exited" && !m.restarts?.timer,
+    );
     for (const m of ended.slice(0, Math.max(0, ended.length - MAX_EXITED))) {
       instances.delete(m.handle);
     }
@@ -521,6 +669,8 @@ export async function startSupervisor(
     params: SupervisorStartParams,
     handle: string,
     signal?: AbortSignal,
+    /** The handle's restart state, when its policy starts this run. */
+    carried?: Restarts,
   ): Managed {
     const projectDir = path.resolve(params.projectDir);
     const dataDir = path.resolve(params.dataDir ?? projectDir);
@@ -594,6 +744,18 @@ export async function startSupervisor(
       child,
       pid,
       status: "starting",
+      ...(carried
+        ? { restarts: carried }
+        : params.restart?.enabled
+          ? {
+              restarts: {
+                policy: params.restart,
+                attempt: 0,
+                everReady: false,
+              },
+            }
+          : {}),
+      stopAsked: false,
       startedAt: new Date().toISOString(),
       logFile,
       ...(runnerVersion === undefined ? {} : { runnerVersion }),
@@ -601,7 +763,12 @@ export async function startSupervisor(
       recordless: false,
       ready: Promise.resolve(),
       exited,
-      stop,
+      // Asked for from outside: its restart policy does not bring it back.
+      stop: () => {
+        m.stopAsked = true;
+        cancelRestart(m);
+        return stop();
+      },
     };
 
     const clearRecords = () => {
@@ -626,7 +793,8 @@ export async function startSupervisor(
         `[${handle}] ${params.host} ended (${sig !== null ? `signal ${sig}` : `code ${code}`}${forced ? ", killed" : ""}).`,
       );
       resolveExited();
-      prune();
+      // With a restart policy, after that has decided.
+      if (!m.restarts) prune();
     });
     child.once("error", () => undefined);
 
@@ -722,6 +890,23 @@ export async function startSupervisor(
     })();
     // Awaited by the start that asked; a later one reads the status.
     m.ready.catch(() => undefined);
+    const { restarts } = m;
+    if (restarts) {
+      void m.ready
+        .then(
+          () => {
+            // A ready start resets the count.
+            restarts.everReady = true;
+            restarts.attempt = 0;
+          },
+          () => undefined,
+        )
+        .then(() => exited)
+        .then(() => {
+          afterOwnExit(m);
+          prune();
+        });
+    }
     return m;
   }
 
@@ -753,6 +938,14 @@ export async function startSupervisor(
       await held.ready.catch(() => undefined);
       if ((held.status as string) !== "running") continue;
       return { instance: view(held), started: false };
+    }
+    // This start takes the place of a restart the key waits for.
+    for (const m of instances.values()) {
+      if (m.key === key && cancelRestart(m)) {
+        log(
+          `[${m.handle}] ${m.params.host} is started anew: its restart is dropped.`,
+        );
+      }
     }
     let theirs: ReturnType<typeof runningInstance>;
     try {
@@ -789,8 +982,9 @@ export async function startSupervisor(
   }
 
   const stopAll = async (which: (m: Managed) => boolean): Promise<number> => {
+    // One that waits for its restart counts: the stop drops the restart.
     const targets = [...instances.values()].filter(
-      (m) => m.status !== "exited" && which(m),
+      (m) => (m.status !== "exited" || m.restarts?.timer) && which(m),
     );
     await Promise.all(targets.map((m) => m.stop()));
     return targets.length;

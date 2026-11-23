@@ -72,6 +72,20 @@ if (process.env.FAKE_STOP_CHANNEL) {
   }
 }
 console.log("fake ph run", process.argv.slice(2).join(" "));
+// FAKE_CRASH: the first run ends on its own (code 7) after its record.
+// "once": later runs stay up. "always": later runs end before their record.
+// FAKE_CRASH_FILE counts the runs.
+let crash = false;
+if (process.env.FAKE_CRASH) {
+  const counter = process.env.FAKE_CRASH_FILE;
+  const runs = existsSync(counter) ? Number(readFileSync(counter, "utf8")) : 0;
+  writeFileSync(counter, String(runs + 1));
+  if (runs > 0 && process.env.FAKE_CRASH === "always") {
+    console.error("fake: boom again");
+    process.exit(7);
+  }
+  crash = runs === 0;
+}
 if (process.env.FAKE_EXIT_EARLY) {
   console.error("fake: boom");
   process.exit(3);
@@ -100,6 +114,12 @@ if (shape !== "none") {
           ? { extra: { control: { protocol: Number(process.env.FAKE_CONTROL_PROTOCOL), address: "nowhere", token: "t" } } }
           : {}),
       }));
+}
+if (crash) {
+  setTimeout(() => {
+    console.error("fake: boom");
+    process.exit(7);
+  }, 300);
 }
 setInterval(() => {}, 1000);
 `;
@@ -655,6 +675,190 @@ describe("lifetime", () => {
       false,
     );
     await until(() => supervisor.instances()[0]?.status === "exited");
+  }, 60_000);
+});
+
+describe("restart policy", () => {
+  const policy = { enabled: true, maxRetries: 2, delay: 200 };
+  const crashing = (mode: "once" | "always") => {
+    const counter = path.join(tempDir("ph-crash-"), "runs");
+    return {
+      counter,
+      runs: () =>
+        existsSync(counter) ? Number(readFileSync(counter, "utf8")) : 0,
+      env: { FAKE_CRASH: mode, FAKE_CRASH_FILE: counter },
+    };
+  };
+
+  it("restarts once a host that ends on its own once, under its handle", async () => {
+    const supervisor = await supervise(homeEnv());
+    const control = supervisor.record.control;
+    const project = makeProject();
+    const crash = crashing("once");
+    const first = await startSupervised(
+      control,
+      withSupervisor(project, "lab-sb", { env: crash.env, restart: policy }),
+    );
+    pids.push(first.instance.pid);
+    expect(first.instance.restart).toEqual({
+      maxRetries: 2,
+      delay: 200,
+      attempt: 0,
+    });
+
+    await until(() => {
+      const [now] = supervisor.instances();
+      return now?.status === "running" && now.pid !== first.instance.pid;
+    });
+    const [again] = (await listSupervised(control)).instances;
+    pids.push(again!.pid);
+    expect(isPidAlive(first.instance.pid)).toBe(false);
+    expect(isPidAlive(again!.pid)).toBe(true);
+    expect(again).toMatchObject({
+      handle: first.instance.handle,
+      status: "running",
+      // Ready again: the count starts over.
+      restart: { attempt: 0, lastExit: { code: 7, signal: null } },
+    });
+    expect(again!.record?.pid).toBe(again!.pid);
+
+    // It stays up: nothing is started a third time.
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    expect(crash.runs()).toBe(2);
+    expect(supervisor.instances()).toHaveLength(1);
+    expect(supervisor.instances()[0]!.pid).toBe(again!.pid);
+  }, 60_000);
+
+  it("stops at the cap for one that keeps ending, and lists it as failed with the reason", async () => {
+    const supervisor = await supervise(homeEnv());
+    const control = supervisor.record.control;
+    const project = makeProject();
+    const crash = crashing("always");
+    const first = await startSupervised(
+      control,
+      withSupervisor(project, "lab-sb", { env: crash.env, restart: policy }),
+    );
+    pids.push(first.instance.pid);
+
+    await until(() => supervisor.instances()[0]?.status === "failed", 30_000);
+    // The first run, and the two restarts the policy allows.
+    expect(crash.runs()).toBe(3);
+    const [failed] = (await listSupervised(control)).instances;
+    expect(failed).toMatchObject({
+      handle: first.instance.handle,
+      status: "failed",
+      exit: { code: 7 },
+      restart: {
+        maxRetries: 2,
+        attempt: 2,
+        lastExit: { code: 7, signal: null },
+        failed:
+          "it ended on its own (code 7) after 2 restart(s) in a row; its restart policy allows 2",
+      },
+    });
+    expect(failed!.restart!.nextAt).toBeUndefined();
+
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    expect(crash.runs()).toBe(3);
+    expect(supervisor.instances()).toHaveLength(1);
+  }, 60_000);
+
+  it("does not restart one that was stopped, nor one stopped while it waits for its restart", async () => {
+    const supervisor = await supervise(homeEnv());
+    const control = supervisor.record.control;
+    const project = makeProject();
+    const stays = crashing("once");
+    // Never ends on its own here: the counter file is there already.
+    writeFileSync(stays.counter, "1");
+    const up = await startSupervised(
+      control,
+      withSupervisor(project, "stopped", { env: stays.env, restart: policy }),
+    );
+    pids.push(up.instance.pid);
+    const stopped = await stopSupervised(control, up.instance.handle);
+    expect(stopped.status).toBe("exited");
+
+    const crash = crashing("once");
+    const waiting = await startSupervised(
+      control,
+      withSupervisor(project, "waiting", {
+        env: crash.env,
+        restart: { ...policy, delay: 1_500 },
+      }),
+    );
+    pids.push(waiting.instance.pid);
+    const held = () =>
+      supervisor.instances().find((i) => i.handle === waiting.instance.handle);
+    await until(() => held()?.status === "restarting");
+    expect(held()!.restart).toMatchObject({ attempt: 1 });
+    expect(held()!.restart!.nextAt).toBeDefined();
+    expect(
+      (await stopSupervised(control, waiting.instance.handle)).status,
+    ).toBe("exited");
+
+    await new Promise((resolve) => setTimeout(resolve, 2_200));
+    expect(stays.runs()).toBe(2);
+    expect(crash.runs()).toBe(1);
+    expect(supervisor.instances().map((i) => [i.host, i.status])).toEqual([
+      ["stopped", "exited"],
+      ["waiting", "exited"],
+    ]);
+  }, 60_000);
+
+  it("does not restart one that lived with a caller that has left", async () => {
+    const supervisor = await supervise(homeEnv());
+    const control = supervisor.record.control;
+    const project = makeProject();
+    const crash = crashing("once");
+    const lease = await holdSupervisorLease(control);
+    const mine = await startSupervised(control, {
+      host: "with-caller",
+      projectDir: project,
+      lifetime: "caller",
+      lease: lease.id,
+      env: crash.env,
+      restart: { ...policy, delay: 1_500 },
+    });
+    pids.push(mine.instance.pid);
+    await until(() => supervisor.instances()[0]?.status === "restarting");
+
+    await lease.release();
+    await new Promise((resolve) => setTimeout(resolve, 2_200));
+    expect(crash.runs()).toBe(1);
+    expect(supervisor.instances()).toMatchObject([
+      { host: "with-caller", status: "exited", pid: mine.instance.pid },
+    ]);
+    expect(supervisor.instances()[0]!.restart?.failed).toBeUndefined();
+  }, 60_000);
+
+  it("restarts nothing without a policy, and nothing that never got ready", async () => {
+    const supervisor = await supervise(homeEnv());
+    const control = supervisor.record.control;
+    const project = makeProject();
+    const crash = crashing("once");
+    const plain = await startSupervised(
+      control,
+      withSupervisor(project, "plain", { env: crash.env }),
+    );
+    pids.push(plain.instance.pid);
+    expect(plain.instance.restart).toBeUndefined();
+    await until(() => supervisor.instances()[0]?.status === "exited");
+
+    await expect(
+      startSupervised(
+        control,
+        withSupervisor(project, "early", {
+          env: { FAKE_EXIT_EARLY: "1" },
+          restart: policy,
+        }),
+      ),
+    ).rejects.toThrow(/before writing its run record/);
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    expect(crash.runs()).toBe(1);
+    expect(supervisor.instances().map((i) => [i.host, i.status])).toEqual([
+      ["plain", "exited"],
+      ["early", "exited"],
+    ]);
   }, 60_000);
 });
 

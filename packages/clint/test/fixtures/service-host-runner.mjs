@@ -16,9 +16,26 @@ export const hostSchema = {
 };
 export const outputsSchema = z.strictObject({ origin: z.url() });
 
+/** With `config.crash` it ends on its own with code 7, and counts its runs in
+ * `config.crashFile`: the first run `config.crashAfterMs` after it is ready;
+ * with `always` every later run before it serves anything. */
+function crashing(config) {
+  if (!config.crash) return () => {};
+  fs.appendFileSync(config.crashFile, "run\n");
+  const runs = fs.readFileSync(config.crashFile, "utf8").trim().split("\n");
+  if (runs.length > 1) {
+    if (config.crash === "always") process.exit(7);
+    return () => {};
+  }
+  return () => {
+    setTimeout(() => process.exit(7), config.crashAfterMs ?? 2_000);
+  };
+}
+
 export async function dev(host) {
   const config = host.config ?? {};
   fs.writeFileSync(config.pidFile, String(process.pid));
+  const crashWhenReady = crashing(config);
   await new Promise((resolve) => setTimeout(resolve, config.delayMs ?? 0));
   const server = createServer((req, res) => {
     res.writeHead(200, { "content-type": "text/plain" });
@@ -40,6 +57,7 @@ export async function dev(host) {
   process.once("SIGTERM", () => {
     void shutdown().then(() => process.exit(0));
   });
+  crashWhenReady();
   return {
     outputs: { origin: `http://127.0.0.1:${server.address().port}` },
     ready: Promise.resolve(),

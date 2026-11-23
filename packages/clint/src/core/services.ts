@@ -74,8 +74,15 @@ interface ServiceStateFile {
   /** Active log file for the current run, relative to the service dir. */
   logFile?: string;
   /** Set when the user's supervisor holds the instance: its process, its
-   * handle for the instance, and how long the instance lives. */
-  supervisor?: { pid: number; handle: string; lifetime: ServiceLifetime };
+   * handle for the instance, and how long the instance lives. The
+   * supervisor then applies the restart policy, and this manager does not.
+   * `restarting`: it ended on its own and the supervisor starts it again. */
+  supervisor?: {
+    pid: number;
+    handle: string;
+    lifetime: ServiceLifetime;
+    restarting?: boolean;
+  };
 }
 
 export interface ServiceManagerOptions {
@@ -354,11 +361,15 @@ function isHeldBySupervisor(state: ServiceStateFile): boolean {
     state.supervisor !== undefined &&
     !isOwnerAlive(state) &&
     isPidAlive(state.supervisor.pid) &&
-    isInstanceAlive(state)
+    // One the supervisor starts again has no process for a moment.
+    (isInstanceAlive(state) || state.supervisor.restarting === true)
   );
 }
 
 type SupervisorModule = typeof import("@powerhousedao/host-core/supervisor");
+type SupervisedInstance = Awaited<
+  ReturnType<SupervisorModule["listSupervised"]>
+>["instances"][number];
 type SupervisorLease = Awaited<
   ReturnType<SupervisorModule["holdSupervisorLease"]>
 >;
@@ -617,19 +628,282 @@ export function createServiceManager(
     return lease;
   }
 
-  /** The instance of `state` as the supervisor lists it, when it holds it. */
+  /**
+   * The instance of `state` as the supervisor lists it, when it holds it:
+   * the handle, and the same process or (after the supervisor started it
+   * again) the same log file, which this manager named for it alone.
+   */
   async function heldInstance(
     supervisor: RunningSupervisor,
     state: ServiceStateFile,
-  ): Promise<boolean> {
-    if (state.supervisor?.pid !== supervisor.pid) return false;
-    const { instances } = await supervisor.api.listSupervised(
-      supervisor.control,
-    );
-    return instances.some(
+    listed?: SupervisedInstance[],
+  ): Promise<SupervisedInstance | undefined> {
+    if (state.supervisor?.pid !== supervisor.pid) return undefined;
+    const instances =
+      listed ??
+      (await supervisor.api.listSupervised(supervisor.control)).instances;
+    const logPath =
+      state.logFile === undefined
+        ? undefined
+        : path.resolve(serviceDir(servicesDir, state.serviceId), state.logFile);
+    return instances.find(
       (i) =>
-        i.handle === state.supervisor?.handle && i.mine && i.pid === state.pid,
+        i.handle === state.supervisor?.handle &&
+        i.mine &&
+        (i.pid === state.pid ||
+          (logPath !== undefined &&
+            i.logFile !== undefined &&
+            path.resolve(i.logFile) === logPath)),
     );
+  }
+
+  /**
+   * Brings the state of an instance the supervisor holds in line with what
+   * the supervisor says of it: the process it runs as now, a restart it
+   * waits for, or that it was left ended. Returns whether it is settled
+   * (false: the supervisor is starting it again).
+   */
+  function applySupervised(
+    def: ServiceDefinition<any>,
+    state: ServiceStateFile,
+    held: SupervisedInstance | undefined,
+  ): boolean {
+    const statePath = stateFilePath(servicesDir, def.id, state.instanceId);
+    if (!state.supervisor || state.status === "stopped") return true;
+    if (hostStarts.has(statePath) || stopping.has(statePath)) return true;
+    const name = resolveServiceName(def);
+    const before = JSON.stringify(state);
+    const attempt = held?.restart?.attempt;
+    let settled = true;
+    if (held?.status === "starting" || held?.status === "restarting") {
+      settled = false;
+      const first = !state.supervisor.restarting;
+      state.supervisor.restarting = true;
+      if (
+        attempt !== undefined &&
+        (first || attempt !== state.restartAttempt)
+      ) {
+        state.restartAttempt = attempt;
+        if (isMine(state) && held.restart) {
+          eventBus?.emit("service:restarting", {
+            id: def.id,
+            instanceId: state.instanceId,
+            name,
+            attempt,
+            maxRetries: held.restart.maxRetries,
+          });
+        }
+      }
+    } else if (
+      held?.status === "running" &&
+      held.pid === state.pid &&
+      !isInstanceAlive(state)
+    ) {
+      // Its end has not reached the supervisor yet.
+      settled = false;
+    } else if (held?.status === "running") {
+      const moved = held.pid !== state.pid || state.supervisor.restarting;
+      delete state.supervisor.restarting;
+      if (moved) {
+        state.pid = held.pid;
+        state.status = "ready";
+        delete state.error;
+        if (attempt !== undefined) state.restartAttempt = attempt;
+        if (held.record && def.run && def.endpoints) {
+          try {
+            const endpoints = def.endpoints(held.record);
+            state.endpoints = {};
+            state.endpointTypes = {};
+            for (const [key, endpoint] of Object.entries(endpoints)) {
+              state.endpoints[key] = endpoint.url;
+              if (endpoint.type) state.endpointTypes[key] = endpoint.type;
+            }
+          } catch {
+            // what it published before stands
+          }
+        }
+        if (isMine(state)) {
+          eventBus?.emit("service:ready", {
+            id: def.id,
+            instanceId: state.instanceId,
+            name,
+            endpoints: state.endpoints ?? {},
+            endpointTypes: state.endpointTypes ?? {},
+          });
+        }
+      }
+    } else if (held?.status === "failed") {
+      delete state.supervisor.restarting;
+      if (state.status !== "failed") {
+        state.status = "failed";
+        state.error = `The supervisor left it ended: ${held.restart?.failed ?? "it ended on its own"}.`;
+        if (attempt !== undefined) state.restartAttempt = attempt;
+        if (isMine(state)) {
+          eventBus?.emit("service:failed", {
+            id: def.id,
+            instanceId: state.instanceId,
+            name,
+            error: state.error,
+          });
+        }
+      }
+    } else if (!isInstanceAlive(state) || state.supervisor.restarting) {
+      // Ended there, or not known there: nothing starts it again.
+      delete state.supervisor.restarting;
+      state.status = "stopped";
+      state.pid = 0;
+      state.stoppedAt ??= new Date().toISOString();
+    }
+    if (JSON.stringify(state) !== before) writeStateFile(statePath, state);
+    return settled;
+  }
+
+  /** Whether this manager speaks for a recorded instance: its own, or one
+   * whose manager has ended. */
+  const speaksFor = (state: ServiceStateFile) =>
+    isMine(state) || !isOwnerAlive(state);
+
+  /**
+   * Whether the supervisor is to say what became of an instance it holds
+   * under a restart policy: it ended on its own, or is being started again.
+   */
+  function awaitsSupervisor(
+    def: ServiceDefinition<any>,
+    state: ServiceStateFile,
+  ): boolean {
+    return (
+      state.supervisor !== undefined &&
+      def.restart?.enabled === true &&
+      speaksFor(state) &&
+      state.status !== "stopped" &&
+      state.status !== "failed" &&
+      isPidAlive(state.supervisor.pid) &&
+      (state.supervisor.restarting === true || !isInstanceAlive(state))
+    );
+  }
+
+  /** State paths whose instance the supervisor is asked about until it is
+   * settled. */
+  const following = new Set<string>();
+  const FOLLOW_POLL_MS = 250;
+
+  /**
+   * An instance the supervisor holds has ended on its own: the supervisor
+   * decides whether it starts again, and this follows what it does until
+   * the instance runs again or is left ended.
+   */
+  function followSupervised(def: ServiceDefinition<any>, statePath: string) {
+    if (following.has(statePath)) return;
+    following.add(statePath);
+    void (async () => {
+      try {
+        for (;;) {
+          const state = readStateFile(statePath);
+          if (!state?.supervisor || !speaksFor(state)) return;
+          if (state.status === "stopped" || stopping.has(statePath)) return;
+          let held: SupervisedInstance | undefined;
+          try {
+            const supervisor = await runningSupervisor();
+            if (supervisor) held = await heldInstance(supervisor, state);
+          } catch {
+            // The supervisor is gone, and what it held with it.
+          }
+          // A stop may have run meanwhile.
+          const now = readStateFile(statePath);
+          if (
+            !now?.supervisor ||
+            !speaksFor(now) ||
+            now.status === "stopped" ||
+            stopping.has(statePath)
+          ) {
+            return;
+          }
+          if (applySupervised(def, now, held)) return;
+          await new Promise((resolve) => {
+            setTimeout(resolve, FOLLOW_POLL_MS).unref();
+          });
+        }
+      } finally {
+        following.delete(statePath);
+      }
+    })();
+  }
+
+  /**
+   * Asks the supervisor about every instance it holds for this manager or
+   * for one that has ended, and brings their state in line. Returns the
+   * supervisor, when one runs.
+   */
+  async function syncSupervised(): Promise<RunningSupervisor | undefined> {
+    const supervisor = await runningSupervisor();
+    if (!supervisor) return undefined;
+    let listed: SupervisedInstance[] | undefined;
+    for (const def of definitions) {
+      if (!def.run) continue;
+      for (const state of scanInstances(servicesDir, def.id)) {
+        if (state.supervisor?.pid !== supervisor.pid) continue;
+        if (state.status === "stopped") continue;
+        // Another manager that still runs follows its own.
+        if (!isMine(state) && isOwnerAlive(state)) continue;
+        listed ??= (await supervisor.api.listSupervised(supervisor.control))
+          .instances;
+        applySupervised(
+          def,
+          state,
+          await heldInstance(supervisor, state, listed),
+        );
+      }
+    }
+    return supervisor;
+  }
+
+  /** Stops, at the supervisor, the instance it holds for `state`: also one
+   * it would start again. False when it holds none. */
+  async function stopAtSupervisor(state: ServiceStateFile): Promise<boolean> {
+    if (!state.supervisor) return false;
+    const supervisor = await runningSupervisor();
+    if (!supervisor || !(await heldInstance(supervisor, state))) return false;
+    await supervisor.api.stopSupervised(
+      supervisor.control,
+      state.supervisor.handle,
+    );
+    return true;
+  }
+
+  /** The status of an instance whose restart the supervisor decides on. */
+  function awaitedStatus(
+    def: ServiceDefinition<any>,
+    state: ServiceStateFile,
+  ): ServiceInstanceStatus {
+    return {
+      serviceId: def.id,
+      instanceId: state.instanceId,
+      name: resolveServiceName(def),
+      status: "starting",
+      restartAttempt: state.restartAttempt,
+      params: state.params,
+      workdir: state.workdir,
+      ...(state.supervisor ? { supervisor: state.supervisor } : {}),
+    };
+  }
+
+  /** The status of an instance the supervisor's restart policy gave up on:
+   * listed as failed, with the reason, until it is started or stopped. */
+  function leftEndedStatus(
+    def: ServiceDefinition<any>,
+    state: ServiceStateFile,
+  ): ServiceInstanceStatus {
+    return {
+      serviceId: def.id,
+      instanceId: state.instanceId,
+      name: resolveServiceName(def),
+      status: "failed",
+      error: state.error ?? "Process exited unexpectedly",
+      restartAttempt: state.restartAttempt,
+      params: state.params,
+      workdir: state.workdir,
+      ...(state.supervisor ? { supervisor: state.supervisor } : {}),
+    };
   }
 
   /** The status of an instance the supervisor holds for an ended manager. */
@@ -641,7 +915,12 @@ export function createServiceManager(
       serviceId: def.id,
       instanceId: state.instanceId,
       name: resolveServiceName(def),
-      status: state.status as ServiceInstanceStatus["status"],
+      status: state.supervisor?.restarting
+        ? "starting"
+        : (state.status as ServiceInstanceStatus["status"]),
+      ...(state.supervisor?.restarting
+        ? { restartAttempt: state.restartAttempt }
+        : {}),
       pid: state.pid,
       endpoints: state.endpoints,
       endpointTypes: state.endpointTypes,
@@ -725,6 +1004,21 @@ export function createServiceManager(
     if (existingState && existingState.status === "stopped") {
       // Clean up stopped state — we're restarting this instance
       removeStateFile(stateFilePath(servicesDir, id, instanceId));
+    } else if (existingState && awaitsSupervisor(def, existingState)) {
+      // The supervisor says what became of it: it may run again already.
+      const supervisor = await runningSupervisor();
+      const settled =
+        supervisor !== undefined &&
+        applySupervised(
+          def,
+          existingState,
+          await heldInstance(supervisor, existingState),
+        );
+      // It is being started again there, or runs again: that is the instance.
+      if (!settled || existingState.status === "ready") return instanceId;
+      if (existingState.status === "stopped") {
+        removeStateFile(stateFilePath(servicesDir, id, instanceId));
+      }
     } else if (existingState && isInstanceAlive(existingState)) {
       // Another process's instance (or a leftover) is never adopted, and
       // a second copy would fight it for its port: refuse. One the
@@ -1140,6 +1434,10 @@ export function createServiceManager(
             logFile: run.logPath,
             ...(def.readiness ? { readyTimeoutMs: def.readiness.timeout } : {}),
             ...(def.shutdown ? { stopTimeoutMs: def.shutdown.timeout } : {}),
+            // The supervisor applies the policy from here on: it also does
+            // after this process has ended. This manager then restarts
+            // nothing itself (see list()).
+            ...(def.restart ? { restart: def.restart } : {}),
           },
           { signal: abort.signal },
         );
@@ -1217,6 +1515,8 @@ export function createServiceManager(
     hostRuns.set(statePath, spawned);
     void spawned.exited.then(() => {
       if (hostRuns.get(statePath) === spawned) hostRuns.delete(statePath);
+      // The supervisor decides whether it starts again.
+      if (state.supervisor) followSupervised(def, statePath);
     });
     eventBus?.emit("service:ready", {
       id,
@@ -1258,31 +1558,54 @@ export function createServiceManager(
       throw new Error(`Service ${serviceId} is not running`);
     }
 
+    /** Stopped at the supervisor: a stop that was asked for, so its restart
+     * policy leaves the instance ended. */
+    const stoppedThere = async (): Promise<boolean> => {
+      stopping.add(statePath);
+      try {
+        if (!(await stopAtSupervisor(state))) return false;
+        hostRuns.delete(statePath);
+        if (state.supervisor) delete state.supervisor.restarting;
+        state.status = "stopped";
+        state.pid = 0;
+        state.stoppedAt = new Date().toISOString();
+        writeStateFile(statePath, state);
+      } finally {
+        stopping.delete(statePath);
+      }
+      eventBus?.emit("service:stopped", {
+        id: serviceId,
+        instanceId,
+        name: resolveServiceName(def),
+      });
+      return true;
+    };
+
     if (!isMine(state)) {
       // What the supervisor holds for an ended manager is stopped there.
-      if (isHeldBySupervisor(state) && state.supervisor) {
-        const supervisor = await runningSupervisor();
-        if (supervisor && (await heldInstance(supervisor, state))) {
-          await supervisor.api.stopSupervised(
-            supervisor.control,
-            state.supervisor.handle,
-          );
-          state.status = "stopped";
-          state.pid = 0;
-          state.stoppedAt = new Date().toISOString();
-          writeStateFile(statePath, state);
-          eventBus?.emit("service:stopped", {
-            id: serviceId,
-            instanceId,
-            name: resolveServiceName(def),
-          });
-          return;
-        }
+      if (
+        (isHeldBySupervisor(state) || awaitsSupervisor(def, state)) &&
+        (await stoppedThere())
+      ) {
+        return;
       }
       // Never kill a process this manager did not spawn: settle stale state
       // (as list() does) or refuse.
       if (foreignStatus(def, state).status === "stopped") return;
       throw new Error(`Service ${serviceId}: ${notOursMessage(state)}`);
+    }
+
+    // One the supervisor restarts is stopped there and only there: ended
+    // from here it would be started again. That holds for the run this
+    // manager started, for one the supervisor started after it, and for one
+    // that waits for its restart.
+    if (
+      state.supervisor &&
+      def.restart?.enabled &&
+      isPidAlive(state.supervisor.pid) &&
+      (await stoppedThere())
+    ) {
+      return;
     }
 
     if (!isPidAlive(state.pid)) {
@@ -1376,7 +1699,9 @@ export function createServiceManager(
     }
 
     const mine = instances.filter(
-      (s) => s.status !== "stopped" && (isMine(s) || isHeldBySupervisor(s)),
+      (s) =>
+        s.status !== "stopped" &&
+        (isMine(s) || isHeldBySupervisor(s) || awaitsSupervisor(def, s)),
     );
     if (mine.length === 0) {
       // Nothing of ours: a live instance of another process is refused by
@@ -1464,6 +1789,24 @@ export function createServiceManager(
 
         // Another process's instance, or a leftover: never adopted.
         if (!isMine(state)) {
+          // One the supervisor restarts for a manager that has ended.
+          if (awaitsSupervisor(def, state)) {
+            followSupervised(
+              def,
+              stateFilePath(servicesDir, def.id, state.instanceId),
+            );
+            results.push(awaitedStatus(def, state));
+            continue;
+          }
+          if (
+            state.supervisor &&
+            state.status === "failed" &&
+            !isOwnerAlive(state) &&
+            !isInstanceAlive(state)
+          ) {
+            results.push(leftEndedStatus(def, state));
+            continue;
+          }
           results.push(
             isHeldBySupervisor(state)
               ? heldStatus(def, state)
@@ -1496,6 +1839,38 @@ export function createServiceManager(
             workdir: state.workdir,
           });
           continue;
+        }
+
+        // One the supervisor holds is restarted there, never here: exactly
+        // one party applies the policy. Its end is followed until the
+        // supervisor has it running again or has left it ended.
+        if (awaitsSupervisor(def, state)) {
+          followSupervised(def, statePath);
+          results.push(awaitedStatus(def, state));
+          continue;
+        }
+        if (state.supervisor && def.restart?.enabled) {
+          if (state.status === "failed") {
+            results.push(leftEndedStatus(def, state));
+            continue;
+          }
+          if (!isInstanceAlive(state)) {
+            // The supervisor ended, and what it held with it.
+            delete state.supervisor.restarting;
+            state.status = "stopped";
+            state.pid = 0;
+            state.stoppedAt = new Date().toISOString();
+            writeStateFile(statePath, state);
+            results.push({
+              serviceId: def.id,
+              instanceId: state.instanceId,
+              name: state.name,
+              status: "stopped",
+              params: state.params,
+              workdir: state.workdir,
+            });
+            continue;
+          }
         }
 
         // Verify PID is alive (pid <= 0 means not yet spawned — treat as dead)
@@ -1556,9 +1931,6 @@ export function createServiceManager(
                   params: restartParams,
                   workdir: restartWorkdir,
                   name: restartName,
-                  ...(state.supervisor
-                    ? { lifetime: state.supervisor.lifetime }
-                    : {}),
                 });
               } catch {
                 // Restart failed — dir may have been removed (test teardown)
@@ -1760,7 +2132,8 @@ export function createServiceManager(
     scanProjects: scanProjectsForService,
     purgeStoppedInstances,
     supervisor: async () => {
-      const running = await runningSupervisor();
+      // What it holds may have been started again since it was recorded.
+      const running = await syncSupervised();
       return running ? { pid: running.pid } : undefined;
     },
   };

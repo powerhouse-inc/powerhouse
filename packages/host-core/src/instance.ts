@@ -282,3 +282,58 @@ export function restartDecision(
     delayMs: policy.delay,
   };
 }
+
+/** Where the restart policy of a supervised instance stands. */
+export interface RestartState {
+  /** Restarts in a row before it is left failed. */
+  maxRetries: number;
+  /** Ms between its end and the restart. */
+  delay: number;
+  /** Restarts made since it last got ready. */
+  attempt: number;
+  /** How it last ended on its own. */
+  lastExit?: { code: number | null; signal: string | null; at: string };
+  /** When the restart it waits for is made. */
+  nextAt?: string;
+  /** Why it was left ended. */
+  failed?: string;
+}
+
+function exitWords(exit: NonNullable<RestartState["lastExit"]>): string {
+  return exit.signal !== null ? `signal ${exit.signal}` : `code ${exit.code}`;
+}
+
+/**
+ * What a supervisor knows of an instance beyond its status, one line each,
+ * in the words every listing uses: the version that runs it, where its
+ * restart policy stands, and what cannot be done with it.
+ */
+export function supervisedFactLines(facts: {
+  runnerVersion?: string;
+  restart?: RestartState;
+  missing?: readonly string[];
+}): string[] {
+  const lines: string[] = [];
+  if (facts.runnerVersion !== undefined) {
+    lines.push(`runner version: ${facts.runnerVersion}`);
+  }
+  const { restart } = facts;
+  if (restart) {
+    const parts = [
+      `restarted by the supervisor: up to ${restart.maxRetries} time(s) in a row, ${restart.delay} ms apart`,
+      `attempt ${restart.attempt} of ${restart.maxRetries}`,
+    ];
+    if (restart.lastExit) {
+      parts.push(
+        `last ended with ${exitWords(restart.lastExit)} at ${restart.lastExit.at}`,
+      );
+    }
+    if (restart.nextAt !== undefined) {
+      parts.push(`next start at ${restart.nextAt}`);
+    }
+    lines.push(parts.join("; "));
+    if (restart.failed !== undefined) lines.push(`failed: ${restart.failed}`);
+  }
+  for (const line of facts.missing ?? []) lines.push(`- ${line}`);
+  return lines;
+}

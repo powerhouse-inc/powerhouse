@@ -1942,6 +1942,228 @@ describe("host services", () => {
       expect(later.list("web")[0]).toMatchObject({ status: "stopped" });
     }, 120_000);
 
+    describe("with a restart policy", () => {
+      const policy = { enabled: true, maxRetries: 2, delay: 200 };
+      let crashFile: string;
+      const runs = () =>
+        fs.existsSync(crashFile)
+          ? fs.readFileSync(crashFile, "utf8").trim().split("\n").length
+          : 0;
+      const until = async (what: () => boolean, timeoutMs = 60_000) => {
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() < deadline) {
+          if (what()) return true;
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        return what();
+      };
+      const settle = () => new Promise((r) => setTimeout(r, 1_500));
+
+      beforeEach(() => {
+        crashFile = path.join(tmpDir, "runs.txt");
+      });
+
+      it("leaves the restart to the supervisor: one that ends once is started again once, and a stop ends it for good", async () => {
+        makeHostProject(project, { marker, pidFile, crash: "once", crashFile });
+        const held = await supervise();
+        const restarting: unknown[] = [];
+        const ready: unknown[] = [];
+        eventBus.on("service:restarting", (data) => restarting.push(data));
+        eventBus.on("service:ready", (data) => ready.push(data));
+        const mgr = managerFor(webDef({ restart: policy }));
+
+        const instanceId = await mgr.start("web", { cwd: project });
+        const first = runPid();
+        started.push(first);
+        expect(held.instances()).toMatchObject([
+          { handle: "1", pid: first, restart: { maxRetries: 2, attempt: 0 } },
+        ]);
+
+        // It ends on its own (code 7): the supervisor starts it again, and
+        // the manager follows it to its new process.
+        expect(
+          await until(() => {
+            const [now] = mgr.list("web");
+            return now?.status === "ready" && now.pid !== first;
+          }),
+        ).toBe(true);
+        const second = runPid();
+        started.push(second);
+        const origin = readRunRecord(project, "web")?.outputs?.origin;
+        expect(mgr.list("web")).toMatchObject([
+          {
+            instanceId,
+            status: "ready",
+            pid: second,
+            endpoints: { site: origin },
+            supervisor: { handle: "1", lifetime: "caller" },
+          },
+        ]);
+        expect(await (await fetch(String(origin))).text()).toBe("web saw /");
+        expect(held.instances()).toMatchObject([
+          {
+            handle: "1",
+            pid: second,
+            status: "running",
+            restart: { attempt: 0, lastExit: { code: 7 } },
+          },
+        ]);
+        // Once, by one party: two runs in all.
+        await settle();
+        expect(runs()).toBe(2);
+        expect(runPid()).toBe(second);
+        expect(restarting).toMatchObject([
+          { id: "web", instanceId, attempt: 1, maxRetries: 2 },
+        ]);
+        expect(ready).toHaveLength(2);
+
+        // A stop that was asked for: of a run the supervisor started.
+        await mgr.stop("web");
+        expect(fs.readFileSync(marker, "utf8")).toBe(
+          "stopped through its stop",
+        );
+        expect(isAlive(second)).toBe(false);
+        await settle();
+        expect(runs()).toBe(2);
+        expect(mgr.list("web")[0]).toMatchObject({ status: "stopped" });
+        expect(held.instances()).toMatchObject([{ status: "exited" }]);
+      }, 180_000);
+
+      it("lists one the supervisor gave up on as failed, with its reason", async () => {
+        makeHostProject(project, {
+          marker,
+          pidFile,
+          crash: "always",
+          crashFile,
+        });
+        const held = await supervise();
+        const failed: { error?: string }[] = [];
+        eventBus.on("service:failed", (data) =>
+          failed.push(data as { error?: string }),
+        );
+        const mgr = managerFor(webDef({ restart: policy }));
+        await mgr.start("web", { cwd: project });
+        started.push(runPid());
+
+        expect(await until(() => mgr.list("web")[0]?.status === "failed")).toBe(
+          true,
+        );
+        const reason =
+          "The supervisor left it ended: it ended on its own (code 7) after 2 restart(s) in a row; its restart policy allows 2.";
+        expect(mgr.list("web")).toMatchObject([
+          { status: "failed", error: reason, restartAttempt: 2 },
+        ]);
+        expect(failed).toMatchObject([{ error: reason }]);
+        expect(held.instances()).toMatchObject([
+          { handle: "1", status: "failed", restart: { attempt: 2 } },
+        ]);
+        // The first run and the two restarts its policy allows; no more.
+        await settle();
+        expect(runs()).toBe(3);
+        expect(isAlive(runPid())).toBe(false);
+
+        await mgr.stop("web");
+        expect(mgr.list("web")[0]).toMatchObject({ status: "stopped" });
+      }, 180_000);
+
+      it("does not start a stopped one again, nor one stopped while it waits for its restart", async () => {
+        makeHostProject(project, {
+          marker,
+          pidFile,
+          crash: "once",
+          crashFile,
+          crashAfterMs: 60_000,
+        });
+        const held = await supervise();
+        const mgr = managerFor(
+          webDef({ restart: { ...policy, delay: 5_000 } }),
+        );
+        await mgr.start("web", { cwd: project });
+        const first = runPid();
+        started.push(first);
+        await mgr.stop("web");
+        expect(isAlive(first)).toBe(false);
+        await settle();
+        expect(runs()).toBe(1);
+        expect(held.instances()).toMatchObject([{ status: "exited" }]);
+
+        // Killed, it waits five seconds for its restart: a stop cancels it.
+        fs.rmSync(crashFile);
+        await mgr.start("web", { cwd: project });
+        const again = runPid();
+        started.push(again);
+        killTree(again, "SIGKILL");
+        expect(
+          await until(() =>
+            held.instances().some((i) => i.status === "restarting"),
+          ),
+        ).toBe(true);
+        expect(mgr.list("web")[0]).toMatchObject({
+          status: "starting",
+          supervisor: { lifetime: "caller" },
+        });
+        await mgr.stop("web");
+        expect(mgr.list("web")[0]).toMatchObject({ status: "stopped" });
+        await new Promise((r) => setTimeout(r, 6_000));
+        expect(runs()).toBe(1);
+        expect(runPid()).toBe(again);
+        expect(held.instances().filter((i) => i.status !== "exited")).toEqual(
+          [],
+        );
+      }, 180_000);
+
+      it("follows one the supervisor restarts for a manager that has ended, and stops it there", async () => {
+        makeHostProject(project, {
+          marker,
+          pidFile,
+          crash: "once",
+          crashFile,
+          crashAfterMs: 4_000,
+        });
+        const held = await supervise();
+        const first = managerFor(webDef({ restart: policy }));
+        const instanceId = await first.start("web", {
+          cwd: project,
+          lifetime: "supervisor",
+        });
+        const pid = runPid();
+        started.push(pid);
+        await first.stopAll();
+        orphan();
+
+        // Its Cli has left: the supervisor still starts it again.
+        expect(
+          await until(() => fs.existsSync(pidFile) && runPid() !== pid),
+        ).toBe(true);
+        const later = managerFor(webDef({ restart: policy }));
+        expect(
+          await until(() => {
+            const [now] = later.list("web");
+            return now?.status === "ready" && now.pid !== pid;
+          }),
+        ).toBe(true);
+        const second = runPid();
+        started.push(second);
+        expect(later.list("web")).toMatchObject([
+          {
+            instanceId,
+            status: "ready",
+            pid: second,
+            supervisor: { handle: "1", lifetime: "supervisor" },
+          },
+        ]);
+        await settle();
+        expect(runs()).toBe(2);
+
+        await later.stop("web");
+        expect(isAlive(second)).toBe(false);
+        await settle();
+        expect(runs()).toBe(2);
+        expect(later.list("web")[0]).toMatchObject({ status: "stopped" });
+        expect(held.instances()).toMatchObject([{ status: "exited" }]);
+      }, 180_000);
+    });
+
     it("starts nothing to outlive it without a supervisor", async () => {
       makeHostProject(project, { marker, pidFile });
       const mgr = managerFor(webDef());

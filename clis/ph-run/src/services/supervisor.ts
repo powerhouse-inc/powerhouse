@@ -1,6 +1,7 @@
 import {
   installStopChannel,
   STOP_ON_STDIN_ENV,
+  supervisedFactLines,
 } from "@powerhousedao/host-core";
 import {
   findSupervisor,
@@ -31,7 +32,8 @@ import path from "node:path";
  *   ph run supervisor ps                   what it holds
  *   ph run supervisor start <host> [verb] [--lifetime caller|supervisor]
  *       [--project <dir>] [--data <dir>] [--record optional]
- *       [--ready-timeout <ms>] [runner arguments]
+ *       [--ready-timeout <ms>] [--restart <times> [--restart-delay <ms>]]
+ *       [runner arguments]
  *   ph run supervisor stop|restart <handle>
  *   ph run supervisor logs <handle> [--lines <n>]
  */
@@ -41,7 +43,8 @@ export const SUPERVISOR_HOST = "supervisor";
 
 export const SUPERVISOR_USAGE =
   "Usage: ph run supervisor [--stop | ps | start <host> [verb] [--lifetime caller|supervisor] " +
-  "[--project <dir>] [--data <dir>] [runner arguments] | stop <handle> | restart <handle> | logs <handle>]";
+  "[--project <dir>] [--data <dir>] [--restart <times> [--restart-delay <ms>]] [runner arguments] | " +
+  "stop <handle> | restart <handle> | logs <handle>]";
 
 export interface SupervisorCommand {
   verb?: string;
@@ -71,7 +74,7 @@ export function describeSupervised(instance: SupervisedInstance): string[] {
     .join(" ");
   const head = [
     instance.handle.padEnd(3),
-    instance.status.padEnd(8),
+    instance.status.padEnd(10),
     `pid ${instance.pid}`.padEnd(10),
     instance.mine ? `with the ${instance.lifetime}` : "not mine",
     instance.verb ? `${instance.host} ${instance.verb}` : instance.host,
@@ -80,7 +83,7 @@ export function describeSupervised(instance: SupervisedInstance): string[] {
     head,
     `     data folder: ${instance.dataDir}${instance.projectDir === instance.dataDir ? "" : ` (project ${instance.projectDir})`}`,
     ...(ports ? [`     ports: ${ports}`] : []),
-    ...instance.missing.map((line) => `     - ${line}`),
+    ...supervisedFactLines(instance).map((line) => `     ${line}`),
   ];
 }
 
@@ -90,6 +93,8 @@ const FLAGS_WITH_VALUE = new Set([
   "--data",
   "--record",
   "--ready-timeout",
+  "--restart",
+  "--restart-delay",
   "--lines",
 ]);
 
@@ -202,6 +207,23 @@ async function start(
   if (readyTimeoutMs !== undefined && !(readyTimeoutMs > 0)) {
     throw new Error("--ready-timeout is a number of milliseconds.");
   }
+  // The supervisor restarts one that ends on its own, this many times in a
+  // row at most.
+  const maxRetries =
+    flags["--restart"] === undefined ? undefined : Number(flags["--restart"]);
+  if (
+    maxRetries !== undefined &&
+    !(Number.isInteger(maxRetries) && maxRetries >= 0)
+  ) {
+    throw new Error("--restart is a number of restarts in a row.");
+  }
+  const restartDelay = Number(flags["--restart-delay"] ?? 1_000);
+  if (!(restartDelay >= 0)) {
+    throw new Error("--restart-delay is a number of milliseconds.");
+  }
+  if (flags["--restart-delay"] !== undefined && maxRetries === undefined) {
+    throw new Error("--restart-delay goes with --restart <times>.");
+  }
   const projectDir = path.resolve(flags["--project"] ?? process.cwd());
   const { control } = await running(env);
 
@@ -230,6 +252,9 @@ async function start(
       ...(lease ? { lease: lease.id } : {}),
       ...(readyTimeoutMs === undefined ? {} : { readyTimeoutMs }),
       ...(record === undefined ? {} : { record }),
+      ...(maxRetries === undefined
+        ? {}
+        : { restart: { enabled: true, maxRetries, delay: restartDelay } }),
     },
     { signal: abort.signal },
   ).finally(() => process.off("SIGINT", interrupt));
@@ -254,12 +279,24 @@ async function start(
       process.off("SIGTERM", done);
       resolve();
     };
+    // Until it has ended for good: the supervisor may start it again.
+    let asking = false;
     const timer = setInterval(() => {
-      try {
-        process.kill(instance.pid, 0);
-      } catch {
-        done();
-      }
+      if (asking) return;
+      asking = true;
+      void listSupervised(control)
+        .then(
+          (listed) => {
+            const now = listed.instances.find(
+              (i) => i.mine && i.handle === instance.handle,
+            );
+            if (!now || now.status === "exited" || now.status === "failed") {
+              done();
+            }
+          },
+          () => done(),
+        )
+        .finally(() => (asking = false));
     }, 500);
     process.once("SIGINT", done);
     process.once("SIGTERM", done);

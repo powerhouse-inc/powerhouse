@@ -99,12 +99,14 @@ export {
   listRunningInstances,
   restartDecision,
   runningInstance,
+  supervisedFactLines,
   type AlreadyRunning,
   type FindInstanceOptions,
   type InstanceDrive,
   type InstanceKey,
   type RestartDecision,
   type RestartPolicy,
+  type RestartState,
   type RunningInstance,
 } from "./instance.js";
 export {

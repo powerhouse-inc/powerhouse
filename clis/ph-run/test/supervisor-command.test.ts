@@ -217,6 +217,10 @@ describe("ph-run run supervisor", () => {
       "supervisor",
       "--project",
       project,
+      "--restart",
+      "2",
+      "--restart-delay",
+      "250",
     );
     expect(kept.out).toContain(
       "Started under the supervisor, with the supervisor:",
@@ -255,10 +259,36 @@ describe("ph-run run supervisor", () => {
     expect(listed).toMatch(
       new RegExp(`pid ${api}\\s+with the caller\\s+api dev`),
     );
+    // The version that runs each, and the restart policy of the one that
+    // was started with one.
+    expect(listed.match(/ {5}runner version: \S+/g)).toHaveLength(2);
+    expect(
+      listed.match(
+        / {5}restarted by the supervisor: up to 2 time\(s\) in a row, 250 ms apart; attempt 0 of 2/g,
+      ),
+    ).toHaveLength(1);
+
+    // It ends on its own: the supervisor starts it again, and says so.
+    killTree(web, "SIGKILL");
+    expect(
+      await until(
+        () => existsSync(path.join(tmp, "web.pid")) && pidOf("web") !== web,
+      ),
+    ).toBe(true);
+    const restarted = pidOf("web");
+    expect(
+      await until(() =>
+        new RegExp(`1 +running +pid ${restarted} `).test(ask("ps").out),
+      ),
+    ).toBe(true);
+    expect(ask("ps").out).toMatch(
+      /attempt 0 of 2; last ended with (code|signal) \S+ at \d{4}-/,
+    );
+    expect(isAlive(restarted)).toBe(true);
 
     caller.child.kill("SIGKILL");
     expect(await until(() => !isAlive(api))).toBe(true);
-    expect(isAlive(web)).toBe(true);
+    expect(isAlive(restarted)).toBe(true);
 
     // Stopping it stops what it holds, and leaves no record.
     const stopped = ask("--stop");
@@ -268,7 +298,7 @@ describe("ph-run run supervisor", () => {
     expect(stopped.code).toBe(0);
     expect(await until(() => supervisor.seen.code !== undefined)).toBe(true);
     expect(supervisor.seen.code).toBe(0);
-    expect(isAlive(web)).toBe(false);
+    expect(isAlive(restarted)).toBe(false);
     expect(readFileSync(path.join(tmp, "web.stopped"), "utf8")).toBe(
       "stopped through its stop",
     );
