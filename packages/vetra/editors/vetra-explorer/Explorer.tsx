@@ -78,6 +78,11 @@ export function VetraExplorer({
   const [creating, setCreating] = useState<readonly StageDocumentType[] | null>(
     null,
   );
+  // The dialog keeps its selected type while it closes, so its list must not empty.
+  const [dialogTypes, setDialogTypes] = useState<readonly StageDocumentType[]>(
+    [],
+  );
+  if (creating && creating !== dialogTypes) setDialogTypes(creating);
 
   // An opened document takes the place of a Build or Deploy page.
   const [lastSelectedId, setLastSelectedId] = useState(selectedId);
@@ -198,7 +203,7 @@ export function VetraExplorer({
         {content}
       </div>
       <CreateDocumentWithTypeModal
-        documentTypes={(creating ?? []).map((type) => ({
+        documentTypes={dialogTypes.map((type) => ({
           documentType: type.documentType,
           name: type.label,
         }))}
