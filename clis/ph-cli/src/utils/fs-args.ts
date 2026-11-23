@@ -27,18 +27,6 @@ export const Directory: Type<string, string> = extendType(ExistingPath, {
   },
 });
 
-/** An existing file. */
-export const File: Type<string, string> = extendType(ExistingPath, {
-  displayName: "file",
-  description: "A file in the file system",
-  from(resolved) {
-    if (!fs.statSync(resolved).isFile()) {
-      return Promise.reject(new Error("Provided path is not a file"));
-    }
-    return Promise.resolve(resolved);
-  },
-});
-
 /** A module's directory name or path, resolved by the command against the project. */
 export const ModuleDir: Type<string, string> = extendType(string, {
   displayName: "dir",

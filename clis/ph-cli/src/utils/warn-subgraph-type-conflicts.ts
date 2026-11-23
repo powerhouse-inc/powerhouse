@@ -1,4 +1,4 @@
-import { lintSubgraphTypes } from "@powerhousedao/vetra/codegen";
+import { lintSubgraphTypes } from "./subgraph-type-lint.js";
 
 export async function warnSubgraphTypeConflicts(
   projectDir: string,

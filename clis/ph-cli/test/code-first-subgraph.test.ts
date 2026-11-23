@@ -1,8 +1,3 @@
-import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
-import {
-  extractSubgraphDocuments,
-  saveSpec,
-} from "@powerhousedao/vetra/codegen";
 import { parse } from "cmd-ts";
 import {
   mkdirSync,
@@ -31,10 +26,8 @@ const args = (
   overrides: Partial<GenerateSubgraphArgs>,
 ): GenerateSubgraphArgs => ({
   name: undefined,
-  document: undefined,
   dir: undefined,
   all: false,
-  extract: false,
   codeFirst: false,
   skipInstall: true,
   debug: undefined,
@@ -85,18 +78,6 @@ const snapshot = (dir: string, subgraph: string) =>
     ].map((path) => [path, read(dir, path)]),
   );
 
-async function subgraphSpec(name: string) {
-  const source = project();
-  const dirName = name.toLowerCase();
-  mkdirSync(join(source, "subgraphs", dirName), { recursive: true });
-  writeFileSync(
-    join(source, "subgraphs", dirName, "index.ts"),
-    `import { BaseSubgraph } from "@powerhousedao/reactor-api";\nexport class ${name}Subgraph extends BaseSubgraph {\n  name = "${dirName}";\n}\n`,
-  );
-  const [doc] = extractSubgraphDocuments(buildTsMorphProject(source));
-  return saveSpec(doc, source);
-}
-
 describe("ph generate subgraph --code-first", { timeout: 60_000 }, () => {
   it("reads the flag", async () => {
     const given = await parse(generateSubgraphCmd, [
@@ -139,37 +120,26 @@ describe("ph generate subgraph --code-first", { timeout: 60_000 }, () => {
       codeFirst: false,
       expected: SCHEMA_FIRST_FILES,
     },
-  ])("--document scaffolds $style", async (row) => {
-    const spec = await subgraphSpec("Orders");
+  ])("--name scaffolds $style", async (row) => {
     const dir = project(row.config);
     await startGenerateSubgraph(
-      args({ document: spec, codeFirst: row.codeFirst }),
+      args({ name: "Orders", codeFirst: row.codeFirst }),
       dir,
     );
     expect(files(dir, "orders")).toEqual(row.expected);
   });
 
-  it.each(["name", "document"] as const)(
-    "with --%s, leaves an existing schema-first subgraph unchanged and says how to convert it",
-    async (target) => {
-      const dir = project();
-      await startGenerateSubgraph(args({ name: "Orders" }), dir);
-      const before = snapshot(dir, "orders");
-      logged = [];
-      await startGenerateSubgraph(
-        args(
-          target === "name"
-            ? { name: "Orders", codeFirst: true }
-            : { document: await subgraphSpec("Orders"), codeFirst: true },
-        ),
-        dir,
-      );
-      expect(logged).toEqual([
-        "subgraphs/orders is schema-first; --code-first only applies to new subgraphs. To convert it, run ph migrate --subgraph orders.",
-      ]);
-      expect(snapshot(dir, "orders")).toEqual(before);
-    },
-  );
+  it("leaves an existing schema-first subgraph unchanged and says how to convert it", async () => {
+    const dir = project();
+    await startGenerateSubgraph(args({ name: "Orders" }), dir);
+    const before = snapshot(dir, "orders");
+    logged = [];
+    await startGenerateSubgraph(args({ name: "Orders", codeFirst: true }), dir);
+    expect(logged).toEqual([
+      "subgraphs/orders is schema-first; --code-first only applies to new subgraphs. To convert it, run ph migrate --subgraph orders.",
+    ]);
+    expect(snapshot(dir, "orders")).toEqual(before);
+  });
 });
 
 describe("ph generate subgraph regeneration", { timeout: 60_000 }, () => {

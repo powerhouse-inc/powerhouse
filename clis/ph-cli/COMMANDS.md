@@ -137,10 +137,6 @@ The generate command creates code for Powerhouse modules. It helps you create ne
 ## All
 Re-generate all modules in the current project
 ### flags
-#### Extract <br>
-Instead of generating code, write a spec for every module into specs/ (one-shot migration to documents-as-source-of-truth)<br><br>
-**usage:** `--extract, -x`<br>
-
 #### Help <br>
 show help<br><br>
 **usage:** `--help, -h`<br>
@@ -149,10 +145,6 @@ show help<br><br>
 ## Document Model
 Generate a document model
 ### options
-#### Document <br>
-Path to a document model spec (.phd or .json) to generate from<br><br>
-**usage:** `--document, -d <file>`<br>
-
 #### Dir <br>
 Name of the directory of an existing document model to re-generate (my-document-model or document-models/my-document-model)<br><br>
 **usage:** `--dir <dir>`<br>
@@ -166,10 +158,6 @@ Experimental. Create a code-first document model with this name, with its editor
 #### All <br>
 Re-generate all existing document models in the current project<br><br>
 **usage:** `--all, -a`<br>
-
-#### Extract <br>
-Write a powerhouse/document-model spec for each existing document model into specs/document-models/<br><br>
-**usage:** `--extract, -x`<br>
 
 #### Code First <br>
 Experimental. With --name, create the model code-first. Existing models of both styles are discovered without it; ph migrate --document-model converts a schema-first one<br><br>
@@ -195,10 +183,6 @@ The name of the document editor to generate<br><br>
 The document type for the new editor<br><br>
 **usage:** `--document-type, -t <str>`<br>
 
-#### Document <br>
-Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen<br><br>
-**usage:** `--document, -d <file>`<br>
-
 #### Dir <br>
 Name of the directory of an existing editor to re-generate (my-editor or editors/my-editor)<br><br>
 **usage:** `--dir <dir>`<br>
@@ -208,10 +192,6 @@ Name of the directory of an existing editor to re-generate (my-editor or editors
 #### All <br>
 Re-generate all existing editors in the current project<br><br>
 **usage:** `--all, -a`<br>
-
-#### Extract <br>
-Write a powerhouse/document-editor spec for each existing editor into specs/editors/<br><br>
-**usage:** `--extract, -x`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>
@@ -233,10 +213,6 @@ The name of the drive app to generate<br><br>
 The document types allowed by the new app (repeatable or comma-separated)<br><br>
 **usage:** `--document-types <value>, -t=<value>`<br>
 
-#### Document <br>
-Path to a powerhouse/app spec file (.phd or .json) to drive codegen<br><br>
-**usage:** `--document, -d <file>`<br>
-
 #### Dir <br>
 Name of the directory of an existing app to re-generate (my-app or editors/my-app)<br><br>
 **usage:** `--dir <dir>`<br>
@@ -250,10 +226,6 @@ Do not allow drag and drop in this drive app.<br><br>
 #### All <br>
 Re-generate all existing apps in the current project<br><br>
 **usage:** `--all, -a`<br>
-
-#### Extract <br>
-Write a powerhouse/app spec for each existing drive app into specs/apps/<br><br>
-**usage:** `--extract, -x`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>
@@ -283,10 +255,6 @@ The document types the processor will run on (repeatable or comma-separated)<br>
 Whether the processor will run in switchboard (nodejs), connect (browser), or both<br><br>
 **usage:** `--apps <value>`<br>
 **default**: `switchboard,connect`
-#### Document <br>
-Path to a powerhouse/processor spec file (.phd or .json) to drive codegen<br><br>
-**usage:** `--document, -d <file>`<br>
-
 #### Dir <br>
 Name of the directory of an existing processor to re-generate (my-processor or processors/my-processor)<br><br>
 **usage:** `--dir <dir>`<br>
@@ -296,10 +264,6 @@ Name of the directory of an existing processor to re-generate (my-processor or p
 #### All <br>
 Re-generate all existing processors in the current project<br><br>
 **usage:** `--all, -a`<br>
-
-#### Extract <br>
-Write a powerhouse/processor spec for each existing processor into specs/processors/<br><br>
-**usage:** `--extract, -x`<br>
 
 #### Skip Install <br>
 Don't install the dependencies the command adds to package.json<br><br>
@@ -321,10 +285,6 @@ Generate a subgraph
 The name of the subgraph to generate<br><br>
 **usage:** `--name, -n <str>`<br>
 
-#### Document <br>
-Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen<br><br>
-**usage:** `--document, -d <file>`<br>
-
 #### Dir <br>
 Name of the directory of an existing subgraph to re-generate (my-subgraph or subgraphs/my-subgraph)<br><br>
 **usage:** `--dir <dir>`<br>
@@ -335,12 +295,8 @@ Name of the directory of an existing subgraph to re-generate (my-subgraph or sub
 Re-generate all existing subgraphs in the current project<br><br>
 **usage:** `--all, -a`<br>
 
-#### Extract <br>
-Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/<br><br>
-**usage:** `--extract, -x`<br>
-
 #### Code First <br>
-Experimental. With --name or --document, create a new subgraph code-first. Existing subgraphs keep their own style; ph migrate --subgraph converts one<br><br>
+Experimental. With --name, create a new subgraph code-first. Existing subgraphs keep their own style; ph migrate --subgraph converts one<br><br>
 **usage:** `--code-first`<br>
 
 #### Skip Install <br>

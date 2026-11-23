@@ -10,20 +10,13 @@ import {
   subgraphDirStyle,
   type SubgraphStyle,
 } from "@powerhousedao/codegen/utils";
-import {
-  extractSubgraphDocuments,
-  findSubgraphNameConflict,
-  generateSubgraphFromDocument,
-  getDocument,
-  saveSpec,
-} from "@powerhousedao/vetra/codegen";
-import type { SubgraphModuleDocument } from "@powerhousedao/vetra/document-models/subgraph-module";
 import { kebabCase } from "change-case";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { GenerateSubgraphArgs } from "../types.js";
 import { installAddedDependencies } from "../utils/install-added-dependencies.js";
 import { resolveModuleDirName } from "../utils/module-dir.js";
+import { findSubgraphNameConflict } from "../utils/subgraph-type-lint.js";
 import { warnSubgraphTypeConflicts } from "../utils/warn-subgraph-type-conflicts.js";
 
 const INDEX_FILE_EXPECTATION = {
@@ -59,22 +52,11 @@ export async function startGenerateSubgraph(
   args: GenerateSubgraphArgs,
   projectDir: string,
 ) {
-  const { name, document, dir, all, extract, debug } = args;
+  const { name, dir, all, debug } = args;
   if (debug) {
     console.log({ args });
   }
   const project = buildTsMorphProject(projectDir);
-  if (extract) {
-    const docs = extractSubgraphDocuments(project);
-    if (docs.length === 0) {
-      console.log("No subgraphs found in subgraphs/.");
-    }
-    for (const doc of docs) {
-      const path = await saveSpec(doc, projectDir);
-      console.log(`Wrote ${path}`);
-    }
-    return;
-  }
   const report: string[] = [];
   if (all) {
     const { subgraphNames, unreadableDirs } =
@@ -90,21 +72,6 @@ export async function startGenerateSubgraph(
         `Skipped subgraphs/${dirName}: expected its index.ts to export ${INDEX_FILE_EXPECTATION[subgraphDirStyle(join(projectDir, "subgraphs"), dirName)]}. Kept the manifest's subgraphs.`,
       );
     }
-  } else if (document) {
-    const doc = (await getDocument(document)) as SubgraphModuleDocument;
-    const notice = codeFirstOnSchemaFirst(
-      args,
-      projectDir,
-      doc.state.global.name,
-    );
-    if (notice) {
-      console.log(notice);
-      return;
-    }
-    await assertSubgraphNameFree(projectDir, doc.state.global.name);
-    await generateSubgraphFromDocument(doc, project, {
-      codeFirst: args.codeFirst,
-    });
   } else if (name) {
     const notice = codeFirstOnSchemaFirst(args, projectDir, name);
     if (notice) {
@@ -131,9 +98,7 @@ export async function startGenerateSubgraph(
     }
     report.push(`Regenerated subgraph "${subgraphName}"`);
   } else {
-    console.log(
-      "Please specify one of `name`, `document`, `dir`, `all`, or `extract`.",
-    );
+    console.log("Please specify one of `name`, `dir`, or `all`.");
     return;
   }
   await project.save();

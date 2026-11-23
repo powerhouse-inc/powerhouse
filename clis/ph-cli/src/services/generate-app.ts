@@ -4,13 +4,6 @@ import {
   getAppMetadata,
   getEditorMetadata,
 } from "@powerhousedao/codegen/utils";
-import {
-  extractAppDocuments,
-  generateAppFromDocument,
-  getDocument,
-  saveSpec,
-} from "@powerhousedao/vetra/codegen";
-import type { AppModuleDocument } from "@powerhousedao/vetra/document-models/app-module";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { GenerateAppArgs } from "../types.js";
@@ -27,27 +20,14 @@ export async function startGenerateApp(
     name,
     allowedDocumentTypes = [],
     disableDragAndDrop,
-    document,
     dir,
     all,
-    extract,
     debug,
   } = args;
   if (debug) {
     console.log({ args });
   }
   const project = buildTsMorphProject(projectDir);
-  if (extract) {
-    const docs = extractAppDocuments(project);
-    if (docs.length === 0) {
-      console.log("No drive apps found in editors/.");
-    }
-    for (const doc of docs) {
-      const path = await saveSpec(doc, projectDir);
-      console.log(`Wrote ${path}`);
-    }
-    return;
-  }
   if (all) {
     const { apps, unreadableDirs } = await generateAllApps(project);
     await project.save();
@@ -63,9 +43,6 @@ export async function startGenerateApp(
       );
     }
     return;
-  } else if (document) {
-    const doc = (await getDocument(document)) as AppModuleDocument;
-    await generateAppFromDocument(doc, project);
   } else if (name) {
     await generateApp(
       {
@@ -105,9 +82,7 @@ export async function startGenerateApp(
     console.log(`Regenerated app "${appName}" in editors/${appDirName}`);
     return;
   } else {
-    console.log(
-      "Please specify one of `name`, `document`, `dir`, `all`, or `extract`.",
-    );
+    console.log("Please specify one of `name`, `dir`, or `all`.");
     return;
   }
   await project.save();

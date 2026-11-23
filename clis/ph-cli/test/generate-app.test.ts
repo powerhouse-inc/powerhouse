@@ -1,5 +1,4 @@
 import {
-  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -21,11 +20,9 @@ function args(overrides: Partial<GenerateAppArgs>): GenerateAppArgs {
   return {
     name: undefined,
     allowedDocumentTypes: undefined,
-    document: undefined,
     dir: undefined,
     disableDragAndDrop: false,
     all: false,
-    extract: false,
     debug: undefined,
     ...overrides,
   };
@@ -133,18 +130,10 @@ describe("ph-cli generate app", () => {
     );
   });
 
-  it("--extract writes a spec for the app", async () => {
-    await startGenerateApp(args({ extract: true }), root);
-
-    const specPath = join(root, "specs", "apps", "stockroom-app.app.phd");
-    expect(logged).toEqual([`Wrote ${specPath}`]);
-    expect(existsSync(specPath)).toBe(true);
-  });
-
-  it("--extract says when there is no app", async () => {
+  it("--all says when there is no app", async () => {
     rmSync(join(root, "editors", "stockroom-app"), { recursive: true });
 
-    await startGenerateApp(args({ extract: true }), root);
+    await startGenerateApp(args({ all: true }), root);
 
     expect(logged).toEqual(["No drive apps found in editors/."]);
   });
