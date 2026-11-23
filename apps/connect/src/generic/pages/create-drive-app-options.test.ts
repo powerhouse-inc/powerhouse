@@ -44,6 +44,7 @@ describe("the Create Drive apps' attribution", () => {
       "todo-app": "routes-eval",
       GenericDriveExplorer: "Powerhouse",
       "vetra-drive-app": "Powerhouse",
+      "vetra-explorer": "Powerhouse",
     });
   });
 
