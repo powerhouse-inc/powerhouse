@@ -46,16 +46,6 @@
       "types": "./dist/processors/index.d.ts",
       "import": "./dist/processors/index.js"
     },
-    "./codegen": {
-      "source": "./codegen/index.ts",
-      "types": "./dist/codegen/index.d.ts",
-      "import": "./dist/codegen/index.js"
-    },
-    "./codegen/spec": {
-      "source": "./codegen/spec.ts",
-      "types": "./dist/codegen/spec.d.ts",
-      "import": "./dist/codegen/spec.js"
-    },
     "./drive-layout": {
       "source": "./drive-layout/index.ts",
       "types": "./dist/drive-layout/index.d.ts",

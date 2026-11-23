@@ -9,8 +9,6 @@ export default defineConfig({
     "editors/*/index.ts",
     "processors/index.ts",
     "processors/*/index.ts",
-    "codegen/index.ts",
-    "codegen/spec.ts",
     "drive-layout/index.ts",
   ],
   platform: "neutral",

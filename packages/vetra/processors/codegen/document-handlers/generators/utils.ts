@@ -11,7 +11,7 @@ import type {
 import { baseMinimalSaveToFile, baseSaveToFile } from "document-model/node";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { lintSubgraphTypes } from "../../../../codegen/subgraph-type-lint.js";
+import { lintSubgraphTypes } from "../../subgraph-type-lint.js";
 import { logger } from "../../logger.js";
 import type { CodegenJob } from "../types.js";
 

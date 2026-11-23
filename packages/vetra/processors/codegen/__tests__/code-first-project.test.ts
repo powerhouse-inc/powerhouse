@@ -22,7 +22,7 @@ import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { extractDocumentModelDocuments } from "../../../codegen/schema-first/extract-document-models.js";
+import { extractDocumentModelDocuments } from "./extract-document-models.js";
 import { DocumentModelGenerator } from "../document-handlers/generators/schema-first/document-model-generator.js";
 
 const vetraDir = fileURLToPath(new URL("../../../", import.meta.url));
