@@ -95,6 +95,60 @@ describe("formatStatus", () => {
     ).toContain("supervisor pid 77, lives with the supervisor");
   });
 
+  it("is one line, as before, when no supervisor holds it or the supervisor knows no more", () => {
+    const status = {
+      serviceId: "svc",
+      instanceId: "svc",
+      name: "My Svc",
+      status: "ready",
+      pid: 123,
+      endpoints: { port: "4000" },
+    } as const;
+    expect(formatStatus(status)).toBe("● My Svc [ready]  pid 123  port=4000");
+    expect(
+      formatStatus({
+        ...status,
+        supervisor: { pid: 77, handle: "1", lifetime: "caller" },
+      }),
+    ).toBe(
+      "● My Svc [ready]  pid 123  port=4000  supervisor pid 77, lives with the caller",
+    );
+  });
+
+  it("shows what the supervisor knows, in the words of `ph run supervisor ps`", () => {
+    const lines = formatStatus({
+      serviceId: "svc",
+      instanceId: "svc",
+      name: "My Svc",
+      status: "failed",
+      error: "The supervisor left it ended: it ended on its own (code 7).",
+      restartAttempt: 2,
+      supervisor: {
+        pid: 77,
+        handle: "1",
+        lifetime: "supervisor",
+        runnerVersion: "6.2.3",
+        missing: [
+          "forwarded commands: its runner (6.2.3) has no control channel",
+        ],
+        restart: {
+          maxRetries: 2,
+          delay: 250,
+          attempt: 2,
+          lastExit: { code: 7, signal: null, at: "2026-11-23T10:00:00.000Z" },
+          failed: "it ended on its own (code 7) after 2 restart(s) in a row",
+        },
+      },
+    }).split("\n");
+    expect(lines).toEqual([
+      "✗ My Svc [failed]  supervisor pid 77, lives with the supervisor  error: The supervisor left it ended: it ended on its own (code 7).  restart #2",
+      "     runner version: 6.2.3",
+      "     restarted by the supervisor: up to 2 time(s) in a row, 250 ms apart; attempt 2 of 2; last ended with code 7 at 2026-11-23T10:00:00.000Z",
+      "     failed: it ended on its own (code 7) after 2 restart(s) in a row",
+      "     - forwarded commands: its runner (6.2.3) has no control channel",
+    ]);
+  });
+
   it("offers --lifetime on the start of a host service only", async () => {
     const [hostStart] = createServiceCommands({
       id: "web",

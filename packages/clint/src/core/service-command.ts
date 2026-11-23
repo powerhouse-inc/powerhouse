@@ -1,4 +1,5 @@
 import path from "node:path";
+import { supervisedFactLines } from "@powerhousedao/host-core/instance";
 import { z } from "zod";
 import type {
   Command,
@@ -44,7 +45,9 @@ export function formatStatus(s: ServiceInstanceStatus): string {
   }
   if (s.error) parts.push(`error: ${s.error}`);
   if (s.restartAttempt) parts.push(`restart #${s.restartAttempt}`);
-  return parts.join("  ");
+  // What the supervisor knows of it, in the words of `ph run supervisor ps`.
+  const facts = s.supervisor ? supervisedFactLines(s.supervisor) : [];
+  return [parts.join("  "), ...facts.map((line) => `     ${line}`)].join("\n");
 }
 
 /**

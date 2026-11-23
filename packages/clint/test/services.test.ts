@@ -16,11 +16,17 @@ import {
 import { killTree } from "../src/core/process-platform.js";
 import { createEventBus } from "../src/core/events.js";
 import { readRunRecord } from "@powerhousedao/host-core";
+import { supervisedFactLines } from "@powerhousedao/host-core/instance";
+import {
+  createServiceCommands,
+  formatStatus,
+} from "../src/core/service-command.js";
 import {
   startSupervisor,
   type Supervisor,
 } from "@powerhousedao/host-core/supervisor";
 import type {
+  CommandContext,
   EventBus,
   HostServiceDefinition,
   ServiceDefinition,
@@ -1714,6 +1720,11 @@ describe("host services", () => {
       endpointTypes: { site: "website" },
     });
     expect(ready).toHaveLength(1);
+    // No supervisor is involved: its status line is the one line it was.
+    expect(instance.supervisor).toBeUndefined();
+    expect(formatStatus(instance)).toBe(
+      `● Web [ready]  pid ${instance.pid}  site=${String(record?.outputs?.origin)}`,
+    );
     const answer = await fetch(`${String(record?.outputs?.origin)}/hello`);
     expect(await answer.text()).toBe("web saw /hello");
     expect(mgr.logs("web")).toContain("— Web");
@@ -2016,6 +2027,24 @@ describe("host services", () => {
           { id: "web", instanceId, attempt: 1, maxRetries: 2 },
         ]);
         expect(ready).toHaveLength(2);
+
+        // Its `-ps` shows what the supervisor knows, in the supervisor's words.
+        const [ps] = createServiceCommands(webDef({ restart: policy })).filter(
+          (c) => c.id === "web-ps",
+        );
+        const shown = (await ps!.execute({}, {
+          services: mgr,
+          workdir: project,
+        } as unknown as CommandContext)) as { text: string };
+        const [known] = held.instances();
+        expect(known?.runnerVersion).toBeTruthy();
+        expect(shown.text.split("\n").slice(1)).toEqual(
+          supervisedFactLines(known!).map((line) => `     ${line}`),
+        );
+        expect(shown.text).toContain(
+          `     runner version: ${known!.runnerVersion}\n` +
+            "     restarted by the supervisor: up to 2 time(s) in a row, 200 ms apart; attempt 0 of 2; last ended with code 7 at ",
+        );
 
         // A stop that was asked for: of a run the supervisor started.
         await mgr.stop("web");

@@ -23,6 +23,7 @@ import type {
   ServiceLifetime,
   ServiceManager,
   ServiceStartOptions,
+  SupervisorHold,
 } from "./types.js";
 import { isPortFree } from "./preflight.js";
 import { scanProjects as scanProjectsImpl } from "./project-scanner.js";
@@ -77,11 +78,20 @@ interface ServiceStateFile {
    * handle for the instance, and how long the instance lives. The
    * supervisor then applies the restart policy, and this manager does not.
    * `restarting`: it ended on its own and the supervisor starts it again. */
-  supervisor?: {
-    pid: number;
-    handle: string;
-    lifetime: ServiceLifetime;
-    restarting?: boolean;
+  supervisor?: SupervisorHold;
+}
+
+/** What the supervisor says of an instance beyond its status, as the state
+ * keeps it for every listing. */
+function supervisedFacts(
+  held: SupervisedInstance,
+): Pick<SupervisorHold, "runnerVersion" | "missing" | "restart"> {
+  return {
+    ...(held.runnerVersion === undefined
+      ? {}
+      : { runnerVersion: held.runnerVersion }),
+    ...(held.missing.length > 0 ? { missing: held.missing } : {}),
+    ...(held.restart ? { restart: held.restart } : {}),
   };
 }
 
@@ -675,6 +685,16 @@ export function createServiceManager(
     const before = JSON.stringify(state);
     const attempt = held?.restart?.attempt;
     let settled = true;
+    if (held) {
+      const { pid, handle, lifetime, restarting } = state.supervisor;
+      state.supervisor = {
+        pid,
+        handle,
+        lifetime,
+        ...(restarting ? { restarting } : {}),
+        ...supervisedFacts(held),
+      };
+    }
     if (held?.status === "starting" || held?.status === "restarting") {
       settled = false;
       const first = !state.supervisor.restarting;
@@ -1412,6 +1432,7 @@ export function createServiceManager(
     const abort = new AbortController();
     const { supervised } = run;
     let handle: string | undefined;
+    let startedAs: SupervisedInstance | undefined;
     const spawning = (async (): Promise<SpawnedHost> => {
       if (supervised) {
         const { api, control } = supervised.supervisor;
@@ -1442,6 +1463,7 @@ export function createServiceManager(
           { signal: abort.signal },
         );
         handle = held.handle;
+        startedAs = held.instance;
         return held;
       }
       const { spawnHost } = await import("@powerhousedao/host-core");
@@ -1503,6 +1525,7 @@ export function createServiceManager(
         pid: supervised.supervisor.pid,
         handle,
         lifetime: supervised.lifetime,
+        ...(startedAs ? supervisedFacts(startedAs) : {}),
       };
     }
     state.endpoints = {};

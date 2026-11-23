@@ -801,7 +801,24 @@ export interface ServiceInstanceStatus {
   workdir?: string;
   params?: Record<string, unknown>;
   /** Set when the user's supervisor holds the instance. */
-  supervisor?: { pid: number; handle: string; lifetime: ServiceLifetime };
+  supervisor?: SupervisorHold;
+}
+
+/** The supervisor that holds a service instance, and what it knows of it. */
+export interface SupervisorHold {
+  /** The supervisor's process. */
+  pid: number;
+  /** Its handle for the instance. */
+  handle: string;
+  lifetime: ServiceLifetime;
+  /** It ended on its own and the supervisor starts it again. */
+  restarting?: boolean;
+  /** The version of the project's ph-cli (or ph-run) that runs it. */
+  runnerVersion?: string;
+  /** What cannot be done with it, each with the reason. */
+  missing?: string[];
+  /** Where its restart policy stands: the supervisor applies it. */
+  restart?: import("@powerhousedao/host-core/instance").RestartState;
 }
 
 /**

@@ -89,9 +89,14 @@ export function serveServices(
   cli: { name: string; version: string; workdir: string },
 ): void {
   channel.describe({ cli: cli.name, version: cli.version });
-  channel.handle("list", (params) => ({
-    instances: services.list(parse(listParamsSchema, params).serviceId),
-  }));
+  channel.handle("list", async (params) => {
+    // What the supervisor holds for this process, as it stands there now.
+    // One that does not answer leaves the list as it was last known.
+    await services.supervisor?.().catch(() => undefined);
+    return {
+      instances: services.list(parse(listParamsSchema, params).serviceId),
+    };
+  });
   channel.handle("start", async (params) => {
     const { id, options } = parse(startParamsSchema, params);
     const instanceId = await services.start(id, options);

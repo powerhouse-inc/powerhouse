@@ -155,6 +155,8 @@ export async function shutdownSupervisor(
 export interface SupervisedHost extends SpawnedHost {
   handle: string;
   lifetime: InstanceLifetime | undefined;
+  /** What the supervisor said of it when it was started. */
+  instance: SupervisedInstance;
 }
 
 const EXITED_POLL_MS = 500;
@@ -192,6 +194,7 @@ export async function startSupervisedHost(
   return {
     handle: instance.handle,
     lifetime: instance.lifetime,
+    instance,
     pid: instance.pid,
     dataDir: instance.dataDir,
     record,

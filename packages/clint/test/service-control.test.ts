@@ -232,4 +232,75 @@ describe("a command with nothing to forward to", () => {
     );
     expect(starts).toHaveLength(1);
   });
+
+  it("asks the supervisor before it answers a list, so a second terminal sees what it knows now", async () => {
+    const hold = {
+      pid: 4242,
+      handle: "1",
+      lifetime: "supervisor" as const,
+      runnerVersion: "6.4.0",
+      missing: ["stop: no control channel"],
+    };
+    const calls: string[] = [];
+    let asked = false;
+    const manager = (supervisor: () => Promise<unknown>) =>
+      ({
+        supervisor,
+        list: () => {
+          calls.push("list");
+          return [
+            {
+              serviceId: "web",
+              instanceId: "web",
+              name: "Web",
+              status: "ready",
+              ...(asked ? { supervisor: hold } : {}),
+            },
+          ];
+        },
+      }) as unknown as ServiceManager;
+    const open = () =>
+      openControlChannel(
+        process.platform === "win32"
+          ? {}
+          : { socketDir: fs.mkdtempSync(path.join(os.tmpdir(), "ph-svc-c-")) },
+      );
+    const cli = { name: "fixture", version: "0.0.1", workdir: os.tmpdir() };
+
+    const channel = await open();
+    const silent = await open();
+    try {
+      serveServices(
+        channel,
+        manager(async () => {
+          calls.push("supervisor");
+          asked = true;
+          return { pid: 4242 };
+        }),
+        cli,
+      );
+      const remote = await connectRemoteServices(
+        manager(async () => undefined),
+        channel.record,
+      );
+      expect(calls.slice(0, 2)).toEqual(["supervisor", "list"]);
+      expect(remote!.list("web")).toMatchObject([{ supervisor: hold }]);
+
+      // A supervisor that does not answer leaves the list as last known.
+      asked = false;
+      serveServices(
+        silent,
+        manager(async () => {
+          throw new Error("The supervisor does not answer.");
+        }),
+        cli,
+      );
+      await expect(callControl(silent.record, "list")).resolves.toMatchObject({
+        instances: [{ serviceId: "web", status: "ready" }],
+      });
+    } finally {
+      await channel.close();
+      await silent.close();
+    }
+  });
 });
