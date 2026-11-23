@@ -62,6 +62,18 @@ export const runHost = command({
     }),
   },
   handler: async (args) => {
+    // The user's supervisor is no host of the project: nothing of it is
+    // loaded.
+    if (args.host === "supervisor") {
+      const { runSupervisorCommand } =
+        await import("@powerhousedao/ph-run/supervisor");
+      process.exitCode = await runSupervisorCommand({
+        verb: args.verb,
+        argv: args.argv,
+        stop: args.stop === true,
+      });
+      return;
+    }
     if (args.explain !== undefined) {
       const { explainHost } = await import("../services/run/explain.js");
       await explainHost({ host: args.host, topic: args.explain });

@@ -61,6 +61,12 @@
       "import": "./dist/services/run/start-run.mjs",
       "default": "./dist/services/run/start-run.mjs"
     },
+    "./supervisor": {
+      "source": "./src/services/supervisor.ts",
+      "types": "./dist/services/supervisor.d.mts",
+      "import": "./dist/services/supervisor.mjs",
+      "default": "./dist/services/supervisor.mjs"
+    },
     "./switchboard": {
       "source": "./src/services/switchboard.ts",
       "types": "./dist/services/switchboard.d.mts",
