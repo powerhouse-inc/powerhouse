@@ -33,6 +33,7 @@ const documentIdSchema = z
 export function createAttachmentCommands(): Command[] {
   const preprocess = defineCommand({
     id: "attachment-preprocess",
+    needs: "reactor",
     description:
       "Compute an attachment's content-addressed ref (attachment://v1:<sha256>) from a local file WITHOUT uploading. Embed the returned ref in a document action now, then send the bytes with attachment-upload for the same file after / in parallel with submitting the action.",
     inputSchema: z.object({
@@ -77,6 +78,7 @@ export function createAttachmentCommands(): Command[] {
 
   const upload = defineCommand({
     id: "attachment-upload",
+    needs: "reactor",
     description:
       "Upload a local file to the attachment store and return its content-addressed ref (attachment://v1:<sha256>). The ref is deterministic from the bytes and identical content dedups. Embed the ref in a document action; the action may be submitted before or after this upload.",
     inputSchema: z.object({
@@ -132,6 +134,7 @@ export function createAttachmentCommands(): Command[] {
 
   const stat = defineCommand({
     id: "attachment-stat",
+    needs: "reactor",
     description:
       "Look up an attachment by ref (attachment://v1:<sha256>) and report its status + metadata. status='pending' = reserved but not yet uploaded; 'available' = stored; 'evicted' = metadata known, bytes reclaimed. On a switchboard, pass the documentId of a document whose operations reference the attachment.",
     inputSchema: z.object({
@@ -170,6 +173,7 @@ export function createAttachmentCommands(): Command[] {
 
   const get = defineCommand({
     id: "attachment-get",
+    needs: "reactor",
     description:
       "Download an attachment's bytes by ref (attachment://v1:<sha256>) to a local file. Errors if the attachment is still pending (bytes not yet uploaded). On a switchboard, pass the documentId of a document whose operations reference the attachment.",
     inputSchema: z.object({

@@ -38,6 +38,18 @@ export {
   serveServices,
   ServiceStartRefused,
 } from "./core/service-control.js";
+export {
+  callerIdentityOf,
+  COMMAND_METHOD,
+  commandRequestSchema,
+  CommandTooLarge,
+  sendCommand,
+  serveCommands,
+} from "./core/command-control.js";
+export type {
+  CommandRequest,
+  ForwardedCommand,
+} from "./core/command-control.js";
 export { scanProjects, PROJECT_INDICATORS } from "./core/project-scanner.js";
 export { getProjectMapping } from "./core/project-mapping.js";
 export type { ProjectMapping } from "./core/project-mapping.js";
@@ -142,8 +154,12 @@ export type {
   CliOptions,
   RunOptions,
   RunReactor,
+  ForwardOptions,
   WorkdirStore,
   CommandContext,
+  CommandNeeds,
+  CommandCaller,
+  CallerIdentity,
   CoreContext,
   PromptConfig,
   InteractiveConfig,

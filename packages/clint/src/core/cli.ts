@@ -36,7 +36,22 @@ import {
   refuseServiceStarts,
   serveServices,
 } from "./service-control.js";
-import { processControlChannel } from "@powerhousedao/host-core/control-channel";
+import {
+  callControl,
+  ControlError,
+  processControlChannel,
+  protocolMismatch,
+} from "@powerhousedao/host-core/control-channel";
+import {
+  COMMAND_METHOD,
+  CommandTooLarge,
+  describeCaller,
+  readPipedStdin,
+  sendCommand,
+  serveCommands,
+  untilAborted,
+  type ForwardedCommand,
+} from "./command-control.js";
 import {
   instanceDataDir,
   instanceServicesDir,
@@ -82,6 +97,7 @@ interface ResolvedRunOptions {
   stderr: (message: string) => void;
   cwd: string;
   writeRaw: (text: string) => void;
+  writeRawErr: (text: string) => void;
   configFile?: string;
   resume?: string;
   interactiveInput?: AsyncIterable<string>;
@@ -92,6 +108,7 @@ interface ResolvedRunOptions {
   members?: RunOptions["members"];
   remoteServices?: RunOptions["remoteServices"];
   serveCommand?: RunOptions["serveCommand"];
+  forward?: RunOptions["forward"];
 }
 
 /**
@@ -345,6 +362,7 @@ export function defineCli<
         : {},
       stdout: defaultStdout,
       runProcess: noop,
+      readStdin: readPipedStdin,
       ...base,
     };
     // Extend with runtime services if available
@@ -712,6 +730,11 @@ export function defineCli<
     resolvedDescription: string,
     onSkillInvocation?: (invocation: SkillInvocation) => Promise<void>,
     wraps?: import("./types.js").WrapRegistry,
+    /** Runs the command elsewhere; resolves false when it is to run here. */
+    elsewhere?: (
+      cmd: Command,
+      input: Record<string, unknown>,
+    ) => Promise<boolean>,
   ): Commander {
     const program = new Commander();
     program
@@ -735,6 +758,10 @@ export function defineCli<
 
     program.option("--verbose", "Enable debug-level logging");
     program.option("--meta", "Output CLI metadata as JSON");
+    program.option(
+      "--local",
+      "Run the command in this process, not in a running instance",
+    );
 
     if (agentLoader) {
       program.option("--resume <thread-id>", "Resume a previous conversation");
@@ -850,6 +877,7 @@ export function defineCli<
         } catch (err) {
           throw new Error(formatZodError(err, cmd.id));
         }
+        if (elsewhere && (await elsewhere(cmd, merged))) return;
         // Wrap the execution through the registered wrap registry. Identity
         // when no lifecycle hook is registered — pure passthrough.
         const result = wraps
@@ -1150,6 +1178,11 @@ export function defineCli<
         }),
       cwd: runOptions?.workdir ?? process.cwd(),
       writeRaw: runOptions?.stdout ?? defaultStdout,
+      writeRawErr: runOptions?.stderr
+        ? (text: string) => runOptions.stderr!(text.replace(/\n$/, ""))
+        : (text: string) => {
+            process.stderr.write(text);
+          },
       configFile: runOptions?.configFile,
       resume: runOptions?.resume,
       interactiveInput: runOptions?.interactiveInput,
@@ -1160,6 +1193,7 @@ export function defineCli<
       members: runOptions?.members,
       remoteServices: runOptions?.remoteServices,
       serveCommand: runOptions?.serveCommand,
+      forward: runOptions?.forward,
     };
     return runImpl(argv, resolved);
   }
@@ -1202,6 +1236,7 @@ export function defineCli<
     let verboseFlag = false;
     let metaFlag = false;
     let noRoutineFlag = false;
+    let localFlag = false;
     const frameworkFlags = new Set([
       "--resume",
       "--workdir",
@@ -1219,6 +1254,8 @@ export function defineCli<
         metaFlag = true;
       } else if (arg === "-R" || arg === "--no-routine") {
         noRoutineFlag = true;
+      } else if (arg === "--local") {
+        localFlag = true;
       } else if (frameworkFlags.has(arg) && i + 1 < preCommandArgs.length) {
         const value = preCommandArgs[i + 1]!;
         if (arg === "--workdir" || arg === "-w") workdirFlag = value;
@@ -1400,27 +1437,257 @@ export function defineCli<
       return renderSkillTemplate(template, ctx).rendered.trim();
     }
 
+    /**
+     * One turn of the agent, its answer written as it streams. Resolves false
+     * when the CLI has no agent.
+     */
+    async function streamPrompt(
+      prompt: string,
+      to: {
+        raw: (text: string) => void;
+        line: (message: string) => void;
+        resume?: string;
+        signal?: AbortSignal;
+      } = { raw: writeRaw, line: stdout, resume: resumeId },
+    ): Promise<boolean> {
+      const agentProvider = await runtime.getAgent();
+      if (!agentProvider) return false;
+      const threadId = to.resume ?? randomUUID();
+      for await (const chunk of agentProvider.stream(prompt, {
+        threadId,
+        tools: commandMap,
+        ...(to.signal ? { abortSignal: to.signal } : {}),
+      })) {
+        to.raw(formatStreamChunk(chunk));
+      }
+      to.line("");
+      to.line(
+        `\x1b[2mThread: ${threadId}  (continue with: ${options.name} --resume ${threadId} "your message")\x1b[0m`,
+      );
+      return true;
+    }
+
     // Skill invocation handler for command mode — routes to agent with skill prefix
     async function handleSkillInvocation(invocation: SkillInvocation) {
-      const agentProvider = await runtime.getAgent();
-      if (!agentProvider) {
+      if (!(await runtime.getAgent())) {
         stderr("Agent not available — cannot invoke skill");
         exit(1);
         return;
       }
       await loadTemplates();
-      const prompt = renderSkillPrompt(invocation);
-      const threadId = resumeId ?? randomUUID();
-      for await (const chunk of agentProvider.stream(prompt, {
-        threadId,
-        tools: commandMap,
-      })) {
-        writeRaw(formatStreamChunk(chunk));
-      }
-      stdout("");
-      stdout(
-        `\x1b[2mThread: ${threadId}  (continue with: ${options.name} --resume ${threadId} "your message")\x1b[0m`,
+      await streamPrompt(renderSkillPrompt(invocation));
+    }
+
+    /** What `cmd` needs of a running instance. */
+    const needsOf = (cmd: Command) =>
+      cmd.needs ?? (skillIds.has(cmd.id) ? "agent" : "nothing");
+    const readsStdin = (cmd: Command, input: Record<string, unknown>) =>
+      typeof cmd.stdin === "function" ? cmd.stdin(input) : cmd.stdin === true;
+
+    /**
+     * A command the running instance executes for a caller in another
+     * process: with this instance's reactor and agent, its output to the
+     * caller. Resolves with the exit code; rejects only when it was cancelled.
+     */
+    async function runForwarded(run: ForwardedCommand): Promise<number> {
+      const { request, caller } = run;
+      const line = (message: string) => run.stdout(`${message}\n`);
+      const fail = (message: string) => run.stderr(`${message}\n`);
+      const what = request.command ?? "a prompt";
+      log.debug(
+        `Running ${what} for ${caller.user || "an unnamed user"} (pid ${caller.pid}).`,
       );
+      context.emit?.("command:forwarded", {
+        command: request.command,
+        user: caller.user,
+        pid: caller.pid,
+      });
+      try {
+        if (request.prompt !== undefined) {
+          const answered = await untilAborted(
+            streamPrompt(request.prompt, {
+              raw: run.stdout,
+              line,
+              signal: run.signal,
+              ...(request.resume ? { resume: request.resume } : {}),
+            }),
+            run.signal,
+          );
+          if (answered) return 0;
+          fail(`${options.name} has no agent to answer a prompt.`);
+          return 1;
+        }
+        const cmd = commandMap.get(request.command!);
+        if (!cmd || cmd.id === "cli-docs") {
+          fail(`Unknown command: ${request.command}`);
+          return 1;
+        }
+        if (needsOf(cmd) === "nothing") {
+          fail(
+            `${cmd.id} runs in the process that calls it, not in the running ${options.name}.`,
+          );
+          return 1;
+        }
+        const input = request.input ?? {};
+        let parsed;
+        try {
+          parsed = cmd.inputSchema.parse(input);
+        } catch (err) {
+          fail(formatZodError(err, cmd.id));
+          return 1;
+        }
+        const ctx: CommandContext = {
+          ...context,
+          stdout: run.stdout,
+          log: createLogger(request.verbose ? "debug" : logLevel, fail),
+          signal: run.signal,
+          caller,
+          readStdin: readsStdin(cmd, input)
+            ? () => Promise.resolve(request.stdin)
+            : () =>
+                Promise.reject(
+                  new Error(
+                    `${cmd.id} reads piped input but does not declare it (stdin), so the caller's was not sent. Pass the input as an option or a file.`,
+                  ),
+                ),
+        };
+        delete ctx._onToolOutput;
+        ctx.runProcess = (command, runOpts) =>
+          processManager.run(command, {
+            ...runOpts,
+            onOutput: (text) => ctx.stdout(text + "\n"),
+          });
+        const result = await untilAborted(
+          lifecycle.wraps.command(cmd.id, () => cmd.execute(parsed, ctx)),
+          run.signal,
+        );
+        if (isSkillInvocation(result)) {
+          await loadTemplates();
+          const answered = await untilAborted(
+            streamPrompt(renderSkillPrompt(result), {
+              raw: run.stdout,
+              line,
+              signal: run.signal,
+              ...(request.resume ? { resume: request.resume } : {}),
+            }),
+            run.signal,
+          );
+          if (answered) return 0;
+          fail("Agent not available — cannot invoke skill");
+          return 1;
+        }
+        const output = formatResult(result);
+        if (output !== undefined) line(output);
+        return 0;
+      } catch (err: any) {
+        // Answered as cancelled by the channel.
+        if (run.signal.aborted) throw err;
+        fail(err instanceof Error ? err.message : String(err));
+        return typeof err?.exitCode === "number" && err.exitCode !== 0
+          ? err.exitCode
+          : 1;
+      }
+    }
+
+    /** Where a command that needs a running instance is refused without one. */
+    const noInstance = (what: string) =>
+      `${what} runs in a running ${options.name}, and none runs for ${workdir}. ` +
+      `Start it with ${opts.serveCommand ? `\`${opts.serveCommand}\`` : "`ph run <host>`"}, then run this again.`;
+
+    /**
+     * Sends a command (or a prompt) that needs the reactor or the agent to
+     * the running instance and shows its output. Resolves with the exit code,
+     * or undefined when it is to run in this process.
+     */
+    async function inInstance(
+      what:
+        | { command: Command; input: Record<string, unknown> }
+        | { prompt: string },
+    ): Promise<number | undefined> {
+      const forward = opts.forward;
+      if (!forward || localFlag) return undefined;
+      if ("command" in what && needsOf(what.command) === "nothing") {
+        return undefined;
+      }
+      const name =
+        "command" in what
+          ? `${options.name} ${what.command.id}`
+          : `A prompt to ${options.name}`;
+      const { target } = forward;
+      const control = target?.control;
+      if (!control) {
+        if (target?.protocol !== undefined) {
+          stderr(
+            `${name} was not sent to the running ${options.name}${target.pid ? ` (pid ${target.pid})` : ""}. ${protocolMismatch(target.protocol)}`,
+          );
+          return 1;
+        }
+        if (!forward.required) return undefined;
+        stderr(noInstance(name));
+        return 1;
+      }
+      // Whether it is there and takes commands, before anything is sent.
+      try {
+        const hello = (await callControl(control, "hello", undefined, {
+          timeoutMs: 5_000,
+        })) as { methods?: unknown } | null;
+        const methods = Array.isArray(hello?.methods) ? hello.methods : [];
+        if (!methods.includes(COMMAND_METHOD)) {
+          if (!forward.required) return undefined;
+          stderr(
+            `${name} needs a running ${options.name}; the instance for ${workdir}${target.pid ? ` (pid ${target.pid})` : ""} takes no commands.`,
+          );
+          return 1;
+        }
+      } catch (err) {
+        if (!(err instanceof ControlError)) throw err;
+        if (err.code === "unreachable") {
+          if (!forward.required) return undefined;
+          stderr(noInstance(name));
+        } else {
+          stderr(err.message);
+        }
+        return 1;
+      }
+      const stdin =
+        "command" in what && readsStdin(what.command, what.input)
+          ? await readPipedStdin()
+          : undefined;
+      const stop = new AbortController();
+      const abort = () => stop.abort();
+      process.once("SIGINT", abort);
+      process.once("SIGTERM", abort);
+      opts.signal?.addEventListener("abort", abort, { once: true });
+      if (opts.signal?.aborted) abort();
+      try {
+        return await sendCommand(
+          control,
+          {
+            cli: options.name,
+            version: options.version,
+            ...("command" in what
+              ? { command: what.command.id, input: what.input }
+              : { prompt: what.prompt }),
+            ...(resumeId ? { resume: resumeId } : {}),
+            workdir,
+            ...describeCaller(),
+            ...(verboseFlag ? { verbose: true } : {}),
+            ...(stdin === undefined ? {} : { stdin }),
+          },
+          { stdout: writeRaw, stderr: opts.writeRawErr, signal: stop.signal },
+        );
+      } catch (err) {
+        if (err instanceof ControlError && err.code === "cancelled") return 130;
+        if (!(err instanceof ControlError || err instanceof CommandTooLarge)) {
+          throw err;
+        }
+        stderr(err.message);
+        return 1;
+      } finally {
+        process.off("SIGINT", abort);
+        process.off("SIGTERM", abort);
+        opts.signal?.removeEventListener("abort", abort);
+      }
     }
 
     // ── Dispatch ─────────────────────────────────────────────────────
@@ -1462,21 +1729,28 @@ export function defineCli<
       if (opts.remoteServices && !isBuiltinFlag) {
         context.serving = opts.remoteServices;
       }
-      if (hasPrompt) {
-        const agentProvider = await runtime.getAgent();
-        if (agentProvider) {
-          const prompt = promptArgs.join(" ");
-          const threadId = resumeId ?? randomUUID();
-          for await (const chunk of agentProvider.stream(prompt, {
-            threadId,
-            tools: commandMap,
-          })) {
-            writeRaw(formatStreamChunk(chunk));
-          }
-          stdout("");
-          stdout(
-            `\x1b[2mThread: ${threadId}  (continue with: ${options.name} --resume ${threadId} "your message")\x1b[0m`,
+      // What a command needs of a running instance it gets there, when the
+      // run says so; this process then starts no reactor and no agent.
+      let exitCode: number | undefined;
+      if (opts.forward?.required && !localFlag && !isBuiltinFlag) {
+        const none = (what: string) => () =>
+          Promise.reject(
+            new Error(
+              `This command asked for the ${what}, which the running ${options.name} holds: it must declare needs: "${what}" to run there.`,
+            ),
           );
+        if (!supplyReactor) context.reactor = none("reactor");
+        context.agent = none("agent");
+      }
+      if (hasPrompt) {
+        const prompt = promptArgs.join(" ");
+        exitCode = await inInstance({ prompt });
+        if (exitCode !== undefined) {
+          await runtime.teardown();
+          if (exitCode !== 0) exit(exitCode);
+          return;
+        }
+        if (await streamPrompt(prompt)) {
           await runtime.teardown();
           return;
         }
@@ -1488,6 +1762,10 @@ export function defineCli<
         resolvedDescription,
         agentLoader ? handleSkillInvocation : undefined,
         lifecycle.wraps,
+        async (cmd, input) => {
+          exitCode = await inInstance({ command: cmd, input });
+          return exitCode !== undefined;
+        },
       );
       try {
         await program.parseAsync(argv);
@@ -1509,6 +1787,7 @@ export function defineCli<
       }
 
       await runtime.teardown();
+      if (exitCode) exit(exitCode);
     } else if (interactiveFlag || hasKeepAlive) {
       // ── Interactive or keep-alive: -i OR hasKeepAlive ──────────────
 
@@ -1530,14 +1809,17 @@ export function defineCli<
         }
       }
       // Commands typed beside this run reach its services on the process's
-      // control channel, when the host runner opened one.
+      // control channel, when the host runner opened one, and those that
+      // need its reactor or agent run here.
       const control = processControlChannel();
-      if (control && context.services) {
-        serveServices(control, context.services, {
+      if (control) {
+        const served = {
           name: options.name,
           version: options.version,
           workdir,
-        });
+        };
+        if (context.services) serveServices(control, context.services, served);
+        serveCommands(control, served, runForwarded);
       }
 
       // 1. PREAMBLE — validate interactive config, build session if needed

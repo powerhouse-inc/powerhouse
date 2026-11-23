@@ -4,6 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   clearRunRecord,
+  controlProtocolOf,
   controlRecordOf,
   describeInstance,
   ensureProcessControlChannel,
@@ -272,6 +273,9 @@ export interface RunCliOptions {
   remoteServices?: RunOptions["remoteServices"];
   /** How the Cli is started to keep running (see `RunOptions.serveCommand`). */
   serveCommand?: string;
+  /** Where commands that need the reactor or the agent run (see
+   * `RunOptions.forward`). */
+  forward?: RunOptions["forward"];
 }
 
 /**
@@ -342,6 +346,7 @@ export async function runCli(
         ? { remoteServices: options.remoteServices }
         : {}),
       ...(options.serveCommand ? { serveCommand: options.serveCommand } : {}),
+      ...(options.forward ? { forward: options.forward } : {}),
     });
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
@@ -462,7 +467,10 @@ function inStack(
     ...(ctx.foreground.beside
       ? {
           ...(ctx.foreground.control
-            ? { remoteServices: ctx.foreground.control }
+            ? {
+                remoteServices: ctx.foreground.control,
+                forward: { target: { control: ctx.foreground.control } },
+              }
             : {}),
           onServe: () => {
             throw new Error(
@@ -524,16 +532,31 @@ export async function run(
     key,
     readProjectName(ctx.projectRoot),
   );
-  const remoteServices =
+  const serving =
     probe.status === "live" && probe.record.pid !== process.pid
-      ? controlRecordOf(probe.record)
+      ? probe.record
       : undefined;
+  const remoteServices = controlRecordOf(serving);
+  const otherProtocol = remoteServices ? undefined : controlProtocolOf(serving);
   const code = await runCli(cli, {
     argv: ctx.argv ?? [],
     ...(url ? { url } : {}),
     workdir: ctx.projectRoot,
     ...(stopStream ? { stopStream } : {}),
     ...(remoteServices ? { remoteServices } : {}),
+    ...(serving && (remoteServices || otherProtocol !== undefined)
+      ? {
+          forward: {
+            target: {
+              ...(remoteServices ? { control: remoteServices } : {}),
+              ...(otherProtocol === undefined
+                ? {}
+                : { protocol: otherProtocol }),
+              pid: serving.pid,
+            },
+          },
+        }
+      : {}),
     serveCommand: `ph run ${key}`,
     onServe: () =>
       recordServing(

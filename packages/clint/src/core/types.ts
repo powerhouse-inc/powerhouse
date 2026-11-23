@@ -145,8 +145,63 @@ export interface CommandContext<
     command: string,
     opts?: Omit<ProcessRunOptions, "onOutput">,
   ) => Promise<{ success: boolean; output: string }>;
+  /**
+   * Aborted when the run of this command is cancelled: the caller of a
+   * command that runs in a running instance pressed Ctrl-C, or went away.
+   * Absent when the command runs in the process that was started for it.
+   */
+  signal?: AbortSignal;
+  /**
+   * Who sent the command, when it runs in a running instance for a caller in
+   * another process ({@link Command.needs}). Absent otherwise. `process.cwd()`,
+   * the terminal and the environment are the instance's then; the caller's
+   * are here.
+   */
+  caller?: CommandCaller;
+  /**
+   * What was piped to the command: the caller's stdin, read to its end.
+   * Undefined when stdin is a terminal. A command that calls it declares
+   * {@link Command.stdin}; in a running instance it rejects otherwise, since
+   * the caller's input was not sent along.
+   */
+  readStdin?: () => Promise<string | undefined>;
   /** @internal Hook for interactive mode to capture progressive tool output. */
   _onToolOutput?: (toolName: string, text: string) => void;
+}
+
+/**
+ * What a command needs of a running instance of its CLI. `"reactor"` and
+ * `"agent"`: typed in a second terminal, the command runs in the instance,
+ * with its reactor and agent, and the terminal shows its output
+ * (`RunOptions.forward`). `"nothing"`: it runs in the process that was
+ * started for it.
+ */
+export type CommandNeeds = "nothing" | "reactor" | "agent";
+
+/** The process a command was sent from (see `CommandContext.caller`). */
+export interface CommandCaller {
+  /** Its OS user and process id, as it reported them: for the log, not for
+   * access decisions. */
+  user: string;
+  pid: number;
+  /** Its working directory. */
+  cwd: string;
+  /** Whether its stdout is a terminal, and how wide. */
+  tty: boolean;
+  columns?: number;
+  /** Whether it wants colour in the output. */
+  color: boolean;
+  /**
+   * Who the command acts as. Not attached yet: a command runs with the
+   * instance's own identity and permissions.
+   */
+  identity?: CallerIdentity;
+}
+
+/** The identity a caller proved. Reserved: nothing sets it yet. */
+export interface CallerIdentity {
+  /** The caller's address (a DID). */
+  address: string;
 }
 
 /**
@@ -214,6 +269,17 @@ export interface Command<
    *   // usage: cli add "Buy milk" 2
    */
   positional?: readonly string[];
+  /**
+   * What the command needs of a running instance (default `"nothing"`; a
+   * skill command needs the agent without saying so). See {@link CommandNeeds}.
+   */
+  needs?: CommandNeeds;
+  /**
+   * Whether the command reads what is piped to it (`context.readStdin`), for
+   * this input when it is a function. The caller's stdin is then sent along
+   * when the command runs in a running instance.
+   */
+  stdin?: boolean | ((input: Record<string, unknown>) => boolean);
   execute: (
     input: z.output<TInput>,
     context: CommandContext<TConfig, R>,
@@ -1190,6 +1256,34 @@ export interface RunOptions {
    * when a command that ends is refused a service start.
    */
   serveCommand?: string;
+  /**
+   * Where a command that needs the reactor or the agent (`Command.needs`)
+   * runs when it is typed as a command that ends: in the running instance of
+   * this CLI, which executes it and sends its output and exit code back.
+   * Absent, or with `--local` before the command name: in this process, as
+   * every other command does.
+   */
+  forward?: ForwardOptions;
+}
+
+/** See `RunOptions.forward`. */
+export interface ForwardOptions {
+  /**
+   * The running instance, from its run record: its control channel, or the
+   * protocol of one this process does not speak (the command then fails,
+   * naming both). Absent: none runs.
+   */
+  target?: {
+    control?: import("@powerhousedao/host-core/control-channel").ControlRecord;
+    protocol?: number;
+    pid?: number;
+  };
+  /**
+   * Without a running instance the command fails, saying how to start one
+   * (`RunOptions.serveCommand`), and builds no reactor or agent of its own.
+   * Default: it runs in this process.
+   */
+  required?: boolean;
 }
 
 /** See `RunOptions.reactor`. */
