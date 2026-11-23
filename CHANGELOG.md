@@ -1,3 +1,44 @@
+## 6.4.0-next.3 (2026-11-23)
+
+### 🚀 Features
+
+- **clint:** give a command the control record of the cli it runs beside ([30fdb322a8](https://github.com/powerhouse-inc/powerhouse/commit/30fdb322a8))
+- **clint,host-core:** control channel so service commands reach the running cli ([2f08407d7e](https://github.com/powerhouse-inc/powerhouse/commit/2f08407d7e))
+- ⚠️  **codegen,ph-cli:** scaffold a neutral dev host, nothing of vetra ([82e68e2330](https://github.com/powerhouse-inc/powerhouse/commit/82e68e2330))
+- ⚠️  **ph-cli:** generate stubs only, no dependency on the vetra package ([329d9de807](https://github.com/powerhouse-inc/powerhouse/commit/329d9de807))
+- **switchboard:** add the inspector plugin that reports loaded document models ([d286a0f1ce](https://github.com/powerhouse-inc/powerhouse/commit/d286a0f1ce))
+- ⚠️  **switchboard,connect:** no built-in vetra package ([1e9b9ba2c6](https://github.com/powerhouse-inc/powerhouse/commit/1e9b9ba2c6))
+- **vetra:** add the vetra explorer drive app ([31f5bb77f6](https://github.com/powerhouse-inc/powerhouse/commit/31f5bb77f6))
+- **vetra:** package drive layout module, used by the explorer ([1c49b661f0](https://github.com/powerhouse-inc/powerhouse/commit/1c49b661f0))
+
+### 🩹 Fixes
+
+- **connect:** keep the drive explorer the default in create drive ([f50030c046](https://github.com/powerhouse-inc/powerhouse/commit/f50030c046))
+- **vetra:** indent explorer rows without relying on utility order ([0057396b34](https://github.com/powerhouse-inc/powerhouse/commit/0057396b34))
+- **vetra:** keep the explorer's type list while the create dialog closes ([cb9717f1de](https://github.com/powerhouse-inc/powerhouse/commit/cb9717f1de))
+
+### ⚠️  Breaking Changes
+
+- **codegen,ph-cli:** scaffold a neutral dev host, nothing of vetra  ([82e68e2330](https://github.com/powerhouse-inc/powerhouse/commit/82e68e2330))
+  new projects have hosts/dev in place of hosts/vetra, and
+  the dev Connect port comes from the connect host, not vetra.connectPort.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+- **switchboard,connect:** no built-in vetra package  ([1e9b9ba2c6](https://github.com/powerhouse-inc/powerhouse/commit/1e9b9ba2c6))
+  switchboard dev mode and Connect studio mode no longer
+  load @powerhousedao/vetra by themselves.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+- **ph-cli:** generate stubs only, no dependency on the vetra package  ([329d9de807](https://github.com/powerhouse-inc/powerhouse/commit/329d9de807))
+  ph generate --document and --extract are removed.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.4.0-next.2 (2026-11-23)
 
 ### 🚀 Features
