@@ -45,6 +45,30 @@ const stream = defineCommand({
   },
 });
 
+const loud = defineCommand({
+  id: "loud",
+  description: "Print straight to the process, past the command's context",
+  needs,
+  inputSchema: z.object({
+    count: z.coerce.number().int().default(3).describe("How many rounds"),
+    tag: z.string().default("loud").describe("What each line starts with"),
+  }),
+  execute: async ({ count, tag }, ctx) => {
+    for (let i = 1; i <= count; i++) {
+      console.log(`${tag} log ${i} at ${Date.now()}`);
+      process.stdout.write(`${tag} write ${i}\n`);
+      console.error(`${tag} error ${i}`);
+      process.stderr.write(Buffer.from(`${tag} bytes ${i}\n`));
+      await sleep(100);
+    }
+    // The instance's own reaction prints where the instance prints.
+    ctx.emit?.("fixture:loud", tag);
+    // Work left running prints on the instance once the command ended.
+    setTimeout(() => console.log(`${tag} after the end`), 300);
+    return `${tag} done`;
+  },
+});
+
 const wait = defineCommand({
   id: "wait",
   description: "Run until cancelled, then leave a note",
@@ -136,7 +160,10 @@ export const cli = defineCli({
   name: "fixture-forward",
   version: "0.0.1",
   description: "A serving Cli whose commands run in it",
-  commands: [where, here, stream, wait, boom, eat, sneak, count, ask],
+  commands: [where, here, stream, loud, wait, boom, eat, sneak, count, ask],
+  events: {
+    "fixture:loud": (tag) => console.log(`the instance heard ${tag}`),
+  },
   triggers: [idle],
   routine: { tickInterval: 200 },
 });

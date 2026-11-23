@@ -387,6 +387,74 @@ describe("commands that run in a Cli that keeps running", () => {
     expect(serving.child.exitCode).toBeNull();
   }, 300_000);
 
+  it("sends what a command prints straight to the process to its caller", async () => {
+    const before = serving.out() + serving.err();
+    const loud = await command(["loud", "--count", "3"]);
+    expect(loud.code).toBe(0);
+    expect(
+      loud.out
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => line.replace(/ at \d+$/, "")),
+    ).toEqual([
+      "loud log 1",
+      "loud write 1",
+      "loud log 2",
+      "loud write 2",
+      "loud log 3",
+      "loud write 3",
+      "loud done",
+    ]);
+    expect(loud.err.split("\n").filter(Boolean)).toEqual([
+      "loud error 1",
+      "loud bytes 1",
+      "loud error 2",
+      "loud bytes 2",
+      "loud error 3",
+      "loud bytes 3",
+    ]);
+
+    // The instance kept what is its own: its reaction to the command, and
+    // what the command left running once it had ended.
+    await waitFor(serving, "loud after the end");
+    const hosted = (serving.out() + serving.err()).slice(before.length);
+    expect(hosted).toContain("the instance heard loud");
+    expect(hosted).not.toMatch(/loud (log|write|error|bytes) \d/);
+    expect(loud.out + loud.err).not.toContain("the instance heard");
+    expect(loud.out + loud.err).not.toContain("after the end");
+  }, 300_000);
+
+  it("keeps the direct output of two commands at once apart", async () => {
+    const before = serving.out() + serving.err();
+    const [a, b] = await Promise.all([
+      command(["loud", "--count", "10", "--tag", "a"]),
+      command(["loud", "--count", "10", "--tag", "b"]),
+    ]);
+    const times = (text: string) =>
+      [...text.matchAll(/ at (\d+)/g)].map((m) => Number(m[1]));
+    for (const [run, tag, other] of [
+      [a, "a", "b"],
+      [b, "b", "a"],
+    ] as const) {
+      expect(run.code).toBe(0);
+      const all = run.out + run.err;
+      for (const kind of ["log", "write", "error", "bytes"]) {
+        expect(
+          all.match(new RegExp(`^${tag} ${kind} \\d+`, "gm")),
+        ).toHaveLength(10);
+      }
+      expect(run.out).toContain(`${tag} done`);
+      expect(all).not.toMatch(new RegExp(`^${other} `, "m"));
+    }
+    // They ran in the instance at the same time.
+    expect(times(a.out)[0]).toBeLessThan(times(b.out).at(-1)!);
+    expect(times(b.out)[0]).toBeLessThan(times(a.out).at(-1)!);
+    await waitFor(serving, "b after the end");
+    await waitFor(serving, "a after the end");
+    const hosted = (serving.out() + serving.err()).slice(before.length);
+    expect(hosted).not.toMatch(/^[ab] (log|write|error|bytes) \d/m);
+  }, 300_000);
+
   it("cancels the command when its caller goes away", async () => {
     const run = phRun([HOST, "--", "wait", "--note", "killed"]);
     await waitFor(run, "waiting", run.out);

@@ -52,6 +52,7 @@ import {
   untilAborted,
   type ForwardedCommand,
 } from "./command-control.js";
+import { captureOutput } from "./forwarded-output.js";
 import {
   instanceDataDir,
   instanceServicesDir,
@@ -1502,6 +1503,17 @@ export function defineCli<
         user: caller.user,
         pid: caller.pid,
       });
+      // What the command prints straight to the process (console.log,
+      // process.stdout.write) is its caller's too, for as long as it runs.
+      return captureOutput(run, () => executeForwarded(run, line, fail));
+    }
+
+    async function executeForwarded(
+      run: ForwardedCommand,
+      line: (message: string) => void,
+      fail: (message: string) => void,
+    ): Promise<number> {
+      const { request, caller } = run;
       try {
         if (request.prompt !== undefined) {
           const answered = await untilAborted(
