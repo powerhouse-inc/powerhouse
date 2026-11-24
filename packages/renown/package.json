@@ -26,6 +26,12 @@
       "import": "./dist/node.js",
       "default": "./dist/node.js"
     },
+    "./identity": {
+      "source": "./src/identity.ts",
+      "types": "./dist/identity.d.ts",
+      "import": "./dist/identity.js",
+      "default": "./dist/identity.js"
+    },
     "./crypto": {
       "source": "./src/crypto.ts",
       "types": "./dist/crypto.d.ts",
@@ -87,6 +93,9 @@
     "*": {
       "node": [
         "./dist/node.d.ts"
+      ],
+      "identity": [
+        "./dist/identity.d.ts"
       ]
     }
   },

@@ -5,6 +5,8 @@ export default defineConfig({
   entry: [
     "src/index.ts",
     "src/node.ts",
+    // Node: the signing side of the person's identities.
+    "src/identity.ts",
     "src/crypto.ts",
     "src/trust.ts",
     "src/wallet/index.ts",
