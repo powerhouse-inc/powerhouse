@@ -1,8 +1,22 @@
 import {
+  listCredentialRecords,
+  withdrawCredentialRecords,
+} from "@powerhousedao/shared/clis/credential-records";
+import {
   ensurePseudonym,
   loginPaths,
+  readActiveIdentity,
 } from "@powerhousedao/shared/clis/identity";
 import { fileAccessList } from "@powerhousedao/shared/clis/owner-only";
+import {
+  didOfP256Jwk,
+  readSessionFile,
+  sessionFilePath,
+  writeSessionFile,
+} from "@powerhousedao/shared/clis/sessions";
+import { carriedCredentialOf } from "../src/carried-credential.js";
+import { createSignatureVerifier } from "../src/crypto/signer.js";
+import { verifyAuthBearerToken } from "../src/utils.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -16,8 +30,10 @@ import { RenownCryptoBuilder } from "../src/crypto/renown-crypto-builder.js";
 import {
   LoginExpiredError,
   logoutHome,
+  openSession,
   readHomeLogin,
   resolveActiveIdentity,
+  SessionApprovalRequiredError,
   withdrawLogin,
 } from "../src/identity.js";
 import { NodeStorage } from "../src/storage/storage.node.js";
@@ -218,5 +234,192 @@ describe("withdrawLogin and logoutHome", () => {
       status: "unavailable",
       reason: `${RENOWN} offers no withdraw`,
     });
+  });
+});
+
+describe("openSession", () => {
+  const store = () => path.join(root, "store");
+
+  it("signs as the pseudonym through a labelled session, recorded in the store", async () => {
+    const dataDir = store();
+    const session = await openSession({
+      dataDir,
+      label: "vetra",
+      place: "home",
+      interactive: false,
+      target: { dataDir },
+      env,
+    });
+    const pseudonym = readActiveIdentity({ dataDir, env })!;
+    expect(session.identity.address).toBe(pseudonym.address);
+    expect(session.signer).toEqual({
+      user: { address: pseudonym.address, networkId: "eip155", chainId: 1 },
+      app: { name: "vetra", key: session.credential.credentialSubject.id },
+    });
+    expect(session.credential.credentialSubject.app).toBe("vetra");
+    expect(await verifyCredentialSignature(session.credential)).toBe(true);
+
+    const file = sessionFilePath({
+      place: "home",
+      label: "vetra",
+      address: pseudonym.address,
+      dataDir,
+      env,
+    });
+    expectOwnerOnly(file);
+    expect(didOfP256Jwk(readSessionFile(file)!.key.publicKey)).toBe(
+      session.signer.app.key,
+    );
+    const [record] = listCredentialRecords({ dataDir });
+    expect(record).toMatchObject({
+      label: "vetra",
+      source: "cli",
+      sessionDid: session.signer.app.key,
+    });
+
+    const action = {
+      id: "a1",
+      type: "SET_NAME",
+      scope: "global",
+      timestampUtcMs: "1",
+      input: { name: "x" },
+    };
+    const target = { documentId: "doc-1", branch: "main" };
+    const tuple = await session.actionSigner.signAction(action, target);
+    expect(tuple[1]).toBe(session.signer.app.key);
+    const signed = {
+      ...action,
+      context: {
+        signer: { ...session.signer, signatures: [tuple] },
+      },
+    };
+    expect(
+      await createSignatureVerifier()(
+        { action: signed } as never,
+        session.signer.app.key,
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps its credential across opens and renews it near its end", async () => {
+    const dataDir = store();
+    const open = () =>
+      openSession({
+        dataDir,
+        label: "vetra",
+        place: "home",
+        interactive: false,
+        target: { dataDir },
+        env,
+      });
+    const first = await open();
+    const again = await open();
+    expect(again.credential.id).toBe(first.credential.id);
+
+    const file = sessionFilePath({
+      place: "home",
+      label: "vetra",
+      address: first.identity.address,
+      dataDir,
+      env,
+    });
+    const held = readSessionFile(file)!;
+    writeSessionFile(file, {
+      ...held,
+      credential: {
+        ...held.credential!,
+        expirationDate: new Date(Date.now() + 3 * 86_400_000).toISOString(),
+      },
+    });
+    const renewed = await open();
+    expect(renewed.credential.id).not.toBe(first.credential.id);
+    expect(
+      Date.parse(renewed.credential.expirationDate!) - Date.now(),
+    ).toBeGreaterThan(29 * 86_400_000);
+    expect(listCredentialRecords({ dataDir })[0]?.credential.id).toBe(
+      renewed.credential.id,
+    );
+  });
+
+  it("issues a new credential where the store withdrew the old one", async () => {
+    const dataDir = store();
+    const first = await openSession({
+      dataDir,
+      label: "vetra",
+      place: "home",
+      interactive: false,
+      target: { dataDir },
+      env,
+    });
+    const [record] = listCredentialRecords({ dataDir });
+    withdrawCredentialRecords({ dataDir, ids: [record!.id], by: "command" });
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const second = await openSession({
+      dataDir,
+      label: "vetra",
+      place: "home",
+      interactive: false,
+      target: { dataDir },
+      env,
+    });
+    expect(second.credential.id).not.toBe(first.credential.id);
+    expect(listCredentialRecords({ dataDir })[0]?.credential.id).toBe(
+      second.credential.id,
+    );
+  });
+
+  it("mints bearers that carry the credential", async () => {
+    const dataDir = store();
+    const session = await openSession({
+      dataDir,
+      label: "mcp test",
+      place: "data-folder",
+      interactive: false,
+      env,
+    });
+    const verified = await verifyAuthBearerToken(await session.bearer());
+    expect(verified).not.toBe(false);
+    expect(verified && verified.issuer).toBe(session.signer.app.key);
+    expect(verified && carriedCredentialOf(verified)?.id).toBe(
+      session.credential.id,
+    );
+  });
+
+  it("is the Renown login's own session for a person's tool, and needs approval for an agent", async () => {
+    const { did } = await writeLogin();
+    // The stored login carries the credential Renown issued for the key.
+    const paths = loginPaths(env);
+    const stored = JSON.parse(fs.readFileSync(paths.file, "utf8")) as {
+      user: { credential: Record<string, unknown> };
+    };
+    stored.user.credential = {
+      ...stored.user.credential,
+      issuer: {
+        id: `did:pkh:eip155:1:${ADDRESS.toLowerCase()}`,
+        ethereumAddress: ADDRESS,
+      },
+      credentialSubject: { id: did, app: "renown-app" },
+    };
+    fs.writeFileSync(paths.file, JSON.stringify(stored));
+    const session = await openSession({
+      dataDir: store(),
+      label: "vetra",
+      place: "home",
+      interactive: false,
+      env,
+    });
+    expect(session.signer).toEqual({
+      user: { address: ADDRESS, networkId: "eip155", chainId: 1 },
+      app: { name: "renown-app", key: did },
+    });
+    await expect(
+      openSession({
+        dataDir: store(),
+        label: "vetra agent vetra-agent",
+        place: "data-folder",
+        interactive: false,
+        env,
+      }),
+    ).rejects.toThrow(SessionApprovalRequiredError);
   });
 });

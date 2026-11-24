@@ -15,9 +15,33 @@ import {
   buildAndSignCredential,
   type SignCredentialTypedData,
 } from "./credential.js";
+import {
+  CredentialWithdrawnError,
+  readCredentialRecord,
+  credentialRecordId,
+  writeCredentialRecord,
+  type CredentialLike,
+} from "@powerhousedao/shared/clis/credential-records";
+import {
+  credentialEndsWithin,
+  ensureSessionFile,
+  readSessionFile,
+  SESSION_LIFETIME_DAYS,
+  SESSION_RENEW_DAYS,
+  sessionCredentialFor,
+  sessionFilePath,
+  sessionSignerOf,
+  writeSessionFile,
+  type SessionPlace,
+  type SessionSigner,
+} from "@powerhousedao/shared/clis/sessions";
+import type { ISigner } from "@powerhousedao/shared/document-model";
+import { enrolCredential } from "./credential-enrolment.js";
 import { MemoryKeyStorage } from "./crypto/memory-key-storage.js";
 import { NodeKeyStorage } from "./crypto/node-key-storage.js";
+import type { RenownCrypto } from "./crypto/renown-crypto.js";
 import { RenownCryptoBuilder } from "./crypto/renown-crypto-builder.js";
+import { RenownCryptoSigner } from "./crypto/signer.js";
 import type { JwkKeyPair } from "./crypto/types.js";
 import { resolveSwitchboardEndpoint } from "./discovery.js";
 import { RenownBuilder } from "./init.node.js";
@@ -265,4 +289,245 @@ export async function logoutHome(
   );
   for (const file of removed) fs.rmSync(file, { force: true });
   return { withdraw, removed };
+}
+
+// ---------------------------------------------------------------- sessions
+
+/** Where a session's credential must be known for a host to accept it. */
+export type SessionTarget = {
+  /** The store's data folder, when this process can write it. */
+  dataDir?: string;
+  /** The host's base URL, to enrol over HTTP when there is no folder. */
+  url?: string;
+};
+
+/** No session for the label can sign yet: the person must approve one. */
+export class SessionApprovalRequiredError extends Error {
+  constructor(label: string, who: string) {
+    super(
+      `The session "${label}" of ${who} needs a credential that only their Renown wallet can sign; approve it first.`,
+    );
+    this.name = "SessionApprovalRequiredError";
+  }
+}
+
+export interface OpenSession {
+  /** Who acts: the Renown login or the pseudonym. */
+  identity: IdentityInfo;
+  /** What actions' `context.signer` names. */
+  signer: SessionSigner;
+  /** Signs actions as the session; `app.name` is the credential's label. */
+  actionSigner: ISigner;
+  credential: PowerhouseVerifiableCredential;
+  /** A bearer of the session that carries its credential (`phCredential`). */
+  bearer(o?: { expiresIn?: number; aud?: string }): Promise<string>;
+  /** Makes the credential known where `target` checks it. */
+  enrol(target: SessionTarget): Promise<void>;
+}
+
+async function cryptoOf(keyPair: JwkKeyPair): Promise<RenownCrypto> {
+  return new RenownCryptoBuilder()
+    .withKeyPairStorage(new MemoryKeyStorage(keyPair))
+    .build();
+}
+
+type SessionSource = {
+  keyPair: JwkKeyPair;
+  did: string;
+  credential: PowerhouseVerifiableCredential;
+  /** Issues the credential again (a pseudonym); unset for a Renown session. */
+  reissue?: () => Promise<PowerhouseVerifiableCredential>;
+};
+
+/** The session a pseudonym signs with: its key file, its credential renewed. */
+async function pseudonymSession(
+  active: ActiveIdentity,
+  o: { dataDir: string; label: string; place: SessionPlace; env: Env },
+): Promise<SessionSource> {
+  const file = sessionFilePath({
+    place: o.place,
+    label: o.label,
+    address: active.address,
+    dataDir: o.dataDir,
+    env: o.env,
+  });
+  const session = ensureSessionFile(file, o.label);
+  const issue = async () => {
+    const credential = await active.issueSessionCredential!(session.did, {
+      label: o.label,
+      expiresInDays: SESSION_LIFETIME_DAYS,
+    });
+    writeSessionFile(file, {
+      ...(readSessionFile(file) ?? session),
+      credential: credential as CredentialLike,
+    });
+    return credential;
+  };
+  const held = sessionCredentialFor(session, active.address);
+  const credential =
+    held && !credentialEndsWithin(held, SESSION_RENEW_DAYS)
+      ? (held as PowerhouseVerifiableCredential)
+      : await issue();
+  return {
+    keyPair: session.key as JwkKeyPair,
+    did: session.did,
+    credential,
+    reissue: issue,
+  };
+}
+
+/** The session a Renown login signs with: the login's own, or an approved one. */
+async function renownSession(
+  active: ActiveIdentity,
+  o: { dataDir: string; label: string; place: SessionPlace; env: Env },
+): Promise<SessionSource> {
+  const login = active.renown!;
+  if (login.expired) throw new LoginExpiredError(login.label, login.expiresAt);
+  if (o.place === "data-folder") {
+    const session = readSessionFile(
+      sessionFilePath({ ...o, address: active.address }),
+    );
+    const credential = session && sessionCredentialFor(session, active.address);
+    if (!session || !credential) {
+      throw new SessionApprovalRequiredError(o.label, login.label);
+    }
+    return {
+      keyPair: session.key as JwkKeyPair,
+      did: session.did,
+      credential: credential as PowerhouseVerifiableCredential,
+    };
+  }
+  const home = await readHomeLogin(o.env);
+  if (!home?.user.credential) {
+    throw new LoginExpiredError(login.label, login.expiresAt);
+  }
+  return {
+    keyPair: home.keyPair,
+    did: home.did,
+    credential: home.user.credential,
+  };
+}
+
+/** Writes `credential`'s record in `dataDir`, unless it holds it already. */
+function recordIn(
+  dataDir: string,
+  credential: PowerhouseVerifiableCredential,
+  writtenBy: string,
+): void {
+  const binding = {
+    address: credential.issuer.ethereumAddress,
+    chainId: Number(credential.issuer.id.split(":")[3]),
+    sessionDid: credential.credentialSubject.id,
+  };
+  const held = readCredentialRecord({
+    dataDir,
+    id: credentialRecordId(binding),
+  });
+  if (held?.credential.id === credential.id) return;
+  writeCredentialRecord({
+    dataDir,
+    credential: credential as CredentialLike,
+    source: "cli",
+    writtenBy,
+  });
+}
+
+/**
+ * The session `label` of whoever acts in `dataDir`, ready to sign: a
+ * pseudonym (made when there is none) signs its session's credential itself
+ * and renews it when it has less than {@link SESSION_RENEW_DAYS} left; a
+ * Renown login's `home` session is the login's own, a `data-folder` one must
+ * have been approved ({@link SessionApprovalRequiredError}). A pseudonym's
+ * password is asked here, when `interactive`, and only to issue.
+ *
+ * With `target`, the credential is made known there before this resolves:
+ * a record in its data folder, else (a pseudonym) an enrolment at its URL.
+ */
+export async function openSession(o: {
+  dataDir: string;
+  label: string;
+  place: SessionPlace;
+  interactive: boolean;
+  target?: SessionTarget;
+  password?: string;
+  env?: Env;
+}): Promise<OpenSession> {
+  const env = o.env ?? process.env;
+  const active = await resolveActiveIdentity({
+    dataDir: o.dataDir,
+    interactive: o.interactive,
+    create: true,
+    env,
+    ...(o.password === undefined ? {} : { password: o.password }),
+  });
+  if (!active) throw new Error(`No identity acts in ${o.dataDir}.`);
+  const where = { dataDir: o.dataDir, label: o.label, place: o.place, env };
+  const source =
+    active.kind === "renown"
+      ? await renownSession(active, where)
+      : await pseudonymSession(active, where);
+  let { credential } = source;
+  const crypto = await cryptoOf(source.keyPair);
+  if (crypto.did !== source.did) {
+    throw new Error(`The session key of "${o.label}" does not match its did.`);
+  }
+  const chainId =
+    active.kind === "renown"
+      ? (active.renown?.chainId ?? Number(DEFAULT_RENOWN_CHAIN_ID))
+      : Number(DEFAULT_RENOWN_CHAIN_ID);
+  const signerOf = () =>
+    sessionSignerOf(
+      { address: active.address, chainId },
+      {
+        did: source.did,
+        label: o.label,
+        credential: credential as CredentialLike,
+      },
+    );
+  const signer = signerOf();
+  const actionSigner = new RenownCryptoSigner(crypto, signer.app.name, {
+    ...signer.user,
+  });
+
+  const enrol = async (target: SessionTarget) => {
+    if (target.dataDir) {
+      try {
+        recordIn(target.dataDir, credential, o.label);
+      } catch (error) {
+        // Withdrawn there before: only a credential issued since lifts it.
+        if (!(error instanceof CredentialWithdrawnError) || !source.reissue) {
+          throw error;
+        }
+        credential = await source.reissue();
+        recordIn(target.dataDir, credential, o.label);
+      }
+      return;
+    }
+    if (target.url && active.signTypedData) {
+      await enrolCredential({
+        hostUrl: target.url,
+        credential,
+        signTypedData: active.signTypedData,
+      });
+    }
+  };
+  if (o.target) await enrol(o.target);
+
+  return {
+    identity: active,
+    get signer() {
+      return signerOf();
+    },
+    actionSigner,
+    get credential() {
+      return credential;
+    },
+    bearer: (b = {}) =>
+      crypto.getBearerToken(active.address, {
+        expiresIn: b.expiresIn ?? 600,
+        ...(b.aud ? { aud: b.aud } : {}),
+        credential,
+      }),
+    enrol,
+  };
 }
