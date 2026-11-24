@@ -1,14 +1,22 @@
 import {
   setBackendAuth,
   useBackendAuth,
+  useLocalSignIn,
   useUser,
 } from "@powerhousedao/reactor-browser";
 import { logger } from "document-model";
 import { useEffect, useRef } from "react";
 import { relistDrives } from "./drive-relist.js";
 
-/** What the gate shows: nothing, a sign-in, or a "not allowed" notice. */
-export type BackendAuthGateMode = "login" | "unauthorized" | null;
+/**
+ * What the gate shows: nothing, a sign-in, a "not allowed" notice, or what
+ * sign-in by link needs of the person (a password, a refused link).
+ */
+export type BackendAuthGateMode =
+  | "login"
+  | "unauthorized"
+  | "local-sign-in"
+  | null;
 
 /**
  * The gate decision for the app's backend: "login" when the backend refused
@@ -23,6 +31,7 @@ export type BackendAuthGateMode = "login" | "unauthorized" | null;
  */
 export function useBackendAuthGate(): BackendAuthGateMode {
   const refusal = useBackendAuth();
+  const localSignIn = useLocalSignIn();
   const user = useUser();
   const address = user?.address;
   const refusedAt = refusal?.at;
@@ -49,6 +58,8 @@ export function useBackendAuthGate(): BackendAuthGateMode {
       );
     });
   }, [address, refusedAt]);
+  // The person opened a sign-in link: its password, or why it was refused.
+  if (localSignIn && localSignIn.status !== "ended") return "local-sign-in";
   if (!refusal) return null;
   // A 403 for a signed-in user is final until they switch account; a 401 for
   // a signed-in user means the token did not reach the backend yet (a stale
