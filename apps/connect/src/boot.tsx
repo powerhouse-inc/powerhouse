@@ -7,6 +7,7 @@ import {
   hasPrerenderedShell,
 } from "./components/prerendered-shell.js";
 import { loadRuntimeConfig } from "./load-runtime-config.js";
+import { takeSignInFragment } from "./local-sign-in-fragment.js";
 import { initPerformanceObserver } from "./utils/performance-observer.js";
 import { warmModules } from "./warm-modules.js";
 
@@ -36,6 +37,8 @@ export type BootDeps = {
   adoptShell: () => boolean;
   /** Evaluates the app's large packages while the config loads. */
   warmModules: () => Promise<unknown>;
+  /** Takes a sign-in link's `#ph-sign-in=` / `#ph-sign-out` out of the URL. */
+  takeSignIn: () => void;
 };
 
 const defaultDeps: BootDeps = {
@@ -48,6 +51,7 @@ const defaultDeps: BootDeps = {
     return hasPrerenderedShell();
   },
   warmModules: () => warmModules(),
+  takeSignIn: () => takeSignInFragment(),
 };
 
 /**
@@ -105,7 +109,12 @@ export async function bootConnect(
     initObserver,
     adoptShell,
     warmModules: warm,
+    takeSignIn,
   } = { ...defaultDeps, ...overrides };
+
+  // First: a sign-in link's code leaves the address bar before the router
+  // can drop it, and is used once, by the reactor's boot.
+  takeSignIn();
 
   if (!window.ph) {
     window.ph = {};

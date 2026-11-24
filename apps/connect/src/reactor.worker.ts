@@ -30,9 +30,9 @@ import {
   FORWARDED_EVENT_TYPES,
   isSyncInspectionOp,
   ReactorHost,
+  SIGNING_IDENTITY_NEEDED_EVENT,
   SYNC_STATUS_CHANGED_EVENT,
   WorkerPackageLoader,
-  type ReactorIdentity,
   type SyncInspectionOpTargets,
   type WorkerMigrationState,
   type WorkerPackageSource,
@@ -59,6 +59,7 @@ import {
   RenownCryptoBuilder,
   type RenownCryptoSigner,
 } from "@renown/sdk/crypto";
+import { createWorkerIdentity } from "./reactor-worker-identity.js";
 import { createWorkerSignerConfig } from "./reactor-worker-signer.js";
 import { configureConnectChannelScheme } from "./utils/reactor-channel-scheme.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
@@ -173,7 +174,10 @@ const storeLocks = createStoreLocks();
 let inspector: ReactorInspector | undefined;
 let syncInspection: SyncInspectionOpTargets | undefined;
 const INSPECTOR_ACCESS: InspectorAccess = { admin: true, sql: true };
-let currentIdentity: ReactorIdentity | null = null;
+// Asks the tabs once `host` exists: only a signature asks.
+const identity = createWorkerIdentity({
+  askTabs: () => host.broadcastBusEvent(SIGNING_IDENTITY_NEEDED_EVENT, {}),
+});
 const localPeers = createWorkerLocalPeers(
   new ConsoleLogger(["reactor.worker", "local-sync"]),
 );
@@ -501,13 +505,21 @@ const host = new ReactorHost({
       const built = await createWorkerSignerConfig(
         crypto,
         construct,
-        currentIdentity ?? undefined,
+        identity.signerUser,
       );
       signer = built.signer;
-      const jwtHandler: JwtHandler = async () =>
-        currentIdentity
-          ? crypto.getBearerToken(currentIdentity.address, { expiresIn: 10 })
-          : undefined;
+      signer.ensureUser = () => identity.ensure();
+      // The bearer carries the user's credential: a host that keeps its
+      // record (sign-in by link, an enrolled pseudonym) verifies it there.
+      const jwtHandler: JwtHandler = async () => {
+        const user = identity.current;
+        if (!user) return undefined;
+        const credential = identity.credential;
+        return crypto.getBearerToken(user.address, {
+          expiresIn: 10,
+          ...(credential ? { credential } : {}),
+        });
+      };
       phase = "building reactor module";
       console.info(`[reactor.worker] boot: ${phase}`);
       const reactorBuilder = new ReactorBuilder()
@@ -617,9 +629,9 @@ const host = new ReactorHost({
     return localPeers.removeHandler();
   },
   onIdentity: (user) => {
-    currentIdentity = user;
+    identity.set(user);
     if (signer) {
-      signer.user = user ?? undefined;
+      signer.user = identity.signerUser;
     }
   },
   onSyncOp: async (method, args) => {

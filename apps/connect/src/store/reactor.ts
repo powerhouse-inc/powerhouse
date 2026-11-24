@@ -22,7 +22,13 @@ import { SYNC_REMOTES_CHANGED_EVENT } from "@powerhousedao/reactor-browser/rpc";
 import {
   addPHEventHandlers,
   addRemoteDrive,
+  createBrowserIdentity,
+  createLocalSignIn,
   createSwitchboardDirectory,
+  credentialRefusalHandler,
+  desktopShell,
+  localSignInAvailable,
+  setCredentialRefusalHandler,
   DocumentCache,
   fetchDriveInfo,
   DRIVE_DOCUMENT_TYPES,
@@ -58,6 +64,7 @@ import {
   BrowserKeyStorage,
   RenownBuilder,
   RenownCryptoBuilder,
+  type RenownCryptoSigner,
 } from "@renown/sdk";
 import {
   logger,
@@ -65,6 +72,7 @@ import {
   type UpgradeManifest,
 } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
+import { pendingSignInFragment } from "../local-sign-in-fragment.js";
 
 import { NoRegistryDiscoveryService } from "../no-registry-discovery.js";
 import { PackageDiscoveryService } from "../package-discovery.js";
@@ -292,6 +300,12 @@ export async function createReactor(
   const renownChainId = getRuntimeConfig().connect.renown?.chainId;
 
   const keyPairStorage = await BrowserKeyStorage.create();
+  // A sign-in link's `#ph-sign-in=` or `#ph-sign-out`, taken at boot.
+  const signInFragment = pendingSignInFragment();
+  if (signInFragment?.kind === "sign-out") {
+    // The tab forgets its session key too: the next one starts afresh.
+    await keyPairStorage.removeKeyPair();
+  }
   const cryptoBuilder = new RenownCryptoBuilder().withKeyPairStorage(
     keyPairStorage,
   );
@@ -312,6 +326,17 @@ export async function createReactor(
   })
     .withCrypto(renownCrypto)
     .build();
+
+  // Sign-in by link (F3d), before any client asks as the user: the link's
+  // code exchanged at the server that serves this page, a credential past
+  // its date dropped, a renewal that is due made.
+  const signInEndpoint = { base: import.meta.env.BASE_URL };
+  const localSignIn = createLocalSignIn({ renown, ...signInEndpoint });
+  await localSignIn
+    .start(signInFragment)
+    .catch((error: unknown) =>
+      logger.error("Sign-in by link failed: @error", error),
+    );
 
   // Sync getter is safe: loadComponent() warmed the cache before createReactor,
   // and it throws loudly if a future caller violates that boot ordering.
@@ -451,6 +476,28 @@ export async function createReactor(
   const remoteDriveUrl =
     remoteBackends.at(0)?.url ?? phGlobalConfig.defaultDrivesUrl;
 
+  // Hosted Connect without a login (F3d): the first signature with nobody
+  // signed in signs this browser's pseudonym in, enrolled at the switchboards
+  // the tab writes to. A page a local server serves keeps to its link.
+  let localServed: Promise<boolean> | undefined;
+  const browserIdentity = createBrowserIdentity({
+    renown,
+    store: () => Promise.resolve(keyPairStorage),
+    hosts: () => tabSwitchboards(store, remoteDriveUrl),
+    localSignInAvailable: () =>
+      (localServed ??= localSignInAvailable(signInEndpoint)),
+    chainId: renownChainId,
+  });
+  // The desktop shell signs its page in with its own key.
+  if (!desktopShell()) {
+    (renown.signer as RenownCryptoSigner).ensureUser = () =>
+      browserIdentity.ensure();
+  }
+  setCredentialRefusalHandler(
+    credentialRefusalHandler({ renown, localSignIn, browserIdentity }),
+  );
+  browserIdentity.start();
+
   // The tab's reactor v2, with all versions and upgrade manifests.
   const localReactor = async ({
     localAsWorker,
@@ -541,6 +588,7 @@ export async function createReactor(
       upgradeManifests,
       documentModelLoader,
       renown,
+      ensureUser: desktopShell() ? undefined : () => browserIdentity.ensure(),
       onReload: (reason) => {
         logger.warn("Reactor worker requested reload: @reason", reason);
         reloadForWorker(reason, () => window.location.reload());
@@ -873,6 +921,17 @@ function routeAttachments(
     byBackend,
     fallback,
   );
+}
+
+/** The switchboards this tab writes to: its directory's and the drive URL's. */
+function tabSwitchboards(
+  store: PHStore,
+  driveUrl: string | undefined,
+): string[] {
+  const bases = (store.switchboards?.list() ?? []).map((entry) => entry.base);
+  const drive = driveUrl ? switchboardOfDrive(driveUrl)?.base : undefined;
+  if (drive) bases.push(new URL(drive, window.location.origin).href);
+  return [...new Set(bases.map((base) => base.replace(/\/+$/, "")))];
 }
 
 function getDriveUrl() {

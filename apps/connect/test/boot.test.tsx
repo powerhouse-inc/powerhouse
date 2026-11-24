@@ -65,6 +65,9 @@ function harness(options: { shell?: boolean } = {}): Harness {
       calls.push("warmModules");
       return Promise.resolve();
     },
+    takeSignIn: () => {
+      calls.push("takeSignIn");
+    },
   };
 
   return {
@@ -83,6 +86,18 @@ beforeEach(() => {
 });
 
 describe("bootConnect", () => {
+  it("takes a sign-in link's fragment before anything else", async () => {
+    const h = harness();
+
+    const booting = bootConnect(h.deps);
+    await Promise.resolve();
+
+    expect(h.calls[0]).toBe("takeSignIn");
+    h.resolveSkeleton();
+    h.resolveConfig();
+    await booting;
+  });
+
   it("starts the runtime config fetch before importing the skeleton chunk", async () => {
     // Both are network round-trips and neither needs the other. Awaiting the
     // skeleton chunk first makes the config fetch a serial prefix to the app

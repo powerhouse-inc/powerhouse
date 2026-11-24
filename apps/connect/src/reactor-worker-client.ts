@@ -22,8 +22,9 @@ import {
   MessageRouter,
   postReactorIdentity,
   RPC_PROTOCOL_VERSION,
+  SIGNING_IDENTITY_NEEDED_EVENT,
   SyncManagerProxy,
-  type ReactorIdentity,
+  type ReactorSessionIdentity,
   type VersionFingerprint,
   type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
@@ -77,6 +78,11 @@ export type WorkerReactorClientArgs = {
   upgradeManifests: UpgradeManifest<readonly number[]>[];
   documentModelLoader: IDocumentModelLoader;
   renown: IRenown;
+  /**
+   * Asked when the worker would sign with nobody signed in: may sign someone
+   * in (hosted Connect's browser pseudonym). The tab answers with its identity.
+   */
+  ensureUser?: () => Promise<void>;
   /** The worker gen in localStorage is already updated when this runs. */
   onReload: (reason: string) => void;
   /** Prebuilt bundle URL; absent only for the monorepo app, where Vite bundles the worker from source. */
@@ -139,7 +145,10 @@ export function buildWorkerConstruct(args: WorkerReactorClientArgs) {
   };
 }
 
-function toReactorIdentity(user: User | undefined): ReactorIdentity | null {
+/** The identity the worker signs as, with the credential its bearers carry. */
+export function toReactorIdentity(
+  user: User | undefined,
+): ReactorSessionIdentity | null {
   if (!user) {
     return null;
   }
@@ -147,6 +156,7 @@ function toReactorIdentity(user: User | undefined): ReactorIdentity | null {
     address: user.address,
     chainId: user.chainId,
     networkId: user.networkId,
+    ...(user.credential ? { credential: user.credential } : {}),
   };
 }
 
@@ -233,6 +243,16 @@ export function createWorkerReactorClientModule(
   args.renown.on("user", (user) =>
     postReactorIdentity(router, toReactorIdentity(user)),
   );
+  // The answer is the identity, null included, so the worker stops waiting.
+  busProxy.subscribe(SIGNING_IDENTITY_NEEDED_EVENT, () => {
+    void (args.ensureUser?.() ?? Promise.resolve())
+      .catch((error: unknown) =>
+        console.warn("Could not sign anyone in for the worker", error),
+      )
+      .finally(() =>
+        postReactorIdentity(router, toReactorIdentity(args.renown.user)),
+      );
+  });
 
   const reactorClientModule: WorkerReactorClientModule = {
     kind: "worker",
