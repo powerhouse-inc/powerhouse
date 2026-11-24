@@ -5,7 +5,7 @@ models, editors, drive apps, subgraphs and processors, as its code has them.
 
 DevTools is for development only. It is a dev-server plugin: only a dev server loads it, and
 nothing a build resolves refers to it. The design is in
-[ADR 0009](../../docs/adr/0009-devtools.md).
+[ADR 0010](../../docs/adr/0010-devtools.md).
 
 ## Connect dev servers
 

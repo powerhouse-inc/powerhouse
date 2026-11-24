@@ -1,4 +1,4 @@
-# ADR 0009 — DevTools: a development-only dock, added as a dev-server plugin
+# ADR 0010 — DevTools: a development-only dock, added as a dev-server plugin
 
 - **Status:** Proposed
 - **Date:** 2026-11-19
