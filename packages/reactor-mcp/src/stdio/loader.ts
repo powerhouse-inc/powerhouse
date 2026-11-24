@@ -129,4 +129,11 @@ export class VitePackageLoader implements IPackageLoader {
       vite.watcher.off("change", listener);
     };
   }
+
+  /** Stops the Vite server and its watcher. */
+  async close(): Promise<void> {
+    const vite = this.vite;
+    this.vite = undefined;
+    await vite?.close();
+  }
 }
