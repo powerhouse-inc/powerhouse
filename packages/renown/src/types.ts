@@ -226,7 +226,15 @@ export type InternalUser = EditorUser & {
   profile?: RenownProfile;
   /** Signed in with a key on this computer: no Renown holds the credential. */
   local?: boolean;
+  /**
+   * Whose local key signed the credential: the person's identity on this
+   * computer, through the link `ph dev` prints (`machine`), or this browser's
+   * own pseudonym (`browser`).
+   */
+  localIdentity?: LocalIdentity;
 };
+
+export type LocalIdentity = "machine" | "browser";
 
 // Export as User for backward compatibility within the package
 export type User = InternalUser;
@@ -285,7 +293,7 @@ export interface IRenown extends Pick<RenownEventEmitter, "on"> {
   /** Signs in from a credential in hand, asking nobody. */
   adoptCredential: (
     credential: PowerhouseVerifiableCredential,
-    options?: { local?: boolean },
+    options?: { local?: boolean; localIdentity?: LocalIdentity },
   ) => Promise<User>;
   logout: () => Promise<void>;
   /** Re-check the current credential at the source; logs out if revoked/expired. */

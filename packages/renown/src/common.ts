@@ -19,6 +19,7 @@ import type {
   IProof,
   IRenown,
   ISigner,
+  LocalIdentity,
   LoginStatus,
   PKHDid,
   PowerhouseVerifiableCredential,
@@ -246,7 +247,7 @@ export class Renown implements IRenown {
   // Renown holds the latter, so such a session is never checked against one.
   async adoptCredential(
     credential: PowerhouseVerifiableCredential,
-    options: { local?: boolean } = {},
+    options: { local?: boolean; localIdentity?: LocalIdentity } = {},
   ): Promise<User> {
     this.#updateStatus("checking");
     try {
@@ -257,7 +258,13 @@ export class Renown implements IRenown {
         credential,
       );
       if (!options.local) return user;
-      const local: User = { ...user, local: true };
+      const local: User = {
+        ...user,
+        local: true,
+        ...(options.localIdentity
+          ? { localIdentity: options.localIdentity }
+          : {}),
+      };
       this.#updateUser(local);
       return local;
     } catch (error) {

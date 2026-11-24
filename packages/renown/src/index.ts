@@ -1,3 +1,4 @@
+export * from "./browser-pseudonym.js";
 export * from "./carried-credential.js";
 export * from "./common.js";
 export * from "./console-login.js";
