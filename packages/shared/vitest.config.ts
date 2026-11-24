@@ -37,6 +37,8 @@ export default defineConfig({
       "clis/project-ports.test.ts",
       "clis/project-env.test.ts",
       "clis/ph-dir.test.ts",
+      "clis/owner-only.test.ts",
+      "clis/identity.test.ts",
       "clis/real-paths.test.ts",
       "clis/retired-flags.test.ts",
       "clis/deprecations.test.ts",

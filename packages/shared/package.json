@@ -111,6 +111,14 @@
       "source": "./clis/ph-dir.ts",
       "import": "./dist/clis/ph-dir.mjs"
     },
+    "./clis/owner-only": {
+      "source": "./clis/owner-only.ts",
+      "import": "./dist/clis/owner-only.mjs"
+    },
+    "./clis/identity": {
+      "source": "./clis/identity.ts",
+      "import": "./dist/clis/identity.mjs"
+    },
     "./clis/real-paths": {
       "source": "./clis/real-paths.ts",
       "import": "./dist/clis/real-paths.mjs"

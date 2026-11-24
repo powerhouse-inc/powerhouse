@@ -145,6 +145,7 @@ export {
   type OpenControlChannelOptions,
 } from "./control-channel.js";
 export {
+  createOwnerOnlyFile,
   fileAccessList,
   restrictFileToOwner,
   writeOwnerOnlyFile,
