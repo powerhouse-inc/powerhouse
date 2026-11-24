@@ -43,7 +43,6 @@ export * from "./src/services/access-gate.js";
 export * from "./src/services/auth.service.js";
 export * from "./src/services/canonical-document-id.js";
 export * from "./src/services/renown-config.js";
-export * from "./src/services/renown-credential-verifier.js";
 export * from "./src/services/document-permission.service.js";
 export * from "./src/services/permission-cache.js";
 export * from "./src/services/readable-documents.js";

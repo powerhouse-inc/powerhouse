@@ -34,8 +34,11 @@ export type ReactorApiConfig = {
     wsRecheckMs?: number;
     /** The first verified caller becomes the admin of a host with none. */
     ownerClaim?: boolean;
-    /** Keep verified credentials, and rely on them while Renown is away. */
+    /** No longer read: Renown's answers are always kept. */
     offlineCredentials?: boolean;
+    /** Renown unreachable: refuse a credential the host has no record of and
+     *  no answer for (`REFUSE_UNSEEN_CREDENTIALS_OFFLINE`). */
+    refuseUnseenOffline?: boolean;
     /** Who may use the host beyond its admins; see {@link ReactorApiAccessConfig}. */
     access?: ReactorApiAccessConfig;
   };
@@ -106,6 +109,7 @@ export function reactorApiConfigFromEnv(
           : undefined,
       }),
       skipCredentialVerification: exactlyTrue(env.SKIP_CREDENTIAL_VERIFICATION),
+      refuseUnseenOffline: exactlyTrue(env.REFUSE_UNSEEN_CREDENTIALS_OFFLINE),
       credentialCacheTtlMs: parseCredentialCacheTtlMs(
         env.CREDENTIAL_VERIFICATION_CACHE_TTL_MS,
         logger,

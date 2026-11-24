@@ -2,7 +2,6 @@ import {
   warnNotOwnerOnly,
   writeOwnerOnlyFile,
 } from "@powerhousedao/shared/clis/owner-only";
-import type { PowerhouseVerifiableCredential } from "@renown/sdk";
 import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -20,7 +19,7 @@ function readJson<T>(filePath: string): T | undefined {
   }
 }
 
-/** Credentials and the owner: readable by the OS user only. */
+/** The owner: readable by the OS user only. */
 function writeJson(filePath: string, value: unknown): void {
   mkdirSync(path.dirname(filePath), { recursive: true });
   if (!writeOwnerOnlyFile(filePath, JSON.stringify(value, null, 2))) {
@@ -70,64 +69,4 @@ export class OwnerClaim {
     writeJson(this.#filePath, { owner });
     this.#admins.push(owner);
   }
-}
-
-/** The credentials a host keeps to go on verifying people while Renown is away. */
-export interface ICredentialKeep {
-  get(
-    address: string,
-    chainId: number,
-    appId: string,
-  ): PowerhouseVerifiableCredential | undefined;
-  set(
-    address: string,
-    chainId: number,
-    appId: string,
-    credential: PowerhouseVerifiableCredential,
-  ): void;
-  delete(address: string, chainId: number, appId: string): void;
-}
-
-/** Keeps them in one JSON file. They hold a public proof, not a secret. */
-export class FileCredentialKeep implements ICredentialKeep {
-  readonly #filePath: string;
-  #entries: Record<string, PowerhouseVerifiableCredential>;
-
-  constructor(filePath: string) {
-    this.#filePath = filePath;
-    this.#entries =
-      readJson<Record<string, PowerhouseVerifiableCredential>>(filePath) ?? {};
-  }
-
-  get(
-    address: string,
-    chainId: number,
-    appId: string,
-  ): PowerhouseVerifiableCredential | undefined {
-    return this.#entries[keyOf(address, chainId, appId)];
-  }
-
-  set(
-    address: string,
-    chainId: number,
-    appId: string,
-    credential: PowerhouseVerifiableCredential,
-  ): void {
-    const key = keyOf(address, chainId, appId);
-    if (this.#entries[key]?.id === credential.id) return;
-    this.#entries = { ...this.#entries, [key]: credential };
-    writeJson(this.#filePath, this.#entries);
-  }
-
-  delete(address: string, chainId: number, appId: string): void {
-    const key = keyOf(address, chainId, appId);
-    if (!(key in this.#entries)) return;
-    const { [key]: _removed, ...rest } = this.#entries;
-    this.#entries = rest;
-    writeJson(this.#filePath, this.#entries);
-  }
-}
-
-function keyOf(address: string, chainId: number, appId: string): string {
-  return `${address.toLowerCase()}|${chainId}|${appId}`;
 }

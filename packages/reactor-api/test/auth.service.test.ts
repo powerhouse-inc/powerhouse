@@ -18,6 +18,7 @@ const mockVerifyCredential = vi.fn();
 vi.mock("@renown/sdk", () => ({
   verifyAuthBearerToken: (...args: unknown[]) =>
     mockVerifyAuthBearerToken(...args),
+  carriedCredentialOf: () => undefined,
 }));
 
 // ─── fixtures ─────────────────────────────────────────────────────────────────
