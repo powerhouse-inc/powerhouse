@@ -157,6 +157,20 @@ function Nav() {
   );
 }
 
+/** DevTools' name in its bar: the same in the dock and on the standalone
+ * page, whichever page shows. Each bar hides it when narrow, where the page
+ * name needs the room and the mark still names DevTools. */
+export function DevtoolsTitle() {
+  return (
+    <span
+      data-testid="ph-devtools-title"
+      className="shrink-0 text-[13px] font-medium whitespace-nowrap text-foreground"
+    >
+      PH DevTools
+    </span>
+  );
+}
+
 export function PanelSwitcher() {
   const { registry, location, navigate } = useShell();
   const current = panelById(registry, location.panel);
@@ -167,7 +181,7 @@ export function PanelSwitcher() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 min-w-0 gap-1.5 px-1.5 text-[13px]"
+            className="h-7 max-w-full min-w-0 gap-1.5 px-1.5 text-[13px]"
             aria-label="Choose page"
           >
             <current.icon className="size-3.5" />
@@ -378,12 +392,14 @@ export function DevtoolsFrame({ mode }: { mode: FrameMode }) {
       {mode !== "standalone" && (
         <header className="flex h-10 shrink-0 items-center gap-1.5 border-b px-2">
           <BoltMark />
+          {/* From this width the title fits beside the longest page name. */}
+          <div className="hidden shrink-0 @min-[25rem]/frame:block">
+            <DevtoolsTitle />
+          </div>
+          {/* Below this width the pages list is hidden. */}
           <div className="min-w-0 @lg/frame:hidden">
             <PanelSwitcher />
           </div>
-          <span className="hidden min-w-0 truncate text-[13px] font-medium @lg/frame:inline">
-            {panel.title}
-          </span>
           <div className="ml-auto flex shrink-0 items-center gap-0.5">
             <SearchButton />
             <div className="hidden items-center gap-0.5 @2xl/frame:flex">

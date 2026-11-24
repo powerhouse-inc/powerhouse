@@ -183,6 +183,20 @@ describe("the dock", () => {
       expect(item.getAttribute("aria-current")).toBeNull();
   });
 
+  it("names DevTools in its bar, whichever page shows", () => {
+    open("alpha");
+    renderDock();
+    const title = () => screen.getByTestId("ph-devtools-title").textContent;
+    expect(title()).toBe("PH DevTools");
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Beta" }).at(0) as HTMLElement,
+    );
+
+    expect(panel().getAttribute("data-panel")).toBe("beta");
+    expect(title()).toBe("PH DevTools");
+  });
+
   it("changes the tab from the tab bar, with no history entry", () => {
     open("beta");
     renderDock();
@@ -521,6 +535,17 @@ describe("the standalone page", () => {
 
     fireEvent.click(within(bar).getByTestId("ph-devtools-search"));
     await waitFor(() => expect(palette()).not.toBeNull());
+  });
+
+  it("names DevTools in its bar, as the dock does", () => {
+    open("beta");
+    renderPage("/__ph/devtools");
+
+    const bar = screen.getByTestId("ph-devtools-bar");
+    expect(within(bar).getByTestId("ph-devtools-title").textContent).toBe(
+      "PH DevTools",
+    );
+    expect(bar.textContent).not.toContain("Served by");
   });
 
   it("shows the saved page and opens the palette on Alt+Shift+K", async () => {
