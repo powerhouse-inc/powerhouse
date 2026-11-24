@@ -214,6 +214,13 @@ const DIFFERENCES: AllowedDifference[] = [
       "the codegen processor's local drive URL: classic builds it on the CONNECT port (services/vetra.ts startLocalVetraSwitchboard, getDefaultVetraUrl(connectPort)), the runner on the switchboard port, where the drive is served (runners/switchboard.ts startVetraSwitchboard, requestedPort)",
   },
   {
+    paths: ["studio.options.devPlugins.where"],
+    classic: '"ph vetra"',
+    hosts: '"hosts/parity-lab-connect/host.js"',
+    reason:
+      "where the dev-server plugin entries are written, for an error message: classic has no host file, so it names its command (services/vetra.ts), and the runner names the host file whose runner.devPlugins it passes (runners/connect.ts startStudio)",
+  },
+  {
     paths: ["switchboard.options.useVetraDrive"],
     classic: "true",
     hosts: "false",

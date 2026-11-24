@@ -8,6 +8,7 @@ export const PACKAGES_DEPENDENCIES = [
   "@powerhousedao/connect-core",
   "@powerhousedao/design-system",
   "@powerhousedao/desktop",
+  "@powerhousedao/devtools",
   "@powerhousedao/host-core",
   "document-drive",
   "document-model",

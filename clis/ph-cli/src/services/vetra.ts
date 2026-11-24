@@ -554,7 +554,10 @@ export async function startVetra(args: VetraArgs) {
         },
         customViteLogger,
         vetraDrivesOverride,
-        { reloadOnConfigChange: true },
+        {
+          reloadOnConfigChange: true,
+          devPlugins: { entries: [], where: "ph vetra" },
+        },
       );
       // Vite may have taken another port, and the base path is Connect's.
       const connectUrl = studio.resolvedUrls?.local[0];

@@ -1,0 +1,9 @@
+/* DevTools' whole stylesheet, for a host without Tailwind. `mountDevtools`
+   puts it in a shadow root: it holds Tailwind's reset, so it is not for a
+   page's own <head>. */
+@layer theme, base, components, utilities;
+@import "tailwindcss" source(none);
+@import "@powerhousedao/design-system/theme.css";
+@import "./tailwind.css";
+
+@source "./src";

@@ -82,11 +82,11 @@ describe("code-first import direction", () => {
       'import { readSubgraphProtocol } from "../../subgraph/protocol.js";',
       "packages/document-model/src/definition/tooling/subgraph/input.ts -> ../../subgraph/protocol.js: tooling/subgraph reads classes through read.ts's protocol reader and projects with subgraph/projection.ts; it never builds or compiles a subgraph",
     ],
-    // subgraphs.ts reaches schema first only through the schema-first SDL read.
+    // subgraphs.ts alone reaches schema first, through the schema-first SDL read.
     [
       "clis/ph-cli/src/services/model/check.ts",
-      'import { schemaFirstSource } from "./schema-first/sdl-sources.js";',
-      "clis/ph-cli/src/services/model/check.ts -> ./schema-first/sdl-sources.js: model commands read normalized artifacts only",
+      'import { schemaFirstSource } from "document-model/tooling";',
+      "clis/ph-cli/src/services/model/check.ts -> document-model/tooling: model commands read normalized artifacts only",
     ],
     [
       "clis/ph-cli/src/services/model/subgraphs.ts",

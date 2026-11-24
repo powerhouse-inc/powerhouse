@@ -76,3 +76,4 @@ export {
   type TypedSubgraphDefinition,
 } from "./src/definition/tooling/subgraph/read.js";
 export type { SchemaFirstSubgraphSource } from "./src/definition/tooling/subgraph/schema-first/sdl-conflicts.js";
+export { schemaFirstSource } from "./src/definition/tooling/subgraph/schema-first/sdl-sources.js";

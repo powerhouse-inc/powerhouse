@@ -1,0 +1,89 @@
+{
+  "id": "fixture/note",
+  "name": "Note",
+  "description": "A note with a title and tags.",
+  "extension": ".note",
+  "author": { "name": "Fixture", "website": null },
+  "specifications": [
+    {
+      "version": 1,
+      "changeLog": [],
+      "state": {
+        "global": {
+          "schema": "type NoteState {\n  title: String!\n  archived: Boolean!\n  tags: [Tag!]!\n}\n\ntype Tag {\n  label: String!\n}",
+          "initialValue": "{\"title\":\"\",\"archived\":false,\"tags\":[]}",
+          "examples": []
+        },
+        "local": { "schema": "", "initialValue": "{}", "examples": [] }
+      },
+      "modules": [
+        {
+          "id": "content",
+          "name": "content",
+          "description": "The note's text.",
+          "operations": [
+            {
+              "id": "set-title",
+              "name": "SET_TITLE",
+              "description": "Sets the title.",
+              "scope": "global",
+              "schema": "input SetTitleInput {\n  title: String!\n}",
+              "reducer": "state.title = action.input.title;",
+              "template": null,
+              "errors": [
+                {
+                  "id": "empty-title",
+                  "name": "EmptyTitle",
+                  "code": "EMPTY_TITLE",
+                  "description": "The title is empty.",
+                  "template": null
+                }
+              ],
+              "examples": [{ "id": "one", "value": "{\"title\":\"Hello\"}" }]
+            },
+            {
+              "id": "archive",
+              "name": "ARCHIVE",
+              "description": null,
+              "scope": "global",
+              "schema": "input ArchiveInput {\n  _placeholder: Boolean\n}",
+              "reducer": "state.archived = true;",
+              "template": null,
+              "errors": [],
+              "examples": []
+            }
+          ]
+        },
+        {
+          "id": "tags",
+          "name": "tags",
+          "description": null,
+          "operations": [
+            {
+              "id": "add-tag",
+              "name": "ADD_TAG",
+              "description": null,
+              "scope": "global",
+              "schema": "input AddTagInput {\n  label: String!\n}",
+              "reducer": null,
+              "template": null,
+              "errors": [],
+              "examples": []
+            },
+            {
+              "id": "remove-tag",
+              "name": "REMOVE_TAG",
+              "description": null,
+              "scope": "global",
+              "schema": "input RemoveTagInput {\n  label: String!\n}",
+              "reducer": null,
+              "template": null,
+              "errors": [],
+              "examples": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

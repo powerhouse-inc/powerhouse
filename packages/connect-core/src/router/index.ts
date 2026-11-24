@@ -40,6 +40,7 @@ export {
   DRIVE_PENDING_MS,
   APP_ROUTE_ID,
   HOME_ROUTE_ID,
+  registerConnectPage,
   registerConnectRoutes,
   registerPackageRoutes,
   holdConnectRoutes,

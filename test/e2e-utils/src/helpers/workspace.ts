@@ -51,6 +51,7 @@ export const WORKSPACE_PUBLISH_PACKAGES = [
   // casualty: local connect imports it, npmjs host-core lacked it).
   "@powerhousedao/host-core",
   "@powerhousedao/connect-core",
+  "@powerhousedao/devtools",
   "@powerhousedao/clint",
   "@powerhousedao/desktop",
   "@powerhousedao/portle",

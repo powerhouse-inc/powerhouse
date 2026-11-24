@@ -52,9 +52,10 @@ const viteCacheOf = (host: ConnectHostParsed, ctx: RunnerContext) =>
     `.vite-${host.name.replace(/[^\w.-]/g, "_")}`,
   );
 
-export async function dev(
+async function startStudio(
   host: ConnectHostParsed,
   ctx: RunnerContext,
+  { devServer }: { devServer: boolean },
 ): Promise<RunnerHandle<ConnectOutputs>> {
   await validateComposition(host, ctx);
   const { runConnectStudio } = await import("../services/connect-studio.js");
@@ -84,6 +85,13 @@ export async function dev(
       exposeStop: (stop) => {
         studio.stop = stop;
       },
+      // Only a dev server loads the host's dev-server plugins.
+      ...(devServer && {
+        devPlugins: {
+          entries: host.runner.devPlugins ?? [],
+          where: `hosts/${host.name}/host.js`,
+        },
+      }),
     }),
   );
   // A config change replaces the first server: the handle stops Studio, which
@@ -96,9 +104,14 @@ export async function dev(
   return connectHandle(current, { host: "localhost", port: args.port });
 }
 
+/** Studio as a dev server, with the host's dev-server plugins. */
+export const dev = (host: ConnectHostParsed, ctx: RunnerContext) =>
+  startStudio(host, ctx, { devServer: true });
+
 /** `run` is dev-studio until the plugin phases give hosts a production
  * runtime; `serve` (below) is the static production server. */
-export const run = dev;
+export const run = (host: ConnectHostParsed, ctx: RunnerContext) =>
+  startStudio(host, ctx, { devServer: false });
 
 /** P3.3 — `build`: the SAME service as classic `ph connect build`. */
 export async function build(
