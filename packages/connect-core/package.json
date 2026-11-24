@@ -91,7 +91,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",
-    "@playwright/test": "^1.60.0",
+    "@playwright/test": "1.64.1",
     "@renown/sdk": "workspace:*",
     "@tanstack/react-router": "^1.170.41",
     "@tanstack/router-cli": "1.167.40",

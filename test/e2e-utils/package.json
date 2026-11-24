@@ -33,10 +33,10 @@
     "test": "vitest --run"
   },
   "peerDependencies": {
-    "@playwright/test": "^1.60.0"
+    "@playwright/test": "1.64.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.60.0",
+    "@playwright/test": "1.64.1",
     "@powerhousedao/shared": "workspace:*",
     "tsdown": "catalog:",
     "vitest": "catalog:"
