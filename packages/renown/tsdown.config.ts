@@ -7,6 +7,8 @@ export default defineConfig({
     "src/node.ts",
     // Node: the signing side of the person's identities.
     "src/identity.ts",
+    // Node: credentials for a page that signs in by link (F3d).
+    "src/local-sign-in.ts",
     "src/crypto.ts",
     "src/trust.ts",
     "src/wallet/index.ts",

@@ -32,6 +32,12 @@
       "import": "./dist/identity.js",
       "default": "./dist/identity.js"
     },
+    "./local-sign-in": {
+      "source": "./src/local-sign-in.ts",
+      "types": "./dist/local-sign-in.d.ts",
+      "import": "./dist/local-sign-in.js",
+      "default": "./dist/local-sign-in.js"
+    },
     "./crypto": {
       "source": "./src/crypto.ts",
       "types": "./dist/crypto.d.ts",
