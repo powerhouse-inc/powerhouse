@@ -3,6 +3,7 @@ import type { phCliCommandNames } from "../command-names.js";
 import { accessTokenArgs } from "./access-token.js";
 import { debugArgs } from "./common.js";
 import { connectConfigArgs } from "./connect.js";
+import { credentialsListArgs } from "./credentials.js";
 import { generateArgs } from "./generate.js";
 import { hostCheckArgs } from "./host.js";
 import { identityPasswordArgs, logoutArgs, whoamiArgs } from "./identity.js";
@@ -178,6 +179,13 @@ export const phCliHelpCommands = {
     args: identityPasswordArgs,
     description:
       "Manage your pseudonym: `ph identity password` sets, changes or removes its password",
+    handler: () => {},
+  }),
+  credentials: helpCommand({
+    name: "credentials",
+    args: credentialsListArgs,
+    description:
+      "List the credentials this store's host accepts, and withdraw them: `list`, `withdraw`",
     handler: () => {},
   }),
   install: helpCommand({

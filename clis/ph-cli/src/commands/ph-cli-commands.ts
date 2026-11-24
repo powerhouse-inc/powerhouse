@@ -1,6 +1,7 @@
 import { accessToken } from "./access-token.js";
 import { build } from "./build.js";
 import { connect } from "./connect.js";
+import { credentials } from "./credentials.js";
 import { generate } from "./generate.js";
 import { host } from "./host.js";
 import { identity } from "./identity.js";
@@ -41,6 +42,7 @@ export const phCliCommands = {
   logout,
   whoami,
   identity,
+  credentials,
   install,
   uninstall,
   run: runHost,

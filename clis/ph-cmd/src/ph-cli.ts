@@ -15,6 +15,7 @@ const PROJECT_OPTIONAL_COMMANDS = new Set([
   "logout",
   "whoami",
   "identity",
+  "credentials",
   "registry-login",
 ]);
 

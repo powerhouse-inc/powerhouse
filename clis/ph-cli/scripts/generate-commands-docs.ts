@@ -23,6 +23,10 @@ import { inspect } from "../src/commands/inspect.js";
 import { install } from "../src/commands/install.js";
 import { keyframes } from "../src/commands/keyframes.js";
 import { list } from "../src/commands/list.js";
+import {
+  credentialsList,
+  credentialsWithdraw,
+} from "../src/commands/credentials.js";
 import { identityPassword } from "../src/commands/identity.js";
 import { login } from "../src/commands/login.js";
 import { logout } from "../src/commands/logout.js";
@@ -68,6 +72,8 @@ const commands = [
   { name: "whoami", command: whoami },
   { name: "logout", command: logout },
   { name: "identity password", command: identityPassword },
+  { name: "credentials list", command: credentialsList },
+  { name: "credentials withdraw", command: credentialsWithdraw },
   { name: "install", command: install },
   { name: "uninstall", command: uninstall },
 ];

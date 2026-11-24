@@ -34,6 +34,8 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Whoami](#whoami)
 - [Logout](#logout)
 - [Identity Password](#identity-password)
+- [Credentials List](#credentials-list)
+- [Credentials Withdraw](#credentials-withdraw)
 - [Install](#install)
 - [Uninstall](#uninstall)
 <br>
@@ -1153,6 +1155,66 @@ Log arguments passed to this command<br><br>
 #### Help <br>
 show help<br><br>
 **usage:** `--help, -h`<br>
+
+
+## Credentials List
+
+List the credentials this store's host accepts by its own record (`.ph/credentials` in the
+data folder): who, the session's label, who wrote it, its expiry and whether it verifies.
+  
+### options
+#### Data Dir <br>
+The store's data folder (default: PH_USER_DATA_DIR, else the project)<br><br>
+**usage:** `--data-dir <str>`<br>
+
+
+### flags
+#### All <br>
+Also list withdrawn credentials<br><br>
+**usage:** `--all`<br>
+
+#### Json <br>
+Print the records as JSON<br><br>
+**usage:** `--json`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Credentials Withdraw
+
+Withdraw credential records by id prefix, address or label. A running host refuses a withdrawn
+credential from its next request, and the withdrawal holds after a restart.
+  
+### arguments
+#### Id Address Label *[required]*<br>
+Records to withdraw: an id prefix, an address or a label<br><br>
+**usage:** `[...id | address | label]`<br>
+
+
+### flags
+#### Expired <br>
+Remove expired records and the tombstones of expired ones<br><br>
+**usage:** `--expired`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+### options
+#### Data Dir <br>
+The store's data folder (default: PH_USER_DATA_DIR, else the project)<br><br>
+**usage:** `--data-dir <str>`<br>
 
 
 ## Install

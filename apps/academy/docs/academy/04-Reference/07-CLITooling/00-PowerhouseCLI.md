@@ -275,6 +275,8 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Whoami](#whoami)
 - [Logout](#logout)
 - [Identity Password](#identity-password)
+- [Credentials List](#credentials-list)
+- [Credentials Withdraw](#credentials-withdraw)
 - [Install](#install)
 - [Uninstall](#uninstall)
 
@@ -1267,6 +1269,62 @@ Set, change or remove the password of your pseudonym, in the home folder and in 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
+
+
+## Credentials List
+
+List the credentials this store's host accepts by its own record (`.ph/credentials` in the
+data folder): who, the session's label, who wrote it, its expiry and whether it verifies.
+  
+
+
+
+### Options
+**Data Dir** - The store's data folder (default: PH_USER_DATA_DIR, else the project) - Usage: `--data-dir <str>`
+
+
+
+
+### Flags
+**All** - Also list withdrawn credentials - Usage: `--all`
+
+**Json** - Print the records as JSON - Usage: `--json`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Credentials Withdraw
+
+Withdraw credential records by id prefix, address or label. A running host refuses a withdrawn
+credential from its next request, and the withdrawal holds after a restart.
+  
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Id Address Label *[required]*** - Records to withdraw: an id prefix, an address or a label - Usage: `[...id | address | label]`
+
+
+
+
+### Flags
+**Expired** - Remove expired records and the tombstones of expired ones - Usage: `--expired`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+
+
+### Options
+**Data Dir** - The store's data folder (default: PH_USER_DATA_DIR, else the project) - Usage: `--data-dir <str>`
 
 
 ## Install
