@@ -11,6 +11,7 @@ export type {
   ReactorContext,
   ReactorSetupContext,
   ReactorConfiguration,
+  LazySigner,
   RemoteReactorConfig,
   RemoteReactorSource,
   DriveConfig,
@@ -152,7 +153,8 @@ async function driveOfAddress(
  * a signer change also reconnects the realtime socket with the current
  * bearer. Without `ctx.attachments` the context gets the switchboard's own
  * attachment service, authenticated by `ctx.attachmentJwtHandler`, else by
- * `tokenProvider`. `shutdown` releases only this process's side (the
+ * the bearer the writes carry (a forwarded command's caller's, else
+ * `tokenProvider`'s). `shutdown` releases only this process's side (the
  * bridged subscriptions, the signer watch, the client) and runs once.
  */
 export async function attachDefaultReactor<
@@ -236,12 +238,12 @@ export async function attachDefaultReactor<
     );
   }
 
-  const { tokenProvider } = options;
+  // Uploads bear as the writes do: a forwarded command's caller, else this Cli.
   const attachments =
     ctx.attachments ??
     (await remoteAttachmentService(
       attachment.endpoint,
-      ctx.attachmentJwtHandler ?? (tokenProvider && (() => tokenProvider())),
+      ctx.attachmentJwtHandler ?? (() => bearerForRequest(ownToken)),
     ));
 
   let stopped = false;

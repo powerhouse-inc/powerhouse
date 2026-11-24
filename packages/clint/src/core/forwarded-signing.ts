@@ -220,8 +220,8 @@ export function asOwnSigner<T>(fn: () => T): T {
  * {@link CommandEndedError} once it ended, else `own`.
  */
 export function signerForWrite(
-  own: (() => ISigner | undefined) | undefined,
-): ISigner | undefined | Promise<ISigner> {
+  own: (() => ISigner | undefined | Promise<ISigner | undefined>) | undefined,
+): ISigner | undefined | Promise<ISigner | undefined> {
   const scope = scopes.getStore();
   if (scope?.open) return scope.caller.signer();
   if (scope) throw new CommandEndedError();

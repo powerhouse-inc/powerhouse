@@ -133,6 +133,7 @@ export type {
   ReactorContext,
   ReactorSetupContext,
   ReactorConfiguration,
+  LazySigner,
   RemoteReactorConfig,
   RemoteReactorSource,
   DriveConfig,

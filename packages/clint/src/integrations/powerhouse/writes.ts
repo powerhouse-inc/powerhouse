@@ -13,15 +13,16 @@ import {
   type DocumentHeaderLike,
   type WriteRules,
 } from "./signing.js";
-import type { ReactorWrites } from "./types.js";
+import type { LazySigner, ReactorWrites } from "./types.js";
 
 export interface ReactorWritesOptions {
   /**
    * The agent's signer. Read on every write, so a signer whose `user` is set
-   * later (a sign-in) takes effect without rebuilding the reactor. Without
-   * one there is nothing to wait for: `ready()` is always true.
+   * later (a sign-in) takes effect without rebuilding the reactor. A
+   * {@link LazySigner} is opened at the first write it signs. Without one
+   * there is nothing to wait for: `ready()` is always true.
    */
-  signer?: ISigner;
+  signer?: ISigner | LazySigner;
   /** See `WriteRules.legacyDocuments`. Default: `sign-when-ready`. */
   legacyDocuments?: WriteRules["legacyDocuments"];
   /**
@@ -59,9 +60,16 @@ export interface ReactorWritesHandle {
    * Passing the target document to the resolver would lift it; until then
    * give a signer only where the documents written are v2.
    */
-  signer?: () => ISigner;
+  signer?: () => ISigner | Promise<ISigner>;
   /** Stops watching the signer; call it from `ReactorContext.shutdown`. */
   stop(): void;
+}
+
+/** Whether `signer` is opened at its first write. */
+export function isLazySigner(
+  signer: ISigner | LazySigner,
+): signer is LazySigner {
+  return typeof (signer as Partial<LazySigner>).open === "function";
 }
 
 /** See {@link ReactorWritesOptions} and {@link ReactorWritesHandle}. */
@@ -69,8 +77,10 @@ export function createReactorWrites(
   options: ReactorWritesOptions = {},
 ): ReactorWritesHandle {
   const source = options.signer;
+  const lazy = source && isLazySigner(source) ? source : undefined;
+  const eager = source && !lazy ? (source as ISigner) : undefined;
   const rules: WriteRules = {
-    ready: () => (source ? signerReady(source) : true),
+    ready: () => (lazy ? lazy.ready() : eager ? signerReady(eager) : true),
     legacyDocuments: options.legacyDocuments ?? "sign-when-ready",
     accepts: options.accepts,
   };
@@ -79,11 +89,16 @@ export function createReactorWrites(
     canWrite: (document) => canWrite(rules, document),
   };
 
-  let signer: (() => ISigner) | undefined;
-  if (source) {
-    const gated = createGatedSigner(source);
+  let signer: (() => ISigner | Promise<ISigner>) | undefined;
+  if (lazy) {
     signer = () => {
-      if (!signerReady(source)) throw new SignerNotReadyError();
+      if (!lazy.ready()) throw new SignerNotReadyError();
+      return lazy.open();
+    };
+  } else if (eager) {
+    const gated = createGatedSigner(eager);
+    signer = () => {
+      if (!signerReady(eager)) throw new SignerNotReadyError();
       return gated;
     };
   }

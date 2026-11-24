@@ -183,7 +183,8 @@ describe("createReactorWrites", () => {
     expect(() => signer!()).toThrow(SignerNotReadyError);
 
     live.user = OWNER;
-    const gated = signer!();
+    // An eager signer is handed back as it is, not as a promise.
+    const gated = signer!() as ISigner;
     expect(gated.app?.key).toBe(live.app?.key);
     await expect(gated.signAction(setName("z"), TARGET)).resolves.toBeDefined();
     // The gate is live: a sign-out closes it again.
@@ -191,6 +192,31 @@ describe("createReactorWrites", () => {
     await expect(gated.signAction(setName("z"), TARGET)).rejects.toBeInstanceOf(
       SignerNotReadyError,
     );
+  });
+
+  it("opens a lazy signer at the first write, and only while it is ready", async () => {
+    const local = await LocalSigner.create({ user: OWNER });
+    let ready = false;
+    let opened = 0;
+    const { writes, signer } = createReactorWrites({
+      signer: {
+        ready: () => ready,
+        open: () => {
+          opened++;
+          return Promise.resolve(local as unknown as ISigner);
+        },
+      },
+    });
+    expect(writes.ready()).toBe(false);
+    expect(writes.canWrite(v2)).toBe(false);
+    expect(() => signer!()).toThrow(SignerNotReadyError);
+    expect(opened).toBe(0);
+
+    ready = true;
+    expect(writes.ready()).toBe(true);
+    const opening = signer!();
+    expect(opened).toBe(1);
+    await expect(opening).resolves.toBe(local);
   });
 
   it("announces powerhouse:writes:ready when writes become possible, and stops watching", async () => {

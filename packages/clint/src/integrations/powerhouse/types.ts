@@ -459,6 +459,17 @@ export interface ReactorConfiguration<
   remote?: RemoteReactorSource<R>;
 }
 
+/**
+ * A signer opened at the first write it signs: a session whose credential is
+ * issued then, so a Cli that never writes makes none.
+ */
+export interface LazySigner {
+  /** Whether a write can be signed now; `writes.ready()` reads it. */
+  ready(): boolean;
+  /** The signer of a write made now; opened at the first. */
+  open(): Promise<ISigner>;
+}
+
 /** `ReactorConfiguration.remote`: the config, or how to build it at attach. */
 export type RemoteReactorSource<R extends DocumentRegistry = AnyRegistry> =
   | RemoteReactorConfig<R>
@@ -486,16 +497,17 @@ export interface RemoteReactorConfig<R extends DocumentRegistry = AnyRegistry> {
   /**
    * Signs the actions the client pushes, read on every write (see
    * `createReactorWrites`): a signer whose `user` is set later, by a
-   * sign-in, takes effect without a new attach.
+   * sign-in, takes effect without a new attach. A {@link LazySigner} is
+   * opened at the first write it signs, so a session can be made then.
    *
-   * Limit: while the signer has no user, every push is refused with
-   * `SignerNotReadyError`, a write to a legacy document included, whatever
-   * `legacyDocuments` says. The client asks for its signer before it knows
-   * which document it writes, so the resolver cannot pass a legacy write
-   * through unsigned. Give a signer only where the documents written are
-   * v2, or once its user is known.
+   * Limit: while the signer has no user (a lazy one: is not ready), every
+   * push is refused with `SignerNotReadyError`, a write to a legacy document
+   * included, whatever `legacyDocuments` says. The client asks for its
+   * signer before it knows which document it writes, so the resolver cannot
+   * pass a legacy write through unsigned. Give a signer only where the
+   * documents written are v2, or once its user is known.
    */
-  signer?: ISigner;
+  signer?: ISigner | LazySigner;
   /** The bearer per request, for an authenticated switchboard. */
   tokenProvider?: BearerTokenProvider;
   /**
