@@ -22,11 +22,11 @@ concurrency:
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "release/**"]
+    branches: ["main", "release/**", "next/**"]
   pull_request:
     # ci/** lets a change to these workflows be exercised by a pull request
     # stacked on its branch before it reaches main.
-    branches: ["main", "release/**", "ci/**"]
+    branches: ["main", "release/**", "next/**", "ci/**"]
     types: [opened, reopened, synchronize]
 
 permissions:

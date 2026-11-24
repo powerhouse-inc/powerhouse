@@ -30,6 +30,7 @@ export async function startInit(args: InitArgs) {
     dev,
     staging,
     rc,
+    next,
     remoteDrive,
     clone,
   } = args;
@@ -64,6 +65,7 @@ export async function startInit(args: InitArgs) {
       dev,
       staging,
       rc,
+      next,
     },
     "versioning strategy",
   );
@@ -106,12 +108,13 @@ export async function startInit(args: InitArgs) {
     dev,
     staging,
     rc,
+    next,
   });
 
-  if (clone && (tag || version || dev || staging || rc)) {
+  if (clone && (tag || version || dev || staging || rc || next)) {
     console.log(
       chalk.yellow(
-        "⚠️  --clone is set; --version/--tag/--dev/--staging/--rc are ignored (the cloned project's dependency set is authoritative).",
+        "⚠️  --clone is set; --version/--tag/--dev/--staging/--rc/--next are ignored (the cloned project's dependency set is authoritative).",
       ),
     );
   }

@@ -25,6 +25,17 @@ describe("ph migrate with no version", () => {
     ).toBe("staging");
   });
 
+  it("stays on the next channel of a project on a branch release", () => {
+    expect(
+      inferReleaseTag({
+        devDependencies: { "@powerhousedao/ph-cli": "6.4.0-next.2" },
+      }),
+    ).toEqual({
+      tag: "next",
+      reason: "the project is on @powerhousedao/ph-cli@6.4.0-next.2",
+    });
+  });
+
   it("follows latest on a stable release", () => {
     const { tag, reason } = inferReleaseTag({
       devDependencies: { "@powerhousedao/ph-cli": "6.2.3" },

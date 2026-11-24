@@ -11,13 +11,14 @@ import {
 } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   findPackageRoot,
   linkedBuildStamp,
   missingVendorEntries,
+  ownRoots,
   prebuildConnectVendor,
   resolveOwnDeps,
   withVendorBase,
@@ -469,6 +470,10 @@ describe("resolveOwnDeps", () => {
       lib: realpathSync(join(pkg, "esm", "index.js")),
       "lib/sub": realpathSync(join(pkg, "sub.js")),
     });
+    // The chunk group matches module ids, which have forward slashes on Windows too.
+    expect(ownRoots(own)).toEqual([
+      `${realpathSync(pkg).split(sep).join("/")}/`,
+    ]);
     rmSync(base, { recursive: true, force: true });
   });
 });
