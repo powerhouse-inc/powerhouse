@@ -8,6 +8,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -18,6 +19,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { runCompound } from "../src/compound.js";
 import { loadHost } from "../src/host-loader.js";
 import { signInLinksOf, signInSecretOf } from "../src/local-sign-in.js";
+import { fileAccessList } from "../src/owner-only.js";
 import { readRunRecord } from "../src/run-record.js";
 
 /**
@@ -216,6 +218,19 @@ describe("a compound with a Connect that signs in by link", () => {
     expect(after[1]).not.toBe(before[0]);
     expect(codeHolds(after[1]!, secret)).toBe(true);
     await first.shutdown();
+  });
+
+  it("keeps the record that holds the secret readable by its user alone", async () => {
+    const { dir } = makeProject({ signIn: true });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const result = await start(dir, () => {});
+    const file = path.join(dir, ".ph", "run", "app.json");
+    if (process.platform === "win32") {
+      expect(fileAccessList(file)).toHaveLength(1);
+    } else {
+      expect(statSync(file).mode & 0o777).toBe(0o600);
+    }
+    await result.shutdown();
   });
 
   it("keeps no secret when no member signs in by link", async () => {

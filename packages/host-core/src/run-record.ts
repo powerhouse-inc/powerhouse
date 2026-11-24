@@ -160,11 +160,12 @@ export function writeRunRecord(projectDir: string, record: RunRecord): void {
   const valid = runRecordSchema.parse(record);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   const text = `${JSON.stringify(valid, null, 2)}\n`;
-  if (valid.extra?.control === undefined) {
+  if (valid.extra?.control === undefined && valid.extra?.signIn === undefined) {
     fs.writeFileSync(target, text);
     return;
   }
-  // It holds the control channel's token: the user's alone.
+  // It holds the control channel's token or the sign-in secret: the user's
+  // alone.
   writeOwnerOnlyFile(target, text);
 }
 
