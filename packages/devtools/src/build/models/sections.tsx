@@ -17,6 +17,16 @@ type Scope = "global" | "local";
 export const stateItem = (scope: Scope) => `state:${scope}`;
 export const operationItem = (name: string) => `op:${name}`;
 
+/** The value a new document reads from JSON text, two spaces per level.
+ * Text that is not JSON stays as written. */
+function formatJson(text: string): string {
+  try {
+    return JSON.stringify(JSON.parse(text), null, 2);
+  } catch {
+    return text;
+  }
+}
+
 function None({ children }: { children: ReactNode }) {
   return <p className="text-[13px] text-muted-foreground">{children}</p>;
 }
@@ -145,7 +155,7 @@ function StateSection({
               <Label>Initial state</Label>
               <div data-testid="ph-state-initial">
                 {state.initialValue ? (
-                  <Code lang="json">{state.initialValue}</Code>
+                  <Code lang="json">{formatJson(state.initialValue)}</Code>
                 ) : (
                   <None>None.</None>
                 )}
@@ -273,7 +283,7 @@ function OperationDetail({
             ) : (
               operation.examples.map((example, index) => (
                 <Code key={index} lang="json">
-                  {example}
+                  {formatJson(example)}
                 </Code>
               ))
             )}

@@ -155,6 +155,29 @@ describe("Build › Document models", () => {
     expect(text("ph-state-schema")).toContain("type InvoiceState {");
   });
 
+  it("indents JSON written on one line, and shows other text as written", async () => {
+    const detail = invoiceDetail();
+    const [specification] = detail.specifications;
+    specification.state.global.initialValue =
+      '{"number":null,"status":"DRAFT","items":[],"totals":{}}';
+    specification.modules[0].operations[1].examples = [
+      '{"id":"item-1"}',
+      "{ not json",
+    ];
+    server.details["acme/invoice"] = detail;
+    await open("model:acme/invoice#op:REMOVE_LINE_ITEM");
+
+    expect(text("ph-state-initial")).toBe(
+      '{\n  "number": null,\n  "status": "DRAFT",\n  "items": [],\n  "totals": {}\n}',
+    );
+    const examples = [
+      ...within(operation("REMOVE_LINE_ITEM"))
+        .getByTestId("ph-operation-examples")
+        .querySelectorAll("pre"),
+    ].map((pre) => pre.textContent);
+    expect(examples).toEqual(['{\n  "id": "item-1"\n}', "{ not json"]);
+  });
+
   it("puts a module's description behind an icon beside its name", async () => {
     const detail = invoiceDetail();
     detail.specifications[0].modules[0].description = "The invoice's lines.";
