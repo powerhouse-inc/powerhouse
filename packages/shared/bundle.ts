@@ -92,6 +92,7 @@ await build({
     "clis/owner-only.ts",
     "clis/identity.ts",
     "clis/credential-records.ts",
+    "clis/sessions.ts",
     "clis/real-paths.ts",
     "clis/utils.ts",
     "clis/command-names.ts",

@@ -40,6 +40,7 @@ export default defineConfig({
       "clis/owner-only.test.ts",
       "clis/identity.test.ts",
       "clis/credential-records.test.ts",
+      "clis/sessions.test.ts",
       "clis/real-paths.test.ts",
       "clis/retired-flags.test.ts",
       "clis/deprecations.test.ts",
