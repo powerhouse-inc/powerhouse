@@ -1,21 +1,17 @@
 import type { HostPlugin } from "@powerhousedao/host-core";
-import type { API, ISubgraph } from "@powerhousedao/reactor-api";
-import {
-  createStudioSubgraph,
-  type JwkPair,
-  type StudioLogin,
-} from "./sign-in.js";
 
 /**
  * Vetra Studio, server side (rewire R4): what makes a switchboard the STUDIO
  * switchboard and cannot be expressed through other plugins — the dev-mode
- * machinery (Vite-loaded local document models with HMR), and studio sign-in
- * (an admin's bearer gets the person's Renown login, so an agent can log
- * the studio Connect in; see sign-in.ts). Listed verb-scoped (verbs: ["dev"])
- * in the vetra host; `ph run vetra` at the run verb is the same stack
- * headless, without dev tooling. The studio DRIVES are not this plugin's
- * business: they are core drive declarations in the host file
+ * machinery (Vite-loaded local document models with HMR). Listed verb-scoped
+ * (verbs: ["dev"]) in the vetra host; `ph run vetra` at the run verb is the
+ * same stack headless, without dev tooling. The studio DRIVES are not this
+ * plugin's business: they are core drive declarations in the host file
  * (reactor.drives with projectHash ids), seeded by the runner.
+ *
+ * The Studio's tab signs in by link (F3d): the Connect server's loopback
+ * endpoint issues its credential as the person's own identity, so the
+ * switchboard hands no login over.
  *
  * Codegen hot-reload stays a runner/dev-verb concern (the project-level
  * watcher), tracked as the R4 follow-up alongside external browser plugin
@@ -35,45 +31,13 @@ export interface StudioSwitchboardConfig {
   processorConfig?: Record<string, unknown>;
 }
 
-export interface StudioHostContext {
-  options?: Record<string, unknown>;
-  renown?: unknown;
-  api?: unknown;
-  graphqlManager?: unknown;
-  lateSubgraphs?: Promise<unknown>[];
-}
-
-interface SubgraphRegistry {
-  registerSubgraphInstance(
-    subgraph: ISubgraph,
-    supergraph?: string,
-    core?: boolean,
-  ): Promise<unknown>;
-}
-
 export interface StudioHooks {
   transformServerOptions: (
     options: Record<string, unknown>,
   ) => Record<string, unknown>;
-  onSubgraphsRegistering: (ctx: StudioHostContext) => Promise<void>;
-}
-
-/** The person's Renown login in the home folder, read from its files; not
- * the switchboard's own key, which stays the instance's. */
-export async function homeLoginLoader(): Promise<StudioLogin | undefined> {
-  const { readHomeLogin } = await import("@renown/sdk/identity");
-  const login = await readHomeLogin();
-  if (!login) return undefined;
-  const { did, address, chainId } = login.user;
-  return {
-    did: login.did,
-    user: { did, address, chainId },
-    keyPair: login.keyPair as JwkPair,
-  };
 }
 
 export function createStudioSwitchboardPlugin(
-  loadLogin: () => Promise<StudioLogin | undefined> = homeLoginLoader,
   config: StudioSwitchboardConfig = {},
 ): HostPlugin<StudioHooks> {
   const processorConfig = Object.entries(config.processorConfig ?? {});
@@ -93,30 +57,6 @@ export function createStudioSwitchboardPlugin(
           processorConfig: new Map([...existing, ...processorConfig]),
         };
       },
-      onSubgraphsRegistering: async (ctx) => {
-        const api = ctx.api as
-          | (Pick<API, "authorizationService" | "relationalDb"> & {
-              authService: unknown;
-            })
-          | undefined;
-        const registry = ctx.graphqlManager as SubgraphRegistry | undefined;
-        if (!api || !registry) {
-          throw new Error(
-            "The vetra-studio plugin needs the switchboard's API and GraphQL manager at onSubgraphsRegistering; the host handed neither.",
-          );
-        }
-        const registration = registry.registerSubgraphInstance(
-          createStudioSubgraph({
-            api,
-            relationalDb: api.relationalDb,
-            loadLogin,
-          }),
-          "graphql",
-          false,
-        );
-        (ctx.lateSubgraphs ??= []).push(registration);
-        await Promise.resolve();
-      },
     },
   };
 }
@@ -124,7 +64,6 @@ export function createStudioSwitchboardPlugin(
 /** A factory, so the entry may carry config (host-core plugins-resolve). */
 const studioSwitchboardPlugin = (
   config?: StudioSwitchboardConfig,
-): HostPlugin<StudioHooks> =>
-  createStudioSwitchboardPlugin(homeLoginLoader, config);
+): HostPlugin<StudioHooks> => createStudioSwitchboardPlugin(config);
 
 export default studioSwitchboardPlugin;
