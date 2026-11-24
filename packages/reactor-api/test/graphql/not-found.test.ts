@@ -12,7 +12,11 @@ class DocumentNotFoundError extends Error {
 
 function readThatThrows(error: Error): IReactorReadClient {
   const fail = () => Promise.reject(error);
-  return { get: fail, getOperations: fail } as unknown as IReactorReadClient;
+  return {
+    isServed: () => Promise.resolve(true),
+    get: fail,
+    getOperations: fail,
+  } as unknown as IReactorReadClient;
 }
 
 async function caught(promise: Promise<unknown>): Promise<GraphQLError> {
