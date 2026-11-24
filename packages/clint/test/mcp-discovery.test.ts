@@ -116,6 +116,45 @@ describe("discoverMcpTools", () => {
     expect(createdClients).toHaveLength(1);
   });
 
+  it("sends each request the bearer it is given, minted per request", async () => {
+    const configs = [];
+    function CapturingMCPClient(config) {
+      configs.push(config);
+      return FakeMCPClient(config);
+    }
+    const services = mockServices([
+      readyInstance({
+        serviceId: "reactor-project",
+        instanceId: "reactor-project:abc123",
+        mcpUrl: "http://localhost:4001/mcp",
+      }),
+    ]);
+    let minted = 0;
+    const asked = [];
+    await discoverMcpTools(services, undefined, CapturingMCPClient, (ep) => {
+      asked.push(ep);
+      return Promise.resolve(++minted === 1 ? "agent-token" : undefined);
+    });
+    const server = configs[0].servers["reactor-project"];
+    const sent = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (_url, init) => {
+      sent.push(new Headers(init?.headers).get("authorization"));
+      return Promise.resolve(new Response("{}"));
+    };
+    try {
+      await server.fetch("http://localhost:4001/mcp", { method: "POST" });
+      await server.fetch("http://localhost:4001/mcp", { method: "POST" });
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    expect(sent).toEqual(["Bearer agent-token", null]);
+    expect(asked[0]).toEqual({
+      url: "http://localhost:4001/mcp",
+      serviceId: "reactor-project",
+    });
+  });
+
   it("returns empty when no services are ready", async () => {
     const services = mockServices([
       {
