@@ -22,7 +22,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { outdatedDependency } from "./installed-version.js";
 import { definitionChecks } from "./model/check.js";
-import { readProjectDefinitions } from "./model/project.js";
+import { readProjectDefinitions } from "@powerhousedao/codegen/utils";
 import {
   assertChangesWritable,
   errorText,

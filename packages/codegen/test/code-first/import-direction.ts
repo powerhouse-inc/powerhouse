@@ -412,17 +412,17 @@ export function importDirectionViolations(
         );
     }
     // Reading schema-first SDL is the one edge from code-first ph-cli code
-    // into a schema-first module.
-    const schemaFirstSubgraphSeam =
-      path === "clis/ph-cli/src/services/model/subgraphs.ts" &&
-      normalized?.endsWith(
-        "/clis/ph-cli/src/services/model/schema-first/sdl-sources.ts",
-      ) === true;
+    // into schema first: `schemaFirstSource` of document-model's tooling,
+    // from subgraphs.ts alone.
+    const importText = node.getText(source);
+    const readsSchemaFirstSdl =
+      path !== "clis/ph-cli/src/services/model/subgraphs.ts" &&
+      /\bschemaFirstSource\b/.test(importText);
     if (
-      !schemaFirstSubgraphSeam &&
       /^clis\/ph-cli\/src\/(commands\/model|services\/model\/)/.test(path) &&
       (specifier.includes("/schema-first") ||
-        /adaptSchemaFirst/.test(node.getText(source)))
+        /adaptSchemaFirst/.test(importText) ||
+        readsSchemaFirstSdl)
     )
       fail(file, specifier, "model commands read normalized artifacts only");
 
@@ -466,7 +466,6 @@ export function importDirectionViolations(
       );
     if (
       codeFirst &&
-      !schemaFirstSubgraphSeam &&
       normalized &&
       (/\/schema-first\//.test(normalized) ||
         /\/templates\/document-editor\/editor\.ts$/.test(normalized))

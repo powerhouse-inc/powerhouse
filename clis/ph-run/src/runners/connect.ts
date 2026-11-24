@@ -18,6 +18,7 @@ import {
   mergeDefaultDrives,
   normalizePluginEntries,
   placeConnectDrives,
+  pluginEntrySchema,
   resolveDriveDeclaration,
   type DriveDeclaration,
   projectDrivesIntoConnect,
@@ -91,6 +92,11 @@ const schemas = defineHostSchemas((s) =>
            * every call on the page's own origin. Typically a sibling's
            * `origin` output token. */
           proxy: z.strictObject({ target: s.tokenable(z.url()) }).optional(),
+          /** Plugins of this host's dev server, which only the `dev` verb
+           * loads: each default-exports a `ConnectDevPlugin` (host-core).
+           * The entries join the dev server's default ones, and
+           * `enabled: false` turns one of those off. */
+          devPlugins: z.array(pluginEntrySchema).optional(),
         })
         .strict(),
       config: connectConfigSchemaWith(s.tokenable).optional(),

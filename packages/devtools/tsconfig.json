@@ -1,0 +1,33 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["**/*"],
+  "exclude": ["dist", "node_modules"],
+  "references": [
+    {
+      "path": "../codegen"
+    },
+    {
+      "path": "../connect-core"
+    },
+    {
+      "path": "../design-system"
+    },
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../host-core"
+    },
+    {
+      "path": "../reactor-browser"
+    },
+    {
+      "path": "../shared"
+    }
+  ]
+}

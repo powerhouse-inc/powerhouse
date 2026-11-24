@@ -134,6 +134,24 @@ describe("connect bridge runner", () => {
     );
   });
 
+  it("loads the host's dev-server plugins for the dev verb only", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    const host = connectHost();
+    host.runner.devPlugins = [{ module: "@acme/inspector/connect" }];
+    const devPluginsOf = async (start: typeof runner.dev) => {
+      vi.mocked(runConnectStudio).mockClear();
+      await start(connect(host), ctx);
+      return vi.mocked(runConnectStudio).mock.calls[0][3]?.devPlugins;
+    };
+    expect(await devPluginsOf(runner.dev)).toEqual({
+      entries: [{ module: "@acme/inspector/connect" }],
+      where: "hosts/lab-connect/host.js",
+    });
+    expect(await devPluginsOf(runner.run)).toBeUndefined();
+  });
+
   it("serves the browser reactor's in-memory store to Connect", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =
@@ -1671,6 +1689,7 @@ describe("the runners hand the services the classic argument shape", () => {
       reloadOnConfigChange: true,
       restartWith: expect.any(Function) as unknown,
       exposeStop: expect.any(Function) as unknown,
+      devPlugins: { entries: [], where: "hosts/lab-connect/host.js" },
     });
   });
 

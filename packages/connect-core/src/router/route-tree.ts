@@ -1,7 +1,7 @@
 // The app's route tree: core's own, or a project's generated one when its
 // tsconfig maps this specifier to the tree.
-import type { AnyRoute } from "@tanstack/react-router";
-import { useRouter } from "@tanstack/react-router";
+import type { AnyRoute, RouteComponent } from "@tanstack/react-router";
+import { createRoute, useRouter } from "@tanstack/react-router";
 import { useSyncExternalStore } from "react";
 import type {
   FileRoutesById,
@@ -152,6 +152,21 @@ export function registerConnectRoutes(
       remove();
     }
   };
+}
+
+/** Adds a page of its own at `path`, below the root and outside the app's
+ * layout, so none of the app's chrome shows on it. Returns the unregister. */
+export function registerConnectPage(page: {
+  path: string;
+  component: RouteComponent;
+}): () => void {
+  return registerConnectRoutes(({ rootRoute }) => [
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: page.path.replace(/^\/+/, ""),
+      component: page.component,
+    }),
+  ]);
 }
 
 /** A file route a package offers to other Connects; `ph build` generates the

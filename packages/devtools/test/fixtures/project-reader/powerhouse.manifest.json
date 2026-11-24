@@ -1,0 +1,25 @@
+{
+  "name": "project-reader-fixture",
+  "description": "",
+  "category": "",
+  "publisher": { "name": "", "url": "" },
+  "documentModels": [{ "id": "fixture/note", "name": "Note" }],
+  "editors": [
+    {
+      "id": "note-editor",
+      "name": "Note Viewer",
+      "documentTypes": ["fixture/note"]
+    }
+  ],
+  "apps": [
+    {
+      "id": "notes-app",
+      "name": "Notes",
+      "documentTypes": ["powerhouse/reactor-drive"]
+    }
+  ],
+  "subgraphs": [{ "id": "note-stats", "name": "Note Stats" }],
+  "processors": [],
+  "config": [],
+  "importScripts": []
+}

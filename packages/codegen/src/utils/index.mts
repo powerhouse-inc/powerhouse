@@ -24,3 +24,7 @@ export {
   uncachedDefinitionSourceRevision,
   ViteTypeScriptSourceImportAdapter,
 } from "./definition-source-importer.js";
+export {
+  readProjectDefinitions,
+  type ProjectModules,
+} from "./project-definitions.js";

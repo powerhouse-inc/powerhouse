@@ -26,6 +26,9 @@
       "path": "../../packages/desktop"
     },
     {
+      "path": "../../packages/devtools"
+    },
+    {
       "path": "../../packages/document-model"
     },
     {

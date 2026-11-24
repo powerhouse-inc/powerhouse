@@ -25,6 +25,7 @@ This command:
     const { runConnectStudio } = await import("../services/connect-studio.js");
     await runConnectStudio(args, undefined, undefined, {
       reloadOnConfigChange: true,
+      devPlugins: { entries: [], where: "ph connect studio" },
     });
   },
 });

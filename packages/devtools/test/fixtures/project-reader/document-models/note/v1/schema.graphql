@@ -1,0 +1,9 @@
+type NoteState {
+  title: String!
+  archived: Boolean!
+  tags: [Tag!]!
+}
+
+type Tag {
+  label: String!
+}

@@ -7,7 +7,7 @@ import {
 } from "document-model/tooling";
 import type { ReleaseDecision } from "../release/approval.js";
 import type { ReleaseCheck } from "../release/evidence.js";
-import type { ProjectModules } from "./project.js";
+import type { ProjectModules } from "@powerhousedao/codegen/utils";
 import { readProjectSubgraphs } from "./subgraphs.js";
 import {
   type ModelRunOptions,

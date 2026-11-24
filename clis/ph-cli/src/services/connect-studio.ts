@@ -1,4 +1,5 @@
 import { getConnectBaseViteConfig } from "@powerhousedao/builder-tools";
+import type { PluginEntryData } from "@powerhousedao/host-core";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { readFileSync, watch } from "node:fs";
 import { join } from "node:path";
@@ -8,6 +9,8 @@ import { createServer, mergeConfig } from "vite";
 import type { ConnectStudioArgs } from "../types.js";
 import { buildStudioConnectOverride } from "../utils/cli-connect-override.js";
 import { switchboardProxy } from "../utils/switchboard-proxy.js";
+import { resolveConnectDevPlugins } from "./connect-dev-plugins.js";
+import { readDevRun } from "./dev-run.js";
 
 const CONFIG_FILE = "powerhouse.config.json";
 const RELOAD_DEBOUNCE_MS = 200;
@@ -26,6 +29,10 @@ export type ConnectStudioOptions = {
    * watcher and whichever server is current. The first server's own `close`
    * stops neither once a config change has replaced it. */
   exposeStop?: (stop: () => Promise<void>) => void;
+  /** Makes this a dev server with its dev-server plugins: the default ones
+   * and `entries`, a host's `runner.devPlugins`, written at `where`. Without
+   * it, none load. */
+  devPlugins?: { entries: readonly PluginEntryData[]; where: string };
 };
 
 function readConfig(file: string): unknown {
@@ -51,6 +58,7 @@ export async function runConnectStudio(
     proxy,
     restartWith,
     exposeStop,
+    devPlugins,
   }: ConnectStudioOptions = {},
 ): Promise<ViteDevServer> {
   const { port, host, open, cors, strictPort, printUrls, bindCLIShortcuts } =
@@ -59,6 +67,17 @@ export async function runConnectStudio(
 
   const dirname = process.cwd();
   const configFile = join(dirname, CONFIG_FILE);
+
+  // Resolved once: every restart serves the same plugin instances, so what a
+  // plugin gave an open tab, such as a token, stays good.
+  const devServerPlugins = devPlugins
+    ? await resolveConnectDevPlugins({
+        projectRoot: dirname,
+        entries: devPlugins.entries,
+        where: devPlugins.where,
+        context: { projectRoot: dirname, run: () => readDevRun(dirname) },
+      })
+    : [];
 
   const start = async (first: boolean) => {
     const override =
@@ -81,6 +100,7 @@ export async function runConnectStudio(
         ...(proxy ? { proxy: switchboardProxy(proxy) } : {}),
       },
       customLogger,
+      plugins: devServerPlugins,
     };
     const server = await createServer(mergeConfig(baseConfig, devServerConfig));
     await server.listen();

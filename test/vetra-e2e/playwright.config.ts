@@ -1,8 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
+import { fileURLToPath } from "node:url";
 
 export const CONNECT_URL = "http://localhost:3001";
 export const REACTOR_URL = "http://localhost:4002";
 export const PREVIEW_URL = "http://localhost:4173";
+// test/versioned-documents: a Connect with its own routes, styles and composition.
+export const CUSTOM_CONNECT_URL = "http://localhost:3002";
 
 // Worker runs only need the dev server, so they skip the slow connect-preview build.
 const workerMode =
@@ -11,7 +14,7 @@ const workerMode =
 
 const previewProject = {
   name: "connect-preview",
-  testMatch: /runtime-config-preview\.spec\.ts/,
+  testMatch: /(runtime-config-preview|devtools-production)\.spec\.ts/,
   use: { ...devices["Desktop Chrome"], baseURL: PREVIEW_URL },
   dependencies: ["vetra-dev"],
 };
@@ -35,6 +38,35 @@ const previewWebServer = {
     ? { gracefulShutdown: { signal: "SIGTERM" as const, timeout: 10000 } }
     : {}),
   timeout: 5 * 60 * 1000,
+};
+
+const customConnectProject = {
+  name: "custom-connect",
+  testMatch: /devtools-custom-connect\.spec\.ts/,
+  use: { ...devices["Desktop Chrome"], baseURL: CUSTOM_CONNECT_URL },
+};
+
+const customConnectWebServer = {
+  command: "pnpm exec ph-cli run connect dev",
+  cwd: fileURLToPath(new URL("../versioned-documents", import.meta.url)),
+  url: CUSTOM_CONNECT_URL,
+  stderr: "pipe" as const,
+  stdout: "pipe" as const,
+  reuseExistingServer: !process.env.CI,
+  timeout: 5 * 60 * 1000,
+};
+
+// The DevTools Build spec writes a document model, an editor and a drive app
+// into this project with `ph-cli generate`, and removes them when it ends.
+// While they exist the vetra host serves them: Connect reloads its tabs and
+// loads the editor and the drive app, and the switchboard registers the
+// model. A run killed before the spec's cleanup leaves them behind. So it
+// runs after the others, where neither can reach another spec.
+const devtoolsBuildProject = {
+  name: "devtools-build",
+  testMatch: /devtools-build\.spec\.ts/,
+  use: { ...devices["Desktop Chrome"], baseURL: CONNECT_URL },
+  dependencies: workerMode ? ["vetra-dev"] : ["vetra-dev", "connect-preview"],
 };
 
 /**
@@ -74,7 +106,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
 
-  /* Two projects:
+  /* Projects:
    *  - vetra-dev runs the existing specs against `ph run vetra` (the vetra
    *    host, dev mode).
    *  - connect-preview runs the runtime-config preview specs against
@@ -83,6 +115,11 @@ export default defineConfig({
    *    all vetra-dev tests finish before connect-preview tests start so the
    *    two test sets cannot interfere on shared files (dist/ is only touched
    *    by connect-preview tests).
+   *  - custom-connect runs the DevTools spec against test/versioned-documents'
+   *    own Connect (`ph run connect dev`, port 3002).
+   *  - devtools-build runs the DevTools Build spec against the vetra host,
+   *    after vetra-dev and connect-preview: it changes the project's code
+   *    while it runs.
    */
   projects: [
     {
@@ -91,10 +128,12 @@ export default defineConfig({
       // (playwright.repro.config.ts / playwright.repro-external.config.ts);
       // its setup expects a project-specific vetra drive that does not exist
       // under this suite's fixture, so it can never pass here.
-      testIgnore: /runtime-config-preview\.spec\.ts|upgrade-repro\.spec\.ts/,
+      testIgnore:
+        /runtime-config-preview\.spec\.ts|upgrade-repro\.spec\.ts|devtools-(custom-connect|production|build)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL: CONNECT_URL },
     },
-    ...(workerMode ? [] : [previewProject]),
+    ...(workerMode ? [] : [previewProject, customConnectProject]),
+    devtoolsBuildProject,
   ],
 
   /* One webServer per project. Both come up at playwright init; tests in each
@@ -113,6 +152,6 @@ export default defineConfig({
         ? { gracefulShutdown: { signal: "SIGTERM" as const, timeout: 10000 } }
         : {}),
     },
-    ...(workerMode ? [] : [previewWebServer]),
+    ...(workerMode ? [] : [previewWebServer, customConnectWebServer]),
   ],
 });

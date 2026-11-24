@@ -1,6 +1,9 @@
 import type { DefinitionCheckReport } from "@powerhousedao/shared/document-model";
 import type { ProjectDefinitions } from "document-model/tooling";
-import { type ProjectModules, readProjectDefinitions } from "./project.js";
+import {
+  type ProjectModules,
+  readProjectDefinitions,
+} from "@powerhousedao/codegen/utils";
 
 export type ModelStreams = {
   readonly out: (text: string) => void;
