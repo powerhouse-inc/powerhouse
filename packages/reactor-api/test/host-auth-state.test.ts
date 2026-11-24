@@ -1,4 +1,6 @@
+import { fileAccessList } from "@powerhousedao/shared/clis/owner-only";
 import type { PowerhouseVerifiableCredential } from "@renown/sdk";
+import { statSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -86,6 +88,15 @@ describe("host auth state", () => {
       expect(admins).toEqual([ADDRESS.toLowerCase()]);
       claim.observe(OTHER);
       expect(admins).toEqual([ADDRESS.toLowerCase()]);
+    });
+
+    it("is readable by the OS user only", () => {
+      new OwnerClaim(file(), []).observe(ADDRESS);
+      if (process.platform === "win32") {
+        expect(fileAccessList(file())).toHaveLength(1);
+      } else {
+        expect(statSync(file()).mode & 0o777).toBe(0o600);
+      }
     });
 
     it("is inert when admins are configured", async () => {

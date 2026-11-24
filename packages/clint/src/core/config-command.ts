@@ -1,4 +1,8 @@
 import {
+  restrictFileToOwner,
+  warnNotOwnerOnly,
+} from "@powerhousedao/shared/clis/owner-only";
+import {
   readFileSync,
   writeFileSync,
   mkdirSync,
@@ -52,6 +56,10 @@ function writeJsonFile(
       contents,
       mode !== undefined ? { encoding: "utf-8", mode } : "utf-8",
     );
+    // A secret: the user's alone on Windows too, where the mode is not.
+    if (mode !== undefined && !restrictFileToOwner(tmp)) {
+      warnNotOwnerOnly(path);
+    }
     try {
       renameSync(tmp, path);
     } catch (err) {

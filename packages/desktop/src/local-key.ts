@@ -1,3 +1,7 @@
+import {
+  warnNotOwnerOnly,
+  writeOwnerOnlyFile,
+} from "@powerhousedao/shared/clis/owner-only";
 import { buildAndSignCredential } from "@renown/sdk/node";
 import type { SignCredentialTypedData } from "@renown/sdk/node";
 import {
@@ -134,12 +138,11 @@ export async function decryptKey(
   return `0x${hexOf(key)}`;
 }
 
-/** Writes beside the target, then moves it in: a crash leaves the old file. */
+/** Writes beside the target, then moves it in: a crash leaves the old file.
+ * Readable by the OS user only. */
 function writePrivate(file: string, text: string): void {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const partial = `${file}.tmp`;
-  fs.writeFileSync(partial, text, { mode: 0o600 });
-  fs.renameSync(partial, file);
+  if (!writeOwnerOnlyFile(file, text)) warnNotOwnerOnly(file);
 }
 
 export function readKeystore(keyPath: string): Keystore {

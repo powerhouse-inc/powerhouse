@@ -1,5 +1,9 @@
+import {
+  warnNotOwnerOnly,
+  writeOwnerOnlyFile,
+} from "@powerhousedao/shared/clis/owner-only";
 import type { PowerhouseVerifiableCredential } from "@renown/sdk";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 function readJson<T>(filePath: string): T | undefined {
@@ -16,11 +20,12 @@ function readJson<T>(filePath: string): T | undefined {
   }
 }
 
+/** Credentials and the owner: readable by the OS user only. */
 function writeJson(filePath: string, value: unknown): void {
   mkdirSync(path.dirname(filePath), { recursive: true });
-  const partial = `${filePath}.tmp`;
-  writeFileSync(partial, JSON.stringify(value, null, 2), { mode: 0o600 });
-  renameSync(partial, filePath);
+  if (!writeOwnerOnlyFile(filePath, JSON.stringify(value, null, 2))) {
+    warnNotOwnerOnly(filePath);
+  }
 }
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "::1", "localhost"]);
