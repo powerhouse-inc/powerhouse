@@ -1,6 +1,14 @@
 import {
+  BrowserRenownEventEmitter,
   CREDENTIAL_TYPES,
+  ensureBrowserPseudonym,
+  issueBrowserCredential,
+  MemoryKeyStorage,
+  Renown as SdkRenown,
+  RenownCryptoBuilder,
+  RenownMemoryStorage,
   type PowerhouseVerifiableCredential,
+  type PseudonymStore,
   type RenownProfile,
 } from "@renown/sdk";
 import { privateKeyToAccount } from "viem/accounts";
@@ -203,6 +211,40 @@ describe("RenownUserButton", () => {
     await screen.getByRole("button", { name: "Open account menu" }).hover();
 
     await expect.element(screen.getByText("View Profile")).toBeVisible();
+  });
+
+  it("names this browser's pseudonym and says it is lost with the site's data", async () => {
+    const crypto = await new RenownCryptoBuilder()
+      .withKeyPairStorage(new MemoryKeyStorage())
+      .build();
+    const renown = new SdkRenown(
+      new RenownMemoryStorage(),
+      new BrowserRenownEventEmitter(),
+      crypto,
+      "connect",
+    );
+    const store: PseudonymStore = {
+      loadPseudonym: () => Promise.resolve(undefined),
+      addPseudonym: (file) => Promise.resolve(file),
+    };
+    const pseudonym = await ensureBrowserPseudonym(store);
+    await renown.adoptCredential(
+      await issueBrowserCredential(pseudonym, { sessionDid: renown.did }),
+      { local: true, localIdentity: "browser" },
+    );
+    setRenown(renown);
+    const screen = await render(<RenownUserButton onDisconnect={vi.fn()} />);
+
+    await screen.getByRole("button", { name: "Open account menu" }).hover();
+
+    expect(screen.getByText(pseudonym.label).elements().length).toBe(2);
+    await expect
+      .element(screen.getByTestId("browser-pseudonym-note"))
+      .toHaveTextContent(
+        "Kept in this browser only. Clearing this site's data loses it: your documents stay, but you can no longer sign as their author.",
+      );
+    await expect.element(screen.getByText("Sign in with Renown")).toBeVisible();
+    expect(screen.getByText("View Profile").elements()).toHaveLength(0);
   });
 
   it("should call onDisconnect when log out is clicked", async () => {

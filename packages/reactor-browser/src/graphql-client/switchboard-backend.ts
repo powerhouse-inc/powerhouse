@@ -41,7 +41,10 @@ export type SwitchboardBackendDescriptor = {
   /** Resolves the bearer per request and for the realtime socket. */
   readonly tokenProvider: BearerTokenProvider;
   /** Read per push when a function; `undefined` pushes unsigned, never ambient. */
-  readonly signer: ISigner | (() => ISigner | undefined) | undefined;
+  readonly signer:
+    | ISigner
+    | (() => ISigner | undefined | Promise<ISigner | undefined>)
+    | undefined;
   /** Models for signing a batch, read per batch. */
   readonly documentModels: () => readonly DocumentModelModule<any>[];
   readonly realtime?: boolean;

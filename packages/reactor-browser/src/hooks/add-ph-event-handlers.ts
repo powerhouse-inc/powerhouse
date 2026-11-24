@@ -1,5 +1,6 @@
 import type { PHGlobalEventHandlerAdders } from "../types/global.js";
 import { addBackendAuthEventHandler } from "./backend-auth.js";
+import { addLocalSignInEventHandler } from "./local-sign-in.js";
 import {
   addAllowListEventHandler,
   addBasePathEventHandler,
@@ -51,6 +52,7 @@ export const commonGlobalEventHandlerFunctions = {
   loading: addLoadingEventHandler,
   drives: addDrivesEventHandler,
   backendAuth: addBackendAuthEventHandler,
+  localSignIn: addLocalSignInEventHandler,
   driveNodes: addDriveNodesEventHandler,
   selectedDriveId: () => {
     addSelectedDriveIdEventHandler();

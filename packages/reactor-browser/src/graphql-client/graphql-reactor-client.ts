@@ -401,7 +401,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     // The middleware wraps the generated SDK methods AND `RunDocument`, so the
     // hand-authored mutation is authenticated by the same code path.
     const middleware = withWrongBackendErrors(
-      makeAuthMiddleware(this.tokenProvider),
+      makeAuthMiddleware(this.tokenProvider, { url: options.url }),
     );
     const fetch =
       options.requestTimeoutMs === undefined
@@ -2948,14 +2948,24 @@ function isActionSigned(action: Action): boolean {
   return Boolean(signer?.app?.key && signer.signatures.at(-1)?.[1]);
 }
 
-/** Resolves the signer of the logged-in user, if there is one. */
-/** The logged-in Renown user's signer, read per call; none when nobody is. */
-export function ambientRenownSigner(): ISigner | undefined {
+/**
+ * The logged-in Renown user's signer, read per call; none when nobody is.
+ * Nobody logged in, the signer is asked to sign someone in first (hosted
+ * Connect's browser pseudonym).
+ */
+export async function ambientRenownSigner(): Promise<ISigner | undefined> {
   if (typeof window === "undefined") {
     return undefined;
   }
   const renown = getPHStore()?.renown;
-  return renown?.user ? renown.signer : undefined;
+  if (!renown) return undefined;
+  const signer = renown.signer as ISigner & {
+    ensureUser?: () => Promise<void>;
+  };
+  if (!renown.user && signer.ensureUser) {
+    await signer.ensureUser().catch(() => undefined);
+  }
+  return renown.user ? renown.signer : undefined;
 }
 
 /**

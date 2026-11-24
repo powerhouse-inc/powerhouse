@@ -10,7 +10,6 @@ import {
   SubscriptionStore,
   type ClientMessage,
   type CorrelationId,
-  type ReactorIdentity,
   type RpcAdmin,
   type RpcAdoptSyncPeer,
   type RpcDbOp,
@@ -29,6 +28,7 @@ import {
   createPortTransport,
   type IRpcTransport,
 } from "@powerhousedao/reactor/rpc";
+import type { ReactorSessionIdentity } from "./connect-reactor.js";
 import { SYNC_REMOTES_CHANGED_EVENT } from "./sync-manager-proxy.js";
 
 function isDataMessage(
@@ -60,7 +60,7 @@ export type ReactorHostOptions = {
     sources?: WorkerPackageSource[],
   ) => Promise<void>;
   unregisterPackages?: (names: string[]) => Promise<void>;
-  onIdentity?: (user: ReactorIdentity | null) => void;
+  onIdentity?: (user: ReactorSessionIdentity | null) => void;
   onSyncOp?: (method: string, args: unknown[]) => Promise<unknown>;
   onDbOp?: (method: string, args: unknown[]) => Promise<unknown>;
   onInspectorOp?: (method: string, args: unknown[]) => Promise<unknown>;
@@ -229,7 +229,8 @@ export class ReactorHost {
         return;
       }
       if (msg.k === "identity") {
-        this.options.onIdentity?.(msg.user);
+        // The tab's identity carries its credential beside the signer fields.
+        this.options.onIdentity?.(msg.user as ReactorSessionIdentity | null);
         return;
       }
       if (msg.k === "sync-op") {

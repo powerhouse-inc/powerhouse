@@ -81,12 +81,14 @@ export {
   connectReactorClient,
   postReactorIdentity,
   type ReactorHello,
+  type ReactorSessionIdentity,
 } from "./connect-reactor.js";
 export {
   isFingerprintMismatchReload,
   ReactorHost,
   RETIRED_WORKER_RELOAD_REASON,
 } from "./reactor-host.js";
+export { SIGNING_IDENTITY_NEEDED_EVENT } from "./bus-event-ids.js";
 export {
   createSyncManagerProxy,
   SyncManagerProxy,

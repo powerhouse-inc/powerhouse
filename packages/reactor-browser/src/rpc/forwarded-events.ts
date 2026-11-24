@@ -1,4 +1,5 @@
 import { ReactorEventTypes, SyncEventTypes } from "@powerhousedao/reactor";
+import { SIGNING_IDENTITY_NEEDED_EVENT } from "./bus-event-ids.js";
 import {
   SYNC_REMOTES_CHANGED_EVENT,
   SYNC_STATUS_CHANGED_EVENT,
@@ -17,4 +18,5 @@ export const FORWARDED_BUS_EVENT_TYPES: number[] = [
   ...FORWARDED_EVENT_TYPES,
   SYNC_STATUS_CHANGED_EVENT,
   SYNC_REMOTES_CHANGED_EVENT,
+  SIGNING_IDENTITY_NEEDED_EVENT,
 ];

@@ -82,3 +82,4 @@ export * from "./close-node.js";
 export * from "./link-props.js";
 export * from "./use-attachments.js";
 export * from "./backend-auth.js";
+export * from "./local-sign-in.js";

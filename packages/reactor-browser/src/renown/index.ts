@@ -46,3 +46,26 @@ export { useRenownWalletAdapter } from "./use-renown-wallet-adapter.js";
 // Only the session action is public. Wallet-controller registry (mutators and
 // the ready waiter) stays internal wiring between the provider and useRenownAuth.
 export { desktopShell, openRenown, type DesktopShell } from "./session.js";
+export {
+  createLocalSignIn,
+  credentialEndsWithin,
+  credentialRefusalHandler,
+  DROPPED_CREDENTIAL_REASONS,
+  exchangeLocalSignIn,
+  LOCAL_SIGN_IN_RENEW_DAYS,
+  localSignInAvailable,
+  renewLocalSignIn,
+  type LocalSignIn,
+  type LocalSignInAnswer,
+  type LocalSignInEndpoint,
+  type LocalSignInIssued,
+  type LocalSignInOptions,
+  type LocalSignInRefused,
+  type SignInFragment,
+} from "./local-sign-in.js";
+export {
+  createBrowserIdentity,
+  switchboardBaseOf,
+  type BrowserIdentity,
+  type BrowserIdentityOptions,
+} from "./browser-identity.js";
