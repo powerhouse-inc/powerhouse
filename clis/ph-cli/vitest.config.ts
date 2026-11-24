@@ -30,6 +30,8 @@ export default defineConfig({
     // Never the user's own login: commands that reach it (publish) make one.
     env: {
       PH_IDENTITY_HOME: path.join(os.tmpdir(), "ph-cli-test-identities"),
+      // A runner asked to open a sign-in link opens none in a test.
+      BROWSER: "none",
     },
     // A file's first test pays for loading the runners, which takes longer
     // than the default on Windows.

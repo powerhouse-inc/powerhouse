@@ -180,14 +180,16 @@ describe("connect bridge runner", () => {
     const { runConnectStudio } =
       await import("../src/services/connect-studio.js");
     vi.mocked(runConnectStudio).mockClear();
-    await runner.run(
+    const handle = await runner.run(
       connect(connectHost({ runner: { module: "m", openBrowser: true } })),
       ctx,
     );
+    // Signing in by link, the runner opens the sign-in link, not vite the app.
     expect(vi.mocked(runConnectStudio).mock.calls[0][0]).toMatchObject({
       port: 3000,
-      open: true,
+      open: false,
     });
+    expect(handle.outputs.localSignIn).toEqual({ open: true });
   });
 
   it("passes runner.host to vite as the bind address, and leaves vite's default when unset", async () => {
@@ -1641,11 +1643,13 @@ describe("runner arguments (ctx.argv) win over the host file", () => {
     expect(vi.mocked(runConnectStudio).mock.calls[0][0]).toMatchObject({
       port: 4100,
       host: "0.0.0.0",
-      open: true,
+      // `--open` opens the sign-in link, not the bare app.
+      open: false,
       strictPort: true,
       cors: true,
     });
     expect(handle.outputs.origin).toBe("http://localhost:4100");
+    expect(handle.outputs.localSignIn).toEqual({ open: true });
   });
 
   it("connect serve: --port and --strictPort reach the built-in server, --open takes vite", async () => {
@@ -1750,6 +1754,11 @@ describe("the runners hand the services the classic argument shape", () => {
       reloadOnConfigChange: true,
       restartWith: expect.any(Function) as unknown,
       exposeStop: expect.any(Function) as unknown,
+      // Sign-in by link, on by default at dev (F3d).
+      localSignIn: {
+        secret: expect.any(String) as unknown,
+        issuer: expect.any(Function) as unknown,
+      },
     });
   });
 
