@@ -54,6 +54,44 @@ export class ReactorSubgraph extends BaseSubgraph {
     else this.logger.error(message, ...replacements);
   }
 
+  /**
+   * A write this host signs with its own key for its caller: actions that
+   * arrive unsigned, or a mutation (`actions` undefined) whose actions the
+   * host builds itself. Logged at debug, so a test or an operator sees who
+   * still relies on it before such writes are refused.
+   */
+  private logHostSigned(
+    what: string,
+    ctx: Context,
+    actions?: readonly unknown[],
+  ): void {
+    const unsigned =
+      actions === undefined
+        ? undefined
+        : actions.filter((action) => {
+            const signer = (
+              action as {
+                context?: {
+                  signer?: { app?: { key?: string }; signatures?: unknown[] };
+                };
+              } | null
+            )?.context?.signer;
+            return !signer?.app?.key || !signer.signatures?.length;
+          }).length;
+    if (unsigned === 0) return;
+    const user = ctx.user as { address: string; label?: string } | undefined;
+    this.logger.debug(
+      "@what: this host signs @count for @caller",
+      what,
+      unsigned === undefined
+        ? "the actions it builds"
+        : `${unsigned} unsigned action(s)`,
+      user
+        ? `${user.address}${user.label ? ` (${user.label})` : ""}`
+        : "an anonymous caller",
+    );
+  }
+
   constructor(args: SubgraphArgs) {
     super(args);
     this.logger.verbose(`constructor()`);
@@ -874,6 +912,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           } else {
             this.assertCanCreate(ctx);
           }
+          this.logHostSigned("createDocument", ctx);
           const result = await resolvers.createDocument(
             this.clientsOf(ctx),
             { document: args.document, parentIdOrSlug },
@@ -925,6 +964,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           } else {
             this.assertCanCreate(ctx);
           }
+          this.logHostSigned("createEmptyDocument", ctx);
           const result = await resolvers.createEmptyDocument(
             this.clientsOf(ctx),
             { documentType: args.documentType, parentIdOrSlug },
@@ -1012,6 +1052,13 @@ export class ReactorSubgraph extends BaseSubgraph {
 
       executeBatch: async (_parent, args, ctx: Context) => {
         this.logger.debug("executeBatch(@args)", args);
+        this.logHostSigned(
+          "executeBatch",
+          ctx,
+          (args.jobs as readonly { actions?: readonly unknown[] }[]).flatMap(
+            (job) => job.actions ?? [],
+          ),
+        );
         try {
           const creation = resolvers.batchCreationOf(args.jobs);
           if (creation) {
@@ -1070,6 +1117,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
       mutateDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("mutateDocument(@args)", args);
+        this.logHostSigned("mutateDocument", ctx, args.actions);
         try {
           // canMutate combines the write + operation checks per action.
           const handle = await this.assertCanExecuteOperations(
@@ -1095,6 +1143,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
       mutateDocumentAsync: async (_parent, args, ctx: Context) => {
         this.logger.debug("mutateDocumentAsync(@args)", args);
+        this.logHostSigned("mutateDocumentAsync", ctx, args.actions);
         try {
           const handle = await this.assertCanExecuteOperations(
             args.documentIdentifier,
@@ -1336,6 +1385,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
       deleteDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("deleteDocument(@args)", args);
+        this.logHostSigned("deleteDocument", ctx);
         try {
           const handle = await this.assertCanWrite(
             requireOneOf<string>(args, "idOrSlug", "identifier"),
@@ -1370,6 +1420,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
       deleteDocuments: async (_parent, args, ctx: Context) => {
         this.logger.debug("deleteDocuments(@args)", args);
+        this.logHostSigned("deleteDocuments", ctx);
         try {
           // Check write permission on each document, resolving slugs so the
           // delete targets the same canonical ids the checks authorized.
