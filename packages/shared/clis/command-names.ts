@@ -22,6 +22,8 @@ export const phCliCommandNames = [
   "switchboard",
   "login",
   "logout",
+  "whoami",
+  "identity",
   "install",
   "add",
   "i",

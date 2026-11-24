@@ -18,7 +18,12 @@ let sentryClient: TelemetryClient | undefined = undefined;
 // Commands whose second positional is itself a subcommand (vs. a project
 // name / file path). Keeping this explicit avoids high-cardinality tag
 // values like `subcommand:my-package` polluting Sentry.
-const COMMANDS_WITH_SUBCOMMANDS = new Set(["connect", "host", "model"]);
+const COMMANDS_WITH_SUBCOMMANDS = new Set([
+  "connect",
+  "host",
+  "identity",
+  "model",
+]);
 
 function detectPackageManager(): string | undefined {
   // npm, pnpm, yarn and bun all set npm_config_user_agent like

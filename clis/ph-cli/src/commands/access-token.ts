@@ -15,8 +15,8 @@ This command:
 
 Prerequisites:
   You must have a cryptographic identity. Run 'ph login' first to:
-  - Generate a keypair (stored in .ph/.keypair.json)
-  - Optionally link your Ethereum address (stored in .ph/.renown.json)
+  - Generate a keypair (stored in ~/.ph/identities/renown/.keypair.json)
+  - Optionally link your Ethereum address (stored in ~/.ph/identities/renown/.renown.json)
 
 Token Details:
   The generated token is a JWT (JSON Web Token) containing:

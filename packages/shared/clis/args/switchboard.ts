@@ -31,7 +31,7 @@ export const switchboardArgs = {
     type: optional(boolean),
     long: "use-identity",
     description:
-      "enable identity using keypair from ph login (uses ~/.ph/keypair.json)",
+      "enable the switchboard's own identity: the instance key in .ph/.keypair.json",
   }),
   requireIdentity: flag({
     type: optional(boolean),

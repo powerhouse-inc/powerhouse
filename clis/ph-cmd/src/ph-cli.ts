@@ -7,11 +7,14 @@ import { getVersion } from "./get-version.js";
 
 const PH_CLI_PACKAGE = "@powerhousedao/ph-cli";
 
-// Auth/identity commands write global state (~/.renown.json, ~/.npmrc), not a
-// project, so they run outside a project via dlx when no ph-cli is installed.
+// Auth/identity commands use the user's home folder (~/.ph/identities,
+// ~/.npmrc), not a project, so they run outside a project via dlx when no
+// ph-cli is installed.
 const PROJECT_OPTIONAL_COMMANDS = new Set([
   "login",
   "logout",
+  "whoami",
+  "identity",
   "registry-login",
 ]);
 

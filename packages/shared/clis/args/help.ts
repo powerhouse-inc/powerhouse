@@ -5,6 +5,7 @@ import { debugArgs } from "./common.js";
 import { connectConfigArgs } from "./connect.js";
 import { generateArgs } from "./generate.js";
 import { hostCheckArgs } from "./host.js";
+import { identityPasswordArgs, logoutArgs, whoamiArgs } from "./identity.js";
 import { inspectArgs } from "./inspect.js";
 import { installArgs } from "./install.js";
 import { keyframesArgs } from "./keyframes.js";
@@ -155,13 +156,28 @@ export const phCliHelpCommands = {
   login: helpCommand({
     name: "login",
     args: loginArgs,
-    description: "Authenticate with Renown using your Ethereum wallet",
+    description:
+      "Log in with Renown using your Ethereum wallet, for every project of this user",
     handler: () => {},
   }),
   logout: helpCommand({
     name: "logout",
-    args: loginArgs,
-    description: "Deletes an existing session created with 'ph login'",
+    args: logoutArgs,
+    description:
+      "Withdraw the login at Renown and delete it; your pseudonym acts again",
+    handler: () => {},
+  }),
+  whoami: helpCommand({
+    name: "whoami",
+    args: whoamiArgs,
+    description: "Show who acts here: your Renown login, or your pseudonym",
+    handler: () => {},
+  }),
+  identity: helpCommand({
+    name: "identity",
+    args: identityPasswordArgs,
+    description:
+      "Manage your pseudonym: `ph identity password` sets, changes or removes its password",
     handler: () => {},
   }),
   install: helpCommand({

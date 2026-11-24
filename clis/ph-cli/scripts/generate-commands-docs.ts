@@ -23,7 +23,9 @@ import { inspect } from "../src/commands/inspect.js";
 import { install } from "../src/commands/install.js";
 import { keyframes } from "../src/commands/keyframes.js";
 import { list } from "../src/commands/list.js";
+import { identityPassword } from "../src/commands/identity.js";
 import { login } from "../src/commands/login.js";
+import { logout } from "../src/commands/logout.js";
 import { mcp } from "../src/commands/mcp.js";
 import { migrate } from "../src/commands/migrate.js";
 import { modelCheck, modelInspect } from "../src/commands/model.js";
@@ -31,6 +33,7 @@ import { phCli } from "../src/commands/ph-cli.js";
 import { runHost } from "../src/commands/run.js";
 import { uninstall } from "../src/commands/uninstall.js";
 import { vetra } from "../src/commands/vetra.js";
+import { whoami } from "../src/commands/whoami.js";
 
 const commands = [
   { name: "run", command: runHost },
@@ -62,6 +65,9 @@ const commands = [
   { name: "model check", command: modelCheck },
   { name: "model inspect", command: modelInspect },
   { name: "login", command: login },
+  { name: "whoami", command: whoami },
+  { name: "logout", command: logout },
+  { name: "identity password", command: identityPassword },
   { name: "install", command: install },
   { name: "uninstall", command: uninstall },
 ];

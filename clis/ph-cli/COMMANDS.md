@@ -31,6 +31,9 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Model Check](#model-check)
 - [Model Inspect](#model-inspect)
 - [Login](#login)
+- [Whoami](#whoami)
+- [Logout](#logout)
+- [Identity Password](#identity-password)
 - [Install](#install)
 - [Uninstall](#uninstall)
 <br>
@@ -691,8 +694,8 @@ This command:
 
 Prerequisites:
   You must have a cryptographic identity. Run 'ph login' first to:
-  - Generate a keypair (stored in .ph/.keypair.json)
-  - Optionally link your Ethereum address (stored in .ph/.renown.json)
+  - Generate a keypair (stored in ~/.ph/identities/renown/.keypair.json)
+  - Optionally link your Ethereum address (stored in ~/.ph/identities/renown/.renown.json)
 
 Token Details:
   The generated token is a JWT (JSON Web Token) containing:
@@ -1052,7 +1055,7 @@ This command:
 1. Generates or loads a cryptographic identity (DID) for the CLI
 2. Opens your browser to the Renown authentication page
 3. You authorize the CLI's DID to act on behalf of your Ethereum address
-4. Stores the credentials locally in .ph/.renown.json
+4. Stores the login in your home folder (~/.ph/identities/renown), for every project
   
 ### options
 #### Renown Url <br>
@@ -1076,6 +1079,72 @@ Show current authentication status<br><br>
 #### Show Did <br>
 Show the CLI's DID and exit<br><br>
 **usage:** `--show-did`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Whoami
+
+Show who acts here: your Renown login when you are logged in (`ph login`), else your
+pseudonym, an Ethereum key made without a login and shown as "Anonymous" and a short
+address. Reads files only; `--check` also asks Renown whether the login is still valid.
+  
+### flags
+#### Json <br>
+Print the identity as JSON<br><br>
+**usage:** `--json`<br>
+
+#### Check <br>
+Ask Renown whether the login is still valid (network)<br><br>
+**usage:** `--check`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+### options
+#### Renown Url <br>
+Renown server URL.<br><br>
+**usage:** `--renown-url <str>`<br>
+**env**: `PH_CONNECT_RENOWN_URL`<br>**default**: `https//www.renown.id`
+
+## Logout
+
+The logout command withdraws your Renown login at Renown and deletes it from this computer,
+its key included. Your pseudonym acts again.
+### options
+#### Renown Url <br>
+Renown server URL.<br><br>
+**usage:** `--renown-url <str>`<br>
+**env**: `PH_CONNECT_RENOWN_URL`<br>**default**: `https//www.renown.id`
+
+### flags
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Identity Password
+Set, change or remove the password of your pseudonym, in the home folder and in every store it was copied into. Makes the pseudonym when there is none.
+### flags
+#### Remove <br>
+Remove the password: the key is kept readable by your user only<br><br>
+**usage:** `--remove`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>

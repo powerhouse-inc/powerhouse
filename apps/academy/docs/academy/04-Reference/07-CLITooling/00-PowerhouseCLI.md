@@ -272,6 +272,9 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Model Check](#model-check)
 - [Model Inspect](#model-inspect)
 - [Login](#login)
+- [Whoami](#whoami)
+- [Logout](#logout)
+- [Identity Password](#identity-password)
 - [Install](#install)
 - [Uninstall](#uninstall)
 
@@ -832,8 +835,8 @@ can be used to authenticate requests to Powerhouse APIs like reactor-api (Switch
 
 Prerequisites:
   You must have a cryptographic identity. Run 'ph login' first to:
-  - Generate a keypair (stored in .ph/.keypair.json)
-  - Optionally link your Ethereum address (stored in .ph/.renown.json)
+  - Generate a keypair (stored in ~/.ph/identities/renown/.keypair.json)
+  - Optionally link your Ethereum address (stored in ~/.ph/identities/renown/.renown.json)
 
 Token Details:
   The generated token is a JWT (JSON Web Token) containing:
@@ -1174,7 +1177,7 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 - 1. Generates or loads a cryptographic identity (DID) for the CLI
 - 2. Opens your browser to the Renown authentication page
 - 3. You authorize the CLI's DID to act on behalf of your Ethereum address
-- 4. Stores the credentials locally in .ph/.renown.json
+- 4. Stores the login in your home folder (~/.ph/identities/renown), for every project
   
 
 
@@ -1197,6 +1200,69 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 **Status** - Show current authentication status - Usage: `--status`
 
 **Show Did** - Show the CLI's DID and exit - Usage: `--show-did`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Whoami
+
+Show who acts here: your Renown login when you are logged in (`ph login`), else your
+pseudonym, an Ethereum key made without a login and shown as "Anonymous" and a short
+address. Reads files only; `--check` also asks Renown whether the login is still valid.
+  
+
+
+
+### Flags
+**Json** - Print the identity as JSON - Usage: `--json`
+
+**Check** - Ask Renown whether the login is still valid (network) - Usage: `--check`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+
+
+### Options
+**Renown Url** - Renown server URL. - Usage: `--renown-url <str>`
+
+**Environment:** `PH_CONNECT_RENOWN_URL`
+**Default:** `https//www.renown.id`
+
+
+## Logout
+
+The logout command withdraws your Renown login at Renown and deletes it from this computer,
+its key included. Your pseudonym acts again.
+
+
+
+### Options
+**Renown Url** - Renown server URL. - Usage: `--renown-url <str>`
+
+**Environment:** `PH_CONNECT_RENOWN_URL`
+**Default:** `https//www.renown.id`
+
+
+
+
+### Flags
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Identity Password
+Set, change or remove the password of your pseudonym, in the home folder and in every store it was copied into. Makes the pseudonym when there is none.
+
+
+
+### Flags
+**Remove** - Remove the password: the key is kept readable by your user only - Usage: `--remove`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 

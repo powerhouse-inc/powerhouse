@@ -1,3 +1,5 @@
+import os from "node:os";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
@@ -24,6 +26,10 @@ export default defineConfig({
   },
   test: {
     include: ["test/**/*.test.ts"],
+    // Never the user's own login: commands that reach it (publish) make one.
+    env: {
+      PH_IDENTITY_HOME: path.join(os.tmpdir(), "ph-cli-test-identities"),
+    },
     // A file's first test pays for loading the runners, which takes longer
     // than the default on Windows.
     testTimeout: process.platform === "win32" ? 20_000 : 5_000,
