@@ -1,10 +1,10 @@
 import { PGlite } from "@electric-sql/pglite";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import { documentModelDocumentModelModule } from "document-model";
+import { documentModelDocumentModelModule, type ILogger } from "document-model";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { Kysely } from "kysely";
+import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -19,6 +19,7 @@ import {
 import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { Database, InProcessReactorModule } from "../../src/core/types.js";
+import { lowerCursorsAboveHead } from "../../src/read-models/cursor-rows.js";
 import { SKIPPED_DOCUMENT_MARKER } from "../../src/read-models/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
@@ -248,6 +249,102 @@ describe("catchup on a store", () => {
     });
   });
 
+  function recordingLogger() {
+    const logger = {
+      error: vi.fn(),
+      warn: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+      verbose: vi.fn(),
+    };
+    return logger as typeof logger & ILogger;
+  }
+
+  it("lowers a cursor above the head to the head, with an error naming it", async () => {
+    // A failover kept the cursors but lost the index's newest rows.
+    await db
+      .updateTable("ViewState")
+      .set({ lastOrdinal: 36 })
+      .where("readModelId", "=", "document-view")
+      .execute();
+    await db.updateTable("ProcessorCursor").set({ lastOrdinal: 9 }).execute();
+    const logger = recordingLogger();
+
+    const lowered = await lowerCursorsAboveHead(db, () => true, logger);
+
+    expect(lowered.map((cursor) => cursor.id)).toEqual([
+      "document-view",
+      "pkg:drive:0",
+    ]);
+    expect(await cursors()).toEqual({
+      "document-indexer": 2,
+      "document-view": 6,
+      "pkg:drive:0": 6,
+    });
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining("above the operation index head"),
+      "read-model",
+      "document-view",
+      36,
+      6,
+    );
+    expect(logger.error).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves a cursor at or below the head alone", async () => {
+    const logger = recordingLogger();
+
+    expect(await lowerCursorsAboveHead(db, () => true, logger)).toEqual([]);
+    expect(await cursors()).toEqual({
+      "document-indexer": 2,
+      "document-view": 6,
+      "pkg:drive:0": 5,
+    });
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it("lowers only the cursors chosen", async () => {
+    await db.updateTable("ViewState").set({ lastOrdinal: 40 }).execute();
+    const logger = recordingLogger();
+
+    await lowerCursorsAboveHead(
+      db,
+      (cursor) => cursor.id === "document-indexer",
+      logger,
+    );
+
+    expect(await cursors()).toEqual({
+      "document-indexer": 6,
+      "document-view": 40,
+      "pkg:drive:0": 5,
+    });
+  });
+
+  it("lowers to zero when the index lost every row", async () => {
+    await db.deleteFrom("operation_index_operations").execute();
+    await sql`select setval(pg_get_serial_sequence(${`"${REACTOR_SCHEMA}"."operation_index_operations"`}, 'ordinal'), 1, false)`.execute(
+      db,
+    );
+
+    await lowerCursorsAboveHead(db, () => true, recordingLogger());
+
+    expect(await cursors()).toEqual({
+      "document-indexer": 0,
+      "document-view": 0,
+      "pkg:drive:0": 0,
+    });
+  });
+
+  it("changes nothing when the head cannot be read", async () => {
+    await db.updateTable("ViewState").set({ lastOrdinal: 40 }).execute();
+    const logger = recordingLogger();
+    const broken = baseDb.withSchema("no_such_schema");
+
+    expect(await lowerCursorsAboveHead(broken, () => true, logger)).toEqual([]);
+    expect(logger.warn).toHaveBeenCalled();
+    expect((await cursors())["document-view"]).toBe(40);
+  });
+
   it("refuses a consumer with no cursor row", async () => {
     await expect(
       rescanCatchUp(db, {
@@ -328,5 +425,68 @@ describe("catchup rescan on a running reactor", () => {
     await expect(module.documentView.get("doc-2")).resolves.toMatchObject({
       header: { id: "doc-2" },
     });
+  });
+});
+
+describe("a reactor restarted after its index lost its newest rows", () => {
+  let database: Kysely<Database>;
+  let module: InProcessReactorModule;
+
+  function build(): Promise<InProcessReactorModule> {
+    return new ReactorBuilder()
+      .withKysely(database)
+      .withCatchUp({ intervalMs: 3_600_000 })
+      .withDocumentModelSources([
+        documentModelDocumentModelModule as unknown as DocumentModelModule,
+        driveDocumentModelModule as unknown as DocumentModelModule,
+      ])
+      .buildModule();
+  }
+
+  beforeEach(async () => {
+    database = new Kysely<Database>({
+      dialect: new PGliteDialect(new PGlite()),
+    });
+    module = await build();
+  });
+
+  afterEach(async () => {
+    await module.reactor.kill().completed;
+    await database.destroy();
+  });
+
+  async function create(id: string): Promise<void> {
+    const job = await module.reactor.create(createDocModelDocument({ id }));
+    await vi.waitUntil(async () => {
+      const status = await module.reactor.getJobStatus(job.id);
+      return status.status === JobStatus.READ_READY;
+    });
+  }
+
+  it("projects a document created after the restart", async () => {
+    await create("doc-1");
+    await module.catchUp.sweepNow();
+    await module.reactor.kill().completed;
+    const scoped = database.withSchema(
+      REACTOR_SCHEMA,
+    ) as unknown as Kysely<CatchUpAdminDatabase>;
+    const { head } = await readCatchUpStatus(scoped);
+    // The failover kept the cursors 30 ordinals past what the index holds.
+    await scoped
+      .updateTable("ViewState")
+      .set({ lastOrdinal: head + 30 })
+      .where("readModelId", "not like", `%${SKIPPED_DOCUMENT_MARKER}%`)
+      .execute();
+
+    module = await build();
+    await create("doc-2");
+    await expect(module.documentView.get("doc-2")).resolves.toMatchObject({
+      header: { id: "doc-2" },
+    });
+
+    const status = await readCatchUpStatus(scoped);
+    expect(
+      status.cursors.filter((cursor) => cursor.lastOrdinal > head),
+    ).toEqual([]);
   });
 });
