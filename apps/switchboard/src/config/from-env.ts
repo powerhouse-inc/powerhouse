@@ -10,7 +10,6 @@ import {
 import {
   type HostValidationMode,
   reactorApiConfigFromEnv,
-  resolveRenownConfig,
 } from "@powerhousedao/reactor-api";
 import { resolvePgliteMaintenance } from "@powerhousedao/reactor-api/pglite-node";
 import { resolvePgliteWorkerMemoryMb } from "@powerhousedao/reactor-api/pglite-node";
@@ -148,7 +147,7 @@ export function switchboardConfigFromEnv(
     auth: {
       ...api.auth,
       renown: {
-        source: renownSourceFromEnv(env, logger),
+        source: renownSourceFromEnv(env),
         url: blankAsUnset(env.RENOWN_URL),
         switchboardUrl: blankAsUnset(env.SWITCHBOARD_URL),
       },
@@ -241,13 +240,11 @@ function blankAsUnset(raw: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-// A set but invalid RENOWN_SOURCE still overrides the config file, as "remote".
-function renownSourceFromEnv(
-  env: Env,
-  logger: Logger,
-): "self" | "remote" | "kept" | undefined {
-  if (blankAsUnset(env.RENOWN_SOURCE) === undefined) return undefined;
-  return resolveRenownConfig(undefined, env, logger).source;
+// No longer read: carried into the config only so the boot can say so, once.
+function renownSourceFromEnv(env: Env): "self" | "remote" | "kept" | undefined {
+  const raw = blankAsUnset(env.RENOWN_SOURCE);
+  if (raw === undefined) return undefined;
+  return raw === "self" || raw === "kept" ? raw : "remote";
 }
 
 function isBlank(raw: string | undefined): boolean {

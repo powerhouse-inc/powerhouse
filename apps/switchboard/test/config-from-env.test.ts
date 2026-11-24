@@ -1,7 +1,6 @@
 import { parseCatchUpPriority } from "@powerhousedao/reactor";
 import {
   reactorApiConfigFromEnv,
-  resolveCredentialCacheTtlMs,
   resolveRenownConfig,
 } from "@powerhousedao/reactor-api";
 import {
@@ -433,18 +432,11 @@ describe("switchboardConfigFromEnv matches today's env reads", () => {
       const { auth } = mapped(row);
       const today = resolveRenownConfig(undefined, row, silent);
       expect({
-        source: auth.renown.source ?? "remote",
         url: auth.renown.url,
         switchboardUrl: auth.renown.switchboardUrl,
       }).toEqual(today);
-      expect(
-        auth.credentialCacheTtlMs ?? (today.source === "self" ? 0 : undefined),
-      ).toBe(
-        resolveCredentialCacheTtlMs(
-          row.CREDENTIAL_VERIFICATION_CACHE_TTL_MS,
-          today.source,
-          silent,
-        ),
+      expect(auth.credentialCacheTtlMs).toBe(
+        reactorApiConfigFromEnv(row, silent).auth?.credentialCacheTtlMs,
       );
     });
   });
@@ -778,14 +770,15 @@ describe("switchboardConfigFromEnv warnings", () => {
     expect(String(warn.mock.calls[0]?.[0])).toContain(name);
   });
 
-  it("an invalid RENOWN_SOURCE warns and still overrides the config file, as remote", () => {
+  // Not read any more: carried only so the boot warns of it, once.
+  it("carries any RENOWN_SOURCE as a known value, without warning here", () => {
     const warn = vi.fn();
     const layer = switchboardConfigFromEnv(
       { RENOWN_SOURCE: "both" },
       { logger: { warn } as unknown as ILogger },
     );
     expect(layer.auth?.renown).toEqual({ source: "remote" });
-    expect(warn).toHaveBeenCalledOnce();
+    expect(warn).not.toHaveBeenCalled();
   });
 });
 

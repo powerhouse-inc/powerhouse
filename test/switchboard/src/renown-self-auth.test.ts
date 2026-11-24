@@ -16,8 +16,9 @@ import { privateKeyToAccount } from "viem/accounts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { SWITCHBOARD_COMMAND } from "./switchboard-bin.js";
 
-// RENOWN_SOURCE=self e2e: seed a delegation credential with auth off, reboot
-// with auth on, and assert bearer checks read this switchboard's own read model.
+// A switchboard that serves the renown read model is Renown: seed a delegation
+// credential with auth off, reboot with auth on, and assert bearer checks read
+// this switchboard's own read model, with no source setting.
 
 const FIXTURE_DIR = resolve(import.meta.dirname, "../renown-self");
 const NOPKG_FIXTURE_DIR = resolve(import.meta.dirname, "../renown-self-nopkg");
@@ -46,6 +47,7 @@ function spawnSwitchboard(
     cwd,
     env: { ...process.env, ...env },
     stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
   });
   let buffer = "";
   let exited = false;
@@ -196,9 +198,9 @@ describe("switchboard as its own renown auth provider", () => {
     );
     await stopSwitchboard(run);
 
-    // Phase 2 — auth on. No CREDENTIAL_VERIFICATION_CACHE_TTL_MS: with
-    // source=self credential checks are not cached by default, so the
-    // revocation is observed immediately.
+    // Phase 2 — auth on. No CREDENTIAL_VERIFICATION_CACHE_TTL_MS: checks
+    // against an in-process read model are not cached, so the revocation is
+    // observed immediately.
     run = spawnSwitchboard(FIXTURE_DIR, {
       PH_SWITCHBOARD_PORT: String(PORT),
       AUTH_ENABLED: "true",
@@ -216,7 +218,7 @@ describe("switchboard as its own renown auth provider", () => {
 
   it("verifies against its own read model, not a remote renown", () => {
     expect(run?.logs()).toContain(
-      "verified against this switchboard's own renown read model",
+      "serves the renown read model: credentials are checked against it in process",
     );
   });
 
@@ -289,14 +291,15 @@ describe("switchboard as its own renown auth provider", () => {
   }, 90_000);
 });
 
-describe("self mode without the renown package", () => {
+describe("a switchboard without the renown package", () => {
   let run: RunningSwitchboard | undefined;
 
   afterAll(async () => {
     await stopSwitchboard(run);
   }, 30_000);
 
-  it("refuses to boot when no loaded package serves the read model", async () => {
+  // Its config still names the source "self": the setting is no longer read.
+  it("boots, asks Renown at its URL, and says the source setting is ignored", async () => {
     for (const dir of [".ph", "dev.db"]) {
       rmSync(resolve(NOPKG_FIXTURE_DIR, dir), { recursive: true, force: true });
     }
@@ -308,11 +311,15 @@ describe("self mode without the renown package", () => {
     await waitFor(
       () =>
         Promise.resolve(
-          boot.logs().includes("renown-read-model") &&
-            boot.logs().includes("RENOWN_SOURCE=remote"),
+          boot
+            .logs()
+            .includes("RENOWN_SOURCE (auth.renown.source) is no longer read") &&
+            boot.logs().includes("Credentials are checked against the records"),
         ),
       120_000,
-      () => `boot did not fail as expected. Logs:\n${boot.logs()}`,
+      () => `boot did not log as expected. Logs:\n${boot.logs()}`,
     );
+    expect(boot.logs()).not.toContain("serves the renown read model");
+    expect(boot.exited()).toBe(false);
   }, 150_000);
 });

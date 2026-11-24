@@ -325,6 +325,9 @@
                 "offlineCredentials": {
                   "type": "boolean"
                 },
+                "refuseUnseenOffline": {
+                  "type": "boolean"
+                },
                 "access": {
                   "type": "object",
                   "properties": {

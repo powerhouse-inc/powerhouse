@@ -11,7 +11,6 @@ import type { IRenown } from "@renown/sdk/node";
 import { existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { workerTrustPolicyIssue } from "../src/boot-preconditions.mjs";
 import { applySwitchboardReactorDefaults } from "../src/builder-defaults.mjs";
 import { getRenownTrustPolicyConfig } from "../src/renown.js";
 
@@ -243,28 +242,6 @@ describe("getRenownTrustPolicyConfig", () => {
       ),
     ).resolves.toBe(true);
     expect(request).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("workerTrustPolicyIssue", () => {
-  it("fails with workers, authEnforcement and a self source", () => {
-    expect(
-      workerTrustPolicyIssue({
-        workers: 2,
-        authEnforcement: true,
-        renownSource: "self",
-      }),
-    ).toMatch(
-      /REACTOR_WORKERS[\s\S]*REACTOR_AUTH_ENFORCEMENT[\s\S]*RENOWN_SOURCE/,
-    );
-  });
-
-  it.each([
-    { workers: 0, authEnforcement: true, renownSource: "self" as const },
-    { workers: 2, authEnforcement: false, renownSource: "self" as const },
-    { workers: 2, authEnforcement: true, renownSource: "remote" as const },
-  ])("passes %o", (config) => {
-    expect(workerTrustPolicyIssue(config)).toBeUndefined();
   });
 });
 

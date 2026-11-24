@@ -48,7 +48,6 @@ import {
   telemetryDir,
   type CanonicalDocumentId,
   type ClientInitializerDependencies,
-  type CredentialVerifier,
   type DocumentPermissionDatabase,
   type IPackageLoader,
   type PgliteFactory,
@@ -80,9 +79,7 @@ import {
 } from "@powerhousedao/reactor-drive/subgraph";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import {
-  createLocalCredentialVerifier,
   RENOWN_READ_MODEL_SUBGRAPH,
-  type CredentialCheck,
   type IRenown,
   type SwitchboardRequestFn,
 } from "@renown/sdk/node";
@@ -669,7 +666,6 @@ async function initServer(
       projectionWorker: false,
       reactorDbUrl,
       authEnforcement: config.protocol.featureFlags.authEnforcement,
-      renownSource: renownConfig.source,
     }).at(0);
     if (issue) throw new Error(issue);
   }
@@ -788,8 +784,6 @@ async function initServer(
   const memoryTelemetry = createMemoryTelemetry(config, reactorLogger);
   // The models workers and workflow pieces import; only on a reactor built here.
   let workerModels: ModelManifestSource | undefined;
-  // Bound once the api serves the renown read model; see `localCredentialCheck`.
-  let localRenownRequest: SwitchboardRequestFn | undefined;
   const initializeClient = async (
     documentModels: DocumentModelModule[],
     {
@@ -923,25 +917,15 @@ async function initServer(
         config.protocol.createSignaturePolicy,
         { hasSigner: renown !== null, logger },
       ),
+      // Renown at its URL, for workers too; F4 moves the reactor onto the
+      // door's verifier.
       trustPolicy: reactorFeatureFlags.authEnforcement
         ? await getRenownTrustPolicyConfig(
-            renownConfig.source === "self"
-              ? {
-                  source: "self",
-                  request: (query, variables) =>
-                    localRenownRequest
-                      ? localRenownRequest(query, variables)
-                      : Promise.reject(
-                          new Error(
-                            "The local renown read model is not bound yet",
-                          ),
-                        ),
-                }
-              : {
-                  source: "remote",
-                  renownUrl: renownConfig.url,
-                  switchboardUrl: renownConfig.switchboardUrl,
-                },
+            {
+              source: "remote",
+              renownUrl: renownConfig.url,
+              switchboardUrl: renownConfig.switchboardUrl,
+            },
             renown,
           )
         : getDelegationTrustPolicyConfig(renown),
@@ -1178,18 +1162,16 @@ async function initServer(
     }
   };
 
-  // Reading credentials from this switchboard's own reactor needs the GraphQL
-  // manager, which only exists once the api is up: bind the check afterwards.
-  let localCredentialCheck: CredentialCheck | undefined;
-  const verifyCredential: CredentialVerifier | undefined =
-    renownConfig.source === "self"
-      ? (params) =>
-          localCredentialCheck
-            ? localCredentialCheck(params)
-            : Promise.reject(
-                new Error("The local renown read model is not bound yet"),
-              )
-      : undefined;
+  // Whether this switchboard serves the renown read model is known once the
+  // api is up; a credential check that reaches Renown before then waits.
+  let settleInProcessRenown: (
+    request: SwitchboardRequestFn | undefined,
+  ) => void = () => {};
+  const inProcessRenown = new Promise<SwitchboardRequestFn | undefined>(
+    (resolve) => {
+      settleInProcessRenown = resolve;
+    },
+  );
 
   let defaultDriveUrl: undefined | string = undefined;
 
@@ -1330,10 +1312,10 @@ async function initServer(
       hostValidation: options.hostValidation,
       // The final update before readiness picks up everything added until then.
       hostRefreshesSupergraph: true,
-      // Already resolved for this reactor's own identity; reuse it so an
-      // invalid RENOWN_SOURCE is reported once, not once per resolution.
+      // Already resolved for this reactor's own identity; reuse it so a
+      // RENOWN_SOURCE still set is reported once, not once per resolution.
       renown: renownConfig,
-      verifyCredential,
+      inProcessRenown: () => inProcessRenown,
     },
     "switchboard",
   );
@@ -1343,46 +1325,47 @@ async function initServer(
   apiRef.current = api;
   const serverPort = api.port;
 
-  if (renownConfig.source === "self") {
-    const { graphqlManager: manager } = api;
+  // A switchboard serving the renown read model (a loaded package's) is
+  // Renown: credential checks ask that read model in process.
+  const { graphqlManager: manager } = api;
+  if (manager.getSubgraphByName(RENOWN_READ_MODEL_SUBGRAPH)) {
     // Credentials are checked from the first request, before the router update
-    // that readiness waits for: a package's read model gets its handler now.
-    if (
-      !manager.hasSubgraphHandler(RENOWN_READ_MODEL_SUBGRAPH) &&
-      manager.getSubgraphByName(RENOWN_READ_MODEL_SUBGRAPH)
-    ) {
+    // that readiness waits for: the read model gets its handler now.
+    if (!manager.hasSubgraphHandler(RENOWN_READ_MODEL_SUBGRAPH)) {
       try {
         await manager.updateRouter(true);
       } catch (error) {
+        settleInProcessRenown(undefined);
         await abortBoot(api);
         throw error;
       }
     }
-    // Refuse to serve rather than 401 every request: the read model comes from
-    // a loaded package, so a missing one is a deployment mistake.
     if (!manager.hasSubgraphHandler(RENOWN_READ_MODEL_SUBGRAPH)) {
+      settleInProcessRenown(undefined);
       await abortBoot(api);
       throw new Error(
-        'Renown credential verification is set to "self" (auth.renown.source ' +
-          `or RENOWN_SOURCE) but no loaded package serves the ` +
-          `"${RENOWN_READ_MODEL_SUBGRAPH}" subgraph. Install one ` +
-          "(@powerhousedao/renown-package) or set RENOWN_SOURCE=remote.",
+        `A loaded package registers the "${RENOWN_READ_MODEL_SUBGRAPH}" subgraph, but it has no handler: credentials cannot be checked against it.`,
       );
     }
-    localRenownRequest = (query, variables) =>
-      manager.executeSubgraphQuery(
-        RENOWN_READ_MODEL_SUBGRAPH,
-        query,
-        variables,
-      );
-    localCredentialCheck = createLocalCredentialVerifier(localRenownRequest, {
-      onError: (error) =>
-        logger.error("Renown read model query failed: @error", error),
-    });
+    const request: SwitchboardRequestFn = async (query, variables) => {
+      try {
+        return await manager.executeSubgraphQuery(
+          RENOWN_READ_MODEL_SUBGRAPH,
+          query,
+          variables,
+        );
+      } catch (error) {
+        logger.error("Renown read model query failed: @error", error);
+        throw error;
+      }
+    };
+    settleInProcessRenown(request);
     logger.info(
-      "Renown credentials will be verified against this switchboard's own " +
-        "renown read model",
+      "This switchboard serves the renown read model: credentials are checked " +
+        "against it in process",
     );
+  } else {
+    settleInProcessRenown(undefined);
   }
 
   // R2.3: the attachments plugin owns the route mount + service creation at

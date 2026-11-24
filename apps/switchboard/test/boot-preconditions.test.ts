@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { workerTrustPolicyIssue } from "../src/boot-preconditions.mjs";
 import {
   reactorDbUrlOf,
   switchboardBootFactsFromEnv,
@@ -16,7 +15,6 @@ const clean: SwitchboardBootFacts = {
   projectionWorker: false,
   reactorDbUrl: undefined,
   authEnforcement: false,
-  renownSource: "remote",
 };
 
 describe("switchboardBootIssues", () => {
@@ -36,26 +34,24 @@ describe("switchboardBootIssues", () => {
       dev: true,
       workers: 2,
       authEnforcement: true,
-      renownSource: "self",
     });
-    expect(issues).toHaveLength(3);
+    expect(issues).toHaveLength(2);
     expect(issues[0]).toMatch(/REACTOR_WORKERS\) is not supported in dev mode/);
-    expect(issues[1]).toMatch(/cannot verify signers/);
-    expect(issues[2]).toMatch(
+    expect(issues[1]).toMatch(
       /REACTOR_WORKERS\) requires a Postgres reactor database/,
     );
   });
 
-  it("keeps workers away from credentials only this switchboard holds", () => {
-    const facts = { workers: 2, authEnforcement: true };
-    for (const renownSource of ["self", "kept"] as const) {
-      expect(workerTrustPolicyIssue({ ...facts, renownSource })).toMatch(
-        /cannot verify signers/,
-      );
-    }
+  // Workers ask Renown at its URL: no credential source keeps them out.
+  it("lets workers verify signers under auth enforcement", () => {
     expect(
-      workerTrustPolicyIssue({ ...facts, renownSource: "remote" }),
-    ).toBeUndefined();
+      switchboardBootIssues({
+        ...clean,
+        workers: 2,
+        authEnforcement: true,
+        reactorDbUrl: POSTGRES,
+      }),
+    ).toEqual([]);
   });
 
   it("treats a PGlite path as no Postgres", () => {
@@ -101,7 +97,6 @@ describe("switchboardBootFactsOf", () => {
       projectionWorker: true,
       reactorDbUrl: POSTGRES,
       authEnforcement: true,
-      renownSource: "self",
     });
   });
 
@@ -111,22 +106,6 @@ describe("switchboardBootFactsOf", () => {
       { dev: false },
     );
     expect(facts.reactorDbUrl).toBeUndefined();
-  });
-
-  it("lets the config's renown source win over the configured one", async () => {
-    const configuredRenown = { source: "self" as const };
-    expect(
-      (await switchboardBootFactsOf({}, { dev: false, configuredRenown }))
-        .renownSource,
-    ).toBe("self");
-    expect(
-      (
-        await switchboardBootFactsOf(
-          { auth: { renown: { source: "remote" } } },
-          { dev: false, configuredRenown },
-        )
-      ).renownSource,
-    ).toBe("remote");
   });
 });
 
@@ -149,7 +128,6 @@ describe("switchboardBootFactsFromEnv", () => {
       projectionWorker: true,
       reactorDbUrl: POSTGRES,
       authEnforcement: true,
-      renownSource: "self",
     });
   });
 
@@ -166,22 +144,6 @@ describe("switchboardBootFactsFromEnv", () => {
       (await switchboardBootFactsFromEnv(env, { dev: false, dbPath: POSTGRES }))
         .facts.reactorDbUrl,
     ).toBe(POSTGRES);
-  });
-
-  it("lets RENOWN_SOURCE win over the configured source", async () => {
-    const configuredRenown = { source: "self" as const };
-    expect(
-      (await switchboardBootFactsFromEnv({}, { dev: false, configuredRenown }))
-        .facts.renownSource,
-    ).toBe("self");
-    expect(
-      (
-        await switchboardBootFactsFromEnv(
-          { RENOWN_SOURCE: "remote" },
-          { dev: false, configuredRenown },
-        )
-      ).facts.renownSource,
-    ).toBe("remote");
   });
 
   it("turns parser errors into issues", async () => {

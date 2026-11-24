@@ -184,11 +184,14 @@ const authSchema = z.object({
   wsRecheckMs: nonNegative.optional(),
   /** The first verified caller becomes the admin of a host with none. */
   ownerClaim: z.boolean().default(false),
-  /** Keep verified credentials, and rely on them while Renown is away. */
+  /** No longer read (warned when on): Renown's answers are always kept. */
   offlineCredentials: z.boolean().default(false),
+  /** Renown unreachable: refuse a credential with no record and no answer. */
+  refuseUnseenOffline: z.boolean().default(false),
   access: accessSchema.prefault({}),
   renown: z
     .object({
+      /** No longer read (warned): records, then Renown, decide. */
       source: z.enum(["self", "remote", "kept"]).optional(),
       url: z.string().min(1).optional(),
       switchboardUrl: z.string().min(1).optional(),

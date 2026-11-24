@@ -160,28 +160,18 @@ describe("switchboard runner checkBoot", () => {
     ).toEqual([]);
   });
 
-  it("refuses workers under auth enforcement with a self Renown source", async () => {
+  // Workers ask Renown at its URL; the source setting is no longer read.
+  it("lets workers run under auth enforcement whatever the Renown source", async () => {
     const env = {
       REACTOR_WORKERS: "2",
       REACTOR_AUTH_ENFORCEMENT: "true",
       RENOWN_SOURCE: "self",
       PH_REACTOR_DATABASE_URL: POSTGRES,
     };
-    expect(await issuesOf(host(), env)).toEqual([
-      expect.stringMatching(/cannot verify signers/),
-    ]);
-  });
-
-  it("reads the Renown source from powerhouse.config.json", async () => {
+    expect(await issuesOf(host(), env)).toEqual([]);
     const root = projectRoot({ auth: { renown: { source: "self" } } });
-    const env = {
-      REACTOR_WORKERS: "2",
-      REACTOR_AUTH_ENFORCEMENT: "true",
-      PH_REACTOR_DATABASE_URL: POSTGRES,
-    };
-    expect(await issuesOf(host(), env, { root })).toEqual([
-      expect.stringMatching(/cannot verify signers/),
-    ]);
+    const { RENOWN_SOURCE: _source, ...unset } = env;
+    expect(await issuesOf(host(), unset, { root })).toEqual([]);
   });
 
   it("refuses workers in dev mode, by verb or runner.dev", async () => {
