@@ -20,8 +20,10 @@ import { verifyAuthBearerToken } from "../src/utils.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { privateKeyToAccount } from "viem/accounts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  buildAndSignCredential,
   recoverCredentialSigner,
   verifyCredentialSignature,
 } from "../src/credential.js";
@@ -31,9 +33,12 @@ import {
   LoginExpiredError,
   logoutHome,
   openSession,
+  pollSessionApproval,
   readHomeLogin,
   resolveActiveIdentity,
   SessionApprovalRequiredError,
+  SessionWithdrawnError,
+  startSessionApproval,
   withdrawLogin,
 } from "../src/identity.js";
 import { NodeStorage } from "../src/storage/storage.node.js";
@@ -79,6 +84,21 @@ async function writeLogin(expiresInMs = 86_400_000) {
     },
   });
   return { paths, did: crypto.did };
+}
+
+/** A Renown wallet: it approves sessions at the console. */
+const WALLET = privateKeyToAccount(`0x${"22".repeat(32)}`);
+
+/** The credential `WALLET` signs for the session key `sessionDid`. */
+function walletCredential(sessionDid: string) {
+  return buildAndSignCredential({
+    signTypedData: (args) =>
+      WALLET.signTypedData(args as Parameters<typeof WALLET.signTypedData>[0]),
+    address: WALLET.address,
+    chainId: 1,
+    app: "renown-app",
+    appId: sessionDid,
+  });
 }
 
 /** Renown's discovery, then the switchboard's answer to the withdraw. */
@@ -421,5 +441,162 @@ describe("openSession", () => {
         env,
       }),
     ).rejects.toThrow(SessionApprovalRequiredError);
+  });
+
+  it("signs as the wallet that approved a store session, whoever acts", async () => {
+    const dataDir = store();
+    await ensurePseudonym({ dataDir, env });
+    const label = "vetra agent vetra-agent";
+    const file = sessionFilePath({
+      place: "data-folder",
+      label,
+      address: "",
+      dataDir,
+      env,
+    });
+    const { sessionDid } = startSessionApproval({ dataDir, label, env });
+    const credential = await walletCredential(sessionDid);
+    writeSessionFile(file, { ...readSessionFile(file)!, credential });
+    const session = await openSession({
+      dataDir,
+      label,
+      place: "data-folder",
+      interactive: false,
+      target: { dataDir },
+      pseudonym: false,
+      env,
+    });
+    expect(session.signer).toEqual({
+      user: { address: WALLET.address, networkId: "eip155", chainId: 1 },
+      app: { name: "renown-app", key: sessionDid },
+    });
+    expect(session.credential.id).toBe(credential.id);
+    expect(listCredentialRecords({ dataDir })).toMatchObject([
+      {
+        address: WALLET.address.toLowerCase(),
+        sessionDid,
+        label: "renown-app",
+      },
+    ]);
+  });
+
+  it("refuses the pseudonym where only an approved session may sign", async () => {
+    const dataDir = store();
+    await expect(
+      openSession({
+        dataDir,
+        label: "vetra agent vetra-agent",
+        place: "data-folder",
+        interactive: false,
+        pseudonym: false,
+        env,
+      }),
+    ).rejects.toThrow(SessionApprovalRequiredError);
+    expect(readActiveIdentity({ dataDir, env })).toBeUndefined();
+  });
+
+  it("stays withdrawn where a session acting by itself was withdrawn", async () => {
+    const dataDir = store();
+    const open = () =>
+      openSession({
+        dataDir,
+        label: "mcp test-client",
+        place: "data-folder",
+        interactive: false,
+        target: { dataDir },
+        reissueWithdrawn: false,
+        env,
+      });
+    await open();
+    const [record] = listCredentialRecords({ dataDir });
+    withdrawCredentialRecords({ dataDir, ids: [record!.id], by: "command" });
+    await expect(open()).rejects.toThrow(SessionWithdrawnError);
+    expect(listCredentialRecords({ dataDir })).toEqual([]);
+  });
+});
+
+describe("session approval at the console", () => {
+  const store = () => path.join(root, "store");
+
+  /** Renown's console and credential lookup, as a person approves at it. */
+  function stubConsole(credential: () => unknown) {
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", (input: string | URL) => {
+      const url = new URL(String(input));
+      asked.push(url.pathname);
+      if (url.pathname.startsWith("/api/console/session/")) {
+        return Promise.resolve(
+          Response.json({
+            status: "ready",
+            address: WALLET.address,
+            chainId: 1,
+          }),
+        );
+      }
+      if (url.pathname === "/api/auth/credential") {
+        return Promise.resolve(Response.json({ credential: credential() }));
+      }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    return asked;
+  }
+
+  it("names the session's key and label on the console page", () => {
+    const approval = startSessionApproval({
+      dataDir: store(),
+      label: "mcp claude-code",
+      renownUrl: RENOWN,
+      env,
+    });
+    const url = new URL(approval.url);
+    expect(url.origin + url.pathname).toBe(`${RENOWN}/console`);
+    expect(url.searchParams.get("connect")).toBe(approval.sessionDid);
+    expect(url.searchParams.get("app")).toBe("mcp claude-code");
+    expect(url.searchParams.get("session")).toBe(approval.sessionId);
+    expect(readSessionFile(approval.file)?.did).toBe(approval.sessionDid);
+  });
+
+  it("keeps the credential the wallet signed, and its record", async () => {
+    const dataDir = store();
+    const approval = startSessionApproval({
+      dataDir,
+      label: "vetra agent vetra-agent",
+      renownUrl: RENOWN,
+      env,
+    });
+    const credential = await walletCredential(approval.sessionDid);
+    const asked = stubConsole(() => credential);
+    const result = await pollSessionApproval({
+      approval,
+      renownUrl: RENOWN,
+      timeoutMs: 0,
+      target: { dataDir },
+    });
+    expect(result).toMatchObject({ status: "ready", address: WALLET.address });
+    expect(asked).toContain("/api/auth/credential");
+    expect(readSessionFile(approval.file)?.credential?.id).toBe(credential.id);
+    expect(listCredentialRecords({ dataDir })).toHaveLength(1);
+  });
+
+  it("keeps nothing of a wallet it turns down", async () => {
+    const dataDir = store();
+    const approval = startSessionApproval({
+      dataDir,
+      label: "vetra agent vetra-agent",
+      renownUrl: RENOWN,
+      env,
+    });
+    const credential = await walletCredential(approval.sessionDid);
+    stubConsole(() => credential);
+    const result = await pollSessionApproval({
+      approval,
+      renownUrl: RENOWN,
+      timeoutMs: 0,
+      target: { dataDir },
+      accept: () => false,
+    });
+    expect(result).toEqual({ status: "refused", address: WALLET.address });
+    expect(readSessionFile(approval.file)?.credential).toBeUndefined();
+    expect(listCredentialRecords({ dataDir })).toEqual([]);
   });
 });

@@ -13,6 +13,7 @@ import type { PrivateKeyAccount } from "viem/accounts";
 import { DEFAULT_RENOWN_CHAIN_ID, DEFAULT_RENOWN_URL } from "./constants.js";
 import {
   buildAndSignCredential,
+  fetchDelegationCredential,
   type SignCredentialTypedData,
 } from "./credential.js";
 import {
@@ -23,6 +24,7 @@ import {
   type CredentialLike,
 } from "@powerhousedao/shared/clis/credential-records";
 import {
+  approvedSessionCredential,
   credentialEndsWithin,
   ensureSessionFile,
   readSessionFile,
@@ -35,6 +37,7 @@ import {
   type SessionPlace,
   type SessionSigner,
 } from "@powerhousedao/shared/clis/sessions";
+import { randomUUID } from "node:crypto";
 import type { ISigner } from "@powerhousedao/shared/document-model";
 import { enrolCredential } from "./credential-enrolment.js";
 import { MemoryKeyStorage } from "./crypto/memory-key-storage.js";
@@ -303,11 +306,26 @@ export type SessionTarget = {
 
 /** No session for the label can sign yet: the person must approve one. */
 export class SessionApprovalRequiredError extends Error {
-  constructor(label: string, who: string) {
+  constructor(label: string, who?: string) {
     super(
-      `The session "${label}" of ${who} needs a credential that only their Renown wallet can sign; approve it first.`,
+      who
+        ? `The session "${label}" of ${who} needs a credential that only their Renown wallet can sign; approve it first.`
+        : `The session "${label}" signs only once a Renown wallet approves it.`,
     );
     this.name = "SessionApprovalRequiredError";
+  }
+}
+
+/** The store withdrew the session's credential, and it is not issued again by itself. */
+export class SessionWithdrawnError extends Error {
+  constructor(
+    label: string,
+    readonly file: string,
+  ) {
+    super(
+      `This store withdrew the session "${label}": it signs nothing there. Remove ${file} to let it act again with a new key.`,
+    );
+    this.name = "SessionWithdrawnError";
   }
 }
 
@@ -432,8 +450,47 @@ function recordIn(
   });
 }
 
+/** A data-folder session a Renown wallet approved: it signs as that wallet. */
+function approvedSession(where: {
+  dataDir: string;
+  label: string;
+  env: Env;
+}): { identity: ActiveIdentity; source: SessionSource } | undefined {
+  const file = sessionFilePath({
+    place: "data-folder",
+    label: where.label,
+    address: "",
+    dataDir: where.dataDir,
+    env: where.env,
+  });
+  const session = readSessionFile(file);
+  const credential =
+    session &&
+    approvedSessionCredential(session, {
+      dataDir: where.dataDir,
+      env: where.env,
+    });
+  if (!session || !credential) return undefined;
+  const address = credential.issuer.ethereumAddress as `0x${string}`;
+  return {
+    identity: {
+      kind: "renown",
+      address,
+      label: `${address.slice(0, 6)}...${address.slice(-4)}`,
+      source: "data-folder",
+      file,
+    },
+    source: {
+      keyPair: session.key as JwkKeyPair,
+      did: session.did,
+      credential: credential as PowerhouseVerifiableCredential,
+    },
+  };
+}
+
 /**
  * The session `label` of whoever acts in `dataDir`, ready to sign: a
+ * data-folder session a Renown wallet approved signs as that wallet; else a
  * pseudonym (made when there is none) signs its session's credential itself
  * and renews it when it has less than {@link SESSION_RENEW_DAYS} left; a
  * Renown login's `home` session is the login's own, a `data-folder` one must
@@ -442,6 +499,11 @@ function recordIn(
  *
  * With `target`, the credential is made known there before this resolves:
  * a record in its data folder, else (a pseudonym) an enrolment at its URL.
+ * A credential the target's folder withdrew is issued again, unless
+ * `reissueWithdrawn` is false ({@link SessionWithdrawnError}): a session that
+ * acts by itself (an agent, an MCP client) stays withdrawn. `pseudonym: false`
+ * refuses to sign as the pseudonym: only a Renown login or an approved
+ * session signs.
  */
 export async function openSession(o: {
   dataDir: string;
@@ -450,29 +512,47 @@ export async function openSession(o: {
   interactive: boolean;
   target?: SessionTarget;
   password?: string;
+  pseudonym?: boolean;
+  reissueWithdrawn?: boolean;
   env?: Env;
 }): Promise<OpenSession> {
   const env = o.env ?? process.env;
-  const active = await resolveActiveIdentity({
-    dataDir: o.dataDir,
-    interactive: o.interactive,
-    create: true,
-    env,
-    ...(o.password === undefined ? {} : { password: o.password }),
-  });
-  if (!active) throw new Error(`No identity acts in ${o.dataDir}.`);
   const where = { dataDir: o.dataDir, label: o.label, place: o.place, env };
-  const source =
-    active.kind === "renown"
-      ? await renownSession(active, where)
-      : await pseudonymSession(active, where);
+  const approved =
+    o.place === "data-folder" ? approvedSession(where) : undefined;
+  let active: ActiveIdentity;
+  let source: SessionSource;
+  if (approved) {
+    ({ identity: active, source } = approved);
+  } else {
+    if (
+      o.pseudonym === false &&
+      readActiveIdentity({ dataDir: o.dataDir, env })?.kind !== "renown"
+    ) {
+      throw new SessionApprovalRequiredError(o.label);
+    }
+    const resolved = await resolveActiveIdentity({
+      dataDir: o.dataDir,
+      interactive: o.interactive,
+      create: true,
+      env,
+      ...(o.password === undefined ? {} : { password: o.password }),
+    });
+    if (!resolved) throw new Error(`No identity acts in ${o.dataDir}.`);
+    active = resolved;
+    source =
+      active.kind === "renown"
+        ? await renownSession(active, where)
+        : await pseudonymSession(active, where);
+  }
   let { credential } = source;
   const crypto = await cryptoOf(source.keyPair);
   if (crypto.did !== source.did) {
     throw new Error(`The session key of "${o.label}" does not match its did.`);
   }
-  const chainId =
-    active.kind === "renown"
+  const chainId = approved
+    ? Number(credential.issuer.id.split(":")[3])
+    : active.kind === "renown"
       ? (active.renown?.chainId ?? Number(DEFAULT_RENOWN_CHAIN_ID))
       : Number(DEFAULT_RENOWN_CHAIN_ID);
   const signerOf = () =>
@@ -495,9 +575,20 @@ export async function openSession(o: {
         recordIn(target.dataDir, credential, o.label);
       } catch (error) {
         // Withdrawn there before: only a credential issued since lifts it.
-        if (!(error instanceof CredentialWithdrawnError) || !source.reissue) {
-          throw error;
+        if (!(error instanceof CredentialWithdrawnError)) throw error;
+        if (o.reissueWithdrawn === false && o.place === "data-folder") {
+          throw new SessionWithdrawnError(
+            o.label,
+            sessionFilePath({
+              place: o.place,
+              label: o.label,
+              address: active.address,
+              dataDir: o.dataDir,
+              env,
+            }),
+          );
         }
+        if (!source.reissue) throw error;
         credential = await source.reissue();
         recordIn(target.dataDir, credential, o.label);
       }
@@ -530,4 +621,129 @@ export async function openSession(o: {
       }),
     enrol,
   };
+}
+
+// ------------------------------------------------- approval at the console
+
+/** A console approval of a data-folder session, started and not yet ready. */
+export interface SessionApproval {
+  /** Renown's console page the person approves the session on. */
+  url: string;
+  /** The console session the page reports to. */
+  sessionId: string;
+  /** The session key's did:key, which the approved credential names. */
+  sessionDid: string;
+  /** The session's file: its key, and its credential once approved. */
+  file: string;
+}
+
+/**
+ * Starts the approval of the data-folder session `label` at Renown's console:
+ * keeps its key (made when there is none) and builds the page the person
+ * approves it on with their wallet. Nothing is asked of Renown yet.
+ */
+export function startSessionApproval(o: {
+  dataDir: string;
+  label: string;
+  renownUrl?: string;
+  env?: Env;
+}): SessionApproval {
+  const file = sessionFilePath({
+    place: "data-folder",
+    label: o.label,
+    address: "",
+    dataDir: o.dataDir,
+    env: o.env,
+  });
+  const session = ensureSessionFile(file, o.label);
+  const sessionId = randomUUID();
+  const url = new URL("/console", o.renownUrl ?? DEFAULT_RENOWN_URL);
+  url.searchParams.set("session", sessionId);
+  url.searchParams.set("connect", session.did);
+  url.searchParams.set("app", o.label);
+  return { url: url.href, sessionId, sessionDid: session.did, file };
+}
+
+export type SessionApprovalResult =
+  | {
+      status: "ready";
+      address: string;
+      credential: PowerhouseVerifiableCredential;
+    }
+  /** Not approved yet; ask again. */
+  | { status: "pending" }
+  /** Approved by a wallet `accept` turned down: nothing was kept. */
+  | { status: "refused"; address: string };
+
+const APPROVAL_POLL_MS = 1000;
+
+type ConsoleSession =
+  | { status: "pending" }
+  | { status: "ready"; address: string; chainId: number };
+
+/**
+ * Waits up to `timeoutMs` for the person to approve `approval` at Renown's
+ * console, then fetches the credential their wallet signed for the session
+ * key and keeps it in the session's file, and its record in `target`'s data
+ * folder. A wallet `accept` turns down is not kept.
+ */
+export async function pollSessionApproval(o: {
+  approval: Pick<SessionApproval, "sessionId" | "sessionDid" | "file">;
+  renownUrl?: string;
+  timeoutMs: number;
+  target?: Pick<SessionTarget, "dataDir">;
+  accept?: (address: string) => boolean;
+  signal?: AbortSignal;
+}): Promise<SessionApprovalResult> {
+  const baseUrl = o.renownUrl ?? DEFAULT_RENOWN_URL;
+  const sessionUrl = new URL(
+    `/api/console/session/${encodeURIComponent(o.approval.sessionId)}`,
+    baseUrl,
+  );
+  const deadline = Date.now() + o.timeoutMs;
+  for (;;) {
+    o.signal?.throwIfAborted();
+    let ready: Extract<ConsoleSession, { status: "ready" }> | undefined;
+    try {
+      const response = await fetch(sessionUrl, {
+        ...(o.signal ? { signal: o.signal } : {}),
+      });
+      if (response.ok) {
+        const answer = (await response.json()) as ConsoleSession;
+        if (answer.status === "ready") ready = answer;
+      }
+    } catch (error) {
+      if (o.signal?.aborted) throw error;
+      // Renown unreachable for now: asked again until the deadline.
+    }
+    if (ready) {
+      if (o.accept && !o.accept(ready.address)) {
+        return { status: "refused", address: ready.address };
+      }
+      const credential = await fetchDelegationCredential({
+        address: ready.address,
+        chainId: ready.chainId,
+        appDid: o.approval.sessionDid,
+        baseUrl,
+      });
+      if (credential) {
+        const session = readSessionFile(o.approval.file);
+        if (!session || session.did !== o.approval.sessionDid) {
+          throw new Error(
+            `The session key in ${o.approval.file} changed while it was being approved.`,
+          );
+        }
+        writeSessionFile(o.approval.file, {
+          ...session,
+          credential: credential as CredentialLike,
+        });
+        if (o.target?.dataDir) {
+          recordIn(o.target.dataDir, credential, session.label);
+        }
+        return { status: "ready", address: ready.address, credential };
+      }
+    }
+    if (Date.now() >= deadline) return { status: "pending" };
+    await new Promise((resolve) => setTimeout(resolve, APPROVAL_POLL_MS));
+  }
 }
