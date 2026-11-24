@@ -60,6 +60,8 @@ beforeAll(async () => {
         storagePath: path.join(root, "switchboard", ".renown.json"),
       },
       protocol: { createSignaturePolicy: "legacy" },
+      // A drive to file documents in, which the host itself creates.
+      drive: { slug: "vetra", global: { name: "Vetra" } },
     },
     { signalHandlers: false, fatalErrorShutdown: false },
   );
@@ -110,6 +112,42 @@ async function call(
   return result;
 }
 
+/** Every operation of `documentId`, all scopes. */
+async function operationsOf(documentId: string): Promise<Operation[]> {
+  const page = await switchboard!.reactor.getOperations(
+    documentId,
+    undefined,
+    undefined,
+    { cursor: "", limit: 1000 },
+  );
+  return page.results;
+}
+
+/** The pseudonym and the session key the client signs with. */
+function signerOfClient(): { address: string; sessionKey: string } {
+  const person = readActiveIdentity({
+    dataDir: project,
+    env: { PH_IDENTITY_HOME: home },
+  });
+  const [record] = listCredentialRecords({ dataDir: project });
+  return { address: person!.address, sessionKey: record!.sessionDid };
+}
+
+/** Each operation names the client's session, verifies against its key, and none is the host's. */
+async function expectSignedByClient(operations: Operation[]): Promise<void> {
+  const { address, sessionKey } = signerOfClient();
+  const switchboardKey = switchboard!.renown?.signer.app?.key;
+  const verify = createSignatureVerifier(true);
+  for (const operation of operations) {
+    const signer = operation.action.context?.signer;
+    expect(signer?.user.address).toBe(address);
+    expect(signer?.app).toEqual({ name: LABEL, key: sessionKey });
+    expect(signer?.signatures.at(-1)?.[1]).toBe(sessionKey);
+    expect(signer?.app.key).not.toBe(switchboardKey);
+    expect(await verify(operation, sessionKey)).toBe(true);
+  }
+}
+
 describe("ph mcp", () => {
   it("signs an MCP client's writes as its own session, the creation included", async () => {
     const created = await call("createDocument", {
@@ -131,27 +169,16 @@ describe("ph mcp", () => {
       env: { PH_IDENTITY_HOME: home },
     });
     expect(person?.kind).toBe("pseudonym");
-    const [record] = listCredentialRecords({ dataDir: project });
-    expect(record).toMatchObject({
-      address: person!.address.toLowerCase(),
-      label: LABEL,
-      source: "cli",
-    });
+    expect(listCredentialRecords({ dataDir: project })).toMatchObject([
+      { address: person!.address.toLowerCase(), label: LABEL, source: "cli" },
+    ]);
     expect(
       fs.existsSync(
         path.join(project, ".ph", "sessions", "mcp-test-client.json"),
       ),
     ).toBe(true);
-    const sessionKey = record!.sessionDid;
 
-    const reactor = switchboard!;
-    const page = await reactor.reactor.getOperations(
-      documentId,
-      undefined,
-      undefined,
-      { cursor: "", limit: 1000 },
-    );
-    const operations: Operation[] = page.results;
+    const operations = await operationsOf(documentId);
     expect(operations.map((op) => op.action.type)).toEqual(
       expect.arrayContaining([
         "CREATE_DOCUMENT",
@@ -160,15 +187,30 @@ describe("ph mcp", () => {
         "SET_MODEL_ID",
       ]),
     );
-    const switchboardKey = reactor.renown?.signer.app?.key;
-    const verify = createSignatureVerifier(true);
-    for (const operation of operations) {
-      const signer = operation.action.context?.signer;
-      expect(signer?.user.address).toBe(person!.address);
-      expect(signer?.app).toEqual({ name: LABEL, key: sessionKey });
-      expect(signer?.signatures.at(-1)?.[1]).toBe(sessionKey);
-      expect(signer?.app.key).not.toBe(switchboardKey);
-      expect(await verify(operation, sessionKey)).toBe(true);
-    }
+    await expectSignedByClient(operations);
+  }, 120_000);
+
+  it("files a document in a drive with every write signed by the client's session", async () => {
+    const created = await call("createDocument", {
+      documentType: "powerhouse/document-model",
+      name: "Filed Model",
+      driveId: "vetra",
+    });
+    const { documentId } = created.structuredContent as { documentId: string };
+    await expectSignedByClient(await operationsOf(documentId));
+
+    const drive = await switchboard!.reactor.get("vetra");
+    const filing = (await operationsOf(drive.header.id)).filter(
+      (op) =>
+        (op.action.type === "ADD_FILE" &&
+          (op.action.input as { id?: string }).id === documentId) ||
+        (op.action.type === "ADD_RELATIONSHIP" &&
+          (op.action.input as { targetId?: string }).targetId === documentId),
+    );
+    expect(filing.map((op) => op.action.type).sort()).toEqual([
+      "ADD_FILE",
+      "ADD_RELATIONSHIP",
+    ]);
+    await expectSignedByClient(filing);
   }, 120_000);
 });
