@@ -249,6 +249,13 @@ The Switchboard signs an unsigned action with its own key, so a non-empty
 `signatures` list is not evidence of client-side signing. Check
 `context.signer.user.address` if you need to know who signed.
 
+With a signer, `create` builds the document's CREATE_DOCUMENT and
+UPGRADE_DOCUMENT (and a parent's ADD_RELATIONSHIP) itself, signs them and
+submits them through `executeBatch`. A create under a drive, and
+`deleteDocument`, still run the Switchboard's own mutations, which build and
+sign those actions on the server. The `signer` option may be a function that
+resolves asynchronously.
+
 ### Reactivity
 
 Every successful `create`, `execute` and `deleteDocument` emits a change event

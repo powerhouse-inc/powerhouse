@@ -38,6 +38,8 @@ import type {
 import {
   actions,
   actionSigningTarget,
+  createVersionsOf,
+  creationActions,
   headNewDocument,
   normalizeDocumentModelVersion,
   capabilitiesOf,
@@ -226,9 +228,15 @@ export type GraphQLReactorClientOptions = {
    * unsigned when nobody is. Set it where there is no Renown to read: tests,
    * scripts, and integration suites that must sign deterministically. A
    * function is called per push, and pushes unsigned when it returns
-   * `undefined`.
+   * `undefined`; it may resolve the signer asynchronously (one that must
+   * first ask whom it signs for).
+   *
+   * With a signer, `create` builds and signs the document's creation itself
+   * and submits it through `executeBatch`, so no action of it is signed by
+   * the Switchboard. A create under a drive, and `deleteDocument`, still run
+   * the Switchboard's own mutations, which build and sign those actions there.
    */
-  signer?: ISigner | (() => ISigner | undefined);
+  signer?: ISigner | (() => ISigner | undefined | Promise<ISigner | undefined>);
 
   /**
    * Names the drive a call belongs to when the client cannot prove it itself,
@@ -329,7 +337,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private readonly tokenProvider: BearerTokenProvider;
   private readonly subscriptionsUrl: string | undefined;
   private readonly documentModels: () => readonly DocumentModelModule<any>[];
-  private readonly resolveSigner: () => ISigner | undefined;
+  private readonly resolveSigner: () => Promise<ISigner | undefined>;
   private readonly driveIdFor: GraphQLReactorClientOptions["driveIdFor"];
   private readonly undoRedoChains = new Map<string, Promise<unknown>>();
   private stopRealtime: (() => void) | undefined;
@@ -376,12 +384,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       this.documentModels = () => copied;
     }
     const signer = options.signer;
-    this.resolveSigner =
+    const resolve =
       typeof signer === "function"
         ? signer
         : signer
           ? () => signer
           : ambientRenownSigner;
+    this.resolveSigner = async () => resolve();
     this.driveIdFor = options.driveIdFor;
     this.subscriptionsUrl =
       options.realtime === false
@@ -881,11 +890,36 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     );
   }
 
+  /**
+   * Creates `document`, under `parentIdentifier` when given.
+   *
+   * With a signer the creation is built and signed here, as the in-process
+   * client builds it, and submitted through `executeBatch`; the Switchboard
+   * signs none of it. A create under a drive still runs the Switchboard's
+   * `createDocument`, which files the document in the drive and signs that
+   * itself, as does a create without a signer.
+   */
   async create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    const signer = await this.resolveSigner();
+    if (signer) {
+      const parent =
+        parentIdentifier === undefined
+          ? undefined
+          : await this.parentOf(parentIdentifier, signal);
+      if (!parent || !isDriveType(parent.documentType)) {
+        return this.createSigned<TDocument>(
+          document,
+          parentIdentifier,
+          parent?.id,
+          signer,
+          signal,
+        );
+      }
+    }
     // A new top-level drive is pinned to the backend its own id routes to;
     // under a parent it goes where the parent is, which only the hook knows.
     const result = await this.sdk.CreateDocument(
@@ -909,6 +943,115 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       documents: [created],
     });
     return created;
+  }
+
+  /**
+   * The signed creation of `document`: its CREATE_DOCUMENT and
+   * UPGRADE_DOCUMENT, then the parent's ADD_RELATIONSHIP, one batch, as the
+   * in-process client's `buildCreateJobs` makes it. The slug is checked as the
+   * Switchboard's `createDocument` checks it.
+   */
+  private async createSigned<TDocument extends PHDocument>(
+    document: PHDocument,
+    parentIdentifier: string | undefined,
+    parentId: string | undefined,
+    signer: ISigner,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const documentId = document.header.id;
+    const branch = document.header.branch || "main";
+    await this.assertSlugAvailable(document.header.slug, documentId, signal);
+    const protocolVersions = await createVersionsOf(
+      document,
+      (options) => this.getCreateProtocolVersions(options, signal),
+      parentIdentifier,
+    );
+    const jobs: ExecutionJobPlan[] = [
+      {
+        key: "create",
+        documentId,
+        scope: "document",
+        branch,
+        actions: creationActions(document, protocolVersions),
+        dependsOn: [],
+      },
+    ];
+    if (parentId) {
+      jobs.push({
+        key: "parent",
+        documentId: parentId,
+        scope: "document",
+        branch: "main",
+        actions: [addRelationshipAction(parentId, documentId, "child")],
+        dependsOn: ["create"],
+      });
+    }
+    const { jobs: settled } = await this.executeBatchAs(
+      { jobs },
+      signer,
+      signal,
+      // A new top-level drive is pinned to the backend its own id routes to.
+      isDrive(document) && parentIdentifier === undefined
+        ? documentId
+        : undefined,
+    );
+    return this.get<TDocument>(
+      documentId,
+      { branch },
+      signal,
+      settled.create?.consistencyToken,
+    );
+  }
+
+  /** The id and type of the document a create names as its parent. */
+  private async parentOf(
+    identifier: string,
+    signal: AbortSignal | undefined,
+  ): Promise<{ id: string; documentType: string }> {
+    const result = await this.sdk.GetDocument(
+      { idOrSlug: identifier, view: { branch: "main", scopes: ["document"] } },
+      undefined,
+      signal,
+    );
+    const parent = result.document?.document;
+    if (!parent) {
+      throw new Error(`Failed to create document: no parent ${identifier}`);
+    }
+    return { id: parent.id, documentType: parent.documentType };
+  }
+
+  /** Refuses a slug another document holds, as `createDocument` does. */
+  private async assertSlugAvailable(
+    slug: string | undefined,
+    documentId: string,
+    signal: AbortSignal | undefined,
+  ): Promise<void> {
+    if (!slug || slug === documentId) return;
+    // Asked first, so a free slug costs no NOT_FOUND on the Switchboard.
+    let served: boolean | undefined;
+    try {
+      served = await this.isServed(slug, { branch: "main" }, signal);
+    } catch (error) {
+      if (!(error instanceof GraphQLOperationNotSupportedError)) throw error;
+    }
+    if (served === false) return;
+    let holder: string | undefined;
+    try {
+      const result = await this.sdk.GetDocument(
+        { idOrSlug: slug, view: { branch: "main", scopes: ["document"] } },
+        undefined,
+        signal,
+      );
+      holder = result.document?.document.id;
+    } catch (error) {
+      if (answersNotFound(error)) return;
+      throw error;
+    }
+    if (holder && holder !== documentId) {
+      throw new Error(
+        `The slug "${slug}" is taken by document ${holder}; choose another.`,
+      );
+    }
   }
 
   /**
@@ -939,7 +1082,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       actions,
       document,
       this.documentModels(),
-      this.resolveSigner(),
+      await this.resolveSigner(),
       signal,
     );
 
@@ -1192,7 +1335,16 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     request: BatchExecutionRequest,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    const signer = this.resolveSigner();
+    return this.executeBatchAs(request, await this.resolveSigner(), signal);
+  }
+
+  /** {@link executeBatch} signed by `signer`; `proven` names its drive. */
+  private async executeBatchAs(
+    request: BatchExecutionRequest,
+    signer: ISigner | undefined,
+    signal?: AbortSignal,
+    proven?: string,
+  ): Promise<BatchExecutionResult> {
     const jobInputs = await Promise.all(
       request.jobs.map(async (job, index) => {
         const documentId = await this.batchWriteTarget(
@@ -1219,10 +1371,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
     const result = await this.batchSdk.ExecuteBatch(
       { jobs: jobInputs },
-      this.driveIdHeaders({
-        method: "executeBatch",
-        jobs: jobInputs.map((job) => ({ documentId: job.documentIdOrSlug })),
-      }),
+      this.driveIdHeaders(
+        {
+          method: "executeBatch",
+          jobs: jobInputs.map((job) => ({ documentId: job.documentIdOrSlug })),
+        },
+        proven,
+      ),
       signal,
     );
 
@@ -1856,7 +2011,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       actions,
       document,
       this.documentModels(),
-      this.resolveSigner(),
+      await this.resolveSigner(),
       signal,
     );
     const result = await this.sdk.MutateDocumentAsync(
@@ -2709,9 +2864,11 @@ function driveIdHeaders(driveId: string): Record<string, string> | undefined {
 }
 
 function isDrive(document: PHDocument): boolean {
-  return (DRIVE_DOCUMENT_TYPES as readonly string[]).includes(
-    document.header.documentType,
-  );
+  return isDriveType(document.header.documentType);
+}
+
+function isDriveType(documentType: string): boolean {
+  return (DRIVE_DOCUMENT_TYPES as readonly string[]).includes(documentType);
 }
 
 /**
