@@ -1,10 +1,17 @@
 import { generateKeyPairSync } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import type { CredentialLike } from "./credential-records.js";
+import {
+  credentialBindingOf,
+  credentialRecordId,
+  readCredentialRecord,
+  readCredentialWithdrawal,
+  type CredentialLike,
+} from "./credential-records.js";
 import {
   identityHome,
   readActiveIdentity,
+  readPseudonym,
   type IdentityInfo,
 } from "./identity.js";
 import {
@@ -23,7 +30,8 @@ import {
  * `~/.ph/identities/<address>/sessions/<label>.json`. Agents and MCP clients
  * act in one store and keep theirs in its data folder:
  * `<dataDir>/.ph/sessions/<label>.json`. A Renown login's tools use the
- * login's own session key.
+ * login's own session key. A data-folder session a Renown wallet approved
+ * (at Renown's console) signs as that wallet, whoever is logged in.
  *
  * Node builtins only: reading who signs needs no curve library and no
  * network. Issuing and signing are `@renown/sdk/identity`'s.
@@ -243,6 +251,54 @@ export function sessionCredentialFor(
   return credentialEndsWithin(credential, 0, now) ? undefined : credential;
 }
 
+/**
+ * The credential of a data-folder session that a Renown wallet signed, by
+ * approving the session at Renown's console: unexpired, naming the session's
+ * key, issued by someone other than the store's pseudonym. Such a session
+ * signs as that wallet, whoever is logged in.
+ */
+export function approvedSessionCredential(
+  session: Pick<SessionFile, "did" | "credential">,
+  o: { dataDir: string; env?: Env; now?: number },
+): CredentialLike | undefined {
+  const { credential } = session;
+  if (!credential || credential.credentialSubject.id !== session.did) {
+    return undefined;
+  }
+  if (credentialEndsWithin(credential, 0, o.now)) return undefined;
+  let pseudonym: string | undefined;
+  try {
+    pseudonym = readPseudonym({
+      dataDir: o.dataDir,
+      env: o.env ?? process.env,
+    })?.address.toLowerCase();
+  } catch {
+    // An unreadable PH_IDENTITY_KEY names no pseudonym.
+  }
+  return issuerAddress(credential) === pseudonym ? undefined : credential;
+}
+
+/**
+ * Whether the store in `dataDir` withdrew the session's credential and holds
+ * no record issued since: the session then signs nothing there until a
+ * credential newer than the withdrawal is issued.
+ */
+export function sessionWithdrawn(o: {
+  dataDir: string;
+  session: Pick<SessionFile, "credential">;
+}): boolean {
+  const { credential } = o.session;
+  const binding = credential && credentialBindingOf(credential);
+  if (!binding) return false;
+  const id = credentialRecordId(binding);
+  const withdrawal = readCredentialWithdrawal({ dataDir: o.dataDir, id });
+  if (!withdrawal) return false;
+  if (readCredentialRecord({ dataDir: o.dataDir, id })) return false;
+  return !(
+    Date.parse(credential.issuanceDate) > Date.parse(withdrawal.withdrawnAt)
+  );
+}
+
 /** What `context.signer` names for `session` acting as `identity`. */
 export function sessionSignerOf(
   identity: Pick<IdentityInfo, "address"> & { chainId?: number },
@@ -310,6 +366,23 @@ export function peekSessionSigner(o: {
   env?: Env;
 }): SessionSigner | undefined {
   const env = o.env ?? process.env;
+  if (o.place === "data-folder") {
+    const session = readSessionFile(
+      sessionFilePath({ ...o, address: "", env }),
+    );
+    const approved =
+      session &&
+      approvedSessionCredential(session, { dataDir: o.dataDir, env });
+    if (session && approved) {
+      return sessionSignerOf(
+        {
+          address: approved.issuer.ethereumAddress as `0x${string}`,
+          chainId: credentialBindingOf(approved)?.chainId,
+        },
+        { ...session, credential: approved },
+      );
+    }
+  }
   const identity = readActiveIdentity({ dataDir: o.dataDir, env });
   if (!identity) return undefined;
   if (identity.kind === "renown") {

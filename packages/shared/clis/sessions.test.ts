@@ -3,10 +3,15 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { CredentialLike } from "./credential-records.js";
+import {
+  withdrawCredentialRecords,
+  writeCredentialRecord,
+  type CredentialLike,
+} from "./credential-records.js";
 import { ensurePseudonym, loginPaths } from "./identity.js";
 import { fileAccessList } from "./owner-only.js";
 import {
+  approvedSessionCredential,
   credentialEndsWithin,
   didOfP256Jwk,
   ensureSessionFile,
@@ -16,6 +21,7 @@ import {
   sessionCredentialFor,
   sessionFilePath,
   sessionSlug,
+  sessionWithdrawn,
   writeSessionFile,
 } from "./sessions.js";
 
@@ -239,5 +245,76 @@ describe("who would sign", () => {
         env,
       }),
     ).toBeUndefined();
+  });
+
+  it("is the wallet that approved a store session, whoever is logged in", async () => {
+    const wallet = "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf";
+    const label = "vetra agent vetra-agent";
+    const file = sessionFilePath({
+      place: "data-folder",
+      label,
+      address: "",
+      dataDir,
+      env,
+    });
+    const session = ensureSessionFile(file, label);
+    writeSessionFile(file, {
+      ...session,
+      credential: credentialFor(wallet, session.did, { label: "renown-app" }),
+    });
+    const peek = () =>
+      peekSessionSigner({ dataDir, label, place: "data-folder", env });
+    const approved = {
+      user: { address: wallet, networkId: "eip155", chainId: 1 },
+      app: { name: "renown-app", key: session.did },
+    };
+    expect(peek()).toEqual(approved);
+    // A pseudonym in the store does not take it over.
+    const pseudonym = await ensurePseudonym({ dataDir, env });
+    expect(peek()).toEqual(approved);
+    expect(
+      approvedSessionCredential(
+        {
+          ...session,
+          credential: credentialFor(pseudonym.address, session.did),
+        },
+        { dataDir, env },
+      ),
+    ).toBeUndefined();
+    // Past its date it approves nothing: the pseudonym acts, unlabelled.
+    writeSessionFile(file, {
+      ...session,
+      credential: credentialFor(wallet, session.did, { days: -1 }),
+    });
+    expect(peek()).toEqual({
+      user: { address: pseudonym.address, networkId: "eip155", chainId: 1 },
+      app: { name: label, key: session.did },
+    });
+  });
+});
+
+describe("a withdrawn session", () => {
+  it("is withdrawn until a credential issued since is recorded", () => {
+    const wallet = "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf";
+    const session = newSession("mcp test");
+    const credential = credentialFor(wallet, session.did);
+    const withSession = { ...session, credential };
+    expect(sessionWithdrawn({ dataDir, session: withSession })).toBe(false);
+    const { id } = writeCredentialRecord({
+      dataDir,
+      credential,
+      source: "cli",
+    });
+    expect(sessionWithdrawn({ dataDir, session: withSession })).toBe(false);
+    withdrawCredentialRecords({ dataDir, ids: [id], by: "command" });
+    expect(sessionWithdrawn({ dataDir, session: withSession })).toBe(true);
+    expect(sessionWithdrawn({ dataDir, session })).toBe(false);
+    const later = {
+      ...credential,
+      issuanceDate: new Date(Date.now() + 60_000).toISOString(),
+    };
+    expect(
+      sessionWithdrawn({ dataDir, session: { ...session, credential: later } }),
+    ).toBe(false);
   });
 });
