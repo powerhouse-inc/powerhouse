@@ -1,17 +1,16 @@
 import type { HostPlugin } from "@powerhousedao/host-core";
 import type { API, ISubgraph } from "@powerhousedao/reactor-api";
-import { NodeKeyStorage } from "@renown/sdk/node";
 import {
   createStudioSubgraph,
   type JwkPair,
-  type StudioRenown,
+  type StudioLogin,
 } from "./sign-in.js";
 
 /**
  * Vetra Studio, server side (rewire R4): what makes a switchboard the STUDIO
  * switchboard and cannot be expressed through other plugins — the dev-mode
  * machinery (Vite-loaded local document models with HMR), and studio sign-in
- * (an admin's bearer gets the studio's Renown identity, so an agent can log
+ * (an admin's bearer gets the person's Renown login, so an agent can log
  * the studio Connect in; see sign-in.ts). Listed verb-scoped (verbs: ["dev"])
  * in the vetra host; `ph run vetra` at the run verb is the same stack
  * headless, without dev tooling. The studio DRIVES are not this plugin's
@@ -59,22 +58,22 @@ export interface StudioHooks {
   onSubgraphsRegistering: (ctx: StudioHostContext) => Promise<void>;
 }
 
-/** The key pair the switchboard signs with: the same file and env var its
- * identity loads from (`options.identity.keypairPath`, else .ph/.keypair.json). */
-export function hostKeyPairLoader(
-  options: Record<string, unknown> | undefined,
-): () => Promise<JwkPair | undefined> {
-  const identity = options?.identity as { keypairPath?: string } | undefined;
-  return async () =>
-    (await new NodeKeyStorage(identity?.keypairPath).loadKeyPair()) as
-      | JwkPair
-      | undefined;
+/** The person's Renown login in the home folder, read from its files; not
+ * the switchboard's own key, which stays the instance's. */
+export async function homeLoginLoader(): Promise<StudioLogin | undefined> {
+  const { readHomeLogin } = await import("@renown/sdk/identity");
+  const login = await readHomeLogin();
+  if (!login) return undefined;
+  const { did, address, chainId } = login.user;
+  return {
+    did: login.did,
+    user: { did, address, chainId },
+    keyPair: login.keyPair as JwkPair,
+  };
 }
 
 export function createStudioSwitchboardPlugin(
-  loadKeyPairFor: (
-    options: Record<string, unknown> | undefined,
-  ) => () => Promise<JwkPair | undefined> = hostKeyPairLoader,
+  loadLogin: () => Promise<StudioLogin | undefined> = homeLoginLoader,
   config: StudioSwitchboardConfig = {},
 ): HostPlugin<StudioHooks> {
   const processorConfig = Object.entries(config.processorConfig ?? {});
@@ -110,8 +109,7 @@ export function createStudioSwitchboardPlugin(
           createStudioSubgraph({
             api,
             relationalDb: api.relationalDb,
-            renown: ctx.renown as StudioRenown | null | undefined,
-            loadKeyPair: loadKeyPairFor(ctx.options),
+            loadLogin,
           }),
           "graphql",
           false,
@@ -127,6 +125,6 @@ export function createStudioSwitchboardPlugin(
 const studioSwitchboardPlugin = (
   config?: StudioSwitchboardConfig,
 ): HostPlugin<StudioHooks> =>
-  createStudioSwitchboardPlugin(hostKeyPairLoader, config);
+  createStudioSwitchboardPlugin(homeLoginLoader, config);
 
 export default studioSwitchboardPlugin;

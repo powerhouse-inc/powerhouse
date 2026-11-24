@@ -1,13 +1,37 @@
-import { describe, expect, it, vi } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { subtle } from "node:crypto";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { studioSignIn, type StudioSignInDeps } from "../src/sign-in.js";
 import studioSwitchboardPlugin, {
   createStudioSwitchboardPlugin,
+  homeLoginLoader,
 } from "../src/switchboard.js";
 
 const ADMIN = "0x763810e8d4129A7347bA9Ad6235fFD0568558Fb4";
 const keyPair = {
   publicKey: { kty: "EC", crv: "P-256", x: "x", y: "y" },
   privateKey: { kty: "EC", crv: "P-256", x: "x", y: "y", d: "d" },
+};
+const generated = await subtle.generateKey(
+  { name: "ECDSA", namedCurve: "P-256" },
+  true,
+  ["sign", "verify"],
+);
+const realKeyPair = {
+  publicKey: await subtle.exportKey("jwk", generated.publicKey),
+  privateKey: await subtle.exportKey("jwk", generated.privateKey),
+};
+
+const login = {
+  did: "did:key:zLogin",
+  user: {
+    did: `did:pkh:eip155:1:${ADMIN.toLowerCase()}`,
+    address: ADMIN,
+    chainId: 1,
+  },
+  keyPair,
 };
 
 function deps(overrides: Partial<StudioSignInDeps> = {}): StudioSignInDeps {
@@ -18,15 +42,7 @@ function deps(overrides: Partial<StudioSignInDeps> = {}): StudioSignInDeps {
         config: { admins: [ADMIN.toLowerCase()] },
       } as never,
     },
-    renown: {
-      did: "did:key:zHost",
-      user: {
-        did: `did:pkh:eip155:1:${ADMIN.toLowerCase()}`,
-        address: ADMIN,
-        chainId: 1,
-      },
-    },
-    loadKeyPair: () => Promise.resolve(keyPair),
+    loadLogin: () => Promise.resolve(login),
     ...overrides,
   };
 }
@@ -34,11 +50,11 @@ function deps(overrides: Partial<StudioSignInDeps> = {}): StudioSignInDeps {
 const admin = { user: { address: ADMIN } } as never;
 
 describe("studioSignIn", () => {
-  it("hands a listed admin the studio's identity and key pair", async () => {
+  it("hands a listed admin the person's login and its key pair", async () => {
     const identity = await studioSignIn(deps(), admin);
     expect(identity).toEqual({
       userDid: `did:pkh:eip155:1:${ADMIN.toLowerCase()}`,
-      did: "did:key:zHost",
+      did: "did:key:zLogin",
       address: ADMIN,
       chainId: 1,
       keyPair: {
@@ -68,27 +84,59 @@ describe("studioSignIn", () => {
     ).rejects.toThrow(/AUTH_ENABLED/);
   });
 
-  it("refuses when the studio has no signed-in identity or no key pair", async () => {
+  it("refuses when nobody is logged in on this computer", async () => {
     await expect(
       studioSignIn(
-        deps({ renown: { did: "did:key:zHost", user: undefined } }),
+        deps({ loadLogin: () => Promise.resolve(undefined) }),
         admin,
       ),
-    ).rejects.toThrow(/ph login/);
-    await expect(
-      studioSignIn(
-        deps({ loadKeyPair: () => Promise.resolve(undefined) }),
-        admin,
-      ),
-    ).rejects.toThrow(/no key pair/);
+    ).rejects.toThrow(/run `ph login`/);
+  });
+});
+
+describe("homeLoginLoader", () => {
+  let home: string;
+  beforeEach(() => {
+    home = mkdtempSync(path.join(tmpdir(), "studio-login-"));
+    vi.stubEnv("PH_IDENTITY_HOME", home);
+    vi.stubEnv("PH_RENOWN_PRIVATE_KEY", undefined);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  it("reads the home folder's login, never the switchboard's key", async () => {
+    expect(await homeLoginLoader()).toBeUndefined();
+    // Where `ph login` keeps it (shared/clis/identity loginPaths).
+    const dir = path.join(home, "renown");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      path.join(dir, ".keypair.json"),
+      JSON.stringify({ keyPair: realKeyPair }),
+    );
+    writeFileSync(
+      path.join(dir, ".renown.json"),
+      JSON.stringify({
+        user: {
+          ...login.user,
+          networkId: "eip155",
+          credential: {
+            id: "urn:uuid:1",
+            expirationDate: new Date(Date.now() + 60_000).toISOString(),
+          },
+        },
+      }),
+    );
+    const read = await homeLoginLoader();
+    expect(read).toMatchObject({ user: login.user, keyPair: realKeyPair });
+    expect(read?.did).toMatch(/^did:key:/);
   });
 });
 
 describe("the studio switchboard plugin", () => {
   it("keeps dev mode on and registers the sign-in subgraph", async () => {
-    const plugin = createStudioSwitchboardPlugin(
-      () => () => Promise.resolve(keyPair),
-    );
+    const plugin = createStudioSwitchboardPlugin(() => Promise.resolve(login));
     expect(plugin.hooks?.transformServerOptions?.({ a: 1 })).toEqual({
       a: 1,
       dev: true,

@@ -2,12 +2,16 @@ import type { API, Context, ISubgraph } from "@powerhousedao/reactor-api";
 import { GraphQLError, parse } from "graphql";
 
 /**
- * Studio sign-in: hands the studio's own Renown identity (the project's CLI
- * key pair and the user `ph login` delegated it to) to a caller that proves
- * it is a listed admin with a bearer, typically one `ph access-token` minted.
- * The browser installs the key pair as its Renown key and logs in with the
- * user's DID, so an agent reaches a real Renown session in Connect without a
- * wallet. Served only by a studio (dev verb) switchboard.
+ * Studio sign-in: hands the person's Renown login (the key pair `ph login`
+ * keeps in the home folder and the user it is delegated by) to a caller that
+ * proves it is a listed admin with a bearer, typically one `ph access-token`
+ * minted. The browser installs the key pair as its Renown key and logs in
+ * with the user's DID, so an agent reaches a real Renown session in Connect
+ * without a wallet. Served only by a studio (dev verb) switchboard. The
+ * instance's own key never leaves the host.
+ *
+ * Temporary (F3a): F3d replaces this hand-over with a one-time code, and from
+ * then on no host reads the person's login.
  */
 
 export const STUDIO_SUBGRAPH_NAME = "vetra-studio";
@@ -37,7 +41,7 @@ export const studioTypeDefs = parse(/* GraphQL */ `
 
   type Mutation {
     """
-    The studio's Renown identity, for a listed admin's bearer: install the key
+    The person's Renown login, for a listed admin's bearer: install the key
     pair in the browser and log in with userDid. Studio (dev) hosts only.
     """
     studioSignIn: StudioIdentity!
@@ -49,19 +53,20 @@ export type StudioApi = Pick<API, "authorizationService"> & {
   authService: unknown;
 };
 
-/** The parts of the host's Renown instance the sign-in reads. */
-export type StudioRenown = {
-  readonly did: string;
-  readonly user: { did: string; address: string; chainId: number } | undefined;
-};
-
 export type JwkPair = { publicKey: JsonWebKey; privateKey: JsonWebKey };
+
+/** The person's Renown login: its session key and the user it names. */
+export type StudioLogin = {
+  /** did:key of the key pair. */
+  did: string;
+  user: { did: string; address: string; chainId: number };
+  keyPair: JwkPair;
+};
 
 export type StudioSignInDeps = {
   api: StudioApi;
-  renown: StudioRenown | null | undefined;
-  /** The key pair the host signs with (its NodeKeyStorage). */
-  loadKeyPair: () => Promise<JwkPair | undefined>;
+  /** The login `ph login` keeps in the home folder, read per sign-in. */
+  loadLogin: () => Promise<StudioLogin | undefined>;
 };
 
 function forbidden(message: string): GraphQLError {
@@ -95,19 +100,16 @@ export async function studioSignIn(
   if (!isListedAdmin(deps.api.authorizationService.config.admins, address)) {
     throw forbidden("Studio sign-in is for the host's admins.");
   }
-  const user = deps.renown?.user;
-  if (!deps.renown || !user) {
+  const login = await deps.loadLogin();
+  if (!login) {
     throw forbidden(
-      "This studio has no signed-in Renown identity: run `ph login` in the project, then restart it.",
+      "No Renown login on this computer: run `ph login`, then sign in again.",
     );
   }
-  const keyPair = await deps.loadKeyPair();
-  if (!keyPair) {
-    throw forbidden("This studio has no key pair to hand over.");
-  }
+  const { user, keyPair } = login;
   return {
     userDid: user.did,
-    did: deps.renown.did,
+    did: login.did,
     address: user.address,
     chainId: user.chainId,
     keyPair: {
