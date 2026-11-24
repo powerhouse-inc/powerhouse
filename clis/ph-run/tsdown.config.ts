@@ -13,6 +13,7 @@ export default defineConfig({
     "services/service-args": "src/services/service-args.ts",
     "services/connect-serve": "src/services/connect-serve.ts",
     "services/connect-server": "src/services/connect-server.ts",
+    "services/local-sign-in": "src/services/local-sign-in.ts",
     "services/run/start-run": "src/services/run/start-run.ts",
     "services/supervisor": "src/services/supervisor.ts",
     "services/switchboard": "src/services/switchboard.ts",

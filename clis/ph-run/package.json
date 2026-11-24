@@ -49,6 +49,12 @@
       "import": "./dist/services/connect-server.mjs",
       "default": "./dist/services/connect-server.mjs"
     },
+    "./local-sign-in": {
+      "source": "./src/services/local-sign-in.ts",
+      "types": "./dist/services/local-sign-in.d.mts",
+      "import": "./dist/services/local-sign-in.mjs",
+      "default": "./dist/services/local-sign-in.mjs"
+    },
     "./member-config": {
       "source": "./src/runners/member-config.ts",
       "types": "./dist/runners/member-config.d.mts",

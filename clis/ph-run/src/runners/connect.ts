@@ -29,10 +29,19 @@ import {
   refineConnectReactor,
   remoteBackendUrls,
   RunnerError,
+  defaultUserDataDir,
   type ReactorConfig,
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
+import {
+  LOCAL_SIGN_IN_SECRET_ENV,
+  newSignInSecret,
+  openInBrowser,
+  opensBrowser,
+  signInLink,
+  type LocalSignInIssuer,
+} from "@powerhousedao/shared/clis/local-sign-in";
 import type { ParsedCmdResult } from "@powerhousedao/shared/clis";
 import {
   commonServerArgs,
@@ -129,6 +138,20 @@ const schemas = defineHostSchemas((s) =>
            * the working directory (the project); `${package}` names the
            * package's own. Every Connect server serves them (dev and serve). */
           serveFiles: z.record(servedFilePath, z.string().min(1)).optional(),
+          /** Sign-in by link (F3d): a loopback endpoint that signs this
+           * computer's pages in as the person's own identity, and a link
+           * with a one-time code printed and opened at start. On by default
+           * at `dev`; `serve` needs it set. `sessions`: the data-folder
+           * sessions (labels) the endpoint also issues for, for a key whose
+           * password nobody can ask for them (the Studio agent). */
+          localSignIn: z
+            .union([
+              z.boolean(),
+              z.strictObject({
+                sessions: z.array(z.string().min(1)).optional(),
+              }),
+            ])
+            .optional(),
         })
         .strict(),
       config: connectConfigSchemaWith(s.tokenable).optional(),
@@ -148,6 +171,9 @@ export type ConnectHostParsed = z.output<typeof hostSchema>;
 export const outputsSchema = z.strictObject({
   origin: z.url(),
   endpoints: z.strictObject({ connect: z.url() }),
+  /** Set when this Connect signs pages in by link; `open`: as asked. The
+   * secret is never an output: a compound keeps it in its record. */
+  localSignIn: z.strictObject({ open: z.boolean().optional() }).optional(),
 });
 export type ConnectOutputs = z.infer<typeof outputsSchema>;
 
@@ -172,18 +198,102 @@ export interface ListeningServer {
 export function connectHandle(
   server: ListeningServer,
   requested: { host: string; port: number },
+  signIn?: LocalSignInPlan,
 ): RunnerHandle<ConnectOutputs> {
   const fallback = `http://${requested.host}:${requested.port}/`;
   const app = server.resolvedUrls?.local[0] ?? fallback;
   let closing: Promise<void> | undefined;
+  if (signIn?.announce) announceSignIn(app, signIn);
   return {
     outputs: outputsSchema.parse({
       origin: new URL(app).origin,
       endpoints: { connect: app },
+      ...(signIn
+        ? {
+            localSignIn: signIn.open === undefined ? {} : { open: signIn.open },
+          }
+        : {}),
     }),
     ready: Promise.resolve(),
     shutdown: () => (closing ??= server.close()),
   };
+}
+
+/** Makes the issuer of a sign-in endpoint (`@renown/sdk/local-sign-in`):
+ * ph-cli's runner has it, a packaged app's ph-run does not. */
+export type LocalSignInIssuerFactory = (o: {
+  dataDir: string;
+  sessions: readonly string[];
+  env: Record<string, string | undefined>;
+}) => Promise<LocalSignInIssuer>;
+
+/** How a started Connect signs pages in by link. */
+export interface LocalSignInPlan {
+  secret: string;
+  /** Print the link and open it here: nobody handed this runner the secret,
+   * so nobody else announces it. */
+  announce: boolean;
+  /** As asked (`--open`, `runner.openBrowser`); unset: a terminal decides. */
+  open?: boolean;
+  /** The server's endpoint options. */
+  endpoint: { secret: string; issuer: () => Promise<LocalSignInIssuer> };
+}
+
+/**
+ * Whether this Connect signs pages in by link, and with what: on at `dev`
+ * unless `runner.localSignIn` is false, at `serve` only when it is set. The
+ * secret is the compound's (`PH_LOCAL_SIGN_IN_SECRET`), else made here.
+ */
+export function localSignInPlan(
+  host: ConnectHostParsed,
+  ctx: RunnerContext,
+  o: {
+    byDefault: boolean;
+    open?: boolean;
+    issuers: LocalSignInIssuerFactory | undefined;
+  },
+): LocalSignInPlan | undefined {
+  const declared = host.runner.localSignIn;
+  if (declared === false || (declared === undefined && !o.byDefault)) {
+    return undefined;
+  }
+  const { issuers } = o;
+  if (!issuers) {
+    if (declared !== undefined) {
+      console.warn(
+        `[connect] hosts/${host.name}/host.js sets runner.localSignIn, but this runner cannot issue credentials: run it with @powerhousedao/ph-cli/runners/connect.`,
+      );
+    }
+    return undefined;
+  }
+  const handed = ctx.env[LOCAL_SIGN_IN_SECRET_ENV];
+  const secret = handed ?? newSignInSecret();
+  const sessions =
+    typeof declared === "object" ? (declared.sessions ?? []) : [];
+  const dataDir = defaultUserDataDir(ctx.projectRoot, ctx.env);
+  return {
+    secret,
+    announce: handed === undefined,
+    ...(o.open === undefined ? {} : { open: o.open }),
+    endpoint: {
+      secret,
+      issuer: () => issuers({ dataDir, sessions, env: ctx.env }),
+    },
+  };
+}
+
+/** Prints the sign-in link of the app at `appUrl`, and opens it as asked or
+ * on a terminal. */
+export function announceSignIn(
+  appUrl: string,
+  plan: Pick<LocalSignInPlan, "secret" | "open">,
+  open: (url: string) => void = openInBrowser,
+): void {
+  const link = signInLink(appUrl, plan.secret);
+  console.log(`  ➜  Sign in: ${link}`);
+  if (opensBrowser({ asked: plan.open, isTTY: process.stdout.isTTY })) {
+    open(link);
+  }
 }
 
 /** host.js reactor.drives -> the served drives.defaultDrives shapes: locals
@@ -566,7 +676,11 @@ export type ConnectServerStart = (
   args: ConnectPreviewArgs,
   override?: ConnectServeOverride,
   dirname?: string,
-  options?: { proxy?: string; serveFiles?: Readonly<Record<string, string>> },
+  options?: {
+    proxy?: string;
+    serveFiles?: Readonly<Record<string, string>>;
+    localSignIn?: LocalSignInPlan["endpoint"];
+  },
 ) => Promise<ListeningServer>;
 
 /** `serve` on a given server. The host's connect config (including a
@@ -579,6 +693,7 @@ export async function serveWith(
   start: ConnectServerStart,
   host: ConnectHostParsed,
   ctx: RunnerContext,
+  options: { issuers?: LocalSignInIssuerFactory } = {},
 ): Promise<RunnerHandle<ConnectOutputs>> {
   await validateComposition(host, ctx);
   const runner = host.runner;
@@ -587,6 +702,12 @@ export async function serveWith(
   // preview`'s own default port.
   const port = passed.port ?? runner.port ?? DEFAULT_CONNECT_STUDIO_PORT;
   const bind = passed.host ?? runner.host ?? "127.0.0.1";
+  const askedOpen = passed.open ?? runner.openBrowser;
+  const signIn = localSignInPlan(host, ctx, {
+    byDefault: false,
+    ...(askedOpen === undefined ? {} : { open: askedOpen }),
+    issuers: options.issuers,
+  });
   // The classic `ph connect preview` arguments, with the keys this host and
   // this invocation own laid over them.
   const classic = await connectPreviewServiceArgs();
@@ -594,7 +715,8 @@ export async function serveWith(
     ...classic,
     port,
     outDir: runner.outDir ?? classic.outDir,
-    open: passed.open ?? runner.openBrowser === true,
+    // With sign-in, the link is opened, not the bare app.
+    open: signIn ? false : askedOpen === true,
     strictPort: passed.strictPort ?? runner.strictPort === true,
     cors: passed.cors ?? true,
     bindCLIShortcuts: false,
@@ -619,20 +741,23 @@ export async function serveWith(
       {
         proxy: runner.proxy?.target,
         ...(runner.serveFiles ? { serveFiles: runner.serveFiles } : {}),
+        ...(signIn ? { localSignIn: signIn.endpoint } : {}),
       },
     ),
   );
-  return connectHandle(server, { host: bind, port });
+  return connectHandle(server, { host: bind, port }, signIn);
 }
 
 /** Serves a built Connect (run `build` first) with nothing but what a running
- * app has. ph-cli's runner adds the verbs that need build tools. */
+ * app has. ph-cli's runner adds the verbs that need build tools, and the
+ * issuer of sign-in by link. */
 export async function serve(
   host: ConnectHostParsed,
   ctx: RunnerContext,
+  options: { issuers?: LocalSignInIssuerFactory } = {},
 ): Promise<RunnerHandle<ConnectOutputs>> {
   const { runConnectServer } = await import("../services/connect-server.js");
-  return serveWith(runConnectServer, host, ctx);
+  return serveWith(runConnectServer, host, ctx, options);
 }
 
 /** With no Studio here, running Connect is serving its build. */
