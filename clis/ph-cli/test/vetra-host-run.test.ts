@@ -292,6 +292,46 @@ describe("ph run vetra", () => {
     expect(readVetraRuntime(dir)?.pid).toBe(OTHER_PID);
   });
 
+  it("a second start prints a fresh sign-in link for the running Connect", async () => {
+    const dir = makeProject();
+    mkdirSync(join(dir, "hosts", "vetra"), { recursive: true });
+    writeFileSync(
+      join(dir, "hosts", "vetra", "host.js"),
+      'export default { name: "vetra", runner: { module: "@powerhousedao/host-core/runners/compound" }, children: {} };\n',
+    );
+    writeRunRecord(dir, {
+      version: 2,
+      host: "vetra",
+      projectName: PROJECT_NAME,
+      kind: "compound",
+      verb: "dev",
+      pid: OTHER_PID,
+      startedAt: new Date().toISOString(),
+      members: {
+        connect: {
+          host: "connect",
+          runnerModule: "m",
+          kind: "reactor",
+          verb: "dev",
+          outputs: { ...connectOutputs, localSignIn: { open: false } },
+        },
+      },
+      extra: { signIn: { secret: "c2VjcmV0LWZvci10aGUtdGVzdA" } },
+    });
+    writeVetraRuntime(dir, otherVetra());
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await runVetraHost({ host: "vetra", projectRoot: dir });
+    const links = log.mock.calls
+      .map(([line]) => String(line))
+      .filter((line) => line.includes("Sign in: "));
+    expect(links).toHaveLength(1);
+    expect(links[0]).toContain(
+      `${connectOutputs.endpoints.connect}#ph-sign-in=`,
+    );
+    expect(startRun).not.toHaveBeenCalled();
+  });
+
   it("refuses while a live ph dev holds the project", async () => {
     const dir = makeProject("vetra");
     writeVetraRuntime(dir, otherVetra());

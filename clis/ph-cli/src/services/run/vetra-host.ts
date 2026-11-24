@@ -1,4 +1,5 @@
 import {
+  announceSignInLinks,
   describeInstance,
   isAlreadyRunning,
   loadHost,
@@ -6,6 +7,7 @@ import {
   readProjectName,
   runningInstance,
   runRecordKey,
+  signInLinksOf,
   STORE_VERBS,
   type AlreadyRunning,
   type RunningInstance,
@@ -59,6 +61,8 @@ export async function runVetraHost(args: StartRunArgs): Promise<unknown> {
       : undefined;
   if (running && running.pid !== process.pid) {
     console.log(describeInstance(running));
+    // How a page that lost its sign-in gets a fresh link (F3d).
+    announceSignInLinks(signInLinksOf(running.record));
     return { running } satisfies AlreadyRunning;
   }
   const refusal = await vetraRuntimeRefusal(projectDir, projectName);
