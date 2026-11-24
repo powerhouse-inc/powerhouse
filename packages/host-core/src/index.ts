@@ -121,6 +121,7 @@ export {
   type StopRunResult,
 } from "./stop-channel.js";
 export {
+  ASK_TIMEOUT_MS,
   callControl,
   closeProcessControlChannel,
   CONTROL_PROTOCOL,

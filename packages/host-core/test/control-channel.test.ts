@@ -481,6 +481,175 @@ describe("requests at the same time", () => {
   });
 });
 
+describe("asking the caller", () => {
+  it("reaches a caller while its request runs, and its answer comes back", async () => {
+    const channel = await open();
+    channel.handle("sum", async (params, call) => {
+      const a = (await call.ask("number", "a")) as number;
+      const b = (await call.ask("number", "b")) as number;
+      return a + b + (params as number);
+    });
+    const seen: unknown[] = [];
+    const result = await callControl(channel.record, "sum", 1, {
+      asks: ["number"],
+      onAsk: (kind, payload) => {
+        seen.push([kind, payload]);
+        return payload === "a" ? 10 : 20;
+      },
+    });
+    expect(result).toBe(31);
+    expect(seen).toEqual([
+      ["number", "a"],
+      ["number", "b"],
+    ]);
+  });
+
+  it("tells the handler which kinds the caller answers", async () => {
+    const channel = await open();
+    channel.handle("kinds", (_params, call) => [...call.asks]);
+    expect(
+      await callControl(channel.record, "kinds", undefined, {
+        asks: ["a", "b"],
+        onAsk: () => null,
+      }),
+    ).toEqual(["a", "b"]);
+    expect(await callControl(channel.record, "kinds")).toEqual([]);
+  });
+
+  it("refuses a kind the caller did not list, without asking", async () => {
+    const channel = await open();
+    channel.handle("odd", async (_params, call) => {
+      try {
+        await call.ask("other");
+        return "asked";
+      } catch (error) {
+        return (error as ControlError).code;
+      }
+    });
+    let asked = 0;
+    const result = await callControl(channel.record, "odd", undefined, {
+      asks: ["number"],
+      onAsk: () => ++asked,
+    });
+    expect(result).toBe("unsupported");
+    expect(asked).toBe(0);
+  });
+
+  it("hands the handler the caller's refusal, with its code", async () => {
+    const channel = await open();
+    channel.handle("try", async (_params, call) => {
+      try {
+        return await call.ask("secret");
+      } catch (error) {
+        const { code: refused, message } = error as ControlError;
+        return { refused, message };
+      }
+    });
+    const result = await callControl(channel.record, "try", undefined, {
+      asks: ["secret"],
+      onAsk: () => {
+        throw Object.assign(new Error("not telling"), { code: "refused" });
+      },
+    });
+    expect(result).toEqual({ refused: "refused", message: "not telling" });
+  });
+
+  it("drops an answer with a wrong token or to no open ask", async () => {
+    const channel = await open();
+    let release = (_value: unknown) => {};
+    channel.handle("hold", async (_params, call) => {
+      const answer = call.ask("value");
+      release(undefined);
+      return answer;
+    });
+    const base = { protocol: CONTROL_PROTOCOL, id: 1 };
+    const socket = net.connect(channel.record.address);
+    let text = "";
+    socket.setEncoding("utf8");
+    socket.on("data", (chunk: string) => (text += chunk));
+    await new Promise((resolve) => socket.once("connect", resolve));
+    const asked = new Promise((resolve) => (release = resolve));
+    socket.write(
+      `${JSON.stringify({ ...base, token: channel.record.token, method: "hold", asks: ["value"] })}\n`,
+    );
+    await asked;
+    await until(() => text.includes('"ask"'));
+    socket.write(
+      `${JSON.stringify({ ...base, token: channel.record.token, answer: { seq: 99, ok: true, result: "stray" } })}\n`,
+    );
+    socket.write(
+      `${JSON.stringify({ ...base, token: "guess", answer: { seq: 1, ok: true, result: "forged" } })}\n`,
+    );
+    await until(() => text.includes('"unauthorized"'));
+    socket.destroy();
+    expect(text).not.toContain('"result":"stray"');
+    expect(text).not.toContain('"result":"forged"');
+  });
+
+  it("is cancelled with the request, at the caller as well", async () => {
+    const channel = await open();
+    let handlerSaw: string | undefined;
+    channel.handle("long", async (_params, call) => {
+      try {
+        return await call.ask("slow");
+      } catch (error) {
+        handlerSaw = (error as ControlError).code;
+        throw error;
+      }
+    });
+    const controller = new AbortController();
+    let callerAborted = false;
+    const call = code(
+      callControl(channel.record, "long", undefined, {
+        signal: controller.signal,
+        asks: ["slow"],
+        onAsk: (_kind, _payload, signal) =>
+          new Promise((_resolve, reject) => {
+            signal.addEventListener("abort", () => {
+              callerAborted = true;
+              reject(new Error("stopped"));
+            });
+            controller.abort();
+          }),
+      }),
+    );
+    expect(await call).toBe("cancelled");
+    await until(() => handlerSaw === "cancelled" && callerAborted);
+  });
+
+  it("times out when the caller does not answer", async () => {
+    const channel = await open();
+    channel.handle("wait", async (_params, call) => {
+      try {
+        return await call.ask("never", undefined, { timeoutMs: 50 });
+      } catch (error) {
+        return (error as ControlError).code;
+      }
+    });
+    const result = await callControl(channel.record, "wait", undefined, {
+      asks: ["never"],
+      onAsk: () => new Promise(() => undefined),
+    });
+    expect(result).toBe("timeout");
+  });
+
+  it("refuses an ask too large for one line", async () => {
+    const channel = await open();
+    channel.handle("big", async (_params, call) => {
+      try {
+        return await call.ask("echo", "x".repeat(MAX_LINE_BYTES));
+      } catch (error) {
+        return (error as ControlError).code;
+      }
+    });
+    const result = await callControl(channel.record, "big", undefined, {
+      asks: ["echo"],
+      onAsk: (_kind, payload) => payload,
+    });
+    expect(result).toBe("bad-request");
+  });
+});
+
 describe("the bounds of a request", () => {
   it("drops a caller that sends no request in time", async () => {
     const channel = await open({ handshakeTimeoutMs: 100 });

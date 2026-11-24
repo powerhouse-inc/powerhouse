@@ -30,11 +30,22 @@ import type { RunRecord } from "./run-record-schema.js";
  * `{ id, stream: "stdout" | "stderr", data }`, in the order it was written.
  * `{ protocol, id, token, cancel: true }` cancels the request `id` of the
  * same connection, and so does the end of the connection.
+ *
+ * A caller that can answer questions while its request runs lists their
+ * kinds in the request, `asks: [kind, ...]`. The handler may then ask one:
+ * `{ id, ask: { seq, kind, payload } }`, and the caller answers on the same
+ * connection with `{ protocol, id, token, answer: { seq, ok: true, result } }`
+ * or `{ ..., answer: { seq, ok: false, error: { code, message } } }`. An
+ * answer is taken at once, not behind the request it answers.
  */
 
-/** 2: output frames and `cancel`. A caller and a process of different
- * protocols refuse each other, each naming both. */
+/** 2: output frames, `cancel`, and asks for the kinds a request lists. A
+ * caller and a process of different protocols refuse each other, each naming
+ * both. */
 export const CONTROL_PROTOCOL = 2;
+
+/** How long an ask waits for its answer unless told otherwise. */
+export const ASK_TIMEOUT_MS = 10 * 60_000;
 
 /** A run record's `extra.control`. */
 export const controlRecordSchema = z.object({
@@ -51,7 +62,33 @@ export type ControlErrorCode =
   | "unknown-method"
   | "failed"
   | "cancelled"
-  | "unreachable";
+  | "unreachable"
+  /** The caller does not answer asks of this kind. */
+  | "unsupported"
+  /** The caller would not answer: what it said is the message. */
+  | "refused"
+  /** The caller did not answer in time. */
+  | "timeout";
+
+const ERROR_CODES: ReadonlySet<string> = new Set<ControlErrorCode>([
+  "unauthorized",
+  "protocol",
+  "bad-request",
+  "unknown-method",
+  "failed",
+  "cancelled",
+  "unreachable",
+  "unsupported",
+  "refused",
+  "timeout",
+]);
+
+/** `code` when it is one of ours, else `failed`. */
+function errorCodeOf(code: unknown): ControlErrorCode {
+  return typeof code === "string" && ERROR_CODES.has(code)
+    ? (code as ControlErrorCode)
+    : "failed";
+}
 
 export class ControlError extends Error {
   constructor(
@@ -72,6 +109,31 @@ export interface ControlCall {
   /** Sends output to the caller now. Nothing is sent once the request is
    * cancelled. */
   write(stream: ControlStream, data: string): void;
+  /** The kinds of ask the caller answers (its request's `asks`). */
+  readonly asks: ReadonlySet<string>;
+  /**
+   * Asks the caller and resolves with its answer. Rejects with a
+   * {@link ControlError}: `unsupported` for a kind the caller did not list,
+   * the code the caller refused with, `cancelled` when the request ends
+   * first, `timeout` after `timeoutMs` (default {@link ASK_TIMEOUT_MS}).
+   */
+  ask(
+    kind: string,
+    payload?: unknown,
+    options?: { timeoutMs?: number },
+  ): Promise<unknown>;
+}
+
+/** A question a handler asked and the caller has not answered yet. */
+interface PendingAsk {
+  resolve(result: unknown): void;
+  reject(error: ControlError): void;
+}
+
+/** A request of a connection that has not ended. */
+interface RunningRequest {
+  controller: AbortController;
+  asks: Map<number, PendingAsk>;
 }
 
 export type ControlHandler = (params: unknown, call: ControlCall) => unknown;
@@ -331,7 +393,7 @@ export async function openControlChannel(
   const server = net.createServer((socket) => {
     sockets.add(socket);
     // The requests of this connection that have not ended, by id.
-    const running = new Map<unknown, AbortController>();
+    const running = new Map<unknown, RunningRequest>();
     // A caller that sends nothing holds a connection for this long.
     let handshake: NodeJS.Timeout | undefined = setTimeout(
       () => socket.destroy(),
@@ -341,7 +403,7 @@ export async function openControlChannel(
     socket.once("close", () => {
       sockets.delete(socket);
       clearTimeout(handshake);
-      for (const controller of running.values()) controller.abort();
+      for (const { controller } of running.values()) controller.abort();
     });
     socket.on("error", () => undefined);
     socket.setEncoding("utf8");
@@ -370,11 +432,18 @@ export async function openControlChannel(
       const { id } = request;
       // Not behind the request it cancels.
       if (request.cancel === true) {
-        running.get(id)?.abort();
+        running.get(id)?.controller.abort();
+        return;
+      }
+      // Nor behind the request it answers: that one waits for it.
+      if ("answer" in request) {
+        settleAsk(running.get(id), request.answer);
         return;
       }
       const controller = new AbortController();
-      running.set(id, controller);
+      const asks = new Map<number, PendingAsk>();
+      running.set(id, { controller, asks });
+      let seq = 0;
       const call: ControlCall = {
         signal: controller.signal,
         write: (stream, data) => {
@@ -383,12 +452,24 @@ export async function openControlChannel(
             send({ id, stream, data: data.slice(at, at + MAX_FRAME_CHARS) });
           }
         },
+        asks: asksOf(request),
+        ask: (kind, payload, askOptions = {}) =>
+          askCaller(
+            { id, kind, payload, seq: ++seq, asks, call, send },
+            askOptions.timeoutMs ?? ASK_TIMEOUT_MS,
+          ),
       };
       queue = queue.then(async () => {
         const response = controller.signal.aborted
           ? refusal(id, "cancelled", "The request was cancelled.")
           : await answer(request, call);
         running.delete(id);
+        for (const pending of asks.values()) {
+          pending.reject(
+            new ControlError("cancelled", "The request ended first."),
+          );
+        }
+        asks.clear();
         send(response);
       });
     };
@@ -475,6 +556,114 @@ function refusal(
   return { id, ok: false, error: { code, message } };
 }
 
+/** The kinds of ask a request says its caller answers. */
+function asksOf(request: Record<string, unknown>): ReadonlySet<string> {
+  const { asks } = request;
+  return new Set(
+    Array.isArray(asks)
+      ? asks.filter((kind): kind is string => typeof kind === "string")
+      : [],
+  );
+}
+
+/** Settles the ask an answer line names; one that names none is dropped. */
+function settleAsk(request: RunningRequest | undefined, answer: unknown): void {
+  if (!request || typeof answer !== "object" || answer === null) return;
+  const { seq, ok, result, error } = answer as {
+    seq?: unknown;
+    ok?: unknown;
+    result?: unknown;
+    error?: { code?: unknown; message?: unknown };
+  };
+  if (typeof seq !== "number") return;
+  const pending = request.asks.get(seq);
+  if (!pending) return;
+  request.asks.delete(seq);
+  if (ok === true) {
+    pending.resolve(result);
+    return;
+  }
+  pending.reject(
+    new ControlError(
+      errorCodeOf(error?.code),
+      typeof error?.message === "string"
+        ? error.message
+        : "The caller did not answer.",
+    ),
+  );
+}
+
+/** Sends one ask to the caller and waits for its answer. */
+function askCaller(
+  o: {
+    id: unknown;
+    kind: string;
+    payload: unknown;
+    seq: number;
+    asks: Map<number, PendingAsk>;
+    call: ControlCall;
+    send: (value: Record<string, unknown>) => void;
+  },
+  timeoutMs: number,
+): Promise<unknown> {
+  const { id, kind, seq, asks, call } = o;
+  if (!call.asks.has(kind)) {
+    return Promise.reject(
+      new ControlError(
+        "unsupported",
+        `The caller does not answer "${kind}": it runs another version.`,
+      ),
+    );
+  }
+  if (call.signal.aborted) {
+    return Promise.reject(
+      new ControlError("cancelled", "The request was cancelled."),
+    );
+  }
+  const frame = { id, ask: { seq, kind, payload: o.payload ?? null } };
+  if (Buffer.byteLength(JSON.stringify(frame)) > MAX_LINE_BYTES - 1024) {
+    return Promise.reject(
+      new ControlError(
+        "bad-request",
+        `"${kind}" is too large to ask the caller (${Math.floor(MAX_LINE_BYTES / 1024)} KiB at most).`,
+      ),
+    );
+  }
+  return new Promise((resolve, reject) => {
+    const done = () => {
+      clearTimeout(timer);
+      call.signal.removeEventListener("abort", cancelled);
+      asks.delete(seq);
+    };
+    const cancelled = () => {
+      done();
+      reject(new ControlError("cancelled", "The request was cancelled."));
+    };
+    const timer = setTimeout(() => {
+      done();
+      reject(
+        new ControlError(
+          "timeout",
+          `The caller did not answer "${kind}" within ${Math.round(timeoutMs / 1000)} s.`,
+        ),
+      );
+    }, timeoutMs);
+    timer.unref();
+    call.signal.addEventListener("abort", cancelled, { once: true });
+    asks.set(seq, {
+      resolve: (result) => {
+        done();
+        resolve(result);
+      },
+      reject: (error) => {
+        done();
+        reject(error);
+      },
+    });
+    o.send(frame);
+  });
+}
+
 // One channel per process, whichever copy of this module asks: a compound
 // and the Cli in front of it may each have loaded their own.
 const SLOT = Symbol.for("@powerhousedao/host-core/control-channel");
@@ -527,6 +716,15 @@ export interface CallControlOptions {
   onOutput?: (stream: ControlStream, data: string) => void;
   /** Cancels the request there; the call then rejects with `cancelled`. */
   signal?: AbortSignal;
+  /**
+   * Answers what the other process asks while it works on the request, for
+   * the kinds in `asks`. Its result is the answer; what it throws is a
+   * refusal, with the error's `code` when that is a {@link ControlErrorCode}.
+   * `signal` aborts when the request ends.
+   */
+  onAsk?: (kind: string, payload: unknown, signal: AbortSignal) => unknown;
+  /** The kinds `onAsk` answers; sent with the request. */
+  asks?: readonly string[];
 }
 
 const CONNECT_TIMEOUT_MS = 2_000;
@@ -586,8 +784,47 @@ export function callControl(
       settled = true;
       for (const timer of timers) clearTimeout(timer);
       signal?.removeEventListener("abort", cancel);
+      asking.abort();
       socket.destroy();
       finish();
+    };
+    // What answers the other process's asks stops when the request ends.
+    const asking = new AbortController();
+    signal?.addEventListener("abort", () => asking.abort(), { once: true });
+    const answerAsk = async (ask: {
+      seq?: unknown;
+      kind?: unknown;
+      payload?: unknown;
+    }) => {
+      const reply = (answer: Record<string, unknown>) => {
+        if (settled || socket.destroyed) return;
+        socket.write(
+          `${JSON.stringify({ ...request, answer: { seq: ask.seq, ...answer } })}\n`,
+        );
+      };
+      const kind = typeof ask.kind === "string" ? ask.kind : "";
+      if (!options.onAsk || !options.asks?.includes(kind)) {
+        reply({
+          ok: false,
+          error: {
+            code: "unsupported",
+            message: `This process does not answer "${kind}".`,
+          },
+        });
+        return;
+      }
+      try {
+        const result = await options.onAsk(kind, ask.payload, asking.signal);
+        reply({ ok: true, result: result ?? null });
+      } catch (error) {
+        reply({
+          ok: false,
+          error: {
+            code: errorCodeOf((error as { code?: unknown } | null)?.code),
+            message: error instanceof Error ? error.message : String(error),
+          },
+        });
+      }
     };
     signal?.addEventListener("abort", cancel, { once: true });
     const unreachable = (why: string) =>
@@ -617,6 +854,9 @@ export function callControl(
           ...request,
           method,
           ...(params === undefined ? {} : { params }),
+          ...(options.onAsk && options.asks?.length
+            ? { asks: options.asks }
+            : {}),
         })}\n`,
       );
     });
@@ -626,6 +866,7 @@ export function callControl(
         result?: unknown;
         stream?: unknown;
         data?: unknown;
+        ask?: { seq?: unknown; kind?: unknown; payload?: unknown };
         error?: { code?: ControlErrorCode; message?: string };
       };
       try {
@@ -638,6 +879,10 @@ export function callControl(
         if (typeof frame.data === "string") {
           options.onOutput?.(frame.stream, frame.data);
         }
+        return;
+      }
+      if (typeof frame.ask === "object" && frame.ask !== null) {
+        void answerAsk(frame.ask);
         return;
       }
       if (frame.ok === true) {
