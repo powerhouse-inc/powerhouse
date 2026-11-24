@@ -1778,8 +1778,8 @@ importers:
         specifier: 'catalog:'
         version: 0.3.15
       '@playwright/test':
-        specifier: 1.64.1
-        version: 1.64.1
+        specifier: npm:flashwright-test@1.64.1-flashwright.11
+        version: flashwright-test@1.64.1-flashwright.11
       '@renown/sdk':
         specifier: workspace:*
         version: link:../renown
@@ -3747,8 +3747,8 @@ importers:
         specifier: 'catalog:'
         version: 3.0.15(zod@4.6.5)
       '@playwright/test':
-        specifier: 1.64.1
-        version: 1.64.1
+        specifier: npm:flashwright-test@1.64.1-flashwright.11
+        version: flashwright-test@1.64.1-flashwright.11
       '@powerhousedao/coverage-baseline':
         specifier: workspace:*
         version: link:../../tools/coverage-baseline
@@ -4038,8 +4038,8 @@ importers:
   test/e2e-utils:
     devDependencies:
       '@playwright/test':
-        specifier: 1.64.1
-        version: 1.64.1
+        specifier: npm:flashwright-test@1.64.1-flashwright.11
+        version: flashwright-test@1.64.1-flashwright.11
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -4069,8 +4069,8 @@ importers:
   test/package-e2e:
     devDependencies:
       '@playwright/test':
-        specifier: 1.64.1
-        version: 1.64.1
+        specifier: npm:flashwright-test@1.64.1-flashwright.11
+        version: flashwright-test@1.64.1-flashwright.11
       '@powerhousedao/coverage-baseline':
         specifier: workspace:*
         version: link:../../tools/coverage-baseline
@@ -4358,7 +4358,7 @@ importers:
         version: link:../../packages/document-model
       next:
         specifier: 16.2.10
-        version: 16.2.10(@babel/core@8.0.5)(@opentelemetry/api@1.9.1)(@playwright/test@1.64.1)(babel-plugin-macros@3.1.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        version: 16.2.10(@babel/core@8.0.5)(@opentelemetry/api@1.9.1)(babel-plugin-macros@3.1.0)(babel-plugin-react-compiler@1.0.0)(flashwright-test@1.64.1-flashwright.11)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       react:
         specifier: 'catalog:'
         version: 19.2.6
@@ -4373,8 +4373,8 @@ importers:
         version: 2.19.5(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(bufferutil@4.1.0)(debug@4.4.3(supports-color@8.1.1))(encoding@0.1.13)(react@19.2.6)(supports-color@8.1.1)(typescript@7.0.2)(utf-8-validate@5.0.10)(viem@2.52.0(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@5.0.10)(zod@3.25.76))(zod@3.25.76)
     devDependencies:
       '@playwright/test':
-        specifier: 1.64.1
-        version: 1.64.1
+        specifier: npm:flashwright-test@1.64.1-flashwright.11
+        version: flashwright-test@1.64.1-flashwright.11
       '@powerhousedao/coverage-baseline':
         specifier: workspace:*
         version: link:../../tools/coverage-baseline
@@ -4595,8 +4595,8 @@ importers:
         specifier: 'catalog:'
         version: 0.2.20(@electric-sql/pglite@0.3.15)
       '@playwright/test':
-        specifier: 1.64.1
-        version: 1.64.1
+        specifier: npm:flashwright-test@1.64.1-flashwright.11
+        version: flashwright-test@1.64.1-flashwright.11
       '@powerhousedao/clint':
         specifier: workspace:*
         version: link:../../packages/clint
@@ -4682,8 +4682,8 @@ importers:
   tools/coverage-baseline:
     dependencies:
       '@playwright/test':
-        specifier: 1.64.1
-        version: 1.64.1
+        specifier: npm:flashwright-test@1.64.1-flashwright.11
+        version: flashwright-test@1.64.1-flashwright.11
       chrome-remote-interface:
         specifier: 0.34.0
         version: 0.34.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -9239,11 +9239,6 @@ packages:
   '@pkgr/core@0.2.9':
     resolution: {integrity: sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
-
-  '@playwright/test@1.64.1':
-    resolution: {integrity: sha512-IaYGml/nSOiZWROfPtuIL7neuu9qDOZ3TNvNljUIrhDMxiGTgPjzj/g9p9RxpS2tSepPDRY+UwAaEeiKtUvIAg==}
-    engines: {node: '>=20'}
-    hasBin: true
 
   '@pnpm/constants@1001.3.1':
     resolution: {integrity: sha512-2hf0s4pVrVEH8RvdJJ7YRKjQdiG8m0iAT26TTqXnCbK30kKwJW69VLmP5tED5zstmDRXcOeH5eRcrpkdwczQ9g==}
@@ -15489,6 +15484,21 @@ packages:
 
   find-workspaces@0.3.1:
     resolution: {integrity: sha512-UDkGILGJSA1LN5Aa7McxCid4sqW3/e+UYsVwyxki3dDT0F8+ym0rAfnCkEfkL0rO7M+8/mvkim4t/s3IPHmg+w==}
+
+  flashwright-core@1.64.1-flashwright.11:
+    resolution: {integrity: sha512-oEHfoePRsWuQwigV28YFlRzxr56loY/aKf6mmwF4Dh1iuDDXxomxFDeKELsQNmUXhHL53qhH706qUaJHhgBCXA==}
+    engines: {node: '>=22.18.0'}
+    hasBin: true
+
+  flashwright-test@1.64.1-flashwright.11:
+    resolution: {integrity: sha512-Dn27ZtDNevcd/zNddwgNtupHXLg3l1DwLweTJQNuvgVCp4MPbi2n4hQfibwn9s5oVQ9AtWPhaV2b+TFVZQU/7g==}
+    engines: {node: '>=22.18.0'}
+    hasBin: true
+
+  flashwright@1.64.1-flashwright.11:
+    resolution: {integrity: sha512-FhlACTTfaWm4s5eCDgFgeT0ZWf4CCErl51LLcGurGu6z+CdJlpOS2Ng17R+cw60Y+GfMzegK9qZTMmj8l6AUyg==}
+    engines: {node: '>=22.18.0'}
+    hasBin: true
 
   flat-cache@4.0.1:
     resolution: {integrity: sha512-f7ccFPK3SXFHpx15UIGyRJ/FJQctuKZ0zVuN3frBo4HnK3cay9VEW0R6yPYFHC0AgqhukPzKjq22t5DmAyqGyw==}
@@ -28037,10 +28047,6 @@ snapshots:
 
   '@pkgr/core@0.2.9': {}
 
-  '@playwright/test@1.64.1':
-    dependencies:
-      playwright: 1.64.1
-
   '@pnpm/constants@1001.3.1': {}
 
   '@pnpm/error@1000.1.0':
@@ -38116,6 +38122,16 @@ snapshots:
       pkg-types: 1.3.1
       yaml: 2.9.0
 
+  flashwright-core@1.64.1-flashwright.11: {}
+
+  flashwright-test@1.64.1-flashwright.11:
+    dependencies:
+      playwright: flashwright@1.64.1-flashwright.11
+
+  flashwright@1.64.1-flashwright.11:
+    dependencies:
+      playwright-core: flashwright-core@1.64.1-flashwright.11
+
   flat-cache@4.0.1:
     dependencies:
       flatted: 3.4.2
@@ -41231,7 +41247,7 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  next@16.2.10(@babel/core@8.0.5)(@opentelemetry/api@1.9.1)(@playwright/test@1.64.1)(babel-plugin-macros@3.1.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
+  next@16.2.10(@babel/core@8.0.5)(@opentelemetry/api@1.9.1)(babel-plugin-macros@3.1.0)(babel-plugin-react-compiler@1.0.0)(flashwright-test@1.64.1-flashwright.11)(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
     dependencies:
       '@next/env': 16.2.10
       '@swc/helpers': 0.5.15
@@ -41251,7 +41267,7 @@ snapshots:
       '@next/swc-win32-arm64-msvc': 16.2.10
       '@next/swc-win32-x64-msvc': 16.2.10
       '@opentelemetry/api': 1.9.1
-      '@playwright/test': 1.64.1
+      '@playwright/test': flashwright-test@1.64.1-flashwright.11
       babel-plugin-react-compiler: 1.0.0
       sharp: 0.34.5
     transitivePeerDependencies:
