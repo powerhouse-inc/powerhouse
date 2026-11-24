@@ -236,7 +236,9 @@ export function createLocalSignInIssuer(o: {
   async function pageOf(
     bearer: string,
   ): Promise<{ sessionDid: string } | LocalSignInRefusal> {
-    const verified = await verifyAuthBearerToken(bearer).catch(() => false);
+    const verified = await verifyAuthBearerToken(bearer).catch(
+      () => false as const,
+    );
     if (!verified) return refuse(401, "bad-bearer");
     // The bearer's signer: the page's session key.
     const { issuer } = verified as { issuer?: unknown };
