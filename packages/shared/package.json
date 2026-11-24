@@ -127,6 +127,10 @@
       "source": "./clis/sessions.ts",
       "import": "./dist/clis/sessions.mjs"
     },
+    "./clis/local-sign-in": {
+      "source": "./clis/local-sign-in.ts",
+      "import": "./dist/clis/local-sign-in.mjs"
+    },
     "./clis/real-paths": {
       "source": "./clis/real-paths.ts",
       "import": "./dist/clis/real-paths.mjs"

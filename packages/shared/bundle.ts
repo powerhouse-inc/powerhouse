@@ -93,6 +93,7 @@ await build({
     "clis/identity.ts",
     "clis/credential-records.ts",
     "clis/sessions.ts",
+    "clis/local-sign-in.ts",
     "clis/real-paths.ts",
     "clis/utils.ts",
     "clis/command-names.ts",
