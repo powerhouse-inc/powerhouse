@@ -209,7 +209,7 @@ test("a generated document model shows with its state and operations", async ({
     "lines: [String!]!",
   );
   await expect(state.getByTestId("ph-state-initial")).toContainText(
-    '"lines":[]',
+    '"lines": []',
   );
   await state
     .locator('[data-testid="ph-state-tab"][data-scope="local"]')
