@@ -16,9 +16,13 @@ export function coreSubgraphClasses(options: {
   inspection: boolean;
   inspectionAdmin: boolean;
   documentPermissions: boolean;
+  /** `false` leaves `/graphql/system` unmounted; on by default. */
+  systemInfo?: boolean;
 }): SubgraphClass[] {
   return [
-    ...DefaultCoreSubgraphs,
+    ...DefaultCoreSubgraphs.filter(
+      (Subgraph) => options.systemInfo !== false || Subgraph !== SystemSubgraph,
+    ),
     ReactorSubgraph,
     ...(options.inspection ? [InspectionSubgraph] : []),
     ...(options.inspection && options.inspectionAdmin
