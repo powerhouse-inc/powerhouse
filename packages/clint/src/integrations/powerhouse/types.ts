@@ -471,7 +471,9 @@ export type RemoteReactorSource<R extends DocumentRegistry = AnyRegistry> =
  * signs and reduces with, the drives to find or create there, the changes
  * to bridge to the event bus, and who it writes as. No drive: the drive the
  * address names. No signer: writes go out unsigned and the switchboard signs
- * them with its own key.
+ * them with its own key. While a forwarded command runs, its writes are
+ * signed by its caller instead, whose bearer its requests carry (see
+ * `Cli.configureIdentity`).
  */
 export interface RemoteReactorConfig<R extends DocumentRegistry = AnyRegistry> {
   /** Any model module fits, as for the reactor and its clients. */

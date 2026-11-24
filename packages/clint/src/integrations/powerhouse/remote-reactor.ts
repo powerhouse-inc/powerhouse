@@ -45,10 +45,11 @@ export interface AttachRemoteReactorOptions {
   /**
    * Signs the actions the client pushes. A function is called per push (see
    * `createReactorWrites`, whose `signer` refuses while the identity has no
-   * user). Omitted, the client falls back to the ambient Renown signer, which
-   * does not exist in Node: actions then go out unsigned.
+   * user), and may resolve asynchronously (a forwarded command's caller).
+   * Omitted, the client falls back to the ambient Renown signer, which does
+   * not exist in Node: actions then go out unsigned.
    */
-  signer?: ISigner | (() => ISigner | undefined);
+  signer?: ISigner | (() => ISigner | undefined | Promise<ISigner | undefined>);
   /** Reachability probe budget. */
   timeoutMs?: number;
 }

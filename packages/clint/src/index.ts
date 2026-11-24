@@ -42,14 +42,34 @@ export {
   callerIdentityOf,
   COMMAND_METHOD,
   commandRequestSchema,
+  commandStoreSchema,
   CommandTooLarge,
   sendCommand,
   serveCommands,
 } from "./core/command-control.js";
 export type {
   CommandRequest,
+  CommandStore,
   ForwardedCommand,
 } from "./core/command-control.js";
+export {
+  asOwnSigner,
+  bearerForRequest,
+  callerSigningOf,
+  COMMAND_SIGNING,
+  CommandEndedError,
+  forwardedSigner,
+  SIGNING_ASKS,
+  signerForWrite,
+  withCallerSigning,
+} from "./core/forwarded-signing.js";
+export type {
+  CallerAsks,
+  CallerSigning,
+  SignerIdentity,
+} from "./core/forwarded-signing.js";
+export { callerAnswers } from "./core/caller-signing.js";
+export type { CallerAnswers } from "./core/caller-signing.js";
 export { scanProjects, PROJECT_INDICATORS } from "./core/project-scanner.js";
 export { getProjectMapping } from "./core/project-mapping.js";
 export type { ProjectMapping } from "./core/project-mapping.js";
@@ -160,6 +180,8 @@ export type {
   CommandNeeds,
   CommandCaller,
   CallerIdentity,
+  CallerSession,
+  IdentityConfiguration,
   CoreContext,
   PromptConfig,
   InteractiveConfig,

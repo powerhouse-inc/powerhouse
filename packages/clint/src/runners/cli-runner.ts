@@ -20,8 +20,10 @@ import {
   type RunnerArgsSchema,
   type RunnerContext,
 } from "@powerhousedao/host-core";
+import { instanceDataDir } from "@powerhousedao/host-core/instance";
 import { defineHostSchemas } from "@powerhousedao/host-core/schema";
 import { z } from "zod";
+import { commandStoreOf } from "../core/command-control.js";
 import type {
   Cli,
   RunOptions,
@@ -347,6 +349,14 @@ export async function runCli(
         : {}),
       ...(options.serveCommand ? { serveCommand: options.serveCommand } : {}),
       ...(options.forward ? { forward: options.forward } : {}),
+      ...(url
+        ? {
+            store: commandStoreOf(
+              url,
+              instanceDataDir(options.workdir ?? process.cwd()),
+            ),
+          }
+        : {}),
     });
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));

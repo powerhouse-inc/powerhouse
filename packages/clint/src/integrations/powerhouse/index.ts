@@ -66,6 +66,10 @@ export {
 } from "./attachment.js";
 
 import type { IReactorClient } from "@powerhousedao/reactor";
+import {
+  bearerForRequest,
+  signerForWrite,
+} from "../../core/forwarded-signing.js";
 import { ensureDrive } from "./drive.js";
 import { bridgeSubscriptions } from "./subscriptions.js";
 import { createReactorWrites } from "./writes.js";
@@ -181,15 +185,17 @@ export async function attachDefaultReactor<
     ...(ctx.emit ? { emit: ctx.emit } : {}),
   });
 
+  // A forwarded command's writes are signed by its caller and its requests
+  // carry the caller's bearer; everything else is this Cli's own.
+  const ownSigner = handle.signer;
+  const ownToken = options.tokenProvider;
   let attachment: Awaited<ReturnType<typeof attachRemoteReactor>>;
   try {
     attachment = await attachRemoteReactor({
       url: options.url,
       documentModels: options.documentModels ?? [],
-      ...(handle.signer ? { signer: handle.signer } : {}),
-      ...(options.tokenProvider
-        ? { tokenProvider: options.tokenProvider }
-        : {}),
+      signer: () => signerForWrite(ownSigner),
+      tokenProvider: () => bearerForRequest(ownToken),
     });
   } catch (error) {
     handle.stop();

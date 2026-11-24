@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { StringDecoder } from "node:string_decoder";
 import { formatWithOptions } from "node:util";
+import { asOwnSigner } from "./forwarded-signing.js";
 
 /**
  * What a command writes straight to the process (`console.log`,
@@ -168,9 +169,12 @@ export function captureOutput<T>(
 
 /**
  * Runs `fn` as the instance itself, whatever command called: what it writes
- * goes where the instance writes. For the instance's own reactions to what a
- * command does (its listeners on the event bus).
+ * goes where the instance writes, and what it writes to the reactor the
+ * instance signs. For the instance's own reactions to what a command does
+ * (its listeners on the event bus).
  */
 export function asInstance<T>(fn: () => T): T {
-  return scopes.getStore() ? scopes.run(undefined, fn) : fn();
+  return scopes.getStore()
+    ? scopes.run(undefined, () => asOwnSigner(fn))
+    : asOwnSigner(fn);
 }

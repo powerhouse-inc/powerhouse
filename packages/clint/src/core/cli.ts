@@ -10,6 +10,7 @@ import type {
   Command,
   CommandContext,
   ConfigEnvVar,
+  IdentityConfiguration,
   Resolvable,
   ResolvedInteractiveConfig,
   Routine,
@@ -45,6 +46,7 @@ import {
 import {
   COMMAND_METHOD,
   CommandTooLarge,
+  commandStoreSchema,
   describeCaller,
   readPipedStdin,
   sendCommand,
@@ -53,6 +55,13 @@ import {
   type ForwardedCommand,
 } from "./command-control.js";
 import { captureOutput } from "./forwarded-output.js";
+import {
+  asOwnSigner,
+  callerSigningOf,
+  COMMAND_SIGNING,
+  withCallerSigning,
+} from "./forwarded-signing.js";
+import { callerAnswers } from "./caller-signing.js";
 import {
   instanceDataDir,
   instanceServicesDir,
@@ -110,6 +119,7 @@ interface ResolvedRunOptions {
   remoteServices?: RunOptions["remoteServices"];
   serveCommand?: RunOptions["serveCommand"];
   forward?: RunOptions["forward"];
+  store?: RunOptions["store"];
 }
 
 /**
@@ -332,6 +342,13 @@ export function defineCli<
 
   function configureAgent(loader: AgentLoader<any>): void {
     agentLoader = loader;
+  }
+
+  // How the command line signs as the person — set via configureIdentity()
+  let identityConfig: IdentityConfiguration | undefined;
+
+  function configureIdentity(config: IdentityConfiguration): void {
+    identityConfig = config;
   }
 
   // Mutable reactor configuration — set via configureReactor()
@@ -1195,6 +1212,7 @@ export function defineCli<
       remoteServices: runOptions?.remoteServices,
       serveCommand: runOptions?.serveCommand,
       forward: runOptions?.forward,
+      store: runOptions?.store,
     };
     return runImpl(argv, resolved);
   }
@@ -1504,8 +1522,16 @@ export function defineCli<
         pid: caller.pid,
       });
       // What the command prints straight to the process (console.log,
-      // process.stdout.write) is its caller's too, for as long as it runs.
-      return captureOutput(run, () => executeForwarded(run, line, fail));
+      // process.stdout.write) is its caller's too, for as long as it runs,
+      // and what it writes to the reactor its caller signs.
+      const signing = callerSigningOf({
+        ...(run.request.signer ? { signer: run.request.signer } : {}),
+        asks: run.asks,
+        ask: (kind, payload) => run.ask(kind, payload),
+      });
+      return captureOutput(run, () =>
+        withCallerSigning(signing, () => executeForwarded(run, line, fail)),
+      );
     }
 
     async function executeForwarded(
@@ -1516,13 +1542,16 @@ export function defineCli<
       const { request, caller } = run;
       try {
         if (request.prompt !== undefined) {
+          // The agent's turn is the agent's work: it signs as the instance.
           const answered = await untilAborted(
-            streamPrompt(request.prompt, {
-              raw: run.stdout,
-              line,
-              signal: run.signal,
-              ...(request.resume ? { resume: request.resume } : {}),
-            }),
+            asOwnSigner(() =>
+              streamPrompt(request.prompt!, {
+                raw: run.stdout,
+                line,
+                signal: run.signal,
+                ...(request.resume ? { resume: request.resume } : {}),
+              }),
+            ),
             run.signal,
           );
           if (answered) return 0;
@@ -1576,12 +1605,14 @@ export function defineCli<
         if (isSkillInvocation(result)) {
           await loadTemplates();
           const answered = await untilAborted(
-            streamPrompt(renderSkillPrompt(result), {
-              raw: run.stdout,
-              line,
-              signal: run.signal,
-              ...(request.resume ? { resume: request.resume } : {}),
-            }),
+            asOwnSigner(() =>
+              streamPrompt(renderSkillPrompt(result), {
+                raw: run.stdout,
+                line,
+                signal: run.signal,
+                ...(request.resume ? { resume: request.resume } : {}),
+              }),
+            ),
             run.signal,
           );
           if (answered) return 0;
@@ -1639,10 +1670,15 @@ export function defineCli<
         return 1;
       }
       // Whether it is there and takes commands, before anything is sent.
+      let hello: {
+        methods?: unknown;
+        signing?: unknown;
+        store?: unknown;
+      } | null;
       try {
-        const hello = (await callControl(control, "hello", undefined, {
+        hello = (await callControl(control, "hello", undefined, {
           timeoutMs: 5_000,
-        })) as { methods?: unknown } | null;
+        })) as typeof hello;
         const methods = Array.isArray(hello?.methods) ? hello.methods : [];
         if (!methods.includes(COMMAND_METHOD)) {
           if (!forward.required) return undefined;
@@ -1661,10 +1697,45 @@ export function defineCli<
         }
         return 1;
       }
+      // A command's writes are signed here, as the person, when this Cli
+      // says how; an instance that cannot ask for that is refused.
+      const signs = identityConfig !== undefined && "command" in what;
+      if (signs && hello?.signing !== COMMAND_SIGNING) {
+        stderr(
+          `${name} was not sent: the running ${options.name}${target.pid ? ` (pid ${target.pid})` : ""} is another version and cannot sign as you. Restart it${opts.serveCommand ? ` (\`${opts.serveCommand}\`)` : ""}, then run this again.`,
+        );
+        return 1;
+      }
       const stdin =
         "command" in what && readsStdin(what.command, what.input)
           ? await readPipedStdin()
           : undefined;
+      // Output waits while a password may be asked on this terminal.
+      let held: (() => void)[] | undefined;
+      const hold = (on: boolean) => {
+        if (on) {
+          held ??= [];
+          return;
+        }
+        const waiting = held ?? [];
+        held = undefined;
+        for (const write of waiting) write();
+      };
+      const writeOut = (text: string) =>
+        held ? held.push(() => writeRaw(text)) : writeRaw(text);
+      const writeErr = (text: string) =>
+        held ? held.push(() => opts.writeRawErr(text)) : opts.writeRawErr(text);
+      const store = commandStoreSchema.safeParse(hello?.store);
+      const answers = signs
+        ? callerAnswers({
+            identity: identityConfig!,
+            workdir,
+            dataDir: instanceDataDir(workdir),
+            interactive: stdin === undefined && process.stdin.isTTY === true,
+            ...(store.success ? { store: store.data } : {}),
+            hold,
+          })
+        : undefined;
       const stop = new AbortController();
       const abort = () => stop.abort();
       process.once("SIGINT", abort);
@@ -1686,7 +1757,18 @@ export function defineCli<
             ...(verboseFlag ? { verbose: true } : {}),
             ...(stdin === undefined ? {} : { stdin }),
           },
-          { stdout: writeRaw, stderr: opts.writeRawErr, signal: stop.signal },
+          {
+            stdout: writeOut,
+            stderr: writeErr,
+            signal: stop.signal,
+            ...(answers
+              ? {
+                  asks: answers.asks,
+                  onAsk: (kind: string, payload: unknown) =>
+                    answers.onAsk(kind, payload),
+                }
+              : {}),
+          },
         );
       } catch (err) {
         if (err instanceof ControlError && err.code === "cancelled") return 130;
@@ -1829,6 +1911,7 @@ export function defineCli<
           name: options.name,
           version: options.version,
           workdir,
+          ...(opts.store ? { store: opts.store } : {}),
         };
         if (context.services) serveServices(control, context.services, served);
         serveCommands(control, served, runForwarded);
@@ -1861,6 +1944,7 @@ export function defineCli<
           },
           configureAgent,
           configureReactor,
+          configureIdentity,
           getCommand,
           listCommands,
           execute,
@@ -2212,6 +2296,7 @@ export function defineCli<
     },
     configureAgent,
     configureReactor,
+    configureIdentity,
     getCommand,
     listCommands,
     execute,

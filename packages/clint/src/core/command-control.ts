@@ -1,6 +1,7 @@
 import {
   callControl,
   MAX_LINE_BYTES,
+  type CallControlOptions,
   type ControlCall,
   type ControlChannel,
   type ControlRecord,
@@ -8,6 +9,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { z } from "zod";
+import { COMMAND_SIGNING } from "./forwarded-signing.js";
 import type { CallerIdentity, CommandCaller } from "./types.js";
 
 /**
@@ -48,8 +50,60 @@ export const commandRequestSchema = z.strictObject({
     user: z.string(),
     pid: z.number().int().nonnegative(),
   }),
+  /**
+   * Whom the caller signs the command's actions as, when it knew already;
+   * otherwise the instance asks (`signer`). A claim: the signatures prove
+   * the key, the credential the address.
+   */
+  signer: z
+    .strictObject({
+      user: z.strictObject({
+        address: z.string().min(1),
+        networkId: z.string(),
+        chainId: z.number().int(),
+      }),
+      app: z.strictObject({ name: z.string(), key: z.string().min(1) }),
+    })
+    .optional(),
 });
 export type CommandRequest = z.infer<typeof commandRequestSchema>;
+
+/**
+ * Where a serving instance's writes are checked (its `hello` says): the
+ * switchboard's base URL, and its data folder when the caller may write its
+ * credential's record there.
+ */
+export const commandStoreSchema = z.object({
+  url: z.string().min(1).optional(),
+  dataDir: z.string().min(1).optional(),
+});
+export type CommandStore = z.infer<typeof commandStoreSchema>;
+
+const LOOPBACK = /^(localhost|127(?:\.\d{1,3}){3}|\[::1\]|::1)$/i;
+
+/**
+ * The store a reactor at `reactorUrl` writes to: its base URL (the address up
+ * to `/graphql` or `/d/<drive>`), and `dataDir` when it listens on this
+ * machine, where it is taken to be the project's own switchboard. A record
+ * written in the wrong folder is a public proof that nobody reads.
+ */
+export function commandStoreOf(
+  reactorUrl: string,
+  dataDir: string,
+): CommandStore {
+  let url: URL;
+  try {
+    url = new URL(reactorUrl);
+  } catch {
+    return {};
+  }
+  const cut = url.pathname.search(/\/(graphql|d)(\/|$)/);
+  const base = `${url.origin}${cut === -1 ? url.pathname.replace(/\/$/, "") : url.pathname.slice(0, cut)}`;
+  return {
+    url: base,
+    ...(LOOPBACK.test(url.hostname) ? { dataDir } : {}),
+  };
+}
 
 const resultSchema = z.object({ exitCode: z.number().int() });
 
@@ -62,6 +116,10 @@ export interface ForwardedCommand {
   /** Raw output to the caller's stdout and stderr. */
   stdout(text: string): void;
   stderr(text: string): void;
+  /** What the caller answers while the command runs (`ControlCall.asks`). */
+  asks: ReadonlySet<string>;
+  /** Asks the caller (`ControlCall.ask`). */
+  ask(kind: string, payload?: unknown): Promise<unknown>;
 }
 
 const sameFolder = (a: string, b: string) => {
@@ -72,14 +130,21 @@ const sameFolder = (a: string, b: string) => {
 };
 
 /**
- * Who a forwarded command acts as. The one place a caller's identity is
- * attached: today a request carries none and the command runs with the
- * instance's identity and permissions.
+ * Who a forwarded command acts as, as its request names it: the address and
+ * session it signs with. Undefined when the request names none (the caller
+ * is asked at the first write, or cannot sign).
  */
 export function callerIdentityOf(
-  _request: CommandRequest,
+  request: CommandRequest,
 ): CallerIdentity | undefined {
-  return undefined;
+  const { signer } = request;
+  return signer
+    ? {
+        address: signer.user.address,
+        label: signer.app.name,
+        key: signer.app.key,
+      }
+    : undefined;
 }
 
 function callerOf(request: CommandRequest): CommandCaller {
@@ -102,10 +167,15 @@ function callerOf(request: CommandRequest): CommandCaller {
  */
 export function serveCommands(
   channel: ControlChannel,
-  cli: { name: string; version: string; workdir: string },
+  cli: { name: string; version: string; workdir: string; store?: CommandStore },
   run: (command: ForwardedCommand) => Promise<number>,
 ): void {
-  channel.describe({ cli: cli.name, version: cli.version });
+  channel.describe({
+    cli: cli.name,
+    version: cli.version,
+    signing: COMMAND_SIGNING,
+    ...(cli.store ? { store: cli.store } : {}),
+  });
   channel.handle(COMMAND_METHOD, async (params: unknown, call: ControlCall) => {
     const parsed = commandRequestSchema.safeParse(params);
     if (!parsed.success) {
@@ -135,6 +205,8 @@ export function serveCommands(
       signal: call.signal,
       stdout: (text) => call.write("stdout", text),
       stderr: (text) => call.write("stderr", text),
+      asks: call.asks,
+      ask: (kind, payload) => call.ask(kind, payload),
     });
     return { exitCode };
   });
@@ -192,6 +264,9 @@ export async function sendCommand(
     stdout: (text: string) => void;
     stderr: (text: string) => void;
     signal?: AbortSignal;
+    /** Answers what the instance asks while the command runs. */
+    onAsk?: CallControlOptions["onAsk"];
+    asks?: readonly string[];
   },
 ): Promise<number> {
   // The line also holds the token and the envelope.
@@ -205,6 +280,7 @@ export async function sendCommand(
     onOutput: (stream, data) =>
       stream === "stdout" ? io.stdout(data) : io.stderr(data),
     ...(io.signal ? { signal: io.signal } : {}),
+    ...(io.onAsk && io.asks ? { onAsk: io.onAsk, asks: io.asks } : {}),
   });
   const parsed = resultSchema.safeParse(result);
   return parsed.success ? parsed.data.exitCode : 1;

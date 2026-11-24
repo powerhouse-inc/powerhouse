@@ -8,7 +8,7 @@ import {
   openControlChannel,
   type ControlChannel,
 } from "@powerhousedao/host-core/control-channel";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { defineCli } from "../src/core/cli.js";
 import { defineCommand } from "../src/core/command.js";
@@ -16,12 +16,18 @@ import {
   callerIdentityOf,
   COMMAND_METHOD,
   commandRequestSchema,
+  commandStoreOf,
   sendCommand,
   serveCommands,
   type CommandRequest,
   type ForwardedCommand,
 } from "../src/core/command-control.js";
-import type { RunOptions } from "../src/core/types.js";
+import {
+  callerSigningOf,
+  signerForWrite,
+  withCallerSigning,
+} from "../src/core/forwarded-signing.js";
+import type { CallerSession, RunOptions } from "../src/core/types.js";
 
 // A command that needs a running instance, typed as a command that ends: the
 // calling side of the control channel, against a channel this test answers.
@@ -158,7 +164,7 @@ describe("a command that runs in the running instance", () => {
       pid: process.pid,
       cwd: process.cwd(),
     });
-    // The seam for the caller's identity: none yet.
+    // A Cli that does not sign names no identity.
     expect(caller.identity).toBeUndefined();
     expect(callerIdentityOf(request)).toBeUndefined();
   });
@@ -288,6 +294,199 @@ describe("a command that runs in the running instance", () => {
     });
     expect(requests[0]!.request.stdin).toBeUndefined();
     expect(requests[0]!.request.input).toEqual({ text: "given" });
+  });
+
+  describe("a command that signs as its caller", () => {
+    const identity: CallerSession["signer"] = {
+      user: { address: "0xcaller", networkId: "eip155", chainId: 1 },
+      app: { name: "lab", key: "did:key:caller" },
+    };
+    let opened: unknown[];
+    let signed: unknown[];
+    let home: string;
+
+    const signingCli = () => {
+      const cli = makeCli(ran);
+      cli.configureIdentity({
+        label: "lab",
+        open: (o) => {
+          opened.push(o);
+          return Promise.resolve({
+            signer: identity,
+            signAction: (action, target, previousStateHash) => {
+              signed.push({ action, target, previousStateHash });
+              return Promise.resolve([
+                "1",
+                identity.app.key,
+                "v2:hash",
+                previousStateHash,
+                "0xsig",
+              ]);
+            },
+            bearer: () => Promise.resolve("caller-bearer"),
+          });
+        },
+      });
+      return cli;
+    };
+
+    const callSigning = (argv: string[], options: RunOptions = {}) =>
+      signingCli().run(["node", NAME, ...argv], {
+        workdir,
+        stdout: (text) => out.push(text),
+        stderr: (text) => err.push(text),
+        exit: (code) => codes.push(code),
+        serveCommand: "ph lab",
+        ...options,
+      });
+
+    /** Serves `docs` signing one action through the caller, as the instance does. */
+    const serveSigning = () =>
+      serve(async (command) => {
+        const signing = callerSigningOf({
+          asks: command.asks,
+          ask: (kind, payload) => command.ask(kind, payload),
+        });
+        const tuple = await withCallerSigning(signing, async () => {
+          const signer = await signerForWrite(undefined);
+          return signer!.signAction(
+            {
+              id: "a1",
+              type: "SET_NAME",
+              scope: "global",
+              timestampUtcMs: "1",
+              input: { name: "x" },
+              context: { prevOpHash: "prev" },
+            },
+            { documentId: "doc-1", branch: "main" },
+          );
+        });
+        command.stdout(`signed by ${tuple[1]}\n`);
+        return 0;
+      });
+
+    beforeEach(() => {
+      opened = [];
+      signed = [];
+      home = fs.mkdtempSync(path.join(os.tmpdir(), "clint-sign-home-"));
+      vi.stubEnv("PH_IDENTITY_HOME", home);
+    });
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      fs.rmSync(home, { recursive: true, force: true });
+    });
+
+    it("signs the instance's action in this process, opening the session on the first ask", async () => {
+      const control = await serveSigning();
+      await callSigning(["docs"], { forward: { target: { control } } });
+      expect(codes).toEqual([]);
+      expect(out.join("")).toBe("signed by did:key:caller\n");
+      expect(opened).toHaveLength(1);
+      expect(opened[0]).toMatchObject({
+        workdir,
+        dataDir: workdir,
+        label: "lab",
+      });
+      expect(signed).toEqual([
+        {
+          action: expect.objectContaining({ id: "a1", type: "SET_NAME" }),
+          target: { documentId: "doc-1", branch: "main" },
+          previousStateHash: "prev",
+        },
+      ]);
+      // The request names nobody: the instance asks, at its first write.
+      expect(requests[0]!.request.signer).toBeUndefined();
+      expect([...requests[0]!.asks]).toEqual([
+        "signer",
+        "sign-action",
+        "bearer",
+      ]);
+    });
+
+    it("opens no session for a command that signs nothing", async () => {
+      const control = await serve();
+      await callSigning(["docs"], { forward: { target: { control } } });
+      expect(out.join("")).toBe("host ran docs\n");
+      expect(opened).toEqual([]);
+    });
+
+    it("tells the caller where the instance's writes are checked", async () => {
+      channel = await openControlChannel();
+      serveCommands(
+        channel,
+        {
+          name: NAME,
+          version: VERSION,
+          workdir,
+          store: { url: "http://127.0.0.1:1", dataDir: workdir },
+        },
+        async (command) => {
+          await command.ask("sign-action", {
+            action: {
+              id: "a1",
+              type: "SET_NAME",
+              scope: "global",
+              timestampUtcMs: "1",
+              input: {},
+            },
+            target: { documentId: "d", branch: "main" },
+            previousStateHash: "",
+          });
+          return 0;
+        },
+      );
+      await callSigning(["docs"], {
+        forward: { target: { control: channel.record } },
+      });
+      expect(codes).toEqual([]);
+      expect(opened[0]).toMatchObject({
+        target: { url: "http://127.0.0.1:1", dataDir: workdir },
+      });
+    });
+
+    it("refuses an instance that cannot ask it to sign, and sends nothing", async () => {
+      channel = await openControlChannel();
+      channel.handle(COMMAND_METHOD, () => ({ exitCode: 0 }));
+      await callSigning(["docs"], {
+        forward: { target: { control: channel.record }, required: true },
+      });
+      expect(codes).toEqual([1]);
+      expect(err.join("\n")).toContain("cannot sign as you");
+      expect(err.join("\n")).toContain("`ph lab`");
+    });
+
+    it("lists no asks from a Cli that does not sign", async () => {
+      const control = await serve();
+      await call(["docs"], { forward: { target: { control } } });
+      expect([...requests[0]!.asks]).toEqual([]);
+    });
+
+    it("names the caller's identity when the request carries it", () => {
+      const request = {
+        signer: identity,
+      } as unknown as CommandRequest;
+      expect(callerIdentityOf(request)).toEqual({
+        address: "0xcaller",
+        label: "lab",
+        key: "did:key:caller",
+      });
+    });
+
+    it("derives where a reactor's writes are checked", () => {
+      expect(commandStoreOf("http://localhost:8091/d/studio", "/data")).toEqual(
+        {
+          url: "http://localhost:8091",
+          dataDir: "/data",
+        },
+      );
+      expect(
+        commandStoreOf("http://127.0.0.1:4001/base/graphql", "/data"),
+      ).toEqual({ url: "http://127.0.0.1:4001/base", dataDir: "/data" });
+      expect(commandStoreOf("https://sb.example/d/x", "/data")).toEqual({
+        url: "https://sb.example",
+      });
+      expect(commandStoreOf("not a url", "/data")).toEqual({});
+    });
   });
 
   describe("the instance's side", () => {

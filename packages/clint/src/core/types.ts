@@ -192,16 +192,61 @@ export interface CommandCaller {
   /** Whether it wants colour in the output. */
   color: boolean;
   /**
-   * Who the command acts as. Not attached yet: a command runs with the
-   * instance's own identity and permissions.
+   * Whom the caller signs the command's actions as, when its request named
+   * it. The command's writes are signed by the caller, over the control
+   * channel; this is for the log, not for access decisions.
    */
   identity?: CallerIdentity;
 }
 
-/** The identity a caller proved. Reserved: nothing sets it yet. */
+/** The identity a forwarded command's caller signs as. */
 export interface CallerIdentity {
-  /** The caller's address (a DID). */
+  /** The caller's address. */
   address: string;
+  /** The label of the session it signs with ("vetra"). */
+  label?: string;
+  /** The session key's did:key. */
+  key?: string;
+}
+
+/**
+ * The person's session a Cli's command line signs with: a command forwarded
+ * to the running instance has its actions signed here (see
+ * `Cli.configureIdentity`).
+ */
+export interface CallerSession {
+  /** What the actions' `context.signer` names. */
+  signer: {
+    user: { address: string; networkId: string; chainId: number };
+    app: { name: string; key: string };
+  };
+  /** The v2 signature tuple of `action` for `target`. */
+  signAction(
+    action: import("@powerhousedao/shared/document-model").Action,
+    target: import("@powerhousedao/shared/document-model").ActionSigningTarget,
+    previousStateHash: string,
+  ): Promise<import("@powerhousedao/shared/document-model").Signature>;
+  /** A bearer of the session for the instance's requests. */
+  bearer(o: { expiresIn: number }): Promise<string>;
+}
+
+/** How a Cli's command line signs as the person (`Cli.configureIdentity`). */
+export interface IdentityConfiguration {
+  /** The session's label: the name its credential signs ("vetra"). */
+  label: string;
+  /**
+   * Opens the session, on the first signature a forwarded command needs: the
+   * signing code loads here, not on the start path. `target` is where the
+   * instance's writes are checked, so the credential is made known there.
+   * `interactive`: a password may be asked on this terminal.
+   */
+  open(o: {
+    workdir: string;
+    dataDir: string;
+    label: string;
+    interactive: boolean;
+    target?: { url?: string; dataDir?: string };
+  }): Promise<CallerSession>;
 }
 
 /**
@@ -1287,6 +1332,12 @@ export interface RunOptions {
    */
   serveCommand?: string;
   /**
+   * Where the writes of a serving instance are checked, told to callers in
+   * `hello`: the switchboard's base URL, and its data folder when callers may
+   * write their credentials' records there.
+   */
+  store?: { url?: string; dataDir?: string };
+  /**
    * Where a command that needs the reactor or the agent (`Command.needs`)
    * runs when it is typed as a command that ends: in the running instance of
    * this CLI, which executes it and sends its output and exit code back.
@@ -1352,6 +1403,12 @@ export interface Cli {
   configureReactor<R extends DocumentRegistry = AnyRegistry>(
     config: import("../integrations/powerhouse/types.js").ReactorConfiguration<R>,
   ): void;
+  /**
+   * How this Cli's command line signs as the person: a command it forwards
+   * to the running instance is signed here, over the control channel.
+   * Without it, such a command signs as the instance.
+   */
+  configureIdentity(config: IdentityConfiguration): void;
   getCommand(id: string): Command | undefined;
   listCommands(): Command[];
   execute(
