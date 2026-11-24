@@ -110,6 +110,13 @@ export {
   type RunningInstance,
 } from "./instance.js";
 export {
+  announceSignInLinks,
+  signInLinksOf,
+  signInMembersOf,
+  signInSecretOf,
+  type SignInLink,
+} from "./local-sign-in.js";
+export {
   askToStop,
   installStopChannel,
   listenForStop,

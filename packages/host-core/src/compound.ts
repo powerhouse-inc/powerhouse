@@ -1,3 +1,8 @@
+import {
+  LOCAL_SIGN_IN_SECRET_ENV,
+  newSignInSecret,
+  signInLink,
+} from "@powerhousedao/shared/clis/local-sign-in";
 import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import fs from "node:fs";
 import path from "node:path";
@@ -24,6 +29,11 @@ import {
   type RunningInstance,
 } from "./instance.js";
 import { hostFileLabel, type HostPackage } from "./host-ref.js";
+import {
+  announceSignInLinks,
+  signInLinksOf,
+  signInMembersOf,
+} from "./local-sign-in.js";
 import { defaultUserDataDir } from "./placeholders.js";
 import { declaresKey, outputSitesOf } from "./resolve/declared.js";
 import { processResolveEnv, runnerOutputsSchema } from "./resolve/node.js";
@@ -146,6 +156,15 @@ export function takesCspRegistrySync(m: PreparedMember): boolean {
   );
 }
 
+/** Whether a member is handed the secret of sign-in by link (F3d): its
+ * runner declares `runner.localSignIn`, or it names the Connect runner. */
+export function takesLocalSignIn(m: PreparedMember): boolean {
+  return (
+    m.specifier === CONNECT_RUNNER ||
+    declaresKey(m.runner.hostSchema, ["runner"], "localSignIn")
+  );
+}
+
 export interface RunCompoundOptions {
   /** Project identity for the lock (defaults read from package.json by the CLI). */
   projectName: string;
@@ -164,6 +183,8 @@ export interface RunCompoundOptions {
   stopStreamLimitMs?: number;
   /** What a stream's supervisor reads (default stdout and stderr). */
   supervisedOutputs?: readonly NodeJS.WritableStream[];
+  /** Opens a sign-in link (default the system's browser; tests pass one). */
+  openBrowser?: (url: string) => void;
 }
 
 export { STOP_ON_STDIN_ENV };
@@ -487,6 +508,8 @@ export async function runCompound(
   if (live && (ctx.argv ?? []).length === 0) {
     const instance = instanceOfRecord(projectRoot, live);
     console.log(describeInstance(instance));
+    // How a page that lost its sign-in gets a fresh link.
+    announceSignInLinks(signInLinksOf(live), options.openBrowser);
     return {
       started: [],
       shutdown: () => Promise.resolve(),
@@ -641,6 +664,16 @@ export async function runCompound(
     keepsRecord && foreground !== undefined
       ? (await ensureProcessControlChannel())?.record
       : undefined;
+  // Sign-in by link (F3d): one secret per start, handed only to the members
+  // that serve Connect, kept here and in the owner-only record.
+  const signInSecret =
+    keepsRecord && prepared.some(takesLocalSignIn)
+      ? newSignInSecret()
+      : undefined;
+  const envOf = (m: PreparedMember) =>
+    signInSecret && takesLocalSignIn(m)
+      ? { ...ctx.env, [LOCAL_SIGN_IN_SECRET_ENV]: signInSecret }
+      : ctx.env;
 
   if (wiring.cspRegistrySync && !prepared.some(takesCspRegistrySync)) {
     console.warn(
@@ -762,7 +795,7 @@ export async function runCompound(
           folder: m.ref,
           verb: memberVerb,
           argv,
-          env: ctx.env,
+          env: envOf(m),
           host: resolved,
           // In-process members print here too; next to the terminal's
           // owner, output would draw into it.
@@ -794,7 +827,7 @@ export async function runCompound(
           await fn(oneShot ? emptyMaps(validated, resolved) : validated, {
             projectRoot,
             ...(m.hostPackage ? { hostPackage: m.hostPackage } : {}),
-            env: ctx.env,
+            env: envOf(m),
             verb: memberVerb,
             parent: { host: host.name, verb },
             ...(argv.length > 0 ? { argv } : {}),
@@ -856,6 +889,12 @@ export async function runCompound(
     throw error;
   }
 
+  // The members that took the secret and sign pages in by link.
+  const signingIn = signInSecret
+    ? signInMembersOf(Object.fromEntries(started.map((m) => [m.name, m])))
+    : [];
+  const signIn =
+    signInSecret && signingIn.length > 0 ? { secret: signInSecret } : undefined;
   if (keepsRecord) {
     const recordMembers: Record<string, RunRecordMember> = {};
     for (const m of started) {
@@ -877,10 +916,28 @@ export async function runCompound(
       pid: process.pid,
       startedAt: new Date().toISOString(),
       members: recordMembers,
-      ...(options.recordExtra || control
-        ? { extra: { ...options.recordExtra, ...(control ? { control } : {}) } }
+      ...(options.recordExtra || control || signIn
+        ? {
+            extra: {
+              ...options.recordExtra,
+              ...(control ? { control } : {}),
+              ...(signIn ? { signIn } : {}),
+            },
+          }
         : {}),
     });
+  }
+  // A stack with a terminal's owner leaves the link to it (the Cli reads the
+  // record); otherwise the compound prints it, and opens it.
+  if (signIn && foreground === undefined) {
+    announceSignInLinks(
+      signingIn.map(({ member, app, open }) => ({
+        member,
+        link: signInLink(app, signIn.secret),
+        ...(open === undefined ? {} : { open }),
+      })),
+      options.openBrowser,
+    );
   }
 
   // The compound owns the exit: members run without process-exiting signal
