@@ -1,3 +1,7 @@
+import {
+  credentialRecordId,
+  readCredentialRecord,
+} from "@powerhousedao/shared/clis/credential-records";
 import { fileAccessList } from "@powerhousedao/shared/clis/owner-only";
 import { verifyDelegationProof } from "@renown/sdk/node";
 import { encryptKeystoreJson, Wallet } from "ethers";
@@ -166,5 +170,17 @@ describe("the key file", () => {
     >;
     expect(kept[`${address.toLowerCase()}|1|${app}`]).toEqual(credential);
     expect(kept.other).toEqual({ id: "x" });
+  });
+
+  it("writes the record the switchboard accepts the credential by", async () => {
+    const keyPath = path.join(dir, "local.key");
+    const address = await createKeyFile(keyPath, "correct horse", QUICK);
+
+    const { credential } = await signDelegation(input(keyPath));
+
+    const id = credentialRecordId({ address, chainId: 1, sessionDid: app });
+    expect(
+      readCredentialRecord({ dataDir: path.join(dir, "local"), id }),
+    ).toMatchObject({ source: "desktop", credential });
   });
 });

@@ -1,3 +1,4 @@
+import { writeCredentialRecord } from "@powerhousedao/shared/clis/credential-records";
 import {
   warnNotOwnerOnly,
   writeOwnerOnlyFile,
@@ -164,7 +165,8 @@ export async function createKeyFile(
 export type SignDelegationInput = {
   keyPath: string;
   password: string;
-  /** The identity's `.ph/.credentials.json`: the switchboard reads it. */
+  /** The identity's `.ph/.credentials.json`, which the shell reads back; the
+   * switchboard reads the record written beside it (`.ph/credentials/`). */
   credentialsPath: string;
   chainId: number;
   appName: string;
@@ -219,5 +221,11 @@ export async function signDelegation(input: SignDelegationInput) {
     `${account.address.toLowerCase()}|${chainId}|${appDid}`,
     credential,
   );
+  // The record is what the switchboard accepts it by: `<dataDir>/.ph/credentials`.
+  writeCredentialRecord({
+    dataDir: path.dirname(path.dirname(credentialsPath)),
+    credential,
+    source: "desktop",
+  });
   return { address: account.address, credential };
 }
