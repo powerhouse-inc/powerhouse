@@ -21,6 +21,12 @@ const PROJECT_NAME = "test-package-vetra";
 /** The page's place in its tab's history. A DevTools step must not add one. */
 const historyLength = (page: Page) => page.evaluate(() => history.length);
 
+/** The Vetra drive in Connect's sidebar: Studio shows it with either reactor.
+ * A tab's own SharedWorker reactor does not sync the preview drive. */
+const vetraDrive = (page: Page) =>
+  page.getByRole("link", { name: "Vetra", exact: true });
+const VETRA_DRIVE_URL = /\/d\/vetra-[0-9a-f]{8}(?:[/?#]|$)/;
+
 test.describe.configure({ timeout: DESCRIBE_TIMEOUT });
 
 test.beforeEach(async ({ page }) => {
@@ -84,8 +90,8 @@ test("the dock stays open across reload, Connect navigation and Back", async ({
   await expect(overview).toHaveAttribute("data-state", "ready");
   expect(page.url()).toBe(homeUrl);
 
-  await page.locator("a", { hasText: "Vetra Preview" }).click();
-  await expect(page).toHaveURL(/\/d\/vetra-preview-[^/?]+/);
+  await vetraDrive(page).click();
+  await expect(page).toHaveURL(VETRA_DRIVE_URL);
   expect(page.url()).not.toContain("devtools");
   await expect(frame).toBeVisible();
 
@@ -135,8 +141,8 @@ test("a share link opens its panel on a drive's page and on the standalone page"
   page,
 }) => {
   await gotoWithDevtools(page, "/");
-  await page.locator("a", { hasText: "Vetra Preview" }).click();
-  await expect(page).toHaveURL(/\/d\/vetra-preview-[^/?]+/);
+  await vetraDrive(page).click();
+  await expect(page).toHaveURL(VETRA_DRIVE_URL);
   const drive = new URL(page.url()).pathname;
   const { panel } = devtools(page);
 
