@@ -930,8 +930,12 @@ function tabSwitchboards(
 ): string[] {
   const bases = (store.switchboards?.list() ?? []).map((entry) => entry.base);
   const drive = driveUrl ? switchboardOfDrive(driveUrl)?.base : undefined;
-  if (drive) bases.push(new URL(drive, window.location.origin).href);
-  return [...new Set(bases.map((base) => base.replace(/\/+$/, "")))];
+  if (drive) bases.push(drive);
+  // A base the page proxies is a path on its own origin.
+  const absolute = bases.map((base) =>
+    new URL(base, window.location.origin).href.replace(/\/+$/, ""),
+  );
+  return [...new Set(absolute)];
 }
 
 function getDriveUrl() {
