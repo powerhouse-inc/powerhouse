@@ -2,6 +2,7 @@ import {
   ensurePseudonym,
   type IdentityInfo,
   loginPaths,
+  PasswordRequiredError,
   readActiveIdentity,
   readLogin,
   readPseudonym,
@@ -381,11 +382,17 @@ async function pseudonymSession(
     });
     return credential;
   };
-  const held = sessionCredentialFor(session, active.address);
+  const held = sessionCredentialFor(session, active.address) as
+    | PowerhouseVerifiableCredential
+    | undefined;
   const credential =
     held && !credentialEndsWithin(held, SESSION_RENEW_DAYS)
-      ? (held as PowerhouseVerifiableCredential)
-      : await issue();
+      ? held
+      : await issue().catch((error: unknown) => {
+          // A locked key renews nothing; the held credential signs until it ends.
+          if (held && error instanceof PasswordRequiredError) return held;
+          throw error;
+        });
   return {
     keyPair: session.key as JwkKeyPair,
     did: session.did,

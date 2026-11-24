@@ -361,6 +361,48 @@ describe("openSession", () => {
     );
   });
 
+  it("signs with the held credential near its end while the key is locked", async () => {
+    const dataDir = store();
+    await ensurePseudonym({
+      dataDir,
+      env,
+      password: "pw",
+      kdf: { n: 1024, r: 8, p: 1, dklen: 32 },
+    });
+    const open = (o: { password?: string } = {}) =>
+      openSession({
+        dataDir,
+        label: "vetra agent vetra-agent",
+        place: "data-folder",
+        interactive: false,
+        target: { dataDir },
+        env,
+        ...o,
+      });
+    const first = await open({ password: "pw" });
+    const file = sessionFilePath({
+      place: "data-folder",
+      label: "vetra agent vetra-agent",
+      address: "",
+      dataDir,
+      env,
+    });
+    const endIn = (ms: number) => {
+      const held = readSessionFile(file)!;
+      writeSessionFile(file, {
+        ...held,
+        credential: {
+          ...held.credential!,
+          expirationDate: new Date(Date.now() + ms).toISOString(),
+        },
+      });
+    };
+    endIn(3 * 86_400_000);
+    expect((await open()).credential.id).toBe(first.credential.id);
+    endIn(-60_000);
+    await expect(open()).rejects.toThrow(/locked with a password/);
+  });
+
   it("issues a new credential where the store withdrew the old one", async () => {
     const dataDir = store();
     const first = await openSession({
