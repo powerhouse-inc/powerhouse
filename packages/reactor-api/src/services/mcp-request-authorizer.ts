@@ -50,6 +50,8 @@ export function createMcpRequestAuthorizer(
       authorized: true,
       subject: user ? { address: user.address, key: user.appKey } : {},
       access: hostAccess(authorizationService, options, user?.address),
+      // The session's label its credential signs ("mcp claude-code").
+      ...(user?.label ? { label: user.label } : {}),
     };
   };
 }

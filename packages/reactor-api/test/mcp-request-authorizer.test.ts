@@ -132,6 +132,34 @@ describe("createMcpRequestAuthorizer", () => {
     expect(await access?.canCreate()).toBe(false);
   });
 
+  it("names the label of the caller's session, as its credential signs it", async () => {
+    const verified = {
+      verifyBearer: () =>
+        Promise.resolve({
+          user: {
+            address: USER,
+            chainId: 1,
+            networkId: "eip155",
+            appKey: "did:key:zSession",
+            label: "mcp claude-code",
+          },
+        }),
+    } as unknown as AuthService;
+    const authorize = createMcpRequestAuthorizer(
+      verified,
+      createAuthorizationService({
+        admins: [],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.OPEN,
+      }),
+      { requireAuthenticatedCaller: false, resolveDocumentId },
+    );
+    const result = await admitted(authorize, "Bearer x");
+    expect(result.subject).toEqual({ address: USER, key: "did:key:zSession" });
+    expect(result.label).toBe("mcp claude-code");
+    expect((await admitted(documentPermissions())).label).toBeUndefined();
+  });
+
   it("answers a bad bearer with a 401", async () => {
     await expect(
       documentPermissions()(request("Bearer not-a-jwt")),

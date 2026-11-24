@@ -20,8 +20,16 @@ import type { McpAccess } from "./host-access.js";
 import { logger } from "./logger.js";
 import { createServer } from "./server.js";
 
-/** The subject the tools read as (anonymous is `{}`, never the host's signer). */
-type McpGrant = { subject: AuthSubject; access?: McpAccess };
+/**
+ * The subject the tools read as (anonymous is `{}`, never the host's signer),
+ * and the label of the caller's session ("mcp claude-code"), when its
+ * credential was seen.
+ */
+export type McpGrant = {
+  subject: AuthSubject;
+  access?: McpAccess;
+  label?: string;
+};
 
 /** An authorized request names its subject and the host ACL its tools answer to. */
 export type McpAuthorizationResult =
@@ -120,6 +128,12 @@ export function setupMcpServer(
       // Stateless mode: every request owns its McpServer + transport so
       // concurrent or slow handlers cannot collide on a shared Protocol
       // instance (which throws "Already connected to a transport").
+      // The tools write through this host's client, signed with its key.
+      logger.debug(
+        "MCP request from @address (@label): this host signs its writes",
+        grant.subject.address ?? "anonymous",
+        grant.label ?? "no label",
+      );
       try {
         const server = await createServer({
           client: options.client,
