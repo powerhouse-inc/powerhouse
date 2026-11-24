@@ -480,6 +480,10 @@ export class Renown implements IRenown {
     if (!this.user) {
       throw new Error("User not found");
     }
-    return this.#crypto.getBearerToken(this.user.address, options);
+    const credential = options.credential ?? this.user.credential;
+    return this.#crypto.getBearerToken(this.user.address, {
+      ...options,
+      ...(credential ? { credential } : {}),
+    });
   }
 }

@@ -312,13 +312,15 @@ export async function fetchDelegationCredential(
 }
 
 /**
- * What Renown says of a credential. `unknown` means it did not answer, and is
+ * What Renown says of a credential. `absent`: it answered and holds none for
+ * the binding (never registered). `unknown` means it did not answer, and is
  * never read as revoked: an outage must not stop anything.
  */
 export type DelegationCredentialStatus =
   | "active"
   | "revoked"
   | "expired"
+  | "absent"
   | "unknown";
 
 export interface CheckDelegationCredentialOptions {
@@ -337,7 +339,7 @@ export interface CheckDelegationCredentialOptions {
    * expired from one revoked.
    */
   expirationDate?: string;
-  /** How long Renown has to answer. Defaults to 5 seconds. */
+  /** How long Renown has to answer, over either transport. Defaults to 5 seconds. */
   timeoutMs?: number;
 }
 
@@ -396,7 +398,10 @@ async function checkOverRest(
     | { credential?: PowerhouseVerifiableCredential | null }
     | undefined;
   if (!body) return { status: "unknown" };
-  if (!body.credential) return { status: goneStatus(expirationDate) };
+  // REST serves active credentials only: with no date, gone is "never held".
+  if (!body.credential) {
+    return { status: expirationDate ? goneStatus(expirationDate) : "absent" };
+  }
   return { status: "active", credential: body.credential };
 }
 
@@ -405,7 +410,9 @@ async function checkOverSwitchboard(
   source: SwitchboardSource,
 ): Promise<DelegationCredentialCheck> {
   const { address, chainId, appDid, expirationDate } = options;
-  const client = new SwitchboardClient(source);
+  const client = new SwitchboardClient(source, {
+    timeoutMs: options.timeoutMs ?? DEFAULT_CHECK_TIMEOUT_MS,
+  });
   const credential = await client.getCredential({ address, chainId, appDid });
   if (credential) return { status: "active", credential };
   const issued = await client.getIssuedCredentials({
@@ -413,8 +420,8 @@ async function checkOverSwitchboard(
     chainId,
     appDid,
   });
-  // This read model has never held it: nothing definite to say.
-  if (issued.length === 0 && !expirationDate) return { status: "unknown" };
+  // Revoked rows stay in the read model: none means it never held one.
+  if (issued.length === 0) return { status: "absent" };
   const latest = issued
     .map((row) => row.expirationDate)
     .filter((date): date is string => Boolean(date))

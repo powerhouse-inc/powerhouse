@@ -390,4 +390,7 @@ export type PKHDid = {
 export interface CreateBearerTokenOptions {
   expiresIn?: number;
   aud?: string;
+  /** The credential naming the session key: the bearer carries it, so a host
+   * can check its signature while Renown cannot be asked. */
+  credential?: PowerhouseVerifiableCredential;
 }

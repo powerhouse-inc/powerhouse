@@ -607,5 +607,26 @@ describe("delegation", () => {
       const past = new Date(Date.now() - 24 * HOUR * 1000).toISOString();
       expect((await check(past)).status).toBe("expired");
     });
+
+    it("answers absent when Renown holds none and no date tells more", async () => {
+      fetchSpy.mockResolvedValue(reply(404, { error: "not found" }));
+      expect((await check()).status).toBe("absent");
+    });
+
+    it("answers absent over a switchboard that never held one", async () => {
+      const empty = () => Promise.resolve({ renownCredentials: [] });
+      const future = new Date(Date.now() + 24 * HOUR * 1000).toISOString();
+      expect(
+        (
+          await checkDelegationCredential({
+            address: person.address,
+            chainId: 1,
+            appDid: session.did,
+            expirationDate: future,
+            switchboardRequest: empty,
+          })
+        ).status,
+      ).toBe("absent");
+    });
   });
 });

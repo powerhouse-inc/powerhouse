@@ -1,6 +1,10 @@
+export * from "./carried-credential.js";
 export * from "./common.js";
 export * from "./console-login.js";
 export * from "./credential.js";
+export * from "./credential-enrolment.js";
+// Node: reads the store's credential records.
+export * from "./credential-verifier.js";
 export * from "./crypto/node.js";
 export * from "./delegation.js";
 export * from "./discovery.js";
