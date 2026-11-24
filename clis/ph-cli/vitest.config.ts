@@ -15,6 +15,7 @@ export default defineConfig({
       "@powerhousedao/ph-run/connect-server": phRun(
         "services/connect-server.ts",
       ),
+      "@powerhousedao/ph-run/local-sign-in": phRun("services/local-sign-in.ts"),
       "@powerhousedao/ph-run/member-config": phRun("runners/member-config.ts"),
       "@powerhousedao/ph-run/runners/connect": phRun("runners/connect.ts"),
       "@powerhousedao/ph-run/runners/switchboard": phRun(

@@ -3,6 +3,7 @@ import {
   connectBuildInvocationArgs,
   connectHandle,
   connectInvocationArgs,
+  localSignInPlan,
   serve as serveBuilt,
   servesDefaultComposition,
   serveWith,
@@ -12,6 +13,7 @@ import {
   type ConnectHostParsed,
   type ConnectInvocationArgs,
   type ConnectOutputs,
+  type LocalSignInIssuerFactory,
 } from "@powerhousedao/ph-run/runners/connect";
 import type { RunnerContext, RunnerHandle } from "@powerhousedao/host-core";
 import { getConfig } from "@powerhousedao/shared/clis";
@@ -23,12 +25,20 @@ export * from "@powerhousedao/ph-run/runners/connect";
 
 export const verbs = ["run", "dev", "build", "serve"];
 
+/** The issuer of sign-in by link (F3d): the person's own identity, loaded at
+ * the first page that signs in. */
+const issuers: LocalSignInIssuerFactory = async (o) => {
+  const { createLocalSignInIssuer } = await import("@renown/sdk/local-sign-in");
+  return createLocalSignInIssuer(o);
+};
+
 /** The Connect studio arguments, with the keys this host and
  * this invocation own laid over them. An argument of this invocation
  * (`passed`) wins over the host file. */
 async function toStudioArgs(
   host: ConnectHostParsed,
   passed: ConnectInvocationArgs,
+  signsIn: boolean,
 ): Promise<ConnectStudioArgs> {
   const { connectStudioServiceArgs } =
     await import("../services/service-args.js");
@@ -39,7 +49,8 @@ async function toStudioArgs(
     port: passed.port ?? runner.port ?? classic.port,
     // The bind address (runnerBaseSchema `host`); unset keeps vite's default.
     host: passed.host ?? runner.host ?? classic.host,
-    open: passed.open ?? runner.openBrowser === true,
+    // With sign-in, the link is opened, not the bare app.
+    open: !signsIn && (passed.open ?? runner.openBrowser === true),
     strictPort: passed.strictPort ?? runner.strictPort === true,
     cors: passed.cors ?? classic.cors,
     bindCLIShortcuts: false,
@@ -64,7 +75,14 @@ export async function dev(
 ): Promise<RunnerHandle<ConnectOutputs>> {
   await validateComposition(host, ctx);
   const { runConnectStudio } = await import("../services/connect-studio.js");
-  const args = await toStudioArgs(host, await connectInvocationArgs(host, ctx));
+  const passed = await connectInvocationArgs(host, ctx);
+  const askedOpen = passed.open ?? host.runner.openBrowser;
+  const signIn = localSignInPlan(host, ctx, {
+    byDefault: true,
+    ...(askedOpen === undefined ? {} : { open: askedOpen }),
+    issuers,
+  });
+  const args = await toStudioArgs(host, passed, signIn !== undefined);
   const studio: { stop?: () => Promise<void> } = {};
   // A host file projects powerhouse.config.json, so a change of that file
   // changes the host: each restart of Studio serves the host as it reads
@@ -107,6 +125,7 @@ export async function dev(
       exposeStop: (stop) => {
         studio.stop = stop;
       },
+      ...(signIn ? { localSignIn: signIn.endpoint } : {}),
     }),
   );
   // A config change replaces the first server: the handle stops Studio, which
@@ -116,7 +135,7 @@ export async function dev(
     close: () => (studio.stop ? studio.stop() : server.close()),
   };
   // vite's dev server binds its default host ("localhost") here.
-  return connectHandle(current, { host: "localhost", port: args.port });
+  return connectHandle(current, { host: "localhost", port: args.port }, signIn);
 }
 
 /** `run` is dev-studio until the plugin phases give hosts a production
@@ -166,9 +185,11 @@ export async function serve(
 ): Promise<RunnerHandle<ConnectOutputs>> {
   const passed = await connectInvocationArgs(host, ctx);
   const open = passed.open ?? host.runner.openBrowser === true;
-  if (!open && process.env.PH_CONNECT_SERVER !== "vite") {
-    return serveBuilt(host, ctx);
+  // With sign-in by link, the link is opened, not the bare app.
+  const signsIn = !!host.runner.localSignIn;
+  if ((!open || signsIn) && process.env.PH_CONNECT_SERVER !== "vite") {
+    return serveBuilt(host, ctx, { issuers });
   }
   const { runConnectPreview } = await import("../services/connect-preview.js");
-  return serveWith(runConnectPreview, host, ctx);
+  return serveWith(runConnectPreview, host, ctx, { issuers });
 }

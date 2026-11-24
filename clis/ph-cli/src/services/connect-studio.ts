@@ -3,6 +3,11 @@ import {
   resolveServedFiles,
   servedFilesStep,
 } from "@powerhousedao/ph-run/connect-serve";
+import {
+  localSignInStep,
+  type LocalSignInOptions,
+  type LocalSignInStep,
+} from "@powerhousedao/ph-run/local-sign-in";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { readFileSync, watch } from "node:fs";
 import { join } from "node:path";
@@ -36,7 +41,16 @@ export type ConnectStudioOptions = {
    * watcher and whichever server is current. The first server's own `close`
    * stops neither once a config change has replaced it. */
   exposeStop?: (stop: () => Promise<void>) => void;
+  /** Sign-in by link: the loopback endpoint every server of this Studio
+   * serves (F3d). One for all of them, so a code taken stays taken. */
+  localSignIn?: Omit<LocalSignInOptions, "port" | "base">;
 };
+
+/** Where a dev server listens. */
+function portOf(server: ViteDevServer | undefined): number | undefined {
+  const address = server?.httpServer?.address();
+  return typeof address === "object" && address ? address.port : undefined;
+}
 
 function readConfig(file: string): unknown {
   try {
@@ -63,6 +77,7 @@ export async function runConnectStudio(
     beforeRestart,
     restartWith,
     exposeStop,
+    localSignIn,
   }: ConnectStudioOptions = {},
 ): Promise<ViteDevServer> {
   const { port, host, open, cors, strictPort, printUrls, bindCLIShortcuts } =
@@ -84,6 +99,25 @@ export async function runConnectStudio(
       );
     },
   };
+  // Ahead of vite's CORS: it answers this computer's pages only. Made with
+  // the first server and kept by the next ones.
+  const current: { server?: ViteDevServer; step?: LocalSignInStep } = {};
+  const signInPlugin: Plugin | undefined = localSignIn && {
+    name: "ph:local-sign-in",
+    configureServer(server) {
+      current.server = server;
+      current.step ??= localSignInStep({
+        ...localSignIn,
+        base: server.config.base,
+        port: () => portOf(current.server),
+      });
+      server.middlewares.use(current.step);
+    },
+  };
+  const plugins = [
+    ...(signInPlugin ? [signInPlugin] : []),
+    ...(servedFiles ? [servedFiles] : []),
+  ];
 
   const start = async (first: boolean) => {
     const override =
@@ -106,7 +140,7 @@ export async function runConnectStudio(
         ...(proxy ? { proxy: switchboardProxy(proxy) } : {}),
       },
       customLogger,
-      ...(servedFiles ? { plugins: [servedFiles] } : {}),
+      ...(plugins.length > 0 ? { plugins } : {}),
     };
     const server = await createServer(mergeConfig(baseConfig, devServerConfig));
     await server.listen();
@@ -118,7 +152,10 @@ export async function runConnectStudio(
   const first = await start(true);
   if (printUrls) first.printUrls();
   if (!reloadOnConfigChange) {
-    exposeStop?.(() => first.close());
+    exposeStop?.(() => {
+      current.step?.dispose();
+      return first.close();
+    });
     return first;
   }
 
@@ -160,6 +197,7 @@ export async function runConnectStudio(
     stopped = true;
     clearTimeout(timer);
     watcher.close();
+    current.step?.dispose();
     // A restart under way ends first: it leaves the server to close.
     await restarts;
     await server.close();

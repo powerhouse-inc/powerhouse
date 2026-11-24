@@ -129,6 +129,26 @@
             "type": "string",
             "minLength": 1
           }
+        },
+        "localSignIn": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "sessions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
         }
       },
       "required": ["module"],
