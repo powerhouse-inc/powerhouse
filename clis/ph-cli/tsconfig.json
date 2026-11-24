@@ -43,6 +43,9 @@
       "path": "../../packages/reactor-api"
     },
     {
+      "path": "../../packages/reactor-browser"
+    },
+    {
       "path": "../../packages/reactor-mcp"
     },
     {
