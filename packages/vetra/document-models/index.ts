@@ -1,5 +1,10 @@
 export { AppModule as AppModuleV1 } from "./app-module/v1/module.js";
+export { AudienceSheet as AudienceSheetV1 } from "./audience-sheet/v1/module.js";
+export { BrandSheet as BrandSheetV1 } from "./brand-sheet/v1/module.js";
 export { DocumentEditor as DocumentEditorV1 } from "./document-editor/v1/module.js";
+export { Feature as FeatureV1 } from "./feature/v1/module.js";
+export { ProblemSheet as ProblemSheetV1 } from "./problem-sheet/v1/module.js";
 export { ProcessorModule as ProcessorModuleV1 } from "./processor-module/v1/module.js";
 export { SubgraphModule as SubgraphModuleV1 } from "./subgraph-module/v1/module.js";
 export { VetraPackage as VetraPackageV1 } from "./vetra-package/v1/module.js";
+export { WorkBreakdownStructure as WorkBreakdownStructureV1 } from "./work-breakdown-structure/v1/module.js";

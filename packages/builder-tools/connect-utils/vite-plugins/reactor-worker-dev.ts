@@ -8,9 +8,17 @@ import {
   REACTOR_WORKER_URL_PREFIX,
   type PrebuiltReactorWorker,
 } from "../reactor-worker-build.js";
+import {
+  prebuildWorkerPackages,
+  workerLocalPackages,
+} from "../worker-packages-build.js";
 
 // Dev bundle cache, sibling of the vendor's `.ph-vendor`.
 const DEV_BUNDLE_DIR = "node_modules/.ph-reactor-worker";
+// The local packages' model bundles, apart: a worker rebuild replaces its dir.
+const DEV_PACKAGES_DIR = "node_modules/.ph-reactor-worker-packages";
+// Where the tab reads them, as from `ph connect build`'s output.
+const PACKAGES_PREFIX = "packages/";
 
 function withBase(base: string, p: string): string {
   return `${base}${p}`.replace(/\/{2,}/g, "/");
@@ -30,10 +38,48 @@ function withBase(base: string, p: string): string {
  * Lazy because it is a full `vite build` of the reactor + PGlite graph. The
  * result is cached in node_modules/.ph-reactor-worker until the installed
  * Connect, its upstream dists, or builder-tools change (`computeSourceDigest`).
+ *
+ * `packages/` serves the configured local packages' model bundles, built at
+ * the first request of a server's life by `ph connect build`'s own prebuild.
+ * The project's models are not among them: the tab loads those live.
  */
-export function reactorWorkerDevPlugin(projectRoot: string): Plugin {
+export function reactorWorkerDevPlugin(
+  projectRoot: string,
+  options: {
+    /** powerhouse.config.json `packages`. */
+    packages?: readonly { packageName: string; provider?: string }[];
+  } = {},
+): Plugin {
   let base = "/";
   let building: Promise<PrebuiltReactorWorker | null> | null = null;
+  let packagesBuilding: Promise<string | null> | null = null;
+
+  const ensurePackagesBuilt = (): Promise<string | null> => {
+    packagesBuilding ??= (async () => {
+      const outDir = path.join(projectRoot, DEV_PACKAGES_DIR);
+      const errorRef: { message?: string } = {};
+      const built = await prebuildWorkerPackages({
+        dirname: projectRoot,
+        packages: workerLocalPackages(projectRoot, options.packages, {
+          own: false,
+        }),
+        outDir,
+        nodeEnv: "development",
+        errorRef,
+      });
+      if (!built) {
+        console.warn(
+          `[connect] reactor worker package bundles failed to build${
+            errorRef.message ? `: ${errorRef.message}` : ""
+          }`,
+        );
+        packagesBuilding = null;
+        return null;
+      }
+      return outDir;
+    })();
+    return packagesBuilding;
+  };
 
   const ensureBuilt = (): Promise<PrebuiltReactorWorker | null> => {
     building ??= (async () => {
@@ -76,6 +122,39 @@ export function reactorWorkerDevPlugin(projectRoot: string): Plugin {
         if (!prefix) return next();
         const name = url.slice(prefix.length).replace(/^\/+/, "");
         if (!name) return next();
+
+        if (name.startsWith(PACKAGES_PREFIX)) {
+          void (async () => {
+            const outDir = await ensurePackagesBuilt();
+            const file = outDir
+              ? path.join(outDir, name.slice(PACKAGES_PREFIX.length))
+              : undefined;
+            const rel = outDir && file ? path.relative(outDir, file) : "..";
+            // None built, or none of that name: no manifest, no packages.
+            if (rel.startsWith("..") || path.isAbsolute(rel) || !file) {
+              res.statusCode = 404;
+              res.end();
+              return;
+            }
+            const stream = createReadStream(file);
+            stream.on("error", () => {
+              if (res.headersSent) return;
+              res.statusCode = 404;
+              res.end();
+            });
+            stream.once("open", () => {
+              const ext = file.slice(file.lastIndexOf("."));
+              res.setHeader(
+                "Content-Type",
+                REACTOR_WORKER_MIME[ext] ?? "text/javascript",
+              );
+              // Built again at each server start, under the same names.
+              res.setHeader("Cache-Control", "no-cache");
+              stream.pipe(res);
+            });
+          })();
+          return;
+        }
 
         void (async () => {
           const built = await ensureBuilt();

@@ -1,7 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  warnNotOwnerOnly,
+  writeOwnerOnlyFile,
+} from "@powerhousedao/shared/clis/owner-only";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { BaseStorage } from "./common.js";
 
+/** A JSON file readable by the OS user only: it holds a credential. */
 export class NodeStorage<
   T extends Record<string, unknown> = Record<string, unknown>,
 > extends BaseStorage<T> {
@@ -15,7 +20,7 @@ export class NodeStorage<
     mkdirSync(parentFolder, { recursive: true });
 
     if (!existsSync(this.filePath)) {
-      writeFileSync(this.filePath, JSON.stringify({}));
+      this.writeData({} as T);
     }
   }
 
@@ -25,7 +30,9 @@ export class NodeStorage<
   }
 
   private writeData(data: T): void {
-    writeFileSync(this.filePath, JSON.stringify(data, null, 2));
+    if (!writeOwnerOnlyFile(this.filePath, JSON.stringify(data, null, 2))) {
+      warnNotOwnerOnly(this.filePath);
+    }
   }
 
   get<Key extends keyof T>(key: Key): T[Key] | undefined {

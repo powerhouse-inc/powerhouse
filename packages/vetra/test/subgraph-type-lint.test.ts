@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   findSubgraphNameConflict,
   lintSubgraphTypes,
-} from "../codegen/subgraph-type-lint.js";
+} from "../processors/codegen/subgraph-type-lint.js";
 
 const temporary: string[] = [];
 

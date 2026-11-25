@@ -278,6 +278,24 @@ describe("createConfigCommand", () => {
       expect(mode).toBe(0o600);
     });
 
+    const itWindows = process.platform === "win32" ? it : it.skip;
+
+    itWindows("gives a sensitive key's file one reader: its user", async () => {
+      const { fileAccessList } =
+        await import("@powerhousedao/shared/clis/owner-only");
+      const cmd = createConfigCommand({
+        cliName: "tasks",
+        configSchema,
+        sensitiveKeys: new Set(["apiKey"]),
+      });
+      await cmd.execute(
+        { name: "apiKey", write: "secret-value" },
+        makeContext(),
+      );
+      const filePath = join(workDir, ".ph", "tasks.config.local.json");
+      expect(fileAccessList(filePath)).toHaveLength(1);
+    });
+
     itPosix("does not force 0600 for a non-sensitive key", async () => {
       const cmd = createConfigCommand({
         cliName: "tasks",

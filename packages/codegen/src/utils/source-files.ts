@@ -31,7 +31,7 @@ export function projectPath(project: Project, filePath: string) {
  * owns are unaffected: they call `replaceWithText` immediately afterwards.
  *
  * The rule has to hold on the cache-hit path too, which is the other half of
- * the same data loss. `ph vetra` builds one Project per process and reuses it
+ * the same data loss. `ph dev` builds one Project per process and reuses it
  * for every codegen run, and nothing ever refreshes it, so a SourceFile loaded
  * by an earlier run keeps the text it had then: codegen scaffolds a reducer
  * with TODO stubs, the user writes the real body on disk, and the next run in

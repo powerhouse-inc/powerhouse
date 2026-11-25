@@ -1,12 +1,15 @@
 import path from "node:path";
+import { supervisedFactLines } from "@powerhousedao/host-core/instance";
 import { z } from "zod";
 import type {
   Command,
   CommandContext,
   ServiceDefinition,
   ServiceInstanceStatus,
+  ServiceLifetime,
 } from "./types.js";
 import { getSchemaFields } from "./schema.js";
+import { restartService, ServiceStartRefused } from "./service-control.js";
 import { resolveServiceName } from "./services.js";
 
 /**
@@ -35,9 +38,16 @@ export function formatStatus(s: ServiceInstanceStatus): string {
     if (ep.length) parts.push(ep.join(" "));
   }
   if (s.workdir) parts.push(s.workdir);
+  if (s.supervisor) {
+    parts.push(
+      `supervisor pid ${s.supervisor.pid}, lives with the ${s.supervisor.lifetime}`,
+    );
+  }
   if (s.error) parts.push(`error: ${s.error}`);
   if (s.restartAttempt) parts.push(`restart #${s.restartAttempt}`);
-  return parts.join("  ");
+  // What the supervisor knows of it, in the words of `ph run supervisor ps`.
+  const facts = s.supervisor ? supervisedFactLines(s.supervisor) : [];
+  return [parts.join("  "), ...facts.map((line) => `     ${line}`)].join("\n");
 }
 
 /**
@@ -68,6 +78,16 @@ export function createServiceCommands(def: ServiceDefinition<any>): Command[] {
     .string()
     .optional()
     .describe("Working directory for the service");
+  if (def.run) {
+    startFields.lifetime = z
+      .enum(["caller", "supervisor"])
+      .optional()
+      .describe(
+        "With a supervisor running (`ph run supervisor`): `caller` (default) " +
+          "ends the service with this process, `supervisor` keeps it until " +
+          "it is stopped",
+      );
+  }
 
   // Merge paramsSchema fields into start command
   if (def.paramsSchema) {
@@ -128,12 +148,16 @@ export function createServiceCommands(def: ServiceDefinition<any>): Command[] {
           workdir: cwd,
           cwd,
           params: Object.keys(params).length > 0 ? params : undefined,
+          ...(def.run && input.lifetime !== undefined
+            ? { lifetime: input.lifetime as ServiceLifetime }
+            : {}),
         });
         const status = services
           .list(id)
           .find((s) => s.instanceId === instanceId);
         return { text: formatStatus(status!) };
       } catch (err: unknown) {
+        if (err instanceof ServiceStartRefused) throw err;
         const msg = err instanceof Error ? err.message : String(err);
         return { text: `✗ ${id}: ${msg}` };
       }
@@ -169,38 +193,18 @@ export function createServiceCommands(def: ServiceDefinition<any>): Command[] {
       const services = context.services;
       if (!services) throw new Error("No services configured");
       try {
-        // Stop if running, capturing its workdir/params for the restart
-        const statuses = services.list(id);
-        const running = statuses.filter(
-          (s) => s.status === "ready" || s.status === "starting",
+        const instanceId = await restartService(
+          services,
+          id,
+          input.instance as string | undefined,
+          context.workdir,
         );
-
-        let prevWorkdir: string | undefined;
-        let prevParams: Record<string, unknown> | undefined;
-        let prevName: string | undefined;
-
-        if (running.length > 0) {
-          const instance = running[0]!;
-          prevWorkdir = instance.workdir;
-          prevParams = instance.params;
-          if (instance.instanceId?.includes(":")) {
-            prevName = instance.instanceId.split(":")[1];
-          }
-          await services.stop(id, input.instance as string | undefined);
-        }
-
-        const cwd = prevWorkdir ?? context.workdir;
-        const instanceId = await services.start(id, {
-          workdir: cwd,
-          cwd,
-          params: prevParams,
-          name: prevName,
-        });
         const status = services
           .list(id)
           .find((s) => s.instanceId === instanceId);
         return { text: formatStatus(status!) };
       } catch (err: unknown) {
+        if (err instanceof ServiceStartRefused) throw err;
         const msg = err instanceof Error ? err.message : String(err);
         return { text: `✗ ${id}: ${msg}` };
       }
@@ -215,6 +219,8 @@ export function createServiceCommands(def: ServiceDefinition<any>): Command[] {
     execute: async (_input, context: CommandContext) => {
       const services = context.services;
       if (!services) throw new Error("No services configured");
+      // A recorded supervisor that does not answer: what runs is unknown.
+      await services.supervisor?.();
       const all = services.list(id);
       if (all.length === 0) return { text: `No instances of ${id}` };
       return { text: all.map(formatStatus).join("\n"), data: all };

@@ -1,0 +1,10 @@
+{
+  "name": "@fixture/cli-package",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "peerDependencies": {
+    "@powerhousedao/clint": "*"
+  }
+}

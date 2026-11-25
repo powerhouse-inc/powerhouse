@@ -30,7 +30,6 @@ describe("reactorSchema (strict per D2.d)", () => {
         remote: { kind: "remote", remote: { url: "https://sb.example/d/b" } },
       },
       placement: { primary: "main", drives: { b: "remote" } },
-      workflows: true,
       protocol: {
         featureFlags: { documentDecisions: true },
         createSignaturePolicy: "v2-required",
@@ -184,7 +183,7 @@ describe("childrenSchema", () => {
         "vetra-switchboard": {
           host: "switchboard",
           runner: { port: 7064 },
-          reactor: { workflows: true },
+          reactor: { namespace: "lab" },
         },
       }).success,
     ).toBe(true);

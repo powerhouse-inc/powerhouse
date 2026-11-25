@@ -7,6 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readVetraRuntime } from "../src/utils/vetra-runtime.js";
+import { writeScaffoldHosts } from "./hosts-project.js";
 import { isAlive, removeDir, stopProcess } from "./processes.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -38,9 +39,11 @@ async function makeProject(): Promise<string> {
     JSON.stringify({
       packages: [],
       reactor: { port: await freePort() },
-      vetra: { connectPort: await freePort() },
+      studio: { port: await freePort() },
     }),
   );
+  // `ph dev` runs the project's dev host.
+  writeScaffoldHosts(dir, PROJECT_NAME);
   cleanups.push(async () => {
     // Whatever Vetra the record names last, then the project.
     await stopProcess(readVetraRuntime(dir)?.pid);
@@ -82,7 +85,7 @@ async function driveIds(client: Client): Promise<string[]> {
 }
 
 describe("restarting Vetra", () => {
-  it("restartVetra and ph vetra --restart replace it, and the launcher follows", async () => {
+  it("restartVetra and ph dev --restart replace it, and the launcher follows", async () => {
     const dir = await makeProject();
     const { launcher, stderr } = await connectLauncher(dir);
 
@@ -128,7 +131,7 @@ describe("restarting Vetra", () => {
     // A restart from a terminal: the launcher's next call reaches the new one.
     const child = spawn(
       process.execPath,
-      [PH_CLI, "vetra", "--restart", "--strictPort", "--watch"],
+      [PH_CLI, "dev", "--restart", "--strictPort", "--watch"],
       { cwd: dir, stdio: "ignore" },
     );
     await vi.waitFor(

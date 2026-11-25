@@ -1,11 +1,15 @@
+import type { SwitchboardConfigInput } from "@powerhousedao/switchboard/config";
 import type * as SwitchboardUtils from "@powerhousedao/switchboard/utils";
 import {
   defineHostSchemas,
   drivesSchema,
+  hostFileLabel,
   mergeDrivePlan,
+  PACKAGE_NAME_PATTERN,
   protocolConflicts,
   resolveDriveDeclaration,
   resolveHostPlugins,
+  resolvePackageRoot,
   seedDrives,
   type BootCheckContext,
   type BootIssue,
@@ -30,24 +34,22 @@ import {
   memberSwitchboardConfigSchema,
   missingPostgresUrl,
   prepareMemberStorage,
-  reactorBlockConflicts,
-  readModelAsReactorStore,
+  readModelOnlyStore,
   switchboardDevMode,
 } from "./member-config.js";
-import { reactorWorkflowsDeprecation } from "./host-deprecations.js";
 import { onlyPassed, runnerArgsSchemaOf } from "./runner-args.js";
 import { z } from "zod";
-import { classicSwitchboardArgs } from "../services/classic-args.js";
+import { switchboardServiceArgs } from "../services/service-args.js";
 import {
   inspectorProgressSource,
   startProgressDisplay,
 } from "../services/run/catch-up-progress.js";
-import type { SwitchboardArgs } from "../services/classic-args.js";
+import type { SwitchboardArgs } from "../services/service-args.js";
 
 /**
- * BRIDGE runner for Switchboard hosts (uniform-runners phase 0): maps a
- * hosts/switchboard/host.js definition onto the SAME `startSwitchboard`
- * service the classic command calls. `run` = production loaders, `dev` =
+ * The runner for Switchboard hosts: maps a hosts/switchboard/host.js
+ * definition onto the `startSwitchboard` service. `ph switchboard` is sugar
+ * for `ph run switchboard`. `run` = production loaders, `dev` =
  * Vite package loader (worker pools refused by the server, as always).
  */
 
@@ -61,33 +63,23 @@ export const kind = "reactor";
  * output tokens; types host files) and `hostSchema` (resolved; checked
  * right before the verb). */
 const schemas = defineHostSchemas((s) =>
-  s.reactorHostSchema
-    .extend({
-      runner: s.runnerBaseSchema
-        .extend({
-          /** 0 binds a port the OS picks; `origin` reports it. */
-          port: z.number().int().min(0).max(65535).optional(),
-          /** Fail on a taken port instead of moving to a free one. */
-          strictPort: z.boolean().optional(),
-          /** Dev mode without the `dev` verb (the Vite package loader). */
-          dev: z.boolean().optional(),
-          /** The project package output dir `build` writes (default "dist"). */
-          outDir: z.string().min(1).optional(),
-        })
-        .strict(),
-      config: z
-        .strictObject({ switchboard: memberSwitchboardConfigSchema.optional() })
-        .optional(),
-    })
-    .superRefine((host, ctx) => {
-      for (const message of reactorBlockConflicts(host)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["config", "switchboard"],
-          message,
-        });
-      }
-    }),
+  s.reactorHostSchema.extend({
+    runner: s.runnerBaseSchema
+      .extend({
+        /** 0 binds a port the OS picks; `origin` reports it. */
+        port: z.number().int().min(0).max(65535).optional(),
+        /** Fail on a taken port instead of moving to a free one. */
+        strictPort: z.boolean().optional(),
+        /** Dev mode without the `dev` verb (the Vite package loader). */
+        dev: z.boolean().optional(),
+        /** The project package output dir `build` writes (default "dist"). */
+        outDir: z.string().min(1).optional(),
+      })
+      .strict(),
+    config: z
+      .strictObject({ switchboard: memberSwitchboardConfigSchema.optional() })
+      .optional(),
+  }),
 );
 export const declaredHostSchema = schemas.declaredHostSchema;
 export const hostSchema = schemas.hostSchema;
@@ -129,7 +121,7 @@ declare global {
 }
 
 /** What a switchboard accepts after `ph run <host> [verb]`: the classic
- * `ph switchboard` and `ph vetra` definitions of the same names. */
+ * `ph switchboard` and `ph dev` definitions of the same names. */
 const invocationArgs = {
   port: switchboardArgs.port,
   strictPort: commonServerArgs.strictPort,
@@ -156,7 +148,7 @@ export type InvocationArgs = ParsedCmdResult<typeof invocation>;
 const WATCH_RETIRED = "it is no longer needed.";
 
 export const argsSchema = runnerArgsSchemaOf(invocationArgs, {
-  // `ph vetra --switchboard-port`
+  // `ph dev --switchboard-port`
   memberOptions: { "--switchboard-port": "--port" },
   retired: {
     "--watch": WATCH_RETIRED,
@@ -199,7 +191,7 @@ async function toSwitchboardArgs(
   composed: boolean,
   passed: Partial<InvocationArgs>,
 ): Promise<SwitchboardRunnerArgs> {
-  const classic = await classicSwitchboardArgs();
+  const classic = await switchboardServiceArgs();
   const runner = host.runner;
   return {
     ...classic,
@@ -326,10 +318,7 @@ interface SlugLookupClient {
  * Adapter from the switchboard's reactor client onto the host-core seeder.
  * Seeding is SLUG-keyed: a live drive that already serves the slug — under
  * whatever id (a store from a run that hashed the project path differently,
- * or a hand-made drive) — is the drive, and nothing is created. addDefaultDrive
- * alone only knows ids: with a different id it would try to create a second
- * drive for the slug, and against a deleted document with that id the create
- * fails on every boot.
+ * or a hand-made drive) — is the drive, and nothing is created.
  */
 function seederClient(
   reactor: unknown,
@@ -399,6 +388,36 @@ async function createDeclaredDrive(
   );
 }
 
+/**
+ * A package's switchboard serves the package's models: each package name in
+ * its `packages.list` is found from the package root (its own dependency, as
+ * its runner and plugins are) and handed to the server by its real folder.
+ * By name the server would look from its own install and the project. Paths
+ * stay as written, and a project host's list is unchanged.
+ */
+function packagesFromHostPackage(
+  config: SwitchboardConfigInput,
+  host: SwitchboardHostParsed,
+  hostPackage: RunnerContext["hostPackage"],
+): SwitchboardConfigInput {
+  const list = config.packages?.list;
+  if (!hostPackage || !list || list.length === 0) return config;
+  const roots = list.map((entry) => {
+    if (path.isAbsolute(entry) || !PACKAGE_NAME_PATTERN.test(entry)) {
+      return entry;
+    }
+    const root = resolvePackageRoot(hostPackage.root, entry);
+    if (root === undefined) {
+      throw new RunnerError(
+        `${hostFileLabel(host.name, hostPackage)}: config.switchboard.packages.list names "${entry}", which is not installed in ${hostPackage.name} (looked up from ${hostPackage.root}).`,
+        `Add ${entry} as a dependency of ${hostPackage.name}, or name its folder with an absolute path.`,
+      );
+    }
+    return root;
+  });
+  return { ...config, packages: { ...config.packages, list: roots } };
+}
+
 function catchUpTopFromEnv(raw: string | undefined): number | undefined {
   const top = Number(raw?.trim() || Number.NaN);
   return Number.isInteger(top) && top >= 0 ? top : undefined;
@@ -413,18 +432,6 @@ async function start(
   // Split before the server import loads the project .env into the env.
   const env = memberEnvOf(ctx.env);
   prepareMemberStorage(host.reactor, env.shell, hostFile);
-  const legacyStore = readModelAsReactorStore(
-    host.reactor,
-    env.shell,
-    hostFile,
-  );
-  if (legacyStore) console.warn(legacyStore.warning);
-  const workflowsBoolean = reactorWorkflowsDeprecation(
-    host.reactor,
-    hostFile,
-    "@powerhousedao/switchboard/plugins/workflows",
-  );
-  if (workflowsBoolean) console.warn(workflowsBoolean);
   // Already loaded by `ph run`, before the host; here for a caller that
   // starts the runner itself, and to reach its flush.
   const { loadObservability } = await import("../services/observability.js");
@@ -443,28 +450,29 @@ async function start(
     entriesDeclared,
     passed,
   );
-  // powerhouse.config.json `reactor.https` is a default, not a flag: it goes
-  // under the member's own config instead of over it. `--https` is a flag.
-  const { https } = classic;
+  // `--https` is a flag of this invocation; without it the member's own
+  // config.switchboard.server.https decides.
   const args = { ...classic, https: passed.https };
   // This member's own config, under the args: nothing is written to the
   // process env, so compound members do not see each other's settings.
-  const memberConfig = await memberSwitchboardConfig(host, env, {
-    pluginHost: entriesDeclared,
-    defaults: https === undefined ? {} : { server: { https } },
-  });
+  const memberConfig = packagesFromHostPackage(
+    await memberSwitchboardConfig(host, env, { hostFile }),
+    host,
+    ctx.hostPackage,
+  );
   const noDatabase = missingPostgresUrl(host.reactor, memberConfig, hostFile);
   if (noDatabase) throw new Error(noDatabase);
 
   // R2 step 2: a declared composition is resolved here, against the PROJECT
-  // dependency tree, and `features.pluginHost: true` tells the server to boot
-  // it. No plugins key = nothing to resolve: the server boots its default
-  // composition (the subsystems MCP_ENABLED, PH_WORKFLOWS_ENABLED and the
-  // config file turn on), which contributes no drives through this runner.
+  // dependency tree (the package's, for a host a package supplies), and
+  // handing it to the server is what makes it boot. No plugins key = nothing
+  // to resolve: the server boots its default composition (the subsystems
+  // MCP_ENABLED and PH_WORKFLOWS_ENABLED turn on), which contributes no
+  // drives through this runner.
   let pluginComposition;
   if (entries !== undefined) {
     pluginComposition = await resolveHostPlugins(
-      ctx.projectRoot,
+      ctx.hostPackage?.root ?? ctx.projectRoot,
       "switchboard",
       ctx.verb,
       entries,
@@ -583,7 +591,7 @@ async function start(
     localHostDrives.length > 0 ? localHostDrives[0].drive.slug : defaultSlug;
   const driveUrl = driveUrlOf(slug);
 
-  // No composition declared (the deprecated `reactor.workflows` switch): the
+  // No composition declared (PH_WORKFLOWS_ENABLED): the
   // workflows flag still seeds the SAME project-hashed drive the classic
   // vetra path seeds. With a composition the workflows PLUGIN declares that
   // drive (contributions.drives above), so nothing implicit happens here.
@@ -697,9 +705,7 @@ export async function resolveStores(
 ): Promise<SwitchboardStores> {
   const hostFile = `hosts/${host.name}/host.js`;
   const env = memberEnvOf(ctx.env);
-  const config = await memberSwitchboardConfig(host, env, {
-    pluginHost: host.runner.plugins !== undefined,
-  });
+  const config = await memberSwitchboardConfig(host, env, { hostFile });
   const noDatabase = missingPostgresUrl(host.reactor, config, hostFile);
   if (noDatabase) throw new Error(noDatabase);
   return {
@@ -721,23 +727,19 @@ export async function checkBoot(
     env.shell,
     ctx.file,
   ).map((message) => ({ path: "reactor.protocol", message }));
-  const legacyStore = readModelAsReactorStore(
-    host.reactor,
-    env.shell,
-    ctx.file,
-  );
-  if (legacyStore) {
-    issues.push({ path: "reactor.backends", message: legacyStore.warning });
-  }
   const { getConfig } = await import("@powerhousedao/config/node");
   const { switchboardBootFactsOf, switchboardBootIssues } =
     await import("@powerhousedao/switchboard/boot");
+  // `start` refuses this before it builds the config.
+  const noStore = readModelOnlyStore(host.reactor, env.shell, ctx.file);
+  if (noStore) {
+    issues.push({ path: "reactor.backends", message: noStore });
+    return issues;
+  }
   let config;
   try {
     // As `start` builds it; an env parse error becomes the issue.
-    config = await memberSwitchboardConfig(host, env, {
-      pluginHost: host.runner.plugins !== undefined,
-    });
+    config = await memberSwitchboardConfig(host, env);
   } catch (error) {
     issues.push({
       path: "",

@@ -1,10 +1,17 @@
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  ISigner,
+} from "@powerhousedao/shared/document-model";
 import type { ReactorProtocol } from "@powerhousedao/host-core";
+import type {
+  BearerTokenProvider,
+  GraphQLReactorClientOptions,
+} from "@powerhousedao/reactor-browser/graphql-client";
 
 /**
  * P5.5 — the agent host's reactor is a REMOTE attach: a running switchboard,
- * reached over GraphQL, instead of the embedded PGlite reactor glued to the
- * CLI's lifetime. N agents attach to ONE reactor as clients; the switchboard
+ * reached over GraphQL, with nothing of it glued to the CLI's lifetime. N
+ * agents attach to ONE reactor as clients; the switchboard
  * outlives agent sessions. The agent DEPENDS on the switchboard — an
  * unreachable remote fails the attach loudly with the start hint, it never
  * auto-starts one.
@@ -18,7 +25,7 @@ export interface AttachRemoteReactorOptions {
    */
   url: string;
   /** Document models the client signs/reduces with. */
-  documentModels: DocumentModelModule[];
+  documentModels: readonly DocumentModelModule<any>[];
   /**
    * What this agent expects of the fleet it joins (the host file's
    * reactor.protocol). Reachability and inspection facts are checked at
@@ -29,6 +36,20 @@ export interface AttachRemoteReactorOptions {
   expectedProtocol?: ReactorProtocol;
   /** Bearer for authenticated switchboards; omitted = unauthenticated. */
   token?: string;
+  /**
+   * Resolves the bearer per request, for a token that expires (a Renown
+   * token). Takes precedence over `token`. Returning undefined sends the
+   * request unauthenticated.
+   */
+  tokenProvider?: BearerTokenProvider;
+  /**
+   * Signs the actions the client pushes. A function is called per push (see
+   * `createReactorWrites`, whose `signer` refuses while the identity has no
+   * user), and may resolve asynchronously (a forwarded command's caller).
+   * Omitted, the client falls back to the ambient Renown signer, which does
+   * not exist in Node: actions then go out unsigned.
+   */
+  signer?: ISigner | (() => ISigner | undefined | Promise<ISigner | undefined>);
   /** Reachability probe budget. */
   timeoutMs?: number;
 }
@@ -73,7 +94,7 @@ async function probeEndpoint(
       `Cannot attach to the reactor at ${endpoint}: the switchboard is not ` +
         `answering. The agent depends on a RUNNING switchboard and never ` +
         `starts one — start it first (e.g. \`ph run switchboard\`, ` +
-        `\`ph vetra\`, or the compound that members both) and retry.`,
+        `\`ph dev\`, or the compound that members both) and retry.`,
       { cause },
     );
   }
@@ -83,10 +104,11 @@ async function probeEndpoint(
  * under the OPEN policy serve it); absence is not an attach failure. */
 async function readRemoteInfo(
   endpoint: string,
-  token: string | undefined,
+  tokenProvider: BearerTokenProvider | undefined,
   timeoutMs: number,
 ): Promise<Record<string, unknown> | undefined> {
   try {
+    const token = await tokenProvider?.();
     const res = await fetch(`${endpoint}/inspection`, {
       method: "POST",
       headers: {
@@ -108,24 +130,53 @@ async function readRemoteInfo(
   }
 }
 
+/**
+ * The Cli's models plus the ones every switchboard holds (document models,
+ * drives): a signed write to a drive needs the drive's model to compute the
+ * state it signs against. A model the Cli lists wins over a base one of the
+ * same type and version.
+ */
+export async function withBaseModels(
+  models: readonly DocumentModelModule<any>[],
+): Promise<DocumentModelModule<any>[]> {
+  const [{ driveDocumentModelModule }, { documentModelDocumentModelModule }] =
+    await Promise.all([
+      import("@powerhousedao/shared/document-drive"),
+      import("document-model"),
+    ]);
+  const key = (module: DocumentModelModule<any>) =>
+    `${module.documentModel.global.id}@${module.version ?? 1}`;
+  const listed = new Set(models.map(key));
+  const base = [
+    documentModelDocumentModelModule,
+    driveDocumentModelModule,
+  ] as unknown as DocumentModelModule<any>[];
+  return [...models, ...base.filter((module) => !listed.has(key(module)))];
+}
+
 export async function attachRemoteReactor(
   options: AttachRemoteReactorOptions,
 ): Promise<RemoteReactorAttachment> {
   const timeoutMs = options.timeoutMs ?? 10_000;
   const endpoint = deriveGraphqlEndpoint(options.url);
 
+  const token = options.token;
+  const tokenProvider =
+    options.tokenProvider ??
+    (token ? () => Promise.resolve<string | undefined>(token) : undefined);
+
   await probeEndpoint(endpoint, timeoutMs);
-  const remoteInfo = await readRemoteInfo(endpoint, options.token, timeoutMs);
+  const remoteInfo = await readRemoteInfo(endpoint, tokenProvider, timeoutMs);
 
   const { GraphQLReactorClient } =
     await import("@powerhousedao/reactor-browser/graphql-client");
-  const client = new GraphQLReactorClient({
+  const clientOptions: GraphQLReactorClientOptions = {
     url: endpoint,
-    documentModels: options.documentModels,
-    ...(options.token
-      ? { tokenProvider: () => Promise.resolve(options.token) }
-      : {}),
-  } as never);
+    documentModels: await withBaseModels(options.documentModels),
+    ...(tokenProvider ? { tokenProvider } : {}),
+    ...(options.signer ? { signer: options.signer } : {}),
+  };
+  const client = new GraphQLReactorClient(clientOptions);
 
   return { endpoint, client, remoteInfo };
 }

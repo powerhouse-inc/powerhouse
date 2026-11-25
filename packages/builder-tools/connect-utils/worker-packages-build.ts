@@ -4,9 +4,9 @@
  * The reactor worker gets document models from the registry CDN or from what
  * Connect statically bundled. A project's own (`provider: "local"`) package is
  * in neither, so its document types have no reducer in the worker and their
- * load jobs fail. Dev solves this by pointing the worker at the dev server's
- * transformed models entry; a production deployment has no dev server, so the
- * entry is prebuilt here, next to the worker bundle it is loaded beside.
+ * load jobs fail. So the entries are prebuilt here: by `ph connect build`,
+ * next to the worker bundle they are loaded beside, and by the dev server for
+ * the packages other than the project, whose models it serves live.
  *
  * Each package's `browser/document-models/index.js` (reducers only: no React,
  * no CSS, no editors) is built self-contained, with the worker-safe subset of
@@ -97,18 +97,48 @@ function resolvePackageModels(
     roots.push(dirname);
   }
   for (const root of roots) {
-    const entryPath = join(
-      root,
-      "dist",
-      "browser",
-      "document-models",
-      "index.js",
+    const entryPaths = [
+      join(root, "dist", "browser", "document-models", "index.js"),
+      // A library build (vetra's): its `./document-models` export.
+      exportedModelsEntry(root),
+    ];
+    const entryPath = entryPaths.find(
+      (candidate) => candidate !== undefined && existsSync(candidate),
     );
-    if (existsSync(entryPath)) {
+    if (entryPath) {
       return { entryPath, version: readVersion(root) };
     }
   }
   return null;
+}
+
+/** The file a package's `./document-models` export names for a browser. */
+function exportedModelsEntry(root: string): string | undefined {
+  let exports: unknown;
+  try {
+    exports = (
+      JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
+        exports?: unknown;
+      }
+    ).exports;
+  } catch {
+    return undefined;
+  }
+  if (!exports || typeof exports !== "object") return undefined;
+  const target = exportTarget(
+    (exports as Record<string, unknown>)["./document-models"],
+  );
+  return target ? join(root, target) : undefined;
+}
+
+function exportTarget(value: unknown): string | undefined {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object") return undefined;
+  for (const condition of ["browser", "import", "default"]) {
+    const target = exportTarget((value as Record<string, unknown>)[condition]);
+    if (target) return target;
+  }
+  return undefined;
 }
 
 function readProjectName(dirname: string): string | undefined {
@@ -132,6 +162,28 @@ export function ownProjectPackage(dirname: string): string | undefined {
   const name = readProjectName(dirname);
   if (!name) return undefined;
   return resolvePackageModels(dirname, name) ? name : undefined;
+}
+
+/**
+ * The local packages whose models the reactor worker loads: the configured
+ * `provider: "local"` packages, and the project itself when it ships a models
+ * bundle. `own: false` leaves the project out, for the dev server, which
+ * serves the project's models live.
+ */
+export function workerLocalPackages(
+  dirname: string,
+  packages: readonly { packageName: string; provider?: string }[] | undefined,
+  options: { own?: boolean } = {},
+): string[] {
+  const configured = (packages ?? [])
+    .filter((p) => p.provider === "local")
+    .map((p) => p.packageName);
+  if (options.own === false) {
+    const project = readProjectName(dirname);
+    return [...new Set(configured.filter((name) => name !== project))];
+  }
+  const own = ownProjectPackage(dirname);
+  return [...new Set([...configured, ...(own ? [own] : [])])];
 }
 
 /**

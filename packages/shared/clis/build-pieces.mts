@@ -41,6 +41,7 @@ export {
   findRequiredFile,
   externalDependencyVersions,
   externalDepsPlugin,
+  packageNameOf,
   undeclaredExternalDependencies,
 } from "./external-deps.mjs";
 export type {

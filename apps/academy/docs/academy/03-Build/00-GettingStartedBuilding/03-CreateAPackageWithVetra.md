@@ -105,7 +105,7 @@ Please be aware that these versions can contain bugs and experimental features t
 You can launch Vetra Studio in two modes:
 
 :::info
-`ph run vetra` starts the `vetra` host from `hosts/vetra/host.js`. The classic `ph vetra` command is deprecated. If your project has no `hosts/` folder, see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
+`ph run vetra`, or `ph dev`, starts the `vetra` host from `hosts/vetra/host.js`. The classic `ph vetra` command started it before 6.4; `ph vetra` now opens Vetra Studio. If your project has no `hosts/` folder, see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
 :::
 
 #### Interactive Mode (Recommended for Development)
@@ -219,7 +219,7 @@ A specialized AI agent that guides users through document model creation with re
 }
 ```
 
-`ph mcp` serves the reactor-mcp tools over stdio from the project's own `ph-cli`. `node --run mcp` runs the project's `mcp` script (`ph-cli mcp`), which works on every platform. On the first tool call it connects to the project's running Vetra, or starts `ph vetra --watch` in the background and writes its output to `.ph/vetra.log`, so you don't need to start Vetra first. A project created before `ph mcp` points reactor-mcp at `http://localhost:4001/mcp`; run `ph migrate` to switch it to the launcher.
+`ph mcp` serves the reactor-mcp tools over stdio from the project's own `ph-cli`. `node --run mcp` runs the project's `mcp` script (`ph-cli mcp`), which works on every platform. On the first tool call it connects to the project's running Vetra, or starts `ph run vetra --strictPort` in the background and writes its output to `.ph/vetra.log`, so you don't need to start Vetra first. A project created before `ph mcp` points reactor-mcp at `http://localhost:4001/mcp`; run `ph migrate` to switch it to the launcher.
 
 #### 1. Start the Reactor MCP:
 

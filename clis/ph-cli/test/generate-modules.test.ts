@@ -1,6 +1,5 @@
-import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
-import { extractProcessorDocuments } from "@powerhousedao/vetra/codegen";
 import {
+  copyFileSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -33,20 +32,19 @@ import { copyLegacySubgraph } from "./subgraph-project.js";
 
 const SUBGRAPH_MODULE_SPEC = join(
   import.meta.dirname,
-  "../../../packages/vetra/document-models/subgraph-module/subgraph-module.json",
+  "fixtures/subgraph-module/subgraph-module.json",
 );
 let base: string;
 let root: string;
 let logged: string[];
 let warned: string[];
 
-const common = { document: undefined, dir: undefined, debug: undefined };
+const common = { dir: undefined, debug: undefined };
 const editorArgs = (overrides: object) => ({
   ...common,
   name: undefined,
   documentType: undefined,
   all: false,
-  extract: false,
   ...overrides,
 });
 const processorArgs = (overrides: object) => ({
@@ -56,14 +54,12 @@ const processorArgs = (overrides: object) => ({
   documentTypes: [],
   apps: ["switchboard" as const, "connect" as const],
   all: false,
-  extract: false,
   skipInstall: true,
   ...overrides,
 });
 const documentModelArgs = (overrides: object) => ({
   ...common,
   all: false,
-  extract: false,
   name: undefined,
   ...overrides,
 });
@@ -85,7 +81,6 @@ const subgraphArgs = (overrides: object) => ({
   ...common,
   name: undefined,
   all: false,
-  extract: false,
   skipInstall: true,
   ...overrides,
 });
@@ -123,8 +118,13 @@ beforeAll(async () => {
     JSON.stringify({ compilerOptions: { module: "nodenext" } }, null, 2),
   );
   vi.spyOn(console, "log").mockImplementation(() => {});
+  mkdirSync(join(base, "document-models/subgraph-module"), { recursive: true });
+  copyFileSync(
+    SUBGRAPH_MODULE_SPEC,
+    join(base, "document-models/subgraph-module/subgraph-module.json"),
+  );
   await startGenerateDocumentModel(
-    documentModelArgs({ document: SUBGRAPH_MODULE_SPEC }),
+    documentModelArgs({ dir: "subgraph-module" }),
     base,
   );
   await startGenerateEditor(
@@ -327,7 +327,6 @@ describe("ph-cli generate editor", () => {
         allowedDocumentTypes: undefined,
         disableDragAndDrop: false,
         all: false,
-        extract: false,
       },
       root,
     );
@@ -337,14 +336,6 @@ describe("ph-cli generate editor", () => {
     ).rejects.toThrow(
       "editors/stockroom-app is a drive app, not a document editor",
     );
-  });
-
-  it("--extract writes a spec for the editor", async () => {
-    await startGenerateEditor(editorArgs({ extract: true }), root);
-
-    const specPath = join(root, "specs/editors/subgraph-editor.editor.phd");
-    expect(logged).toEqual([`Wrote ${specPath}`]);
-    expect(existsSync(specPath)).toBe(true);
   });
 });
 
@@ -380,22 +371,6 @@ describe("ph-cli generate processor", () => {
     ).rejects.toThrow(
       'No directory in processors/ for --dir "processors": expected its name ("my-processor") or its path ("processors/my-processor").',
     );
-  });
-
-  it("--extract writes a spec with the processor's type and document types", async () => {
-    await startGenerateProcessor(processorArgs({ extract: true }), root);
-
-    const specPath = join(root, "specs/processors/stock-indexer.processor.phd");
-    expect(logged).toEqual([`Wrote ${specPath}`]);
-    expect(existsSync(specPath)).toBe(true);
-    const [doc] = extractProcessorDocuments(buildTsMorphProject(root));
-    expect(doc.state.global).toMatchObject({
-      name: "stock-indexer",
-      type: "relational",
-      documentTypes: [
-        expect.objectContaining({ documentType: "powerhouse/subgraph" }),
-      ],
-    });
   });
 });
 
@@ -463,13 +438,5 @@ describe("ph-cli generate subgraph", () => {
       'Subgraph name "subgraph-module" is taken by a document model subgraph',
     );
     expect(existsSync(join(root, "subgraphs", "subgraph-module"))).toBe(false);
-  });
-
-  it("--extract writes a spec for the subgraph", async () => {
-    await startGenerateSubgraph(subgraphArgs({ extract: true }), root);
-
-    const specPath = join(root, "specs/subgraphs/stock.subgraph.phd");
-    expect(logged).toEqual([`Wrote ${specPath}`]);
-    expect(existsSync(specPath)).toBe(true);
   });
 });

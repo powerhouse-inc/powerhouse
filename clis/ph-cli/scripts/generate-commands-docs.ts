@@ -1,7 +1,7 @@
 import { writeCliDocsMarkdownFile } from "@powerhousedao/codegen/file-builders";
 import { accessToken } from "../src/commands/access-token.js";
 import { build as buildCmd } from "../src/commands/build.js";
-import { build, connect, preview, studio } from "../src/commands/connect.js";
+import { config as connectConfig, connect } from "../src/commands/connect.js";
 import { generateAllCmd } from "../src/commands/generate-all.js";
 import { generateAppCmd } from "../src/commands/generate-app.js";
 import { generateConnectRoutesCmd } from "../src/commands/generate-connect-routes.js";
@@ -23,20 +23,27 @@ import { inspect } from "../src/commands/inspect.js";
 import { install } from "../src/commands/install.js";
 import { keyframes } from "../src/commands/keyframes.js";
 import { list } from "../src/commands/list.js";
+import {
+  credentialsList,
+  credentialsWithdraw,
+} from "../src/commands/credentials.js";
+import { identityPassword } from "../src/commands/identity.js";
 import { login } from "../src/commands/login.js";
+import { logout } from "../src/commands/logout.js";
 import { mcp } from "../src/commands/mcp.js";
 import { migrate } from "../src/commands/migrate.js";
 import { modelCheck, modelInspect } from "../src/commands/model.js";
 import { phCli } from "../src/commands/ph-cli.js";
 import { runHost } from "../src/commands/run.js";
-import { switchboard } from "../src/commands/switchboard.js";
 import { uninstall } from "../src/commands/uninstall.js";
 import { vetra } from "../src/commands/vetra.js";
+import { whoami } from "../src/commands/whoami.js";
 
 const commands = [
   { name: "run", command: runHost },
   { name: "host check", command: hostCheck },
   { name: "host export", command: hostExport },
+  { name: "vetra", command: vetra },
   { name: "generate", command: generate },
   { name: "all", command: generateAllCmd },
   { name: "document-model", command: generateDocumentModelCmd },
@@ -50,12 +57,9 @@ const commands = [
   { name: "migration-file", command: generateMigrationFileCmd },
   { name: "connect-routes", command: generateConnectRoutesCmd },
   { name: "hosts", command: generateHostsCmd },
-  { name: "vetra", command: vetra },
   { name: "build", command: buildCmd },
   { name: "connect", command: connect },
-  { name: "connect studio", command: studio },
-  { name: "connect build", command: build },
-  { name: "connect preview", command: preview },
+  { name: "connect config", command: connectConfig },
   { name: "access token", command: accessToken },
   { name: "inspect", command: inspect },
   { name: "keyframes", command: keyframes },
@@ -64,8 +68,12 @@ const commands = [
   { name: "migrate", command: migrate },
   { name: "model check", command: modelCheck },
   { name: "model inspect", command: modelInspect },
-  { name: "switchboard", command: switchboard },
   { name: "login", command: login },
+  { name: "whoami", command: whoami },
+  { name: "logout", command: logout },
+  { name: "identity password", command: identityPassword },
+  { name: "credentials list", command: credentialsList },
+  { name: "credentials withdraw", command: credentialsWithdraw },
   { name: "install", command: install },
   { name: "uninstall", command: uninstall },
 ];

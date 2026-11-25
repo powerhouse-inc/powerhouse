@@ -41,11 +41,13 @@ describe("wrapAgent applies wrap registry to workspace tools", () => {
     ...IDENTITY_WRAPS,
     tool: (name, tool) => {
       wrappedNames.push(name);
+      const execute = tool.execute?.bind(tool);
+      if (!execute) return tool;
       return {
         ...tool,
         execute: (...args: unknown[]) => {
           executions.push({ name, argCount: args.length, firstArg: args[0] });
-          return tool.execute(...args);
+          return execute(...args);
         },
       };
     },

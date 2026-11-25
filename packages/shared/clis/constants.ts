@@ -3,14 +3,6 @@ import { join } from "node:path";
 import type { Manifest } from "../document-model/types.js";
 import type { PowerhouseConfig } from "./types.js";
 
-export const SERVICE_ACTIONS = [
-  "start",
-  "stop",
-  "status",
-  "setup",
-  "restart",
-] as const;
-
 export const SECONDS_IN_DAY = 24 * 60 * 60;
 export const DEFAULT_EXPIRY_DAYS = 7;
 export const DEFAULT_EXPIRY_SECONDS = DEFAULT_EXPIRY_DAYS * SECONDS_IN_DAY;
@@ -82,14 +74,9 @@ export const PROJECT_PORT_BAND_VETRA_CONNECT = 2000 as const;
 export const DEFAULT_DRIVE_ICON =
   "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2016%2016'%3E%3Crect%20width='16'%20height='16'%20rx='3'%20fill='%23F3F5F7'/%3E%3Cpath%20fill='%23343839'%20fill-rule='evenodd'%20clip-rule='evenodd'%20d='M10.0059%200L3.41636%205.45646C2.44979%206.25682%202.3795%207.71452%203.26456%208.60418L5.54425%2010.8957C6.21311%2011.568%206.35783%2012.6012%205.89944%2013.4314L4.48126%2016H2.13333C0.955126%2016%200%2015.0449%200%2013.8667V2.13333C0%200.955126%200.955126%200%202.13333%200H10.0059ZM11.2436%200L10.0128%202.24221C9.55899%203.06891%209.70183%204.09549%2010.3641%204.7669L12.7825%207.21868C13.6656%208.11402%2013.5866%209.57512%2012.612%2010.37L5.70922%2016H13.8667C15.0449%2016%2016%2015.0449%2016%2013.8667V2.13333C16%200.955126%2015.0449%200%2013.8667%200H11.2436Z'/%3E%3C/svg%3E" as const;
 
-export const DEFAULT_VETRA_DRIVE_ID = "vetra" as const;
-
 export const MINIMUM_NODE_VERSION = "24.0.0" as const;
-export const PH_BIN = "ph-cli-legacy" as const;
 export const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json" as const;
 export const PH_GLOBAL_DIR_NAME = ".ph" as const;
-// Keep PH_GLOBAL_PROJECT_NAME for backwards compatibility
-export const PH_GLOBAL_PROJECT_NAME = PH_GLOBAL_DIR_NAME;
 
 export const HOME_DIR = homedir();
 
@@ -111,8 +98,15 @@ export const ANALYTICS_ENGINE_CORE_PACKAGE =
 export const GRAPHQL_PACKAGE = "graphql";
 export const GRAPHQL_TAG_PACKAGE = "graphql-tag";
 export const PIECES_FRAMEWORK_PACKAGE = "@powerhousedao/pieces-framework";
+export const CLINT_PACKAGE = "@powerhousedao/clint";
 export const KYSELY_PACKAGE = "kysely";
 export const RELATIONAL_DB_PROCESSOR_CLASS = "RelationalDbProcessor";
+
+// The module a package's ./cli export is built from: its `defineCli` result.
+// Node-only like ./pieces: a Cli runs in a terminal, never in Connect. It is
+// its own build (buildCliBuildConfig), not an entry of the node build. Here,
+// not in build-config, so codegen detects a Cli by the file the build reads.
+export const CLI_ENTRY = "cli/index.ts";
 
 // External peerDependencies of every generated project.
 // `peer` is the consumer-facing range; `dev` is the exact build-tested pin.
@@ -158,6 +152,13 @@ export const FEATURE_DEPENDENCIES = {
     peerExternal: {},
     devVersioned: [PIECES_FRAMEWORK_PACKAGE],
   },
+  // A Cli runs on the host's clint: the build leaves every clint import
+  // external (CLINT_EXTERNAL), so the package must name it for its consumers.
+  cli: {
+    peerVersioned: [CLINT_PACKAGE],
+    peerExternal: {},
+    devVersioned: [],
+  },
 } as const satisfies Record<
   string,
   {
@@ -171,6 +172,7 @@ export const VERSIONED_DEPENDENCIES = [
   ...VERSIONED_PEER_DEPENDENCIES,
   ...FEATURE_DEPENDENCIES.analyticsProcessor.peerVersioned,
   ...FEATURE_DEPENDENCIES.subgraph.peerVersioned,
+  ...FEATURE_DEPENDENCIES.cli.peerVersioned,
 ];
 
 // Transitive dependencies whose postinstall scripts the generated project
@@ -226,18 +228,25 @@ export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/connect",
   "@powerhousedao/design-system",
   // uniform-runners: the runner modules the scaffolded hosts/*/host.js
-  // files name (desktop runner, clint-runner/mastra-runner, and the generic
+  // files name (desktop runner, mastra-runner/cli-runner, and the generic
   // compound they build on); dormant in classic projects until the feature
   // flag defaults on.
   "@powerhousedao/host-core",
   "@powerhousedao/clint",
   "@powerhousedao/desktop",
-  // the Vetra Studio plugins the scaffolded vetra host composes (verb dev)
-  "@powerhousedao/vetra-studio",
   // the switchboard plugins the scaffolded switchboard host composes
   // (workflows, mcp, …) and their PHPluginConfigs types for tsc -p hosts.
   "@powerhousedao/switchboard",
 ];
+
+// The host `ph dev` runs, and the one earlier scaffolds wrote in its place:
+// a project that has only the earlier one keeps running it.
+export const DEV_HOST = "dev" as const;
+export const LEGACY_DEV_HOST = "vetra" as const;
+
+// The plugins a project's hosts/vetra composes. `ph migrate` manages them
+// only in a project that has that host; no scaffold installs them.
+export const LEGACY_DEV_HOST_DEV_DEPENDENCIES = ["@powerhousedao/vetra-studio"];
 
 export const packageJsonExports = {
   ".": {
@@ -298,13 +307,19 @@ export const packageJsonExports = {
     types: "./dist/types/pieces/*/index.d.ts",
     node: "./dist/node/pieces/*/index.mjs",
   },
+  // Node only too: the package's `defineCli` result, which the Cli runner
+  // (`@powerhousedao/clint/cli-runner`) or a product bin runs in a terminal.
+  "./cli": {
+    types: "./dist/types/cli/index.d.ts",
+    node: "./dist/node/cli/index.mjs",
+  },
   "./manifest": "./dist/powerhouse.manifest.json",
   "./style.css": "./dist/style.css",
 } as const;
 
 export const packageScripts = {
   "test:watch": "vitest",
-  // Routes type-check against the tree, which Vetra or a build would write.
+  // Routes type-check against the tree, which a dev run or a build would write.
   lint: "ph-cli generate connect-routes && oxlint --type-aware --type-check",
   "lint:fix":
     "ph-cli generate connect-routes && oxlint --type-aware --type-check --fix",
@@ -316,7 +331,7 @@ export const packageScripts = {
   // The project's hosts (hosts/<name>/host.js), as `ph run <host>`.
   connect: "ph-cli run connect",
   build: "ph-cli build",
-  vetra: "ph-cli run vetra",
+  dev: "ph-cli run dev",
   // The MCP configs run it as `node --run mcp`, which needs no shell on Windows.
   mcp: "ph-cli mcp",
 } as const;
@@ -324,7 +339,7 @@ export const packageScripts = {
 // The scripts of `packageScripts` that run the host of the same name.
 export const HOST_PACKAGE_SCRIPTS: readonly (keyof typeof packageScripts)[] = [
   "connect",
-  "vetra",
+  "dev",
 ];
 
 // The values earlier scaffolds wrote for a script of `packageScripts`. `ph
@@ -346,7 +361,6 @@ export const SUPERSEDED_PACKAGE_SCRIPTS: Partial<
   build: ["npm run tsc && npm run tailwind"],
   // The classic commands, before the hosts.
   connect: ["ph-cli connect"],
-  vetra: ["ph-cli vetra"],
 };
 
 // Scripts earlier scaffolds wrote under names `packageScripts` no longer has.
@@ -363,6 +377,13 @@ export const RETIRED_PACKAGE_SCRIPTS: Record<
     replacement: "ph-cli run switchboard",
     host: "switchboard",
   },
+  // The classic dev mode; `ph-cli vetra` opens Vetra Studio.
+  vetra: {
+    values: ["ph-cli vetra"],
+    replacement: "ph-cli run vetra",
+    host: LEGACY_DEV_HOST,
+  },
+  service: { values: ["ph-cli service"] },
   "service-startup": {
     values: [
       "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",

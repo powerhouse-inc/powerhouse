@@ -20,8 +20,8 @@ import {
 
 /**
  * The vetra host's switchboard member (`ph run vetra`): a switchboard whose
- * composition has the Vetra Studio plugin active gets what classic `ph vetra`
- * gives its switchboard, from the same code —
+ * composition has the Vetra Studio plugin active gets what makes it the
+ * Vetra switchboard (services/vetra-switchboard.ts) —
  *  - the codegen processor's config (`VetraConfig`), handed to the server
  *    through the studio plugin's entry config;
  *  - the printed URL block, once the member is ready;
@@ -228,7 +228,7 @@ describe("switchboard runner — the vetra host's switchboard", () => {
   });
 });
 
-describe("what classic `ph vetra` and the vetra host share", () => {
+describe("what the vetra switchboard is made of", () => {
   it("the codegen processor follows the remote drive when one is given", () => {
     const local = {
       interactive: false,

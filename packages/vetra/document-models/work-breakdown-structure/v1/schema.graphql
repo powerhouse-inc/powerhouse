@@ -1,0 +1,381 @@
+scalar Unknown
+scalar DateTime
+scalar Attachment
+scalar Address
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+type WorkBreakdownStructureState {
+  feature: FeatureRef
+  name: String
+  description: String
+  packages: [WorkPackage!]!
+  tasks: [Task!]!
+  status: WbsStatus!
+}
+
+type WorkPackage {
+  id: OID!
+  parentPackageId: OID
+  name: String!
+  description: String
+}
+
+type Task {
+  id: OID!
+  packageId: OID
+  name: String!
+  description: String
+  taskKind: [TaskKind!]!
+  targetSpec: SpecRef
+  targetOutcomes: [OutcomeRef!]!
+  acceptanceCriteria: String
+  status: TaskStatus!
+  owner: String
+  session: SessionRef
+  plannedIn: SessionRef
+  dependsOn: [TaskRef!]!
+  parentFeature: FeatureRef
+  startedAt: DateTime
+  completedAt: DateTime
+  notes: String
+}
+
+type FeatureRef {
+  documentId: PHID!
+  name: String
+  status: String
+}
+
+type SpecRef {
+  documentId: PHID!
+  name: String
+  kind: String
+}
+
+type OutcomeRef {
+  id: OID!
+  documentId: PHID!
+  objectId: OID!
+  statement: String
+  scope: String
+}
+
+type SessionRef {
+  documentId: PHID!
+  agent: String
+  model: String
+}
+
+type TaskRef {
+  id: OID!
+  documentId: PHID!
+  objectId: OID!
+  name: String
+  status: String
+}
+
+enum WbsStatus {
+  DRAFT
+  ACTIVE
+  COMPLETE
+  ARCHIVED
+}
+
+enum TaskKind {
+  SPEC_CHANGE
+  IMPLEMENTATION
+  INTEGRATION
+  TESTING
+  REVIEW
+  DOCUMENTATION
+  MAINTENANCE
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+  BLOCKED
+  DROPPED
+}
+
+# wbs_meta
+
+input SetWbsNameInput {
+  name: String!
+}
+
+input ClearWbsNameInput {
+  _: Boolean
+}
+
+input SetWbsDescriptionInput {
+  description: String!
+}
+
+input ClearWbsDescriptionInput {
+  _: Boolean
+}
+
+input SetFeatureInput {
+  documentId: PHID!
+  name: String
+  status: String
+}
+
+input UpdateFeatureSnippetInput {
+  name: String
+  status: String
+}
+
+input ClearFeatureInput {
+  _: Boolean
+}
+
+# wbs_status
+
+input ActivateWbsInput {
+  _: Boolean
+}
+
+input CompleteWbsInput {
+  _: Boolean
+}
+
+input ArchiveWbsInput {
+  _: Boolean
+}
+
+input ReopenWbsInput {
+  _: Boolean
+}
+
+# packages
+
+input AddPackageInput {
+  id: OID!
+  name: String!
+  description: String
+  parentPackageId: OID
+  insertBefore: OID
+}
+
+input UpdatePackageInput {
+  id: OID!
+  name: String
+  description: String
+}
+
+input MovePackageInput {
+  id: OID!
+  parentPackageId: OID
+}
+
+input RemovePackageInput {
+  id: OID!
+}
+
+input ReorderPackagesInput {
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+# tasks
+
+input AddTaskInput {
+  id: OID!
+  name: String!
+  taskKind: [TaskKind!]!
+  packageId: OID
+  description: String
+  acceptanceCriteria: String
+  owner: String
+  insertBefore: OID
+}
+
+input UpdateTaskInput {
+  id: OID!
+  name: String
+  description: String
+  taskKind: [TaskKind!]
+  acceptanceCriteria: String
+  owner: String
+  notes: String
+}
+
+input MoveTaskInput {
+  id: OID!
+  packageId: OID
+  insertBefore: OID
+}
+
+input ReorderTasksInput {
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+input RemoveTaskInput {
+  id: OID!
+}
+
+input SetTaskTargetSpecInput {
+  taskId: OID!
+  documentId: PHID!
+  name: String
+  kind: String
+}
+
+input UpdateTaskTargetSpecSnippetInput {
+  taskId: OID!
+  name: String
+  kind: String
+}
+
+input ClearTaskTargetSpecInput {
+  taskId: OID!
+}
+
+input SetTaskParentFeatureInput {
+  taskId: OID!
+  documentId: PHID!
+  name: String
+  status: String
+}
+
+input UpdateTaskParentFeatureSnippetInput {
+  taskId: OID!
+  name: String
+  status: String
+}
+
+input ClearTaskParentFeatureInput {
+  taskId: OID!
+}
+
+input SetTaskPlannedInInput {
+  taskId: OID!
+  documentId: PHID!
+  agent: String
+  model: String
+}
+
+input UpdateTaskPlannedInSnippetInput {
+  taskId: OID!
+  agent: String
+  model: String
+}
+
+input ClearTaskPlannedInInput {
+  taskId: OID!
+}
+
+input AddTaskOutcomeRefInput {
+  taskId: OID!
+  id: OID!
+  documentId: PHID!
+  objectId: OID!
+  statement: String
+  scope: String
+  insertBefore: OID
+}
+
+input UpdateTaskOutcomeRefSnippetInput {
+  taskId: OID!
+  id: OID!
+  statement: String
+  scope: String
+}
+
+input RemoveTaskOutcomeRefInput {
+  taskId: OID!
+  id: OID!
+}
+
+input ReorderTaskOutcomeRefsInput {
+  taskId: OID!
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+input AddTaskDependencyInput {
+  taskId: OID!
+  id: OID!
+  documentId: PHID!
+  objectId: OID!
+  name: String
+  status: String
+}
+
+input UpdateTaskDependencySnippetInput {
+  taskId: OID!
+  id: OID!
+  name: String
+  status: String
+}
+
+input RemoveTaskDependencyInput {
+  taskId: OID!
+  id: OID!
+}
+
+input AssignTaskInput {
+  taskId: OID!
+  documentId: PHID!
+  agent: String
+  model: String
+  owner: String
+  startedAt: DateTime!
+}
+
+input UpdateTaskSessionSnippetInput {
+  taskId: OID!
+  agent: String
+  model: String
+}
+
+input UnassignTaskInput {
+  taskId: OID!
+}
+
+input SubmitTaskForReviewInput {
+  taskId: OID!
+}
+
+input AcceptTaskInput {
+  taskId: OID!
+  completedAt: DateTime!
+}
+
+input RejectTaskInput {
+  taskId: OID!
+}
+
+input BlockTaskInput {
+  taskId: OID!
+  reason: String
+}
+
+input UnblockTaskInput {
+  taskId: OID!
+}
+
+input DropTaskInput {
+  taskId: OID!
+  reason: String
+}

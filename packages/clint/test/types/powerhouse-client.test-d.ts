@@ -6,6 +6,7 @@
  */
 
 import { expectTypeOf } from "expect-type";
+import type { IReactorClient } from "@powerhousedao/reactor";
 import type { PHBaseState } from "document-model";
 import type { ReactorContext, RegistryEntry } from "../../src/index.js";
 
@@ -69,7 +70,28 @@ async function checkGetDefault() {
   >();
 }
 
+// The relationship writes take IReactorClient's parameters in its order: the
+// typed view is the same object, so a parameter out of place lands in the
+// wrong slot at run time. Only addRelationship has `metadata` (before
+// `branch`).
+expectTypeOf(reactor.client.addRelationship).parameters.toEqualTypeOf<
+  Parameters<IReactorClient["addRelationship"]>
+>();
+expectTypeOf(reactor.client.removeRelationship).parameters.toEqualTypeOf<
+  Parameters<IReactorClient["removeRelationship"]>
+>();
+expectTypeOf(reactor.client.moveRelationship).parameters.toEqualTypeOf<
+  Parameters<IReactorClient["moveRelationship"]>
+>();
+
+async function checkAddRelationshipBranch() {
+  await reactor.client.addRelationship("a", "b", "child", undefined, "draft");
+  // @ts-expect-error -- the fourth argument is the metadata, not the branch
+  await reactor.client.addRelationship("a", "b", "child", "draft");
+}
+
 // Keep the async helpers alive so TS doesn't flag them as unused.
 void checkGet;
 void checkExecute;
 void checkGetDefault;
+void checkAddRelationshipBranch;

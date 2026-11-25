@@ -4,6 +4,7 @@ import {
 } from "@powerhousedao/codegen";
 import type * as Codegen from "@powerhousedao/codegen";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -557,6 +558,37 @@ describe("ph migrate --document-models", () => {
     expect(output).toContain("document-models/notes: would convert acme/notes");
     expect(output).toContain("+++ b/document-models/notes/v1/definition.ts");
     expect(snapshot(root, join(root, "document-models"))).toEqual(before);
+  }, 240_000);
+
+  it("leaves a build copy git ignores as it is, and reads every file outside a work tree", async () => {
+    const root = await notesProject();
+    const consumer = (models: string) =>
+      `export { addNote } from "${models}/notes/v1/gen/creators.js";\n`;
+    // A desktop shell's staged copy of the package, beside its sources.
+    const copy = "hosts/desktop/dist-stack/consumer.ts";
+    writeFileSync(join(root, "consumer.ts"), consumer("./document-models"));
+    mkdirSync(join(root, dirname(copy)), { recursive: true });
+    writeFileSync(join(root, copy), consumer("../../../document-models"));
+    writeFileSync(join(root, ".gitignore"), "node_modules/\ndist-stack/\n");
+
+    const outside = await run(root, true);
+    expect(outside.output).toContain(`+++ b/${copy}`);
+
+    // Nothing is added: untracked files git does not ignore still count.
+    expect(spawnSync("git", ["init", "--quiet"], { cwd: root }).status).toBe(0);
+    const preview = await run(root, true);
+    expect(preview.code, preview.output).toBe(0);
+    expect(preview.output).toContain("+++ b/consumer.ts");
+    expect(preview.output).not.toContain(copy);
+
+    const { code, output } = await run(root);
+    expect(code, output).toBe(0);
+    expect(readFileSync(join(root, "consumer.ts"), "utf8")).toBe(
+      'export { addNote } from "./document-models/notes/compat/v1/index.js";\n',
+    );
+    expect(readFileSync(join(root, copy), "utf8")).toBe(
+      consumer("../../../document-models"),
+    );
   }, 240_000);
 
   it("restores every file when the converted model does not load", async () => {

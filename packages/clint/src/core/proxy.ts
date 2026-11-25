@@ -1,9 +1,9 @@
 /**
- * Embedded reverse proxy — exposes all service endpoints through a single port.
+ * Reverse proxy — one front port routing path prefixes to upstreams (the
+ * server behind `@powerhousedao/clint/proxy-runner`).
  * Uses http-proxy for HTTP + WebSocket forwarding.
  */
 import http from "node:http";
-import httpProxy from "http-proxy";
 import type { Logger } from "./types.js";
 import type { ProxyRoute } from "./proxy-routes.js";
 import {
@@ -21,8 +21,7 @@ export interface ProxyServerOptions {
    * Browser-facing base URL when the proxy sits behind an ingress /
    * reverse proxy (e.g. `https://vetra-agent.<tenant>.vetra.io`). When
    * set, `url` returns this instead of the local listen address, so
-   * everything composed from it (the ready event's proxied switchboard /
-   * drive / mcp URLs) is reachable from outside the pod.
+   * everything composed from it is reachable from outside the pod.
    *
    * A non-root pathname mounts the whole proxy surface under that base
    * path (e.g. `https://host/myagent` → base path `/myagent`): incoming
@@ -92,7 +91,57 @@ function splitUrl(url: string): [pathname: string, query: string] {
 const DEFAULT_DRAIN_TIMEOUT_MS = 10_000;
 
 /**
- * Create and start an embedded reverse proxy server.
+ * Finish a client response without ever writing to one that has ended.
+ * - Nothing sent yet and still writable: write head + body.
+ * - Head already sent but not ended: end it (no second head, no body).
+ * - Already ended, or the client socket is gone: do nothing.
+ * Never throws: a client that went away is not an error for the proxy.
+ */
+export function safeEnd(
+  res: http.ServerResponse,
+  status: number,
+  body: string,
+  headers: http.OutgoingHttpHeaders = { "Content-Type": "application/json" },
+): void {
+  try {
+    if (res.writableEnded || res.destroyed) return;
+    if (!res.headersSent && res.writable) {
+      // Drop headers a half-processed upstream response may already have set
+      // (e.g. its Content-Length), which would truncate or mislabel our body.
+      for (const name of res.getHeaderNames()) res.removeHeader(name);
+      res.writeHead(status, {
+        ...headers,
+        "Content-Length": Buffer.byteLength(body),
+      });
+      res.end(body);
+      return;
+    }
+    // Head already sent: close the body. Nothing sent but not writable: leave
+    // it alone (an end() here would emit an implicit 200).
+    if (res.headersSent) res.end();
+  } catch {
+    // The response went away between the check and the write.
+  }
+}
+
+/**
+ * Drop a client-sent `x-forwarded-host` so http-proxy's xfwd sets it from the
+ * real incoming `Host` (it keeps an existing value: `xfh = xfh || host`).
+ * `changeOrigin` rewrites `Host` to the upstream, so `x-forwarded-host` is the
+ * only place upstreams see the browser's host — a client-chosen value there
+ * would defeat their Host checks (e.g. DNS-rebinding guards). An ingress in
+ * front preserves `Host`, so its public host still arrives.
+ * (`x-forwarded-for`/`-port`/`-proto` are appended to, never replaced, so the
+ * real hop is always present in them.)
+ */
+export function stripClientForwardedHost(req: {
+  headers: http.IncomingHttpHeaders;
+}): void {
+  delete req.headers["x-forwarded-host"];
+}
+
+/**
+ * Create and start a reverse proxy server.
  */
 export async function createProxyServer(
   options: ProxyServerOptions,
@@ -135,6 +184,8 @@ export async function createProxyServer(
     autoSelectFamily: false,
   });
 
+  // http-proxy loads when a proxy starts, not with the package index.
+  const { default: httpProxy } = await import("http-proxy");
   const proxy = httpProxy.createProxyServer({
     xfwd: true,
     agent: upstreamAgent,
@@ -164,6 +215,17 @@ export async function createProxyServer(
   // end — a clean end would mis-signal a complete chunked body).
   proxy.on("proxyRes", (proxyRes, _req, res) => {
     const serverRes = res as http.ServerResponse;
+    // Once the client response is done (ended by an error answer, or the
+    // client went away) stop feeding it, so a late chunk is never written
+    // to an ended response.
+    const stopFeeding = () => {
+      proxyRes.unpipe(serverRes);
+      if (!proxyRes.destroyed && !proxyRes.readableEnded) proxyRes.destroy();
+    };
+    serverRes.once("close", stopFeeding);
+    serverRes.once("finish", () => {
+      if (!proxyRes.readableEnded) stopFeeding();
+    });
     proxyRes.on("close", () => {
       if (!proxyRes.readableEnded && !serverRes.writableEnded) {
         serverRes.destroy();
@@ -196,13 +258,11 @@ export async function createProxyServer(
     // Guard against double-send: the response may be a WS socket, or headers
     // may already be in flight from a partially-streamed response.
     if (res && "writeHead" in res) {
-      const serverRes = res as http.ServerResponse;
-      if (!serverRes.headersSent && serverRes.writable) {
-        serverRes.writeHead(status, { "Content-Type": "application/json" });
-        serverRes.end(JSON.stringify({ error: message, message: err.message }));
-      } else if (!serverRes.writableEnded) {
-        serverRes.end();
-      }
+      safeEnd(
+        res as http.ServerResponse,
+        status,
+        JSON.stringify({ error: message, message: err.message }),
+      );
     } else if (res && "destroy" in res) {
       (res as import("node:net").Socket).destroy();
     }
@@ -254,26 +314,47 @@ export async function createProxyServer(
   }
 
   const server = http.createServer((req, res) => {
+    // A write that lands on a response after it ended (or after the client
+    // left) is reported as an 'error' event on the response; without a
+    // listener that would be an uncaught exception.
+    const logClientError = (what: string) => (err: Error) => {
+      const code = (err as NodeJS.ErrnoException).code;
+      // These two mean the proxy itself wrote at the wrong time; client
+      // resets (ECONNRESET etc.) are routine.
+      if (
+        code === "ERR_STREAM_WRITE_AFTER_END" ||
+        code === "ERR_HTTP_HEADERS_SENT"
+      ) {
+        logger.warn(
+          `Proxy client ${what} error for ${req.url}: ${err.message}`,
+        );
+      } else {
+        logger.debug(
+          `Proxy client ${what} error for ${req.url}: ${err.message}`,
+        );
+      }
+    };
+    res.on("error", logClientError("response"));
+    req.on("error", logClientError("request"));
     const [rawPath, query] = splitUrl(req.url ?? "/");
     const stripped = stripBase(rawPath);
     if (stripped === undefined) {
-      res.writeHead(404, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Not Found", path: rawPath }));
+      safeEnd(res, 404, JSON.stringify({ error: "Not Found", path: rawPath }));
       return;
     }
     const pathname = stripped;
 
     // Built-in health endpoint
     if (pathname === "/_proxy/health") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ ok: true, routes: routes.length }));
+      safeEnd(res, 200, JSON.stringify({ ok: true, routes: routes.length }));
       return;
     }
 
     // Built-in debug endpoint
     if (pathname === "/_proxy/routes") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(
+      safeEnd(
+        res,
+        200,
         JSON.stringify(
           routes.map((r) => ({
             prefix: r.prefix,
@@ -282,6 +363,7 @@ export async function createProxyServer(
             source: r.source,
             ...(r.redirectTo ? { redirectTo: r.redirectTo } : {}),
             ...(r.exact ? { exact: true } : {}),
+            ...(r.unavailable ? { unavailable: true } : {}),
           })),
         ),
       );
@@ -290,22 +372,35 @@ export async function createProxyServer(
 
     const route = matchRoute(pathname);
     if (!route) {
-      res.writeHead(404, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Not Found", path: pathname }));
+      safeEnd(res, 404, JSON.stringify({ error: "Not Found", path: pathname }));
       return;
     }
 
     if (route.redirectTo) {
-      res.writeHead(302, {
+      safeEnd(res, 302, "", {
         Location: prefixRedirect(route.redirectTo) + query,
       });
-      res.end();
+      return;
+    }
+
+    if (route.unavailable) {
+      safeEnd(
+        res,
+        503,
+        JSON.stringify({
+          error: "Service Unavailable",
+          message: "starting",
+          path: pathname,
+        }),
+        { "Content-Type": "application/json", "Retry-After": "2" },
+      );
       return;
     }
 
     if (!route.upstream) {
-      res.writeHead(502, { "Content-Type": "application/json" });
-      res.end(
+      safeEnd(
+        res,
+        502,
         JSON.stringify({
           error: "Bad Gateway",
           message: "route has no upstream",
@@ -324,6 +419,7 @@ export async function createProxyServer(
     } else {
       delete req.headers["x-forwarded-prefix"];
     }
+    stripClientForwardedHost(req);
     req.url = (targetPath || "/") + query;
     proxy.web(req, res, { target, changeOrigin: true });
   });
@@ -394,6 +490,7 @@ export async function createProxyServer(
     } else {
       delete req.headers["x-forwarded-prefix"];
     }
+    stripClientForwardedHost(req);
     req.url = (targetPath || "/") + query;
     proxy.ws(req, socket, head, { target, changeOrigin: true });
   });
@@ -435,7 +532,7 @@ export async function createProxyServer(
       // route and a prefix route on the same prefix (e.g. a `'/'` redirect vs
       // Connect's `'/'` catch-all) coexist — matchRoute dispatches exact first.
       // Re-adding from the same source replaces the existing route, so
-      // repeated registration (boot-adoption + service:ready) is idempotent.
+      // repeated registration (e.g. a second service:ready) is idempotent.
       const sameMatch = (r: ProxyRoute) =>
         r.prefix === route.prefix && !!r.exact === !!route.exact;
       const ownIdx = routes.findIndex(

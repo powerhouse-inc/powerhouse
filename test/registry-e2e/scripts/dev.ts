@@ -67,7 +67,7 @@ async function podWarmCounts(from: string): Promise<Record<string, number>> {
 
 if (!hasRenownLogin()) {
   console.error(
-    `No Renown session in ${renownDir()}. Run \`ph login\` in its parent, or set REGISTRY_E2E_RENOWN_DIR to a .ph directory that has one.`,
+    `No Renown session in ${renownDir()}. Run \`ph login\`, or set REGISTRY_E2E_RENOWN_DIR to a directory that has one.`,
   );
   process.exit(2);
 }
@@ -77,7 +77,7 @@ const { token, did } = await renownToken(DEV_URL);
 const user = await whoami(token);
 if (user !== did) {
   console.error(
-    `${DEV_URL} did not accept the Renown token (whoami: ${user ?? "rejected"}). Run \`ph login\` again in ${path.dirname(renownDir())}.`,
+    `${DEV_URL} did not accept the Renown token (whoami: ${user ?? "rejected"}). Run \`ph login\` again.`,
   );
   process.exit(2);
 }

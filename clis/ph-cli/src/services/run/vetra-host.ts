@@ -1,7 +1,16 @@
 import {
+  announceSignInLinks,
+  describeInstance,
+  isAlreadyRunning,
+  loadHost,
   ONE_SHOT_VERBS,
   readProjectName,
+  runningInstance,
+  runRecordKey,
+  signInLinksOf,
   STORE_VERBS,
+  type AlreadyRunning,
+  type RunningInstance,
 } from "@powerhousedao/host-core";
 import { outputsSchema as connectOutputsSchema } from "@powerhousedao/ph-run/runners/connect";
 import { outputsSchema as switchboardOutputsSchema } from "@powerhousedao/ph-run/runners/switchboard";
@@ -18,12 +27,13 @@ import {
 } from "../../utils/vetra-runtime.js";
 
 /**
- * `ph run vetra`: the vetra host is the generic compound runner over a
- * switchboard and a connect member, so nothing below `ph run` knows it is
- * Vetra. What `ph vetra` does around its own start is done here around
- * startRun instead, with the same helpers: refuse while another Vetra holds
+ * `ph run dev` (and `ph run vetra` in a project with that host): the dev host
+ * is the generic compound runner over a switchboard and a connect member, so
+ * nothing below `ph run` knows it is the dev stack. What makes the stack the
+ * project's own is done here around startRun: refuse while another one holds
  * the project, publish `.ph/vetra-runtime.json` once the stack is ready,
- * clear it on exit, and correct a drifted `.mcp.json`.
+ * clear it on exit, and correct a drifted `.mcp.json`. `--restart` is its own
+ * argument, not a runner's: it stops the recorded Vetra first.
  */
 export async function runVetraHost(args: StartRunArgs): Promise<unknown> {
   const verb = args.verb ?? "run";
@@ -33,13 +43,56 @@ export async function runVetraHost(args: StartRunArgs): Promise<unknown> {
   }
   const projectDir = args.projectRoot ?? process.cwd();
   const projectName = readProjectName(projectDir);
+  const restart = args.argv?.includes(RESTART_FLAG) ?? false;
+  if (restart) {
+    const { stopVetra } = await import("../../utils/vetra-launcher.js");
+    await stopVetra({
+      projectDir,
+      projectName,
+      onProgress: (message) => console.log(message),
+    });
+  }
+  const argv = args.argv?.filter((arg) => arg !== RESTART_FLAG) ?? [];
+  // One instance per (host, data folder): a second start is the running
+  // one, shown. A stack with no run record (an earlier version's) is refused.
+  const running =
+    argv.length === 0
+      ? await runningDevHost(projectDir, args.host, projectName)
+      : undefined;
+  if (running && running.pid !== process.pid) {
+    console.log(describeInstance(running));
+    // How a page that lost its sign-in gets a fresh link (F3d).
+    announceSignInLinks(signInLinksOf(running.record));
+    return { running } satisfies AlreadyRunning;
+  }
   const refusal = await vetraRuntimeRefusal(projectDir, projectName);
   if (refusal) throw new Error(refusal);
 
-  const result = await startRun(args);
+  const result = await startRun(restart ? { ...args, argv } : args);
+  if (isAlreadyRunning(result)) return result;
   publishVetraRuntime(projectDir, projectName, result);
   return result;
 }
+
+/** The live instance of the host `ref` names. A host that does not load is
+ * startRun's to report. */
+async function runningDevHost(
+  projectDir: string,
+  ref: string,
+  projectName: string,
+): Promise<RunningInstance | undefined> {
+  let key: string;
+  try {
+    const loaded = await loadHost(projectDir, ref);
+    key = runRecordKey(loaded.host.name, loaded.package?.name);
+  } catch {
+    return undefined;
+  }
+  return runningInstance(projectDir, key, { projectName });
+}
+
+/** `ph run dev --restart`, which `ph dev --restart` is sugar for. */
+const RESTART_FLAG = "--restart";
 
 const startedSchema = z.object({
   started: z.array(z.object({ outputs: z.unknown() })),

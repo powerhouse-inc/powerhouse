@@ -93,6 +93,10 @@ export function createRoutineServiceAdapter(
     eventBus?.emit("service:stopped", { id, instanceId: id, name });
   }
 
+  async function stopAll(): Promise<void> {
+    if (routine.status === "running") await stop(id);
+  }
+
   function list(serviceId?: string): ServiceInstanceStatus[] {
     if (serviceId && serviceId !== id) return [];
     return [getInstanceStatus()];
@@ -153,6 +157,7 @@ export function createRoutineServiceAdapter(
   return {
     start,
     stop,
+    stopAll,
     list,
     getDefinition,
     logs,
@@ -186,6 +191,15 @@ export function createCompositeServiceManager(
 
   async function stop(id: string, instanceId?: string): Promise<void> {
     return getManager(id).stop(id, instanceId);
+  }
+
+  async function stopAll(): Promise<void> {
+    const errors: unknown[] = [];
+    for (const mgr of managers) {
+      // One manager's failure must not leave the others' instances running.
+      await mgr.stopAll().catch((error: unknown) => errors.push(error));
+    }
+    if (errors.length > 0) throw errors[0];
   }
 
   function list(serviceId?: string): ServiceInstanceStatus[] {
@@ -233,9 +247,18 @@ export function createCompositeServiceManager(
     return getManager(id).purgeStoppedInstances(id);
   }
 
+  async function supervisor(): Promise<{ pid: number } | undefined> {
+    for (const mgr of managers) {
+      const found = await mgr.supervisor?.();
+      if (found) return found;
+    }
+    return undefined;
+  }
+
   return {
     start,
     stop,
+    stopAll,
     list,
     getDefinition,
     logs,
@@ -243,5 +266,6 @@ export function createCompositeServiceManager(
     watchChunks,
     scanProjects,
     purgeStoppedInstances,
+    supervisor,
   };
 }

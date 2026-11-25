@@ -1,0 +1,327 @@
+scalar Unknown
+scalar DateTime
+scalar Attachment
+scalar Address
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+type BrandSheetState {
+  name: String
+  maxim: String
+  concept: String
+  logos: [Logo!]!
+  colors: [Color!]!
+  typography: [Typeface!]!
+  voice: Voice
+  imagery: Imagery
+  agentFeedback: AgentFeedback!
+}
+
+type Logo {
+  id: OID!
+  description: String!
+  markType: MarkType!
+  assetData: String
+  assetMediaType: String
+  assetFilename: String
+  assetUrl: URL
+}
+
+enum MarkType {
+  WORDMARK
+  SYMBOL
+  COMBINATION
+}
+
+type Color {
+  id: OID!
+  role: ColorRole!
+  name: String!
+  hex: String!
+  usage: String!
+}
+
+enum ColorRole {
+  PRIMARY
+  SURFACE
+  ACCENT
+  SECONDARY
+  TEXT
+}
+
+type Typeface {
+  id: OID!
+  role: TypeRole!
+  family: String!
+  alternatives: [String!]!
+  notes: String
+}
+
+enum TypeRole {
+  HEADLINE
+  BODY
+  UI
+  NUMERALS
+}
+
+type Voice {
+  qualities: [String!]!
+  guidance: String!
+  vocabulary: Vocabulary!
+}
+
+type Vocabulary {
+  prefer: [String!]!
+  avoid: [String!]!
+}
+
+type Imagery {
+  direction: String
+  include: [String!]!
+  avoid: [String!]!
+  references: [ImageRef!]!
+}
+
+type ImageRef {
+  id: OID!
+  data: String
+  mediaType: String
+  filename: String
+  url: URL
+}
+
+type AgentFeedback {
+  readyForFeedback: Boolean!
+  suggestions: [Suggestion!]!
+}
+
+type Suggestion {
+  id: OID!
+  createdAt: DateTime!
+  agent: String!
+  content: String!
+  resolution: SuggestionResolution
+}
+
+type SuggestionResolution {
+  resolvedAt: DateTime!
+  decision: SuggestionDecision!
+  comment: String
+  changeApplied: Boolean!
+}
+
+enum SuggestionDecision {
+  ACCEPTED
+  DISMISSED
+}
+
+# identity
+
+input SetProductNameInput {
+  name: String!
+}
+
+input ClearProductNameInput {
+  _: Boolean
+}
+
+input SetMaximInput {
+  maxim: String!
+}
+
+input ClearMaximInput {
+  _: Boolean
+}
+
+input SetConceptInput {
+  concept: String!
+}
+
+input ClearConceptInput {
+  _: Boolean
+}
+
+# logos
+
+input AddLogoInput {
+  id: OID!
+  description: String!
+  markType: MarkType!
+  insertBefore: OID
+}
+
+input UpdateLogoInput {
+  id: OID!
+  description: String
+  markType: MarkType
+}
+
+input SetLogoAssetInput {
+  logoId: OID!
+  data: String
+  mediaType: String
+  filename: String
+  url: URL
+}
+
+input ClearLogoAssetInput {
+  logoId: OID!
+}
+
+input RemoveLogoInput {
+  id: OID!
+}
+
+input ReorderLogosInput {
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+# colors
+
+input AddColorInput {
+  id: OID!
+  role: ColorRole!
+  name: String!
+  hex: String!
+  usage: String!
+  insertBefore: OID
+}
+
+input UpdateColorInput {
+  id: OID!
+  role: ColorRole
+  name: String
+  hex: String
+  usage: String
+}
+
+input RemoveColorInput {
+  id: OID!
+}
+
+input ReorderColorsInput {
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+# typography
+
+input AddTypefaceInput {
+  id: OID!
+  role: TypeRole!
+  family: String!
+  alternatives: [String!]!
+  notes: String
+  insertBefore: OID
+}
+
+input UpdateTypefaceInput {
+  id: OID!
+  role: TypeRole
+  family: String
+  alternatives: [String!]
+  notes: String
+}
+
+input RemoveTypefaceInput {
+  id: OID!
+}
+
+input ReorderTypefacesInput {
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+# voice
+
+input SetVoiceInput {
+  qualities: [String!]!
+  guidance: String!
+}
+
+input UpdateVoiceInput {
+  qualities: [String!]
+  guidance: String
+}
+
+input SetVoiceVocabularyInput {
+  prefer: [String!]!
+  avoid: [String!]!
+}
+
+input ClearVoiceInput {
+  _: Boolean
+}
+
+# imagery
+
+input SetImageryDirectionInput {
+  direction: String!
+}
+
+input ClearImageryDirectionInput {
+  _: Boolean
+}
+
+input SetImageryGuidanceInput {
+  include: [String!]!
+  avoid: [String!]!
+}
+
+input AddImageryReferenceInput {
+  id: OID!
+  data: String
+  mediaType: String
+  filename: String
+  url: URL
+  insertBefore: OID
+}
+
+input RemoveImageryReferenceInput {
+  id: OID!
+}
+
+input ReorderImageryReferencesInput {
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+# agent_feedback
+
+input SetReadyForFeedbackInput {
+  ready: Boolean!
+}
+
+input AddSuggestionInput {
+  id: OID!
+  createdAt: DateTime!
+  agent: String!
+  content: String!
+}
+
+input ResolveSuggestionInput {
+  id: OID!
+  resolvedAt: DateTime!
+  decision: SuggestionDecision!
+  comment: String
+  changeApplied: Boolean!
+}
+
+input RemoveSuggestionInput {
+  id: OID!
+}

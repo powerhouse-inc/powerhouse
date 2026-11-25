@@ -18,10 +18,8 @@ import {
 const modelArgs = (
   overrides: Partial<GenerateDocumentModelArgs>,
 ): GenerateDocumentModelArgs => ({
-  document: undefined,
   dir: undefined,
   all: false,
-  extract: false,
   name: undefined,
   debug: undefined,
   ...overrides,
@@ -30,10 +28,8 @@ const modelArgs = (
 const editorArgs = {
   name: undefined,
   documentType: undefined,
-  document: undefined,
   dir: undefined,
   all: true,
-  extract: false,
   debug: undefined,
 };
 
@@ -131,7 +127,7 @@ describe("--name", () => {
     const before = files.map((path) => read(dir, path));
     expect(before[1]).toContain("TodoList");
 
-    await printed(() => startGenerateAll({}, dir));
+    await printed(() => startGenerateAll(dir));
 
     expect(files.map((path) => read(dir, path))).toEqual(before);
   }, 120_000);
@@ -177,9 +173,7 @@ describe("a package without models", () => {
     writeJson(dir, "powerhouse.config.json", { documentModelsDir: 42 });
     expect(
       await printed(() => startGenerateDocumentModel(modelArgs({}), dir)),
-    ).toEqual([
-      "Please specify one of `name`, `document`, `dir`, `all`, or `extract`.",
-    ]);
+    ).toEqual(["Please specify one of `name`, `dir`, or `all`."]);
   });
 });
 

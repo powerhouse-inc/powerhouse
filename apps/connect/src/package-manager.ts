@@ -121,7 +121,6 @@ export function sharedDepMismatchWarnings(
 
 // The bundled packages' versions, inlined by bundled-package-versions.ts.
 declare const PH_COMMON_PACKAGE_VERSION: string;
-declare const PH_VETRA_PACKAGE_VERSION: string;
 declare const PH_WORKFLOW_PACKAGE_VERSION: string;
 
 const LOCAL_PACKAGE_NAME = "Local" as const;
@@ -172,7 +171,6 @@ export class BrowserPackageManager implements IPackageManager {
   async init(
     localPackage?: DocumentModelLib<any>,
     localPackageVersion?: string,
-    studioMode?: boolean,
     workflowsEnabled?: boolean,
     genericChrome = true,
   ) {
@@ -183,18 +181,9 @@ export class BrowserPackageManager implements IPackageManager {
       genericChrome ? common : { ...common, editors: [] },
       PH_COMMON_PACKAGE_VERSION,
     );
-    // Vetra is builder-only and not CDN-loadable; lazy-load it (code-split
-    // chunk, never fetched in production) only in studio mode.
-    if (studioMode) {
-      const vetra = await import("@powerhousedao/vetra");
-      this.addLocalPackage(
-        vetra.manifest.name,
-        vetra,
-        PH_VETRA_PACKAGE_VERSION,
-      );
-    }
-    // Same shape for the workflow package, behind its own independent flag.
-    // Only the package root: `./pieces` and `./reactor` are node-only.
+    // The workflow package is not CDN-loadable; lazy-load it (code-split
+    // chunk) only behind its flag. Only the package root: `./pieces` and
+    // `./reactor` are node-only.
     if (workflowsEnabled) {
       const workflow = await import("@powerhousedao/workflow");
       this.addLocalPackage(
@@ -278,7 +267,7 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   getPackageSource(packageName: string) {
-    // check vs packages registered as local (Common, Vetra, bundled packages...)
+    // check vs packages registered as local (Common, bundled packages...)
     if (this.#localPackageNames.has(packageName)) {
       return "common";
     }

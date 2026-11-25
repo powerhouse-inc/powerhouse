@@ -71,6 +71,8 @@ export interface PhClintEvents<R extends DocumentRegistry = AnyRegistry> {
     documentType: keyof R & string;
   };
   "powerhouse:document:deleted": { documentId: string };
+  /** The agent's signer can now sign (see `ReactorContext.writes`). */
+  "powerhouse:writes:ready": Record<string, never>;
 }
 
 /**
@@ -114,32 +116,25 @@ export interface CommandContext<
   routine?: Routine;
   processes?: ProcessManager;
   services?: ServiceManager;
-  /** Embedded reverse proxy, when `proxyEnabled`. */
-  proxy?: {
-    /** Public base URL of the proxy (e.g. 'http://localhost:8090'). */
-    url: string;
-    port: number;
-    /** Current route table snapshot. */
-    routes(): ReadonlyArray<{
-      prefix: string;
-      upstream?: string;
-      ws: boolean;
-      source: string;
-      redirectTo?: string;
-      exact?: boolean;
-    }>;
-    /**
-     * Register a proxy route at runtime — used by embedding CLIs to add
-     * redirects or announce extra endpoints once a service is ready.
-     */
-    addRoute(route: import("./proxy-routes.js").ProxyRoute): void;
-  };
+  /**
+   * The control channel of the running Cli this command runs beside (typed in
+   * a second terminal): what the Cli holds in its process is reached with
+   * `callControl(serving, method)`. Absent in the running Cli itself, and
+   * when none runs.
+   */
+  serving?: import("@powerhousedao/host-core/control-channel").ControlRecord;
   emit?: EmitFn<R>;
   on?: OnFn<R>;
   /** Folder operations on the agent's personal drive. Available when a personal drive is configured. */
   folders?: import("../integrations/powerhouse/types.js").FolderOperations;
   /** Lazy reactor accessor — returns the ReactorContext or undefined if not configured. */
   reactor?: () => Promise<ReactorContext<R> | undefined>;
+  /**
+   * True when the run's reactor is the one `RunOptions.reactor` supplies (a
+   * host runner's attach to a switchboard): `reactor()` then reaches that
+   * switchboard, in a one-shot command too.
+   */
+  reactorAttached?: boolean;
   /** Lazy agent accessor — returns the AgentProvider or undefined if not configured. */
   agent?: () => Promise<AgentProvider | undefined>;
   /**
@@ -150,8 +145,108 @@ export interface CommandContext<
     command: string,
     opts?: Omit<ProcessRunOptions, "onOutput">,
   ) => Promise<{ success: boolean; output: string }>;
+  /**
+   * Aborted when the run of this command is cancelled: the caller of a
+   * command that runs in a running instance pressed Ctrl-C, or went away.
+   * Absent when the command runs in the process that was started for it.
+   */
+  signal?: AbortSignal;
+  /**
+   * Who sent the command, when it runs in a running instance for a caller in
+   * another process ({@link Command.needs}). Absent otherwise. `process.cwd()`,
+   * the terminal and the environment are the instance's then; the caller's
+   * are here.
+   */
+  caller?: CommandCaller;
+  /**
+   * What was piped to the command: the caller's stdin, read to its end.
+   * Undefined when stdin is a terminal. A command that calls it declares
+   * {@link Command.stdin}; in a running instance it rejects otherwise, since
+   * the caller's input was not sent along.
+   */
+  readStdin?: () => Promise<string | undefined>;
   /** @internal Hook for interactive mode to capture progressive tool output. */
   _onToolOutput?: (toolName: string, text: string) => void;
+}
+
+/**
+ * What a command needs of a running instance of its CLI. `"reactor"` and
+ * `"agent"`: typed in a second terminal, the command runs in the instance,
+ * with its reactor and agent, and the terminal shows its output
+ * (`RunOptions.forward`). `"nothing"`: it runs in the process that was
+ * started for it.
+ */
+export type CommandNeeds = "nothing" | "reactor" | "agent";
+
+/** The process a command was sent from (see `CommandContext.caller`). */
+export interface CommandCaller {
+  /** Its OS user and process id, as it reported them: for the log, not for
+   * access decisions. */
+  user: string;
+  pid: number;
+  /** Its working directory. */
+  cwd: string;
+  /** Whether its stdout is a terminal, and how wide. */
+  tty: boolean;
+  columns?: number;
+  /** Whether it wants colour in the output. */
+  color: boolean;
+  /**
+   * Whom the caller signs the command's actions as, when its request named
+   * it. The command's writes are signed by the caller, over the control
+   * channel; this is for the log, not for access decisions.
+   */
+  identity?: CallerIdentity;
+}
+
+/** The identity a forwarded command's caller signs as. */
+export interface CallerIdentity {
+  /** The caller's address. */
+  address: string;
+  /** The label of the session it signs with ("vetra"). */
+  label?: string;
+  /** The session key's did:key. */
+  key?: string;
+}
+
+/**
+ * The person's session a Cli's command line signs with: a command forwarded
+ * to the running instance has its actions signed here (see
+ * `Cli.configureIdentity`).
+ */
+export interface CallerSession {
+  /** What the actions' `context.signer` names. */
+  signer: {
+    user: { address: string; networkId: string; chainId: number };
+    app: { name: string; key: string };
+  };
+  /** The v2 signature tuple of `action` for `target`. */
+  signAction(
+    action: import("@powerhousedao/shared/document-model").Action,
+    target: import("@powerhousedao/shared/document-model").ActionSigningTarget,
+    previousStateHash: string,
+  ): Promise<import("@powerhousedao/shared/document-model").Signature>;
+  /** A bearer of the session for the instance's requests. */
+  bearer(o: { expiresIn: number }): Promise<string>;
+}
+
+/** How a Cli's command line signs as the person (`Cli.configureIdentity`). */
+export interface IdentityConfiguration {
+  /** The session's label: the name its credential signs ("vetra"). */
+  label: string;
+  /**
+   * Opens the session, on the first signature a forwarded command needs: the
+   * signing code loads here, not on the start path. `target` is where the
+   * instance's writes are checked, so the credential is made known there.
+   * `interactive`: a password may be asked on this terminal.
+   */
+  open(o: {
+    workdir: string;
+    dataDir: string;
+    label: string;
+    interactive: boolean;
+    target?: { url?: string; dataDir?: string };
+  }): Promise<CallerSession>;
 }
 
 /**
@@ -219,6 +314,17 @@ export interface Command<
    *   // usage: cli add "Buy milk" 2
    */
   positional?: readonly string[];
+  /**
+   * What the command needs of a running instance (default `"nothing"`; a
+   * skill command needs the agent without saying so). See {@link CommandNeeds}.
+   */
+  needs?: CommandNeeds;
+  /**
+   * Whether the command reads what is piped to it (`context.readStdin`), for
+   * this input when it is a function. The caller's stdin is then sent along
+   * when the command runs in a running instance.
+   */
+  stdin?: boolean | ((input: Record<string, unknown>) => boolean);
   execute: (
     input: z.output<TInput>,
     context: CommandContext<TConfig, R>,
@@ -516,15 +622,6 @@ export type EndpointType =
 export interface CaptureDefinition {
   group: number;
   type?: EndpointType;
-  /**
-   * Claim the proxy's `/` catch-all for this website endpoint. Only honored
-   * on `website`-type captures. Exactly one capture across all services
-   * should set this — the primary SPA whose root-relative asset requests
-   * must resolve at the proxy root. Other `website` captures are routed
-   * under `/{serviceId}/{captureName}` and must serve themselves under that
-   * base path.
-   */
-  proxyRoot?: boolean;
 }
 
 /**
@@ -630,45 +727,25 @@ export interface ServiceBuildContext<TConfig = Record<string, unknown>> {
   params?: Record<string, unknown>;
   /** Resolved CLI config. */
   config: TConfig;
-  /** Embedded-proxy mount info derived from `config.proxyPublicUrl`. */
-  proxy: {
-    /** Validated public URL, trailing slashes stripped. Undefined when unset/invalid. */
-    publicUrl?: string;
-    /** Mount base path: '' at root, else leading-slash no-trailing-slash ('/myagent'). */
-    basePath: string;
-  };
 }
 
 /**
- * A proxy route declared by a service, relative to its mount. The framework
- * mounts `prefix` under `/{serviceId}/` and manages the route's lifecycle
- * alongside capture-derived routes (added on ready, removed on stop/failure,
- * re-wired for instances adopted at boot).
+ * Definition for a long-running background service: a shell `command`, or a
+ * host run (`run`). Services are child processes of the CLI: they never
+ * outlive the process that started them.
  */
-export interface ServiceProxyRouteSpec {
-  /** Path prefix relative to the service mount (leading '/' ignored). */
-  prefix: string;
-  upstream: string | URL;
-  ws?: boolean;
-}
+export type ServiceDefinition<TConfig = Record<string, unknown>> =
+  | CommandServiceDefinition<TConfig>
+  | HostServiceDefinition<TConfig>;
 
-/**
- * Definition for a long-running background service.
- * Services are spawned as detached processes that survive CLI exit.
- */
-export interface ServiceDefinition<TConfig = Record<string, unknown>> {
+/** What both forms of {@link ServiceDefinition} have. */
+export interface ServiceDefinitionBase<TConfig = Record<string, unknown>> {
   id: string;
   /** Display name for this service. Defaults to slugToTitle(id) when omitted. */
   name?: string;
   /** Human-readable description of the service. */
   description?: string;
-  command: string | ((ctx: ServiceBuildContext<TConfig>) => string);
   env?: (ctx: ServiceBuildContext<TConfig>) => Record<string, string>;
-  /**
-   * Proxy routes derived from a ready instance's endpoints, mounted under
-   * `/{serviceId}/`. Invalid specs (bad upstream URL) are skipped.
-   */
-  proxyRoutes?: (instance: ServiceInstanceStatus) => ServiceProxyRouteSpec[];
   /** Zod schema for typed start parameters (merged into start command flags). */
   paramsSchema?: import("zod").ZodType;
   /** Maximum concurrent instances (default 1). */
@@ -680,10 +757,58 @@ export interface ServiceDefinition<TConfig = Record<string, unknown>> {
    */
   preflight?: PreflightCheck<TConfig>[];
   readiness?: ReadinessConfig;
-  shutdown?: { signal: NodeJS.Signals; timeout: number };
   restart?: { enabled: boolean; maxRetries: number; delay: number };
   /** Project scanner for auto-discovery. Enables `{id}-ls` command and panel integration. */
   projectScanner?: ProjectScanner;
+}
+
+/** A service that runs a shell command, ready when its output matches `readiness`. */
+export interface CommandServiceDefinition<
+  TConfig = Record<string, unknown>,
+> extends ServiceDefinitionBase<TConfig> {
+  command: string | ((ctx: ServiceBuildContext<TConfig>) => string);
+  shutdown?: { signal: NodeJS.Signals; timeout: number };
+  run?: never;
+  endpoints?: never;
+}
+
+/**
+ * A service that is a host run: `ph run <host> [verb] [-- argv]` in the
+ * start's cwd, through host-core's `spawnHost`, with the project as its data
+ * dir (its stores and `.ph/run` record are the project's own). The child's
+ * output goes to the service log. It is ready once its run record is live,
+ * within `readiness.timeout` (patterns and `wait` do not apply), and its
+ * endpoints are `endpoints(record)`. A stop ends its stdin, which it takes as
+ * a stop request; its process tree is killed only when it has not exited
+ * after `shutdown.timeout` (default 30 s).
+ */
+export interface HostServiceDefinition<
+  TConfig = Record<string, unknown>,
+> extends ServiceDefinitionBase<TConfig> {
+  run: ServiceHostRun;
+  /** The endpoints a ready instance reports, read from its run record. A
+   * throw fails the start, naming what the record lacks. */
+  endpoints?: (
+    record: import("@powerhousedao/host-core").RunRecord,
+  ) => Record<string, { url: string; type?: EndpointType }>;
+  /** No signal: the stop is the end of its stdin. */
+  shutdown?: { timeout: number; signal?: never };
+  command?: never;
+}
+
+/** What {@link HostServiceDefinition} runs. */
+export interface ServiceHostRun {
+  /** The host: its folder under the project's `hosts/`, or `<package>/<host>`
+   * for one an installed package supplies. */
+  host: string;
+  /** Absent: the host's default verb. A one-shot verb writes no run record
+   * and is refused. */
+  verb?: string;
+  /** The runner's arguments, after `--`. */
+  argv?: readonly string[];
+  /** Merged into the child's env, under `env(ctx)`. It may not set
+   * PH_USER_DATA_DIR: the data dir is the project. */
+  env?: Record<string, string>;
 }
 
 /**
@@ -696,7 +821,14 @@ export interface ServiceStartOptions {
   cwd?: string;
   params?: Record<string, unknown>;
   name?: string;
+  /** How long a host service lives when the user's supervisor runs it:
+   * `caller` (the default) until the process that asked ends, `supervisor`
+   * until it is stopped or the supervisor ends. Without a supervisor every
+   * instance lives with the process that started it. */
+  lifetime?: ServiceLifetime;
 }
+
+export type ServiceLifetime = "caller" | "supervisor";
 
 /**
  * Runtime status of a service instance.
@@ -713,6 +845,25 @@ export interface ServiceInstanceStatus {
   restartAttempt?: number;
   workdir?: string;
   params?: Record<string, unknown>;
+  /** Set when the user's supervisor holds the instance. */
+  supervisor?: SupervisorHold;
+}
+
+/** The supervisor that holds a service instance, and what it knows of it. */
+export interface SupervisorHold {
+  /** The supervisor's process. */
+  pid: number;
+  /** Its handle for the instance. */
+  handle: string;
+  lifetime: ServiceLifetime;
+  /** It ended on its own and the supervisor starts it again. */
+  restarting?: boolean;
+  /** The version of the project's ph-cli (or ph-run) that runs it. */
+  runnerVersion?: string;
+  /** What cannot be done with it, each with the reason. */
+  missing?: string[];
+  /** Where its restart policy stands: the supervisor applies it. */
+  restart?: import("@powerhousedao/host-core/instance").RestartState;
 }
 
 /**
@@ -729,11 +880,17 @@ export interface ServiceStatus {
 }
 
 /**
- * Manager for long-running background services.
+ * Manager for long-running background services. A manager reports, stops
+ * and restarts only the instances it started; one recorded by another
+ * process (or left over from an earlier run) is never adopted.
  */
 export interface ServiceManager {
   start(id: string, opts?: ServiceStartOptions): Promise<string>;
   stop(id: string, instanceId?: string): Promise<void>;
+  /** Stop every instance this manager started (the CLI runtime's teardown
+   * calls it). Instances still running when the process ends are killed
+   * anyway; this is the graceful path. */
+  stopAll(): Promise<void>;
   list(serviceId?: string): ServiceInstanceStatus[];
   /** Get the static definition for a service. */
   getDefinition(id: string): ServiceDefinition | undefined;
@@ -757,6 +914,10 @@ export interface ServiceManager {
   ): import("./project-scanner.js").ProjectScanResult[];
   /** Remove all stopped instance state files (and their log files) for a service. */
   purgeStoppedInstances(id: string): void;
+  /** The supervisor of this OS user that host services are started through,
+   * when one runs. Rejects when one is recorded and does not answer: nothing
+   * may then be started, stopped or listed as if there were none. */
+  supervisor?(): Promise<{ pid: number } | undefined>;
 }
 
 // ── Event Bus ─────────────────────────────────────────────────────
@@ -887,8 +1048,13 @@ export interface WrapRegistry {
   /**
    * Wraps each agent tool's execute function. Implementations must forward
    * every invocation argument — Mastra invokes `execute(args, toolContext)`.
+   *
+   * Any tool fits as it is, a Mastra `Tool` included: `execute` may be
+   * absent (Mastra's is optional, so an implementation returns such a tool
+   * unwrapped), and it is declared as a method so an `execute` with typed
+   * arguments fits as well.
    */
-  tool<T extends { execute: (...args: unknown[]) => unknown }>(
+  tool<T extends { execute?(...args: unknown[]): unknown }>(
     name: string,
     tool: T,
   ): T;
@@ -1043,12 +1209,6 @@ export interface CliOptions<
 > {
   name: string;
   version: string;
-  /**
-   * Absolute path to the CLI package root (the directory containing package.json).
-   * Used by the framework to resolve sibling packages (e.g. the `-app` Reactor Package)
-   * and auto-detect Connect assets. Typically set to `CLI_ROOT` from config.ts.
-   */
-  root?: string;
   description: Resolvable<string, z.infer<TSchema> & z.infer<TSecrets>>;
   commands: Command<any, any, any>[];
   configSchema?: TSchema;
@@ -1056,8 +1216,8 @@ export interface CliOptions<
   secretsSchema?: TSecrets;
   interactive?: InteractiveConfig<z.infer<TSchema> & z.infer<TSecrets>>;
   /**
-   * Builds the bearer-token handler for the embedded switchboard's HTTP
-   * attachment routes (`/attachments/*`). Called once after config resolves,
+   * Builds the bearer-token handler for the switchboard's HTTP attachment
+   * routes (`/attachments/*`). Called once after config resolves,
    * with the workdir + resolved config; the returned handler mints a token per
    * call (or undefined when none is available). The framework has no identity
    * of its own, so the host CLI supplies this — without it, attachment
@@ -1091,25 +1251,6 @@ export interface CliOptions<
    */
   prompts?: PromptsConfig;
   /**
-   * When true, an embedded reverse proxy is started that exposes all service
-   * endpoints through a single port. Config fields `proxyPort` and `proxyHost`
-   * are auto-injected into the config schema.
-   */
-  proxyEnabled?: boolean;
-  /**
-   * Extra proxy routes registered at startup, alongside the service-derived
-   * ones. For in-process HTTP servers on fixed ports (e.g. a trigger-owned
-   * API) that the ServiceManager doesn't know about. Requires `proxyEnabled`.
-   */
-  proxyRoutes?: Array<{
-    /** URL path prefix matched against incoming requests (e.g. '/preview'). */
-    prefix: string;
-    /** Upstream target URL (e.g. 'http://127.0.0.1:5180'). */
-    upstream: string;
-    /** Forward WebSocket upgrades on this route. */
-    ws?: boolean;
-  }>;
-  /**
    * Lifecycle hooks registered with this CLI. Each hook may contribute a
    * config schema fragment (merged into the effective schema, so its fields
    * flow through the 6-layer resolver and `cli config`) and an `onInit`
@@ -1127,6 +1268,12 @@ export interface CliOptions<
  * For interactive mode testing, `interactiveInput` provides a headless REPL
  * that reads from the iterable instead of rendering Ink.
  */
+/** What `RunOptions.onServe` answers when an instance serves already. */
+export interface ServeAnswer {
+  /** That instance, described for the terminal. */
+  running: string;
+}
+
 export interface RunOptions {
   exit?: (code: number) => void;
   stdout?: (message: string) => void;
@@ -1141,7 +1288,92 @@ export interface RunOptions {
   configFile?: string;
   /** Override log verbosity. Default: 'info'. */
   logLevel?: LogLevel;
+  /**
+   * The reactor for this run, in place of the one `configureReactor` set:
+   * called lazily, like that configuration's `create`, with the setup
+   * context and that configuration (undefined when the CLI set none). A
+   * host runner (`@powerhousedao/clint/cli-runner`) attaches a remote
+   * switchboard here.
+   */
+  reactor?: RunReactor;
+  /**
+   * Called once when the CLI keeps running (interactive, or serving its
+   * routine), before it starts anything for that; never for a one-shot
+   * command. A host runner writes its run record here. A rejection ends the
+   * run: its message on stderr, exit code 1. So does `{ running }`, the
+   * description of an instance that serves already: it goes to stdout, and
+   * the run ends with exit code 0 having started nothing.
+   */
+  onServe?: () => void | ServeAnswer | Promise<void | ServeAnswer>;
+  /**
+   * Stops a run that keeps going as SIGINT or SIGTERM would: the headless
+   * keep-alive and the ink shell end, and the CLI tears down. An abort
+   * before then takes effect once it is serving. The line-based shell
+   * (`-i` on a pipe) and a command in flight do not listen.
+   */
+  signal?: AbortSignal;
+  /**
+   * The members of the compound this CLI is the foreground member of, as
+   * service instances next to its own services (`context.services`): the
+   * panel and the log calls show them; start and stop refuse, since the
+   * compound owns their life.
+   */
+  members?: () => readonly import("@powerhousedao/host-core").MemberStatus[];
+  /**
+   * The control channel of a running instance of this CLI (from its run
+   * record). A command that ends acts on that instance's services through
+   * it: `<service>-ps`, `-start`, `-stop` and `-restart` reach what runs
+   * there.
+   */
+  remoteServices?: import("@powerhousedao/host-core/control-channel").ControlRecord;
+  /**
+   * How this CLI is started so that it keeps running (`ph run <host>`): named
+   * when a command that ends is refused a service start.
+   */
+  serveCommand?: string;
+  /**
+   * Where the writes of a serving instance are checked, told to callers in
+   * `hello`: the switchboard's base URL, and its data folder when callers may
+   * write their credentials' records there.
+   */
+  store?: { url?: string; dataDir?: string };
+  /**
+   * Where a command that needs the reactor or the agent (`Command.needs`)
+   * runs when it is typed as a command that ends: in the running instance of
+   * this CLI, which executes it and sends its output and exit code back.
+   * Absent, or with `--local` before the command name: in this process, as
+   * every other command does.
+   */
+  forward?: ForwardOptions;
 }
+
+/** See `RunOptions.forward`. */
+export interface ForwardOptions {
+  /**
+   * The running instance, from its run record: its control channel, or the
+   * protocol of one this process does not speak (the command then fails,
+   * naming both). Absent: none runs.
+   */
+  target?: {
+    control?: import("@powerhousedao/host-core/control-channel").ControlRecord;
+    protocol?: number;
+    pid?: number;
+  };
+  /**
+   * Without a running instance the command fails, saying how to start one
+   * (`RunOptions.serveCommand`), and builds no reactor or agent of its own.
+   * Default: it runs in this process.
+   */
+  required?: boolean;
+}
+
+/** See `RunOptions.reactor`. */
+export type RunReactor = (
+  setup: import("../integrations/powerhouse/types.js").ReactorSetupContext,
+  configured:
+    | import("../integrations/powerhouse/types.js").ReactorConfiguration
+    | undefined,
+) => Promise<import("../integrations/powerhouse/types.js").ReactorContext>;
 
 /**
  * Environment variable mapping for a config field.
@@ -1171,6 +1403,12 @@ export interface Cli {
   configureReactor<R extends DocumentRegistry = AnyRegistry>(
     config: import("../integrations/powerhouse/types.js").ReactorConfiguration<R>,
   ): void;
+  /**
+   * How this Cli's command line signs as the person: a command it forwards
+   * to the running instance is signed here, over the control channel.
+   * Without it, such a command signs as the instance.
+   */
+  configureIdentity(config: IdentityConfiguration): void;
   getCommand(id: string): Command | undefined;
   listCommands(): Command[];
   execute(

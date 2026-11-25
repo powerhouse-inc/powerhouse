@@ -280,9 +280,12 @@ describe("GraphQLReactorClient.read", () => {
     const client = clientOver(createMockSdk(["READ_READY"]));
 
     expect(Object.keys(client.write).sort()).toEqual([
+      "addRelationship",
       "create",
       "deleteDocument",
       "execute",
+      "removeRelationship",
+      "rename",
     ]);
     expect((client.read as unknown as Record<string, unknown>).execute).toBe(
       undefined,

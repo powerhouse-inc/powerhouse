@@ -11,7 +11,7 @@ This article covers the **manual code generation method** using the `ph generate
 | **Vetra Studio** | Automatic—Vetra watches your specifications and generates code as you work |
 | **Connect**      | Manual—Export a `.phd` file and run `ph generate`                          |
 
-If you're using Vetra Studio with `ph vetra --interactive`, you don't need to run any generation commands. Vetra handles everything for you, prompting for confirmation before processing changes.
+If you're using Vetra Studio with `ph dev --interactive`, you don't need to run any generation commands. Vetra handles everything for you, prompting for confirmation before processing changes.
 
 ## Prerequisites (Connect Workflow Only)
 
@@ -137,7 +137,7 @@ When using Vetra Studio, code generation is automatic:
 1. **Start Vetra in Interactive Mode:**
 
    ```bash
-   ph vetra --interactive
+   ph dev --interactive
    ```
 
 2. **Create Your Document Model:**

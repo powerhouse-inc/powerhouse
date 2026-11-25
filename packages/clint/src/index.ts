@@ -31,6 +31,45 @@ export {
   resolveServiceName,
 } from "./core/services.js";
 export { createServiceCommands, formatStatus } from "./core/service-command.js";
+export {
+  connectRemoteServices,
+  refuseServiceStarts,
+  restartService,
+  serveServices,
+  ServiceStartRefused,
+} from "./core/service-control.js";
+export {
+  callerIdentityOf,
+  COMMAND_METHOD,
+  commandRequestSchema,
+  commandStoreSchema,
+  CommandTooLarge,
+  sendCommand,
+  serveCommands,
+} from "./core/command-control.js";
+export type {
+  CommandRequest,
+  CommandStore,
+  ForwardedCommand,
+} from "./core/command-control.js";
+export {
+  asOwnSigner,
+  bearerForRequest,
+  callerSigningOf,
+  COMMAND_SIGNING,
+  CommandEndedError,
+  forwardedSigner,
+  SIGNING_ASKS,
+  signerForWrite,
+  withCallerSigning,
+} from "./core/forwarded-signing.js";
+export type {
+  CallerAsks,
+  CallerSigning,
+  SignerIdentity,
+} from "./core/forwarded-signing.js";
+export { callerAnswers } from "./core/caller-signing.js";
+export type { CallerAnswers } from "./core/caller-signing.js";
 export { scanProjects, PROJECT_INDICATORS } from "./core/project-scanner.js";
 export { getProjectMapping } from "./core/project-mapping.js";
 export type { ProjectMapping } from "./core/project-mapping.js";
@@ -53,6 +92,7 @@ export {
   registerDefaultHelpers,
   extractTemplateVars,
   renderSkillTemplate,
+  loadTemplates,
 } from "./core/templates.js";
 export type { RenderOptions, RenderResult } from "./core/templates.js";
 export { createRoutine } from "./core/routine.js";
@@ -64,13 +104,6 @@ export { formatStreamChunk, renderStream } from "./core/stream.js";
 export type { RenderedChunk } from "./core/stream.js";
 export { createProxyServer } from "./core/proxy.js";
 export type { ProxyServerOptions, ProxyServerInstance } from "./core/proxy.js";
-export {
-  buildSwitchboardRoutes,
-  buildSwitchboardRouteSpecs,
-  buildServiceRoutes,
-  captureRoutePrefix,
-  isWsEndpointType,
-} from "./core/proxy-routes.js";
 export type { ProxyRoute } from "./core/proxy-routes.js";
 export { createReplSession } from "./interactive/session.js";
 export { parseReplInput, tokenizeArgs } from "./interactive/router.js";
@@ -80,38 +113,41 @@ export {
   getCompletionSuffix,
   applyCompletion,
 } from "./interactive/completions.js";
-export { renderMarkdown } from "./interactive/markdown.js";
-export { buildDefaultReactor } from "./integrations/powerhouse/index.js";
-export type { BuildDefaultReactorOptions } from "./integrations/powerhouse/index.js";
-export { startSwitchboard } from "./integrations/powerhouse/index.js";
+export { renderMarkdown, loadMarkdown } from "./interactive/markdown.js";
 export {
-  defaultPort,
-  resolvePort,
-  resolveReactorDefaults,
-} from "./integrations/powerhouse/ports.js";
-export { deterministicId } from "./integrations/powerhouse/identity.js";
-export type { StartSwitchboardOptions } from "./integrations/powerhouse/switchboard.js";
+  attachDefaultReactor,
+  resolveRemoteReactorConfig,
+} from "./integrations/powerhouse/index.js";
+export type { AttachDefaultReactorOptions } from "./integrations/powerhouse/index.js";
 export { defineRegistry } from "./integrations/powerhouse/registry.js";
 export { createDocumentChangeTrigger } from "./integrations/powerhouse/change-trigger.js";
 export type { DocumentChangeTriggerOptions } from "./integrations/powerhouse/change-trigger.js";
 export { isDocType } from "./integrations/powerhouse/type-guard.js";
+export {
+  SignerNotReadyError,
+  signerReady,
+  policyOfHeader,
+} from "./integrations/powerhouse/signing.js";
+export type { SignaturePolicy } from "./integrations/powerhouse/signing.js";
 export type {
   ReactorContext,
   ReactorSetupContext,
   ReactorConfiguration,
+  LazySigner,
+  RemoteReactorConfig,
+  RemoteReactorSource,
   DriveConfig,
+  EnsureDriveClient,
+  ReactorWrites,
   DriveEntry,
   FolderEntry,
   FolderOperations,
   SubscriptionConfig,
-  SwitchboardConfig,
-  ConnectConfig,
   DocumentRegistry,
   AnyRegistry,
   RegistryEntry,
   TypedReactorClient,
   TypedDocumentChangeEvent,
-  ReactorClientModule,
   IAttachmentService,
   AttachmentRef,
   AttachmentResponse,
@@ -138,8 +174,15 @@ export type {
   Cli,
   CliOptions,
   RunOptions,
+  RunReactor,
+  ForwardOptions,
   WorkdirStore,
   CommandContext,
+  CommandNeeds,
+  CommandCaller,
+  CallerIdentity,
+  CallerSession,
+  IdentityConfiguration,
   CoreContext,
   PromptConfig,
   InteractiveConfig,
@@ -183,8 +226,12 @@ export type {
   ReadinessConfig,
   ServiceBuildContext,
   ServiceDefinition,
-  ServiceProxyRouteSpec,
+  ServiceDefinitionBase,
+  CommandServiceDefinition,
+  HostServiceDefinition,
+  ServiceHostRun,
   ServiceStartOptions,
+  ServiceLifetime,
   ServiceInstanceStatus,
   ServiceStatus,
   ServiceManager,

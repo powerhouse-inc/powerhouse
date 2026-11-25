@@ -114,7 +114,7 @@ cd ChatRoom
 
 **Vetra Studio** is the builder's orchestration hub for assembling all specifications needed for your package. It provides a **Vetra Studio Drive** to access, manage, and share document model specifications, editors, and data integrations—all through a visual interface. For deeper coverage, see the [Vetra Studio documentation](/academy/GetStarted/VetraStudio).
 
-Once in the project directory, run the `ph run vetra` command to start a Vetra Studio Drive where you'll be defining your specifications. It starts the `vetra` host that `ph init` wrote to `hosts/vetra/host.js`. The classic `ph vetra` command is deprecated: see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
+Once in the project directory, run the `ph run vetra` command to start a Vetra Studio Drive where you'll be defining your specifications. It starts the `vetra` host that `ph init` wrote to `hosts/vetra/host.js`, as `ph dev` does. The classic `ph vetra` command started it before 6.4; `ph vetra` now opens Vetra Studio: see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
 
 ```bash
 ph run vetra

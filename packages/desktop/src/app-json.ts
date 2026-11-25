@@ -60,11 +60,6 @@ const loadingSchema = loadingColorsSchema
     /** Colors for `prefers-color-scheme: dark`; without it the page keeps
      * the light colors in both schemes. */
     dark: loadingColorsSchema.nullable().optional(),
-    /** Deprecated: a decoration pinned to the bottom-right corner, relative
-     * to app.json, with `artDark` its dark-scheme counterpart. Superseded by
-     * the top-level `background`, which ignores these when set. */
-    art: z.string().min(1).nullable().optional(),
-    artDark: z.string().min(1).nullable().optional(),
   })
   .nullable()
   .optional();
@@ -228,13 +223,8 @@ export const appJsonSchema = z.strictObject({
    * page colour (`{ color, layers }`), or one image pinned bottom-right.
    * The status line stays centred above them. `ph generate desktop-shell`
    * copies Connect's `connect.branding.homeBackground` here. null or
-   * omitted: the app icon (or `splash`) above the status line. */
+   * omitted: the app icon above the status line. */
   background: backgroundSchema,
-  /** Deprecated in favour of `background`: a wide splash image shown above
-   * the status line instead of the square icon. Relative to this file. */
-  splash: z.string().min(1).nullable().optional(),
-  /** Deprecated with `splash`: its `prefers-color-scheme: dark` variant. */
-  splashDark: z.string().min(1).nullable().optional(),
   loading: loadingSchema,
   window: windowSchema,
   fileAssociations: z.array(fileAssociationSchema).optional(),
@@ -265,6 +255,73 @@ export const DEFAULT_SHELL_CRATE_VERSION = "0.1.2";
 
 export const APP_JSON_FILE = "app.json";
 
+/** A key app.json no longer takes, with what replaces it. */
+export interface RemovedAppJsonKey {
+  /** Path of the key in app.json. */
+  path: string;
+  message: string;
+}
+
+// The `background` layers that place an image where the removed keys did:
+// the splash above the centred status line, the art in the bottom-right
+// corner.
+const SPLASH_LAYER =
+  '{ src: "<image>", position: { bottom: "calc(50% + 32px)" }, width: "min(720px, 80vw)", maxHeight: "65vh" }';
+const ART_LAYER =
+  '{ src: "<image>", position: { bottom: 0, right: 0 }, width: "clamp(220px, 30vw, 520px)" }';
+const DARK_SRC = 'src: { light: "<image>", dark: "<dark image>" }';
+
+/**
+ * The keys removed from app.json in 6.4 that `raw` still sets (`splash`,
+ * `splashDark`, `loading.art`, `loading.artDark`), in that order. Checked
+ * before schema validation, so the error names the `background` form that
+ * replaces each one instead of a bare "Unrecognized key".
+ */
+export function findRemovedAppJsonKeys(raw: unknown): RemovedAppJsonKey[] {
+  const isObject = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value);
+  if (!isObject(raw)) return [];
+  const hasBackground = raw.background !== undefined && raw.background !== null;
+  const replacements: Array<[string, unknown, string]> = [
+    [
+      "splash",
+      raw.splash,
+      `use a background layer, which shows the image above the status line: background: { layers: [${SPLASH_LAYER}] }.`,
+    ],
+    [
+      "splashDark",
+      raw.splashDark,
+      `name the dark image in the background layer that shows the splash: ${DARK_SRC}.`,
+    ],
+  ];
+  if (isObject(raw.loading)) {
+    replacements.push(
+      [
+        "loading.art",
+        raw.loading.art,
+        `use the top-level background: background: "<image>" pins the image to the bottom-right corner at its own size, and background: { layers: [${ART_LAYER}] } keeps the width it had.`,
+      ],
+      [
+        "loading.artDark",
+        raw.loading.artDark,
+        `name the dark image in the background layer that shows the art: ${DARK_SRC}.`,
+      ],
+    );
+  }
+  return replacements.flatMap(([key, value, replacement]) =>
+    value === undefined
+      ? []
+      : [
+          {
+            path: key,
+            message: hasBackground
+              ? `${key} was removed in 6.4; this file sets background, which already replaced it. Remove the key.`
+              : `${key} was removed in 6.4; ${replacement}`,
+          },
+        ],
+  );
+}
+
 /** Read + validate hosts/<host>/app.json. Throws with the field named on a
  * bad value, and a clear message when the file is absent. */
 export function loadAppJson(hostDir: string): AppJson {
@@ -281,6 +338,11 @@ export function loadAppJson(hostDir: string): AppJson {
     throw new Error(`${file}: not valid JSON — ${String(error)}`, {
       cause: error,
     });
+  }
+  const removed = findRemovedAppJsonKeys(raw);
+  if (removed.length > 0) {
+    const lines = removed.map((key) => `  ${key.message}`).join("\n");
+    throw new Error(`${file}: removed key:\n${lines}`);
   }
   const result = appJsonSchema.safeParse(raw);
   if (!result.success) {

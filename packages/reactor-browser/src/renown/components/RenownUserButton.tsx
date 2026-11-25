@@ -1,3 +1,4 @@
+import { anonymousLabel } from "@renown/sdk";
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "../../hooks/renown.js";
@@ -178,6 +179,12 @@ const styles: Record<string, CSSProperties> = {
   disconnectItem: {
     color: "var(--destructive, #dc2626)",
   },
+  note: {
+    margin: "8px 0 0",
+    fontSize: "12px",
+    lineHeight: 1.4,
+    color: "var(--muted-foreground, #6b7280)",
+  },
   separator: {
     height: "1px",
     backgroundColor: "var(--border, #e5e7eb)",
@@ -206,14 +213,20 @@ export function RenownUserButton({
   const user = useUser();
 
   const address = addressProp ?? user?.address ?? "";
-  const username = usernameProp ?? user?.profile?.username ?? user?.ens?.name;
+  // A key on this computer or in this browser: a pseudonym, no Renown profile.
+  const localIdentity = addressProp ? undefined : user?.localIdentity;
+  const username =
+    usernameProp ??
+    user?.profile?.username ??
+    user?.ens?.name ??
+    (localIdentity && address ? anonymousLabel(address) : undefined);
   const avatarUrl =
     avatarUrlProp ?? user?.profile?.userImage ?? user?.ens?.avatarUrl;
   const userId = userIdProp ?? user?.profile?.documentId;
   const onDisconnect = onDisconnectProp ?? (() => void defaultLogout());
   const displayName =
     username ?? (address ? truncateAddress(address) : "Account");
-  const profileId = userId ?? address;
+  const profileId = localIdentity ? undefined : (userId ?? address);
 
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -359,8 +372,30 @@ export function RenownUserButton({
                 </button>
               </div>
             )}
+            {localIdentity === "browser" && (
+              <p style={styles.note} data-testid="browser-pseudonym-note">
+                Kept in this browser only. Clearing this site&apos;s data loses
+                it: your documents stay, but you can no longer sign as their
+                author.
+              </p>
+            )}
           </div>
           <div style={styles.menuSection}>
+            {localIdentity === "browser" && (
+              <button
+                type="button"
+                onClick={() => openRenown()}
+                onMouseEnter={() => setHoveredItem("renown")}
+                onMouseLeave={() => setHoveredItem(null)}
+                style={{
+                  ...styles.menuItem,
+                  ...(hoveredItem === "renown" ? styles.menuItemHover : {}),
+                }}
+              >
+                <UserIcon size={14} color="var(--muted-foreground, #6b7280)" />
+                Sign in with Renown
+              </button>
+            )}
             {profileId && (
               <button
                 type="button"

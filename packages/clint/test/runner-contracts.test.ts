@@ -12,15 +12,16 @@ import type {
   PHHostOutputs,
 } from "@powerhousedao/host-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
-import * as clintRunner from "../src/runners/clint-runner.js";
+import * as cliRunner from "../src/runners/cli-runner.js";
+import * as proxyRunner from "../src/runners/proxy-runner.js";
 import * as mastraRunner from "../src/runners/mastra-runner.js";
 
 /** The runner modules as validateHost sees them (spread: the index-signature
  * shape of RunnerModule, no cast). */
 const MASTRA = "@powerhousedao/clint/mastra-runner";
-const CLINT = "@powerhousedao/clint/clint-runner";
+const CLI = "@powerhousedao/clint/cli-runner";
 const mastra = { ...mastraRunner };
-const clint = { ...clintRunner };
+const cliRun = { ...cliRunner };
 /** validateDeclaredHost takes an untyped RunnerModule; its verbs are unused. */
 const untyped = (module: {
   kind: "reactor" | "compound";
@@ -83,67 +84,41 @@ const assistantHost = () => {
   };
 };
 
-/** A clint shell host using every option the runner reads, as DECLARED:
- * the assistant agent and the proxy route name the assistant host's outputs
- * by token. */
-const declaredCliHost = () =>
+/** A cli-runner host as DECLARED: a package's Cli, attached to the
+ * switchboard's drive by an `$output` token. */
+const declaredCliRunnerHost = () =>
   ({
-    name: "cli",
-    runner: {
-      module: CLINT,
-      lifecycle: "attached",
-      proxy: {
-        port: 8490,
-        routes: {
-          "/agent": {
-            upstream: { $output: { host: "assistant", path: ["origin"] } },
-            path: "/v1",
-            ws: false,
-          },
-          "/docs": { upstream: "https://docs.example.com" },
-        },
-      },
-    },
-    children: {
-      switchboard: { host: "switchboard" },
-      assistant: {
-        host: "assistant",
-        config: { readiness: { pattern: "agent API", timeout: 60_000 } },
-      },
-    },
-    config: {
-      agents: {
-        main: {
-          url: {
-            $output: { host: "assistant", path: ["endpoints", "openai"] },
+    name: "tools",
+    runner: { module: CLI },
+    config: { package: "@acme/tools" },
+    reactor: {
+      backends: {
+        switchboard: {
+          kind: "remote",
+          remote: {
+            url: {
+              $output: {
+                host: "switchboard",
+                path: ["drives", "powerhouse", "url"],
+              },
+            },
           },
         },
-        remote: { url: "https://agents.example.com/v1" },
       },
-      startOrder: ["switchboard", "assistant"],
     },
   }) satisfies PHHost;
 
-/** The same host RESOLVED: what the verbs receive. */
-const cliHost = () => {
-  const host = declaredCliHost();
+/** The same host RESOLVED. */
+const cliRunnerHost = () => {
+  const host = declaredCliRunnerHost();
   return {
     ...host,
-    runner: {
-      ...host.runner,
-      proxy: {
-        ...host.runner.proxy,
-        routes: {
-          ...host.runner.proxy.routes,
-          "/agent": { upstream: "http://127.0.0.1:4910", path: "/v1" },
+    reactor: {
+      backends: {
+        switchboard: {
+          kind: "remote",
+          remote: { url: "http://127.0.0.1:4001/d/powerhouse" },
         },
-      },
-    },
-    config: {
-      ...host.config,
-      agents: {
-        ...host.config.agents,
-        main: { url: "http://127.0.0.1:4910/v1" },
       },
     },
   };
@@ -152,8 +127,8 @@ const cliHost = () => {
 const validate = {
   mastra: (host: unknown) =>
     validateHost(mastra, MASTRA, host, "hosts/assistant/host.js"),
-  clint: (host: unknown) =>
-    validateHost(clint, CLINT, host, "hosts/cli/host.js"),
+  cli: (host: unknown) =>
+    validateHost(cliRun, CLI, host, "hosts/tools/host.js"),
 };
 
 describe("mastra-runner host contract", () => {
@@ -259,157 +234,70 @@ describe("mastra-runner host contract", () => {
   });
 });
 
-describe("clint-runner host contract", () => {
-  it("accepts a host using every option the runner reads", () => {
-    const parsed = validate.clint(cliHost());
-    expect(parsed.runner.lifecycle).toBe("attached");
-    expect(parsed.children.assistant?.config?.readiness?.timeout).toBe(60_000);
-    expect(parsed.config?.agents?.main?.url).toBe("http://127.0.0.1:4910/v1");
+describe("cli-runner host contract", () => {
+  it("is a reactor runner whose arguments all go to the Cli", () => {
+    expect(cliRunner.kind).toBe("reactor");
+    expect(cliRunner.argsSchema).toEqual({
+      options: [],
+      flags: [],
+      passthrough: true,
+    });
+    // No outputs: start-run neither locks nor records it; the runner records
+    // a Cli that keeps running itself.
+    expect("outputsSchema" in cliRunner).toBe(false);
   });
 
-  it("declared form: agent urls and proxy upstreams take output tokens", () => {
-    expect(clintRunner.declaredHostSchema.safeParse(declaredCliHost())).toEqual(
-      expect.objectContaining({ success: true }),
+  it("accepts a package's Cli on a switchboard drive", () => {
+    const parsed = validate.cli(cliRunnerHost());
+    expect(parsed.config?.package).toBe("@acme/tools");
+    expect(parsed.reactor?.backends?.switchboard?.remote?.url).toBe(
+      "http://127.0.0.1:4001/d/powerhouse",
     );
-  });
-
-  it("ph run's compound path lets the deferred self tokens through to the verb", () => {
-    const file = "hosts/cli/host.js";
-    validateDeclaredHost(untyped(clint), CLINT, declaredCliHost(), file);
-    const host = validateHost(clint, CLINT, declaredCliHost(), file, {
-      tokens: "allow",
-    });
-    expect(host.config?.agents?.main?.url).toEqual({
-      $output: { host: "assistant", path: ["endpoints", "openai"] },
-    });
-  });
-
-  it("resolved form: agents and proxy upstreams are deferred self fields that keep their tokens", () => {
-    // They name the compound's own members' outputs, which exist only after
-    // the verb starts them; clint resolves them then (deferSelf).
-    const parsed = clintRunner.hostSchema.parse(declaredCliHost());
-    expect(parsed.config?.agents?.main?.url).toEqual({
-      $output: { host: "assistant", path: ["endpoints", "openai"] },
-    });
-    expect(parsed.runner.proxy?.routes["/agent"]?.upstream).toEqual({
-      $output: { host: "assistant", path: ["origin"] },
-    });
-  });
-
-  it("rejects the removed agents.<x>.host and proxy member forms naming the token form", () => {
-    const host = cliHost();
-    for (const schema of [
-      clintRunner.hostSchema,
-      clintRunner.declaredHostSchema,
-    ]) {
-      const agent = schema.safeParse({
-        ...host,
-        config: { agents: { main: { host: "assistant" } } },
-      });
-      expect(agent.error?.issues).toContainEqual(
-        expect.objectContaining({
-          path: ["config", "agents", "main"],
-          message: expect.stringMatching(
-            /`host` was removed; use url: <host>\.endpoints\.openai from \.\.\/<host>\/outputs\.js, or \{ url: \{ \$output: \{ host: "assistant", path: \["endpoints", "openai"\] \} \} \}/,
-          ) as unknown,
-        }),
-      );
-      const route = schema.safeParse({
-        ...host,
-        runner: {
-          ...host.runner,
-          proxy: { port: 8490, routes: { "/x": { member: "assistant" } } },
-        },
-      });
-      expect(route.error?.issues).toContainEqual(
-        expect.objectContaining({
-          path: ["runner", "proxy", "routes", "/x"],
-          message: expect.stringMatching(
-            /`member` was removed; point `upstream` at the member host's output/,
-          ) as unknown,
-        }),
-      );
-    }
-    // Through validateHost the message carries the field path.
+    // Without config the project's own ./cli runs; without a reactor the
+    // Cli keeps its own.
     expect(() =>
-      validate.clint({
-        ...host,
-        config: { agents: { main: { host: "assistant" } } },
-      }),
-    ).toThrow(/config\.agents\.main: `host` was removed; use url:/);
+      validate.cli({ name: "tools", runner: { module: CLI } }),
+    ).not.toThrow();
   });
 
-  it("rejects an unknown runner key", () => {
-    const host = cliHost();
+  it("declared form: remote.url takes the switchboard's output token", () => {
+    const file = "hosts/tools/host.js";
     expect(() =>
-      validate.clint({ ...host, runner: { ...host.runner, lifecycel: "x" } }),
-    ).toThrow(/runner: Unrecognized key: "lifecycel"/);
+      validateDeclaredHost(untyped(cliRun), CLI, declaredCliRunnerHost(), file),
+    ).not.toThrow();
+    expect(() =>
+      validateHost(cliRun, CLI, declaredCliRunnerHost(), file),
+    ).toThrow(/is an unresolved output token/);
   });
 
-  it("rejects a defaultVerb typo", () => {
-    const host = cliHost();
+  it("resolved form: remote.url must be a drive address", () => {
+    const host = cliRunnerHost();
     expect(() =>
-      validate.clint({
+      validate.cli({
         ...host,
-        runner: { ...host.runner, defaultVerb: "dvev" },
-      }),
-    ).toThrow(/defaultVerb "dvev" is not a verb/);
-  });
-
-  it("applies the startOrder refinement", () => {
-    const host = cliHost();
-    expect(() =>
-      validate.clint({
-        ...host,
-        config: { ...host.config, startOrder: ["switchboard", "asistant"] },
-      }),
-    ).toThrow(/config\.startOrder\.1: startOrder names "asistant"/);
-  });
-
-  it("rejects an invalid lifecycle, proxy route, agent or member config", () => {
-    const host = cliHost();
-    expect(() =>
-      validate.clint({
-        ...host,
-        runner: { ...host.runner, lifecycle: "forever" },
-      }),
-    ).toThrow(/runner\.lifecycle/);
-    expect(() =>
-      validate.clint({
-        ...host,
-        runner: {
-          ...host.runner,
-          proxy: { port: 8490, routes: { "/x": { ws: true } } },
+        reactor: {
+          backends: {
+            switchboard: {
+              kind: "remote",
+              remote: { url: "http://127.0.0.1:4001/graphql" },
+            },
+          },
         },
       }),
-    ).toThrow(/runner\.proxy\.routes\.\/x\.upstream: Invalid input/);
-    expect(() =>
-      validate.clint({
-        ...host,
-        config: { agents: { main: {} } },
-      }),
-    ).toThrow(/config\.agents\.main\.url: Invalid input/);
-    expect(() =>
-      validate.clint({
-        ...host,
-        children: {
-          ...host.children,
-          assistant: { host: "assistant", config: { readyness: {} } },
-        },
-      }),
-    ).toThrow(/children\.assistant\.config: Unrecognized key: "readyness"/);
+    ).toThrow(/must be a switchboard drive address/);
   });
 
-  it("outputsSchema carries the agents and the optional proxy url", () => {
-    expect(
-      clintRunner.outputsSchema.parse({
-        agents: { main: "http://127.0.0.1:4910/v1" },
-        proxy: { url: "http://0.0.0.0:8490" },
-      }).proxy?.url,
-    ).toBe("http://0.0.0.0:8490");
-    expect(
-      clintRunner.outputsSchema.safeParse({ agents: { main: "nope" } }).success,
-    ).toBe(false);
+  it("rejects unknown config, runner and top-level keys, and children", () => {
+    const host = cliRunnerHost();
+    expect(() =>
+      validate.cli({ ...host, config: { pakage: "@acme/tools" } }),
+    ).toThrow(/config: Unrecognized key: "pakage"/);
+    expect(() =>
+      validate.cli({ ...host, runner: { ...host.runner, proxy: {} } }),
+    ).toThrow(/runner: Unrecognized key: "proxy"/);
+    expect(() =>
+      validate.cli({ ...host, children: { sb: { host: "switchboard" } } }),
+    ).toThrow(/is a reactor runner, so the host must not declare `children`/);
   });
 });
 
@@ -419,16 +307,23 @@ describe("declared verbs", () => {
       .filter(([, value]) => typeof value === "function")
       .map(([name]) => name);
 
+  it("cli lists exactly its verb functions (not its helpers)", () => {
+    expect([...cliRunner.verbs].sort()).toEqual(
+      functions(cliRun)
+        .filter(
+          (name) =>
+            name !== "runCli" && name !== "loadCli" && name !== "loadOwnCli",
+        )
+        .sort(),
+    );
+  });
+
   it("mastra lists exactly its verb functions (not promptFromMessages)", () => {
     expect([...mastraRunner.verbs].sort()).toEqual(
       functions(mastra)
         .filter((name) => name !== "promptFromMessages")
         .sort(),
     );
-  });
-
-  it("clint lists exactly its verb functions", () => {
-    expect([...clintRunner.verbs].sort()).toEqual(functions(clint).sort());
   });
 });
 
@@ -453,9 +348,16 @@ describe("PHHostRunners augmentation", () => {
     expectTypeOf<
       NonNullable<mastraRunner.MastraHost["config"]>["apiKey"]
     >().toEqualTypeOf<string | undefined>();
-    expectTypeOf<
-      PHHostOutputs<typeof CLINT>
-    >().toEqualTypeOf<clintRunner.ClintOutputs>();
+    expectTypeOf<PHHostOutputs<typeof CLI>>().toEqualTypeOf<
+      Record<string, never>
+    >();
+    const cliTypo = {
+      name: "tools",
+      runner: { module: CLI },
+      // @ts-expect-error -- `pakage` is not a cli-runner config key
+      config: { pakage: "x" },
+    } satisfies PHHost;
+    expect(cliTypo.name).toBe("tools");
   });
 });
 
@@ -474,9 +376,13 @@ describe("emitted runner host schemas drift", () => {
       "host-mastra-runner",
       mastraRunner.declaredHostSchema,
     ),
-    "host-clint-runner.schema.json": emitHostJsonSchema(
-      "host-clint-runner",
-      clintRunner.declaredHostSchema,
+    "host-cli-runner.schema.json": emitHostJsonSchema(
+      "host-cli-runner",
+      cliRunner.declaredHostSchema,
+    ),
+    "host-proxy-runner.schema.json": emitHostJsonSchema(
+      "host-proxy-runner",
+      proxyRunner.declaredHostSchema,
     ),
   };
   for (const [file, schema] of Object.entries(emitted)) {

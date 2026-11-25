@@ -1,8 +1,10 @@
 import { accessToken } from "./access-token.js";
 import { build } from "./build.js";
 import { connect } from "./connect.js";
+import { credentials } from "./credentials.js";
 import { generate } from "./generate.js";
 import { host } from "./host.js";
+import { identity } from "./identity.js";
 import { init } from "./init.js";
 import { inspect } from "./inspect.js";
 import { install } from "./install.js";
@@ -16,15 +18,14 @@ import { model } from "./model.js";
 import { publish } from "./publish.js";
 import { registryLogin } from "./registry-login.js";
 import { runHost } from "./run.js";
-import { switchboard } from "./switchboard.js";
 import { uninstall } from "./uninstall.js";
 import { unpublish } from "./unpublish.js";
 import { vetra } from "./vetra.js";
+import { whoami } from "./whoami.js";
 
 export const phCliCommands = {
   init,
   generate,
-  vetra,
   connect,
   build,
   publish,
@@ -37,11 +38,14 @@ export const phCliCommands = {
   mcp,
   migrate,
   model,
-  switchboard,
   login,
   logout,
+  whoami,
+  identity,
+  credentials,
   install,
   uninstall,
   run: runHost,
   host,
+  vetra,
 } as const;

@@ -20,18 +20,21 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { createServer } from "@powerhousedao/reactor-mcp";
+import type { LocalDocumentModels } from "@powerhousedao/reactor-mcp/remote";
 import { resolveSwitchboardPortDefault } from "@powerhousedao/shared/clis/args";
+import { identityDataDir } from "@powerhousedao/shared/clis/identity";
+import type * as RenownIdentity from "@renown/sdk/identity";
 import fs from "node:fs";
 import path from "node:path";
 import { getVersion } from "../get-version.js";
 import {
   ensureVetra,
   restartVetra,
-  vetraCommandFor,
+  currentPhCliRunVetraCommand,
   VetraStartError,
   type EnsureVetraOptions,
   type VetraCommand,
-} from "../utils/vetra-launch.js";
+} from "../utils/vetra-launcher.js";
 import {
   readVetraRuntime,
   type VetraRuntimeRecord,
@@ -43,7 +46,7 @@ const CONFIG_FILE = "powerhouse.config.json";
 export type McpLauncherOptions = {
   projectDir?: string;
   startTimeoutSeconds: number;
-  /** Test seam: what starts Vetra; defaults to {@link vetraCommandFor}. */
+  /** Test seam: what starts Vetra; defaults to {@link currentPhCliRunVetraCommand}. */
   vetraCommand?: VetraCommand;
 };
 
@@ -98,9 +101,9 @@ export const RESTART_VETRA_TOOL = "restartVetra";
 const restartVetraTool: Tool = {
   name: RESTART_VETRA_TOOL,
   description:
-    "Restart this project's Vetra (its Switchboard and Studio) and wait until it is ready. " +
-    "Use it after a change Vetra reads only at startup, such as the reactor or packages settings " +
-    "in powerhouse.config.json; Studio restarts by itself for connect.* changes. " +
+    "Restart this project's dev stack (its Switchboard and Connect, what `ph dev` runs) and wait until it is ready. " +
+    "Use it after a change the stack reads only at startup, such as the reactor or packages settings " +
+    "in powerhouse.config.json; Connect restarts by itself for connect.* changes. " +
     "Returns the new Connect, Switchboard and MCP URLs.",
   inputSchema: { type: "object", properties: {} },
   outputSchema: {
@@ -144,6 +147,8 @@ class Upstream {
   #client: Promise<Client> | undefined;
   /** The Vetra the client talks to; another pid in the record means it restarted. */
   #pid: number | undefined;
+  /** That Vetra's record, for its Switchboard's GraphQL endpoint. */
+  #record: VetraRuntimeRecord | undefined;
   /** The calls waiting on the connection, told how Vetra's start goes. */
   #waiting = new Set<Progress>();
 
@@ -162,6 +167,12 @@ class Upstream {
       throw error;
     });
     return this.#waitWith(this.#client, onProgress);
+  }
+
+  /** The running Vetra's Switchboard GraphQL endpoint, starting Vetra when it is down. */
+  async switchboard(onProgress?: Progress): Promise<string> {
+    await this.get(onProgress);
+    return vetraUrls(this.#record!).switchboardUrl;
   }
 
   async #waitWith<T>(task: Promise<T>, onProgress?: Progress): Promise<T> {
@@ -218,7 +229,8 @@ class Upstream {
       projectDir,
       projectName: name,
       switchboardPort: resolveSwitchboardPortDefault(),
-      command: this.options.vetraCommand ?? vetraCommandFor(projectDir),
+      command:
+        this.options.vetraCommand ?? currentPhCliRunVetraCommand(projectDir),
       timeoutMs: this.options.startTimeoutSeconds * 1000,
       onProgress: this.#report,
     });
@@ -226,6 +238,7 @@ class Upstream {
     const client = new Client({ name: "ph-mcp", version: getVersion() });
     await client.connect(new StreamableHTTPClientTransport(new URL(mcpUrl)));
     this.#pid = record.pid;
+    this.#record = record;
     console.error(`[ph mcp] forwarding tool calls to ${mcpUrl}`);
     return client;
   }
@@ -253,6 +266,165 @@ async function forwardToolCall(
   }
 }
 
+/** The tools that write: they run here, signed and borne as the MCP client's session. */
+export const SIGNED_TOOLS: ReadonlySet<string> = new Set([
+  "createDocument",
+  "addActions",
+  "deleteDocument",
+]);
+
+/** What an MCP client's session is called, and its credential signs. */
+export function mcpSessionLabel(clientName: string | undefined): string {
+  return `mcp ${clientName?.trim() || "client"}`;
+}
+
+/** How long a Renown approval of a session is waited for. */
+const APPROVAL_WAIT_MS = 10 * 60_000;
+
+type Answer = { result: CallToolResult } | { forward: true };
+
+/**
+ * The writing tools, run in this process over the project's Switchboard,
+ * every action signed and every request borne as the MCP client's own
+ * session (`mcp <client>`), kept in the project's data folder with its
+ * credential's record: the pseudonym's, issued at the first write, or one a
+ * Renown login approves once at Renown's console. A call that needs a model
+ * this process does not hold, before it wrote anything, goes to the host's
+ * `/mcp` instead, which signs its writes itself.
+ */
+class SignedTools {
+  #models: Promise<LocalDocumentModels> | undefined;
+  /** The console approvals waited for, by session label. */
+  #approvals = new Map<string, string>();
+
+  constructor(private readonly projectDir: string) {}
+
+  #localModels(): Promise<LocalDocumentModels> {
+    this.#models ??= import("@powerhousedao/reactor-mcp/remote").then(
+      ({ localDocumentModels }) =>
+        localDocumentModels(this.projectDir, {
+          onError: (error) =>
+            console.error(
+              `[ph mcp] the project's document models did not load: ${error instanceof Error ? error.message : String(error)}`,
+            ),
+        }),
+    );
+    return this.#models;
+  }
+
+  async call(
+    params: CallToolRequest["params"],
+    label: string,
+    graphqlUrl: string,
+    signal: AbortSignal,
+  ): Promise<Answer> {
+    const identity = await import("@renown/sdk/identity");
+    const dataDir = identityDataDir(this.projectDir);
+    let session: Awaited<ReturnType<typeof identity.openSession>>;
+    try {
+      session = await identity.openSession({
+        dataDir,
+        label,
+        place: "data-folder",
+        interactive: false,
+        target: { dataDir },
+        // A client that acts by itself stays withdrawn where it was withdrawn.
+        reissueWithdrawn: false,
+      });
+    } catch (error) {
+      if (error instanceof identity.SessionApprovalRequiredError) {
+        return { result: toolError(this.#approve(identity, label, dataDir)) };
+      }
+      throw error;
+    }
+    const [{ createRemoteServer }, { GraphQLReactorClient }, models] =
+      await Promise.all([
+        import("@powerhousedao/reactor-mcp/remote"),
+        import("@powerhousedao/reactor-browser/graphql-client"),
+        this.#localModels(),
+      ]);
+    const client = new GraphQLReactorClient({
+      url: graphqlUrl,
+      documentModels: () => models.current(),
+      signer: session.actionSigner,
+      tokenProvider: () => session.bearer(),
+      realtime: false,
+    });
+    const seen = { missing: false, wrote: false };
+    const server = createRemoteServer({
+      client,
+      documentModels: () => models.current(),
+      onMissingModel: () => {
+        seen.missing = true;
+      },
+      onWrite: () => {
+        seen.wrote = true;
+      },
+    });
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    const local = new Client({ name: "ph-mcp", version: getVersion() });
+    try {
+      await server.connect(serverSide);
+      await local.connect(clientSide);
+      const result = (await local.request(
+        { method: "tools/call", params },
+        CallToolResultSchema,
+        { signal, timeout: CALL_TIMEOUT_MS },
+      )) as CallToolResult;
+      if (result.isError && seen.missing && !seen.wrote) {
+        return { forward: true };
+      }
+      return { result };
+    } finally {
+      client.dispose();
+      await local.close().catch(() => {});
+      await server.close().catch(() => {});
+    }
+  }
+
+  /** Starts, once per session, the approval a Renown login gives at the console. */
+  #approve(
+    identity: typeof RenownIdentity,
+    label: string,
+    dataDir: string,
+  ): string {
+    const waiting = this.#approvals.get(label);
+    if (waiting) return waiting;
+    const approval = identity.startSessionApproval({ dataDir, label });
+    const message =
+      `This MCP client acts for your Renown login, and its session "${label}" needs your approval once: ` +
+      `open ${approval.url}, approve it with your wallet, then call the tool again.`;
+    this.#approvals.set(label, message);
+    void import("@renown/sdk/node")
+      .then(({ openBrowser }) => openBrowser(approval.url))
+      .catch(() => {});
+    void identity
+      .pollSessionApproval({
+        approval,
+        timeoutMs: APPROVAL_WAIT_MS,
+        target: { dataDir },
+      })
+      .then((outcome) => {
+        if (outcome.status === "ready") {
+          console.error(`[ph mcp] ${label} approved for ${outcome.address}`);
+        }
+      })
+      .catch((error: unknown) =>
+        console.error(
+          `[ph mcp] the approval of ${label} failed: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      )
+      .finally(() => this.#approvals.delete(label));
+    return message;
+  }
+
+  async close(): Promise<void> {
+    const models = this.#models;
+    this.#models = undefined;
+    await (await models)?.close();
+  }
+}
+
 /** `ph mcp`: tools listed by in-process reactor-mcp, calls forwarded to Vetra (started on first call). */
 export async function startMcpLauncher(options: McpLauncherOptions) {
   // stdout carries JSON-RPC only.
@@ -262,11 +434,12 @@ export async function startMcpLauncher(options: McpLauncherOptions) {
   const projectDir = findProjectDir(
     options.projectDir ?? process.env.PH_CALLER_CWD ?? process.cwd(),
   );
-  // Port resolution and `ph vetra` both read the project from the cwd.
+  // Port resolution and `ph run dev` both read the project from the cwd.
   if (projectDir) process.chdir(projectDir);
 
   const local = await connectLocalReactorMcp();
   const upstream = new Upstream(projectDir, options);
+  const signed = projectDir ? new SignedTools(projectDir) : undefined;
   const server = new Server(
     local.getServerVersion() ?? { name: "reactor-mcp-server", version: "" },
     {
@@ -312,6 +485,15 @@ export async function startMcpLauncher(options: McpLauncherOptions) {
           structuredContent: urls,
         };
       }
+      if (signed && SIGNED_TOOLS.has(request.params.name)) {
+        const answer = await signed.call(
+          request.params,
+          mcpSessionLabel(server.getClientVersion()?.name),
+          await upstream.switchboard(onProgress),
+          extra.signal,
+        );
+        if ("result" in answer) return answer.result;
+      }
       return await forwardToolCall(
         upstream,
         request.params,
@@ -331,7 +513,12 @@ export async function startMcpLauncher(options: McpLauncherOptions) {
   });
 
   const transport = new StdioServerTransport();
-  transport.onclose = () => process.exit(0);
-  process.stdin.once("end", () => process.exit(0));
+  const exit = () => {
+    void (signed?.close() ?? Promise.resolve())
+      .catch(() => {})
+      .finally(() => process.exit(0));
+  };
+  transport.onclose = exit;
+  process.stdin.once("end", exit);
   await server.connect(transport);
 }

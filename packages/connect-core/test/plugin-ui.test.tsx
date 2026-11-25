@@ -118,9 +118,18 @@ describe("loading the active plugins' UI", () => {
     expect(getConnectRegistry().ui).toBe(set);
   });
 
-  it("loads every known plugin without a composition", async () => {
+  it("loads no plugin for an empty composition", async () => {
     chromeUi.mockClear();
-    const set = await loadConnectPluginUi(undefined);
+    extraUi.mockClear();
+    const set = await loadConnectPluginUi([]);
+    expect(chromeUi).not.toHaveBeenCalled();
+    expect(extraUi).not.toHaveBeenCalled();
+    expect(set.routes).toEqual({});
+  });
+
+  it("keeps a composed plugin's routes", async () => {
+    chromeUi.mockClear();
+    const set = await loadConnectPluginUi([{ module: "@acme/chrome" }]);
     expect(chromeUi).toHaveBeenCalledOnce();
     expect(set.routes["/_app/"]?.component).toBe(Home);
   });

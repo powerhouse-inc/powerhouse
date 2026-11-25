@@ -4,8 +4,9 @@
 This reference covers the **uniform runners** system. `ph run <host>` starts
 any host your project declares, and `ph init` writes the `hosts/` folder. The
 classic commands (`ph switchboard`, `ph connect`, `ph vetra`) are deprecated:
-they work in 6.3 with a warning, and 6.4 removes their own boot path. To move
-an existing project, see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
+they work in 6.3 with a warning, and 6.4 removes their own boot path. In 6.4
+the dev mode `ph vetra` started is `ph dev`, and `ph vetra` opens Vetra
+Studio. To move an existing project, see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
 Since 6.3 the `FEATURE_UNIFORM_RUNNERS_ENABLED` variable has no effect: remove
 it. Set to `false` it prints a warning, and 6.4 refuses to start.
 :::
@@ -146,7 +147,11 @@ A host file may import exactly three things: the project's
 generated `../<host>/outputs.js` (`ph generate hosts`). `process.` is banned —
 read the environment with `{ $env: "NAME" }` (or
 `{ $env: { name: "NAME", optional: true } }` to omit the property when unset),
-resolved when the host starts.
+resolved when the host starts. Three names always resolve, as
+`{ $env: "<name>" }` or as `"${<name>}"` inside a string: `userData` (the
+root of the `.ph` tree: `PH_USER_DATA_DIR`, else the project), `projectRoot`
+and `package` (the root of the package that supplies the host, see
+[Hosts from a package](#hosts-from-a-package)).
 
 ## Core reactor config (not plugins)
 
@@ -351,7 +356,8 @@ interface HostPlugin<THooks, TConfig> {
 
 **`appliesTo` and the host-type hierarchy.** Compatibility walks a parent
 chain: `connect`, `switchboard`, and `mastra` all extend `reactor`, while
-`compound` is its own branch (plugins over a *member set*, like a proxy). A
+`compound` is its own branch (plugins over a *member set*; no runner loads
+them today). A
 plugin with `appliesTo: "reactor"` composes onto any reactor host; one with
 `appliesTo: "switchboard"` is rejected elsewhere — at boot, with both names
 in the error.
@@ -398,8 +404,10 @@ through its entry `config`, not top-level `connect.drives`). When a host
 declares a plugin list without `@powerhousedao/connect/plugins/generic`, those
 toggles turn OFF and Connect hides the generic chrome: the sidebar and the
 drive-list home screen. Drive and document views under `/d/` still render.
-With no declared plugin list, every plugin reads as present, so classic Connect
-is unchanged. (`branding` is NOT the generic plugin's concern. It reaches past
+With no declared plugin list, Connect boots a default one: the generic plugin
+with the top-level `connect.drives` and `connect.home` values, Sentry and
+OpenPanel, and the assistant, Studio and workflows plugins where the config
+already switches them on. (`branding` is NOT the generic plugin's concern. It reaches past
 the chrome, for example into the document title, so it stays a top-level
 `connect.branding` value that survives the plugin's absence. The switchboard
 side behaves the same way: removing `mcp` removes `/mcp`.)
@@ -585,8 +593,7 @@ replaces `reactor`; each member wraps a sibling host by folder name:
 import connect from "../connect/host.js";
 import { outputs as server } from "../switchboard/outputs.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "desktop",
   runner: { module: "@powerhousedao/desktop/runner" },
   children: {
@@ -607,7 +614,7 @@ export default {
       },
     },
   },
-};
+});
 ```
 
 Wrapper semantics are **full-statement** for `config` and `reactor`: a
@@ -629,10 +636,113 @@ element's key (the index for an array) and `{ $item: ["url"] }` — or the
 typed `server.drives.$item.url` from `outputs.js` — reads a path of the
 element. Records are visited in key-sorted order, so the result is
 deterministic. A nested map names outer bindings with `as` and
-`{ $item: { as, path } }` / `{ $key: "<as>" }`. Compound-level plugins
-(`appliesTo: "compound"`) act on the member set — the clint proxy is the
-reference example: one front port, routes declared per member, resolved from
-each child's `runner.{host, port}`.
+`{ $item: { as, path } }` / `{ $key: "<as>" }`. A proxy in front of the
+members is itself a member: `@powerhousedao/clint/proxy-runner` serves one
+front port whose routes name the other members' outputs as tokens (e.g.
+`upstream: switchboard.origin`), so it starts after them and stops before
+them.
+
+## Hosts from a package
+
+An installed package can supply hosts, so that a tool brings its own stack
+and the project's `hosts/` folder holds nothing of it. The package ships a
+`hosts/` folder at its root, laid out as a project's, and lists it in its
+`files`:
+
+```
+node_modules/@acme/tools/
+  package.json           "files": ["dist", "hosts"]
+  hosts/
+    studio/host.js       ph run @acme/tools/studio
+    switchboard/host.js  ph run @acme/tools/switchboard
+```
+
+How a host is named:
+
+- **A bare name is always the project's.** `ph run switchboard` runs
+  `hosts/switchboard/` of the project. A package cannot shadow or replace a
+  project host.
+- **A package's host is `<package>/<host>`**: `ph run @acme/tools/studio`, or
+  `ph run tools/studio` for an unscoped package. The host is the last
+  segment, so a host name never holds a `/`. The package is found from the
+  project root, as Node finds it (a pnpm link is followed to the package's
+  own folder).
+- **Inside a package's compound, a bare member name is that package's host
+  first**, and only then the project's. A member can also be written in
+  full, `host: "@acme/tools/switchboard"`; that form always means the
+  installed package, from wherever it is written. A project compound may
+  name a package's host that way too.
+
+What a package's host resolves where:
+
+| From the package | From the project |
+| --- | --- |
+| the host file and its imports (sibling hosts, `outputs.js`, a `powerhouse.config.json` import is the package's own) | the working directory and `ctx.projectRoot` |
+| `runner.module`, `runner.plugins[].module` and the package names in `config.switchboard.packages.list` (switchboard) | `${projectRoot}`, `${userData}`, relative data paths: stores stay in the project |
+| a cli host's Cli: `config.package`, or without it the package's own `./cli` | drive ids, the `.ph/` tree, `PH_USER_DATA_DIR` |
+| `${package}`: the package's root | |
+
+A package's host names its own files with `${package}`: the package's real
+folder, so `runner.outDir: "${package}/dist/connect"` serves the Connect the
+package built, not the project's. For a project host `${package}` is the
+project root, so one host file serves both the package's own repository and
+the projects that install it. In a compound each member gets its own: the
+root of the package that supplies that member's host (a project member of a
+package's compound gets the project root). `{ $env: "package" }` reads the
+same value, and `ph run <host> --explain outputs` prints it for a host that
+names it.
+
+A package's switchboard loads the package's models, not the project's:
+`packages: { disableLocal: true, list: ["${package}", "@acme/models"] }` in
+its `config.switchboard` serves the package itself and `@acme/models`, found
+from the package as its own dependency (the server gets its real folder). A
+package name the package does not have installed fails the start, naming
+both.
+
+A Connect host serves files that are not in its build with
+`runner.serveFiles`, for state a process writes per project next to an
+installed package's build:
+
+```js
+runner: {
+  module: "@powerhousedao/ph-cli/runners/connect",
+  outDir: "${package}/dist/connect",
+  serveFiles: { "/studio.config.json": "${userData}/.ph/studio/studio.config.json" },
+},
+```
+
+Each path, under the app's base, answers with its file as it reads at that
+request, with `Cache-Control: no-store`; a missing file is a 404, never the
+app's page. A path is `/` and segments of letters, digits and `-._~`, none
+starting with a dot, the last with an extension; Connect's own
+`/index.html` and `/powerhouse.config.json` and the switchboard's proxied
+paths are refused. A relative file is read against the working directory.
+Every Connect server serves them: `dev`, `serve` and vite's preview.
+
+So a package names the runners its hosts use as its own dependencies; one
+that must match the project's tools, such as
+`@powerhousedao/ph-cli/runners/switchboard`, is best a peer dependency. The
+runner learns that it runs a package's host from `ctx.hostPackage`
+(`{ name, root }`).
+
+A package's host keeps its state in a folder named after the package, so a
+package's `studio` and a project host named `studio` never meet:
+
+| | project host | package host |
+| --- | --- | --- |
+| run record | `.ph/run/studio.json` | `.ph/run/@acme/tools/studio.json` |
+| a compound's member logs | `.ph/services/<member>/` | `.ph/services/@acme/tools/<member>/` |
+| Connect's Vite cache | `node_modules/.vite-<name>` | `node_modules/.vite-@acme+tools+<name>` |
+
+`ph run @acme/tools/studio --stop` stops it, and `ph host check
+@acme/tools/studio` checks it. `build` is refused on a package's host, and
+on a project compound with a package's member: a package's hosts are built
+by the package, and a build in the project would write into the installed
+package. In the package's own repository they are project hosts and build
+as usual. A ref that names no host, a package that is
+not installed or has no `hosts/`, and a compound that is, through its
+compound members, its own member fail before anything starts, naming the
+package and the host.
 
 ## Debugging
 

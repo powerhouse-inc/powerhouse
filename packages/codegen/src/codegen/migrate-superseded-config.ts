@@ -47,7 +47,7 @@ function isHttps(
 function storageOutcome(key: string): Outcome {
   return {
     kept: "the switchboard does not read it when it starts, so moving it would change where the reactor keeps its data",
-    byHand: supersededConfigKeys[key],
+    byHand: supersededConfigKeys[key] ?? undefined,
   };
 }
 
@@ -172,7 +172,7 @@ export function migrateSupersededConfig(
     // A key the table gained without a rule here is left to the author.
     const outcome: Outcome = RULES[key]?.(value) ?? {
       kept: "migrate has no rule for it",
-      byHand: supersededConfigKeys[key],
+      byHand: supersededConfigKeys[key] ?? undefined,
     };
     if ("kept" in outcome) {
       const byHand = outcome.byHand

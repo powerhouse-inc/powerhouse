@@ -30,6 +30,7 @@ import {
   AuthorizationPolicy,
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
+import { managerClientsOf } from "./utils/client-halves.js";
 
 const CLAIM_EXCLUSION = "Excluding subgraph @name from the supergraph: @error";
 
@@ -122,12 +123,12 @@ function makeHarness(models: DocumentModelModule[]) {
       close: vi.fn((cb?: () => void) => cb?.()),
       setMaxListeners: vi.fn(),
     } as unknown as WebSocketServer,
-    reactorClient: {
+    ...managerClientsOf({
       getDocumentModelModules: vi.fn().mockResolvedValue({ results: models }),
       find: vi
         .fn()
         .mockResolvedValue({ results: [], options: { cursor: "", limit: 1 } }),
-    } as unknown as IReactorClient,
+    }),
     relationalDb: {} as IRelationalDb,
     analyticsStore: {} as IAnalyticsStore,
     syncManager: {} as ISyncManager,

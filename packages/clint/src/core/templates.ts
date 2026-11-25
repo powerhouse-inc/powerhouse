@@ -1,4 +1,23 @@
-import Handlebars from "handlebars";
+import { createRequire } from "node:module";
+import type Handlebars from "handlebars";
+
+type HandlebarsModule = typeof Handlebars;
+
+let loaded: HandlebarsModule | undefined;
+
+/**
+ * Load Handlebars ahead of a render. Handlebars stays off the start path:
+ * it loads here or on the first sync call.
+ */
+export async function loadTemplates(): Promise<void> {
+  loaded ??= (await import("handlebars")).default;
+}
+
+/** Handlebars for sync callers; required on first use unless already loaded. */
+function handlebars(): HandlebarsModule {
+  loaded ??= createRequire(import.meta.url)("handlebars") as HandlebarsModule;
+  return loaded;
+}
 
 /**
  * Known helper names — both custom defaults and Handlebars built-ins.
@@ -64,6 +83,7 @@ export function registerDefaultHelpers(hbs: typeof Handlebars): void {
  * Filters out known helpers and built-in block helpers.
  */
 export function extractTemplateVars(template: string): Set<string> {
+  const Handlebars = handlebars();
   const ast = Handlebars.parse(template);
   const vars = new Set<string>();
 
@@ -146,7 +166,7 @@ export function renderSkillTemplate(
   context: Record<string, unknown>,
   options?: RenderOptions,
 ): RenderResult {
-  const hbs = Handlebars.create();
+  const hbs = handlebars().create();
   registerDefaultHelpers(hbs);
 
   // Register custom helpers

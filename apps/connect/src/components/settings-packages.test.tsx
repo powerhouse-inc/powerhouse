@@ -16,7 +16,7 @@ afterEach(cleanup);
 // Connect's own package manager in the store, as boot sets it.
 async function mountTab(genericChrome: boolean) {
   const pm = new BrowserPackageManager("test", null);
-  await pm.init(undefined, undefined, false, false, genericChrome);
+  await pm.init(undefined, undefined, false, genericChrome);
   const store = createPHStore();
   store.vetraPackageManager = pm;
   render(

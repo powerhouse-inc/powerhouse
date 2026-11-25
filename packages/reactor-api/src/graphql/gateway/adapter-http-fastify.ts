@@ -100,11 +100,8 @@ export class FastifyHttpAdapter implements IHttpAdapter {
   mount(
     path: string,
     handler: FetchHandler,
-    { prefix, exact }: { prefix?: boolean; exact?: boolean } = {},
+    { prefix: asPrefix = false }: { prefix?: boolean } = {},
   ): AdapterRouteHandle {
-    // `exact` never meant exact: it selected prefix matching. Kept as an alias
-    // so existing callers keep working while the name is retired.
-    const asPrefix = prefix ?? exact ?? false;
     for (const [handle, entry] of this.#fetchRoutes) {
       if (entry.path === path) this.#fetchRoutes.delete(handle);
     }

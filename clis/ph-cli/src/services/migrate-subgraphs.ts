@@ -27,6 +27,7 @@ import {
   assertChangesWritable,
   errorText,
   type FileBackup,
+  ignoredByGit,
   restoreChanges,
   writeChanges,
 } from "./project-files.js";
@@ -71,6 +72,7 @@ export async function migrateSubgraphs(
   /** What the project's tsc reported in the subgraphs before this run wrote anything. */
   let typeBaseline: ProjectTypeCheck | undefined;
   const outsideReaders = subgraphReaders(projectDir);
+  const ignored = ignoredByGit(projectDir);
   const styles = new Map(
     subgraphDirStyles(join(projectDir, "subgraphs")).map(
       ({ dirName, style }) => [dirName, style] as const,
@@ -98,7 +100,7 @@ export async function migrateSubgraphs(
         out(`${label}: already code-first\n`);
         continue;
       }
-      const originals = readDirectory(projectDir, dirName);
+      const originals = readDirectory(projectDir, dirName, ignored);
       let written: FileBackup | undefined;
       try {
         const migration = await migrateSubgraph({
@@ -313,10 +315,14 @@ async function typeReport(
   return report;
 }
 
-/** The directory's files and `scalars/index.ts`, by project-relative path. */
+/**
+ * The directory's files and `scalars/index.ts`, by project-relative path.
+ * Files git ignores, such as build copies, are left out.
+ */
 function readDirectory(
   projectDir: string,
   dirName: string,
+  ignored: (path: string) => boolean,
 ): ReadonlyMap<string, Buffer> {
   const files = new Map<string, Buffer>();
   const dir = join(projectDir, "subgraphs", dirName);
@@ -326,10 +332,8 @@ function readDirectory(
   })) {
     if (!entry.isFile() || !SOURCE_FILE.test(entry.name)) continue;
     const path = join(entry.parentPath, entry.name);
-    files.set(
-      path.slice(projectDir.length + 1).replaceAll("\\", "/"),
-      readFileSync(path),
-    );
+    const local = path.slice(projectDir.length + 1).replaceAll("\\", "/");
+    if (!ignored(local)) files.set(local, readFileSync(path));
   }
   const scalars = join(projectDir, SCALARS_ENTRY);
   if (existsSync(scalars)) files.set(SCALARS_ENTRY, readFileSync(scalars));

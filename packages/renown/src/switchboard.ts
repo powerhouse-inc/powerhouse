@@ -377,11 +377,18 @@ export class SwitchboardClient {
   // Set once the switchboard has rejected `execute`, so later writes skip the probe.
   #legacyMutate = false;
 
-  constructor(source: SwitchboardSource) {
+  /** `timeoutMs` bounds each HTTP request; a local executor is not bounded. */
+  constructor(source: SwitchboardSource, options: { timeoutMs?: number } = {}) {
     if (typeof source === "string") {
       this.#endpoint = source;
-      this.#transport = (query, variables, options) =>
-        this.#post(source, query, variables, options?.token);
+      this.#transport = (query, variables, requestOptions) =>
+        this.#post(
+          source,
+          query,
+          variables,
+          requestOptions?.token,
+          options.timeoutMs,
+        );
     } else {
       this.#transport = source;
     }
@@ -397,6 +404,7 @@ export class SwitchboardClient {
     query: string,
     variables: Record<string, unknown>,
     token?: string,
+    timeoutMs?: number,
   ): Promise<unknown> {
     const response = await fetch(endpoint, {
       method: "POST",
@@ -405,6 +413,9 @@ export class SwitchboardClient {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({ query, variables }),
+      ...(timeoutMs !== undefined
+        ? { signal: AbortSignal.timeout(timeoutMs) }
+        : {}),
     });
     /* A validation failure comes back as 400 WITH a GraphQL error body, so read
        it before judging the status: the messages say what was wrong, the code

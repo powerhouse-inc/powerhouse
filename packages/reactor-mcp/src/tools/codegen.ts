@@ -126,7 +126,7 @@ export function codegenStatusTool(codegen: CodegenStatusRegistry) {
           documents: [],
           loadFailures: codegen.loadFailures(),
           message:
-            "No Vetra codegen runs on this reactor; `ph vetra` runs it for the project's Vetra drive",
+            "No Vetra codegen runs on this reactor; `ph dev` runs it for the project's Vetra drive",
         };
       }
       let documentId = args.documentId;

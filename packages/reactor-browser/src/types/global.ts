@@ -130,6 +130,34 @@ export type BackendAuthState = {
   at: string;
 };
 
+/**
+ * Sign-in by link to this computer's identity (`#ph-sign-in=`, F3d), when it
+ * needs the person: the key's password, a link the server refused, or a
+ * sign-in that ended. Unset while there is nothing to say.
+ */
+export type LocalSignInState =
+  | {
+      status: "password";
+      /** Wrong passwords left before the link is used up. */
+      triesLeft?: number;
+      /** Sends the password to the server that serves this page. */
+      submit: (password: string) => Promise<void>;
+      dismiss: () => void;
+    }
+  | {
+      status: "failed";
+      /** `used-code`, `expired-code`, `bad-code`, `renown-login`, ... */
+      reason: string;
+      /** A Renown login's name, for `renown-login`. */
+      label?: string;
+      dismiss: () => void;
+    }
+  | {
+      status: "ended";
+      /** Why the credential was dropped: `expired`, `withdrawn-here`, ... */
+      reason: string;
+    };
+
 export type PHGlobal = PHGlobalConfig & {
   navigation?: PHNavigation;
   loading?: boolean;
@@ -153,6 +181,8 @@ export type PHGlobal = PHGlobalConfig & {
    * sign-in gate instead of the drives. See `hooks/backend-auth.ts`.
    */
   backendAuth?: BackendAuthState;
+  /** Sign-in by link, when it needs the person; see `renown/local-sign-in.ts`. */
+  localSignIn?: LocalSignInState;
   /** Per-drive node caches; see `hooks/drive-nodes.ts`. */
   driveNodes?: DriveNodesCache;
   documentCache?: IDocumentCache;

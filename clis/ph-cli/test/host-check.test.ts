@@ -72,7 +72,8 @@ describe("ph host check", () => {
     );
   });
 
-  it("refuses workers under auth enforcement with a self Renown source", async () => {
+  // Workers ask Renown at its URL; RENOWN_SOURCE is no longer read.
+  it("lets workers run under auth enforcement whatever RENOWN_SOURCE says", async () => {
     const dir = makeProject({ switchboard: switchboard() });
     const result = await runHostCheck({
       host: "switchboard",
@@ -84,11 +85,8 @@ describe("ph host check", () => {
         `PH_REACTOR_DATABASE_URL=${POSTGRES}`,
       ]),
     });
-    expect(result.exitCode).toBe(1);
-    expect(result.output.split("\n")).toHaveLength(2);
-    expect(result.output).toMatch(
-      /boot {2}The executor worker pool .* cannot verify signers/,
-    );
+    expect(result.output).not.toMatch(/cannot verify signers/);
+    expect(result.exitCode).toBe(0);
   });
 
   it("reports an env that contradicts the protocol block", async () => {

@@ -1,6 +1,6 @@
 import { debugArgs } from "@powerhousedao/shared/clis/args";
 import { command, flag, option, optional, string } from "cmd-ts";
-import { File, ModuleDir } from "../utils/fs-args.js";
+import { ModuleDir } from "../utils/fs-args.js";
 
 export const generateEditorCmd = command({
   name: "editor",
@@ -18,13 +18,6 @@ export const generateEditorCmd = command({
       short: "t",
       description: "The document type for the new editor",
     }),
-    document: option({
-      type: optional(File),
-      long: "document",
-      short: "d",
-      description:
-        "Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen",
-    }),
     dir: option({
       type: optional(ModuleDir),
       long: "dir",
@@ -35,12 +28,6 @@ export const generateEditorCmd = command({
       long: "all",
       short: "a",
       description: "Re-generate all existing editors in the current project",
-    }),
-    extract: flag({
-      long: "extract",
-      short: "x",
-      description:
-        "Write a powerhouse/document-editor spec for each existing editor into specs/editors/",
     }),
     ...debugArgs,
   },

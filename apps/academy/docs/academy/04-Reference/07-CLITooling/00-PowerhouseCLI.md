@@ -246,6 +246,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Run](#run)
 - [Host Check](#host-check)
 - [Host Export](#host-export)
+- [Vetra](#vetra)
 - [Generate](#generate)
 - [All](#all)
 - [Document Model](#document-model)
@@ -259,12 +260,9 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Migration File](#migration-file)
 - [Connect Routes](#connect-routes)
 - [Hosts](#hosts)
-- [Vetra](#vetra)
 - [Build](#build)
 - [Connect](#connect)
-- [Connect Studio](#connect-studio)
-- [Connect Build](#connect-build)
-- [Connect Preview](#connect-preview)
+- [Connect Config](#connect-config)
 - [Access Token](#access-token)
 - [Inspect](#inspect)
 - [Keyframes](#keyframes)
@@ -273,14 +271,18 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Migrate](#migrate)
 - [Model Check](#model-check)
 - [Model Inspect](#model-inspect)
-- [Switchboard](#switchboard)
 - [Login](#login)
+- [Whoami](#whoami)
+- [Logout](#logout)
+- [Identity Password](#identity-password)
+- [Credentials List](#credentials-list)
+- [Credentials Withdraw](#credentials-withdraw)
 - [Install](#install)
 - [Uninstall](#uninstall)
 
 
 ## Run
-Run a host from the project's hosts/ folder: `ph run <host> [verb]`. The host's own host.js names the runner module; the verb defaults to `run`. Arguments after the verb go to the runner, which names the ones it accepts.
+Run a host from the project's hosts/ folder: `ph run <host> [verb]`. The host's own host.js names the runner module; the verb defaults to `run`. Arguments after the verb go to the runner, which names the ones it accepts. `ph run <package>/<host>` runs a host that an installed package supplies.
 
 
 
@@ -289,7 +291,7 @@ Run a host from the project's hosts/ folder: `ph run <host> [verb]`. The host's 
 ## Parameters
 
 ### Arguments
-**Host *[required]*** - Folder name under hosts/ (e.g. vetra, connect). - Usage: `<host>`
+**Host *[required]*** - Folder name under hosts/ (e.g. dev, connect), or `<package>/<host>` for one in an installed package's hosts/ (e.g. `@acme/tools/studio`). - Usage: `<host>`
 
 **Verb** - Runner verb (default: run; e.g. dev, build, serve). - Usage: `[verb]`
 
@@ -364,6 +366,27 @@ Print a host as declared, with every member a compound names, as JSON (tokens un
 **Help** - show help - Usage: `--help, -h`
 
 
+## Vetra
+Open Vetra Studio: `ph vetra [verb]` is `ph run @powerhousedao/vetra-cli/studio [verb]`, the studio host of the @powerhousedao/vetra-cli package. A project without the package gets it first: `ph vetra` installs it as a devDependency, at this ph-cli's version, with the project's package manager. The runner arguments, --stop and --explain work as for `ph run`. The dev mode that `ph vetra` started before 6.4 (the project's hosts/vetra) is `ph dev`.
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Verb** - Verb of the studio host (default: the host's own). - Usage: `[verb]`
+
+**Runner Arguments *[required]*** - Arguments for the studio host's runner, as `ph run` takes them. - Usage: `[...runner arguments]`
+
+
+
+
+### Flags
+**Help** - show help - Usage: `--help, -h`
+
+
 ## Generate
 The generate command creates code for Powerhouse modules. It helps you create new code from scratch, or to re-generate existing code in your project.
 
@@ -373,8 +396,6 @@ Re-generate all modules in the current project
 
 
 ### Flags
-**Extract** - Instead of generating code, write a spec for every module into specs/ (one-shot migration to documents-as-source-of-truth) - Usage: `--extract, -x`
-
 **Help** - show help - Usage: `--help, -h`
 
 
@@ -384,21 +405,15 @@ Generate a document model
 
 
 ### Options
-**Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
-
 **Dir** - Name of the directory of an existing document model to re-generate (my-document-model or document-models/my-document-model) - Usage: `--dir <dir>`
 
-**Name** - Experimental. Create a code-first document model with this name, with its editor - Usage: `--name, -n <str>`
+**Name** - Create a document model with this name, with its editor - Usage: `--name, -n <str>`
 
 
 
 
 ### Flags
 **All** - Re-generate all existing document models in the current project - Usage: `--all, -a`
-
-**Extract** - Write a powerhouse/document-model spec for each existing document model into specs/document-models/ - Usage: `--extract, -x`
-
-**Code First** - Experimental. With --name, create the model code-first. Existing models of both styles are discovered without it; ph migrate --document-model converts a schema-first one - Usage: `--code-first`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -415,8 +430,6 @@ Generate a document editor
 
 **Document Type** - The document type for the new editor - Usage: `--document-type, -t <str>`
 
-**Document** - Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
-
 **Dir** - Name of the directory of an existing editor to re-generate (my-editor or editors/my-editor) - Usage: `--dir <dir>`
 
 
@@ -424,8 +437,6 @@ Generate a document editor
 
 ### Flags
 **All** - Re-generate all existing editors in the current project - Usage: `--all, -a`
-
-**Extract** - Write a powerhouse/document-editor spec for each existing editor into specs/editors/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -442,8 +453,6 @@ Generate a drive app
 
 **Document Types** - The document types allowed by the new app (repeatable or comma-separated) - Usage: `--document-types <value>, -t=<value>`
 
-**Document** - Path to a powerhouse/app spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
-
 **Dir** - Name of the directory of an existing app to re-generate (my-app or editors/my-app) - Usage: `--dir <dir>`
 
 
@@ -454,8 +463,6 @@ Generate a drive app
 
 **Default:** `false`
 **All** - Re-generate all existing apps in the current project - Usage: `--all, -a`
-
-**Extract** - Write a powerhouse/app spec for each existing drive app into specs/apps/ - Usage: `--extract, -x`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -479,8 +486,6 @@ Generate a processor
 **Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage: `--apps <value>`
 
 **Default:** `switchboard,connect`
-**Document** - Path to a powerhouse/processor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
-
 **Dir** - Name of the directory of an existing processor to re-generate (my-processor or processors/my-processor) - Usage: `--dir <dir>`
 
 
@@ -488,8 +493,6 @@ Generate a processor
 
 ### Flags
 **All** - Re-generate all existing processors in the current project - Usage: `--all, -a`
-
-**Extract** - Write a powerhouse/processor spec for each existing processor into specs/processors/ - Usage: `--extract, -x`
 
 **Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
 
@@ -504,9 +507,7 @@ Generate a subgraph
 
 
 ### Options
-**Name** - The name of the subgraph to generate - Usage: `--name, -n <str>`
-
-**Document** - Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
+**Name** - Create a subgraph with this name. A subgraph directory that already exists keeps its form - Usage: `--name, -n <str>`
 
 **Dir** - Name of the directory of an existing subgraph to re-generate (my-subgraph or subgraphs/my-subgraph) - Usage: `--dir <dir>`
 
@@ -515,10 +516,6 @@ Generate a subgraph
 
 ### Flags
 **All** - Re-generate all existing subgraphs in the current project - Usage: `--all, -a`
-
-**Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
-
-**Code First** - Experimental. With --name or --document, create a new subgraph code-first. Existing subgraphs keep their own style; ph migrate --subgraph converts one - Usage: `--code-first`
 
 **Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
 
@@ -681,134 +678,6 @@ Generate hosts/&lt;name&gt;/outputs.js + outputs.d.ts (typed $output token trees
 **Help** - show help - Usage: `--help, -h`
 
 
-## Vetra
-
-The vetra command sets up a Vetra development environment for working with Vetra projects.
-It starts a Vetra Switchboard and optionally Connect Studio, enabling document collaboration 
-and real-time processing with a "Vetra" drive or connection to remote drives.
-
-**What it does:**
-- 1. Starts a Vetra Switchboard with a "Vetra" drive for document storage
-- 2. Optionally connects to remote drives instead of creating a local drive
-- 3. Starts Connect Studio pointing to the Switchboard for user interaction (unless disabled)
-- 4. Enables real-time updates, collaboration, and code generation
-
-Default drives:
-Connect's default drives resolve to the Vetra drive (and the preview drive
-when using --watch), plus any drives configured under
-connect.drives.defaultDrives in powerhouse.config.json - de-duplicated by
-URL, so configuring project drives does not cost you the Vetra drive.
-An explicit --default-drives-url is appended to that list (de-duplicated);
-it never replaces the Vetra drive.
-
-Every drive on the local Switchboard:
-Studio has no reactor of its own: it reads and writes on the local
-Switchboard (connect.instance.reactorClient "remote"), so it lists every
-drive there, such as one an agent adds through MCP, and a drive created in
-Studio lands there too. Not with --remote-drive, or when the project sets
-connect.instance.multiReactor or reactorClient itself.
-
-Preview drive app:
-Set vetra.previewDrive.app in powerhouse.config.json to the id of a drive
-app, and ph vetra --watch opens the Vetra Preview drive in that app: it sets
-the drive's app when it creates the drive and each time it starts. Without
-the field the drive keeps the app it has.
-
-One Vetra per project:
-A running Vetra is recorded in .ph/vetra-runtime.json (its pid and the
-Connect, Switchboard and MCP URLs); a second `ph vetra` prints those and
-exits. --restart stops the recorded Vetra first, then starts this one; the
-`ph mcp` launcher reconnects to it on its next tool call. Studio restarts
-by itself when powerhouse.config.json changes.
-
-
-
-
-### Options
-**Switchboard Port** - port to use for the Vetra Switchboard - Usage: `--switchboard-port <number>`
-
-**Connect Port** - port to use for the Vetra Connect - Usage: `--connect-port <number>`
-
-**Remote Drive** - URL of remote drive to connect to (skips switchboard initialization) - Usage: `--remote-drive <str>`
-
-**Drives Public Base** - public base URL for the drive URLs advertised to Connect; each drive is exposed as &lt;base&gt;/d/&lt;slug&gt; instead of `http://localhost:<switchboard-port>/d/<slug>`. Use when the switchboard is reachable through a reverse proxy. - Usage: `--drives-public-base <str>`
-
-**Db Path** - Database path or connection string. Use a `postgres://` URL for Postgres; otherwise treated as a PGlite filesystem path. Leave unset for in-memory PGlite. - Usage: `--db-path <str>`
-
-**Renown Namespace** - Renown localStorage namespace; share it across Connects to share login. - Usage: `--renown-namespace <str>`
-
-**Base** - Base path for the app - Usage: `--base <str>`
-
-**Log Level** - Log level for the application - Usage: `--log-level <value>`
-
-**Environment:** `PH_CONNECT_LOG_LEVEL`
-**Default:** `info`
-**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
-
-**Environment:** `PH_PACKAGES`
-**Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
-
-**Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - Comma-separated drive URLs to use as Connect's default drives. - Usage: `--default-drives-url <str>`
-
-**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
-
-**Default:** `preserve-by-url-and-detach`
-**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
-
-**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
-
-**Default:** `300`
-**Https Key File** - path to the ssl key file - Usage: `--https-key-file <str>`
-
-**Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file <str>`
-
-**Remote Drives** - Specify remote drive URLs to use - Usage: `--remote-drives <str>`
-
-
-
-
-### Flags
-**Watch** - Enable dynamic loading for document-models and editors in connect-studio and switchboard - Usage: `--watch, -w`
-
-**Default:** `false`
-**Logs** - Show additional logs - Usage: `--logs`
-
-**Default:** `false`
-**Restart** - Stop this project's running Vetra first (the pid in .ph/vetra-runtime.json), then start - Usage: `--restart`
-
-**Default:** `false`
-**Disable Connect** - Skip Connect initialization (only start switchboard and reactor) - Usage: `--disable-connect`
-
-**Default:** `false`
-**Interactive** - Enable interactive mode for code generation (requires user confirmation before generating code) - Usage: `--interactive`
-
-**Default:** `false`
-**Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
-
-**Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
-
-**Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Open** - Open browser on startup - Usage: `--open`
-
-**Cors** - Enable CORS - Usage: `--cors`
-
-**Strict Port** - Exit if specified port is already in use - Usage: `--strictPort`
-
-**Print Urls** - Print server urls - Usage: `--print-urls`
-
-**Default:** `true`
-**Bind Cli Shortcuts** - Bind CLI shortcuts - Usage: `--bind-cli-shortcuts`
-
-**Default:** `true`
-**Https** - Use https - Usage: `--https`
-
-**Dev** - enable development mode to load local packages - Usage: `--dev`
-
-**Help** - show help - Usage: `--help, -h`
-
-
 ## Build
 
 Build a Powerhouse package for publishing: a browser bundle and a node bundle of its
@@ -843,7 +712,7 @@ can load and still fail at runtime, so don't publish it.
 **Ignore Type Errors** - Unsafe: build even when tsc reports type errors, without asking. The package can load and still fail at runtime - Usage: `--ignore-type-errors`
 
 **Default:** `false`
-**Release** - Experimental: check every document model as for a release and stop the build, previous output intact, when the check finds them invalid or cannot run; then write the release approval ph publish verifies - Usage: `--release`
+**Release** - Experimental: check every document model as for a release and stop the build, previous output intact, when the check finds them invalid or cannot run; then write the release approval ph publish verifies; also refuse a package with a Cli that does not declare @powerhousedao/clint - Usage: `--release`
 
 **Default:** `false`
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -852,97 +721,33 @@ can load and still fail at runtime, so don't publish it.
 
 
 ## Connect
-Powerhouse Connect commands. Use with `studio`, `build`, `preview`, or `config`. Defaults to `studio` if not specified.
+Powerhouse Connect. `ph connect` runs the project's connect host: it is `ph run connect dev`, as is `ph connect studio`; `ph connect build` is `ph run connect build` and `ph connect preview` is `ph run connect serve`. `ph connect config` reads and writes Connect's runtime configuration.
 
-## Connect Studio
-The studio command starts the Connect Studio, a development environment for building
-and testing Powerhouse applications. It provides a visual interface for working with
-your project.
+## Connect Config
+Read or update Connect's runtime configuration (powerhouse.config.json).
 
-**What it does:**
-- 1. Starts a local Connect Studio server
-- 2. Provides a web interface for development
-- 3. Allows you to interact with your project components
-- 4. Supports various configuration options for customization
+Modes (mutually exclusive — positional, --get, --json, and field flags cannot be combined):
+  ph connect config                       List the effective connect.* block (defaults &lt; source).
+  ph connect config &lt;key&gt;                 Get the value at the dotted path (e.g. ph connect config connect.renown.url).
+  ph connect config --get &lt;dotted.path&gt;   Same as positional &lt;key&gt; (kept for backward compat).
+  ph connect config &lt;key&gt; &lt;value&gt;         Set a single field and dual-write to source + dist (positional).
+  ph connect config --&lt;field&gt; &lt;value&gt;     Set a single field via per-field flag (e.g. --renown-url `https://renown.id`).
+  ph connect config --json '\{"renown":\{"url":"…"\}\}'
+                                          Bulk-set multiple fields and dual-write. The payload is the connect.*
+                                          block without the "connect" wrapper; unknown keys are rejected.
 
-
-
-
-### Options
-**Port** - Port to run the dev server on. - Usage: `--port <number>`
-
-**Default:** `3000`
-**Renown Namespace** - Renown localStorage namespace; share it across Connects to share login. - Usage: `--renown-namespace <str>`
-
-**Base** - Base path for the app - Usage: `--base <str>`
-
-**Log Level** - Log level for the application - Usage: `--log-level <value>`
-
-**Environment:** `PH_CONNECT_LOG_LEVEL`
-**Default:** `info`
-**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
-
-**Environment:** `PH_PACKAGES`
-**Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
-
-**Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - Comma-separated drive URLs to use as Connect's default drives. - Usage: `--default-drives-url <str>`
-
-**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
-
-**Default:** `preserve-by-url-and-detach`
-**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
-
-**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
-
-**Default:** `300`
-
-
-
-
-### Flags
-**Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
-
-**Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
-
-**Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Open** - Open browser on startup - Usage: `--open`
-
-**Cors** - Enable CORS - Usage: `--cors`
-
-**Strict Port** - Exit if specified port is already in use - Usage: `--strictPort`
-
-**Print Urls** - Print server urls - Usage: `--print-urls`
-
-**Default:** `true`
-**Bind Cli Shortcuts** - Bind CLI shortcuts - Usage: `--bind-cli-shortcuts`
-
-**Default:** `true`
-**Help** - show help - Usage: `--help, -h`
-
-
-## Connect Build
-The Connect build command creates a production build with the project's local and
-external packages included.
-
-Runtime-config overrides (all combinable — last wins on collision):
-  ph connect build                                    Build with the current source config.
-  ph connect build &lt;key&gt; &lt;value&gt;                      Build with a positional override applied (e.g. ph connect build connect.renown.url `https://renown.staging`).
-  ph connect build --&lt;field&gt; &lt;value&gt;                  Build with a per-field flag override (e.g. --renown-url `https://renown.staging`).
-  ph connect build --json '\{"app":\{"workflowsEnabled":true\}\}'
-                                                      Build with a bulk override. The payload is the connect.* block
-                                                      without the "connect" wrapper; unknown keys are rejected.
-
-Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors out (use `ph connect config <key>` to read).
+Writes go to:
+  - &lt;project&gt;/powerhouse.config.json (source — picked up by the next build)
+  - &lt;dist-dir&gt;/powerhouse.config.json (if it exists — the currently-served SPA picks it up on refresh)
 
 
 
 
 ### Options
-**Out Dir** - Output directory - Usage: `--outDir <str>`
+**Get** - Dotted path inside connect.* (e.g. "connect.renown.url") to read the effective value. Mutually exclusive with the set modes. Equivalent to `ph connect config <key>` (positional). - Usage: `--get <str>`
 
-**Default:** `.ph/connect-build/dist/`
+**Dist Dir** - Path to the directory containing the dist powerhouse.config.json. Defaults to the PH_CONNECT_OUTDIR env or `.ph/connect-build/dist/`. - Usage: `--dist-dir <str>`
+
 **Json** - Inline JSON override for the runtime connect.* block, without the "connect" wrapper, e.g. '\{"app":\{"workflowsEnabled":true\},"renown":\{"url":"..."\}\}'. A top-level packageRegistryUrl is also accepted. Validated against the runtime schema (unknown keys fail); deep-merged on top of source powerhouse.config.json. Individual --flag values beat --json on collision. - Usage: `--json <str>`
 
 **Renown Url** - Override connect.renown.url. - Usage: `--renown-url <str>`
@@ -985,20 +790,12 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 
 **Sentry Tracing Enabled** - Override connect.sentry.tracing (Sentry performance tracing). - Usage: `--sentry-tracing-enabled <value>`
 
-**Favicon** - Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico, or icon.svg/icon.png for those types; resolved relative to the build cwd. - Usage: `--favicon <str>`
-
 **Base** - Base path for the app - Usage: `--base <str>`
 
 **Log Level** - Log level for the application - Usage: `--log-level <value>`
 
 **Environment:** `PH_CONNECT_LOG_LEVEL`
 **Default:** `info`
-**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
-
-**Environment:** `PH_PACKAGES`
-**Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
-
-**Environment:** `PH_LOCAL_PACKAGE`
 **Default Drives Url** - Comma-separated drive URLs to use as Connect's default drives. - Usage: `--default-drives-url <str>`
 
 **Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
@@ -1021,76 +818,6 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 
 
 ### Flags
-**Dynamic Base** - Build one bundle that serves under any subpath; base resolved at serve time from a runtime global. Overrides --base. - Usage: `--dynamic-base`
-
-**Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
-
-**Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
-
-**Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Help** - show help - Usage: `--help, -h`
-
-
-## Connect Preview
-The Connect preview command previews a built Connect project.
-NOTE: You must run `ph connect build` first
-
-
-
-
-### Options
-**Port** - Port to run the preview server on. - Usage: `--port <number>`
-
-**Default:** `4173`
-**Out Dir** - Output directory - Usage: `--outDir <str>`
-
-**Default:** `.ph/connect-build/dist/`
-**Base** - Base path for the app - Usage: `--base <str>`
-
-**Log Level** - Log level for the application - Usage: `--log-level <value>`
-
-**Environment:** `PH_CONNECT_LOG_LEVEL`
-**Default:** `info`
-**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
-
-**Environment:** `PH_PACKAGES`
-**Local Package** - Path to local package to load during development - Usage: `--local-package <str>`
-
-**Environment:** `PH_LOCAL_PACKAGE`
-**Default Drives Url** - Comma-separated drive URLs to use as Connect's default drives. - Usage: `--default-drives-url <str>`
-
-**Drive Preserve Strategy** - The preservation strategy to use on default drives - Usage: `--drive-preserve-strategy <value>`
-
-**Default:** `preserve-by-url-and-detach`
-**Host** - Expose the server to the network. Pass an IP (e.g. 0.0.0.0) to bind to a specific address. - Usage: `--host <str>`
-
-**Watch Timeout** - Amount of time to wait before a file is considered changed - Usage: `--watch-timeout <number>`
-
-**Default:** `300`
-
-
-
-
-### Flags
-**Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
-
-**Force** - Force dep pre-optimization regardless of whether deps have changed. - Usage: `--force`
-
-**Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Open** - Open browser on startup - Usage: `--open`
-
-**Cors** - Enable CORS - Usage: `--cors`
-
-**Strict Port** - Exit if specified port is already in use - Usage: `--strictPort`
-
-**Print Urls** - Print server urls - Usage: `--print-urls`
-
-**Default:** `true`
-**Bind Cli Shortcuts** - Bind CLI shortcuts - Usage: `--bind-cli-shortcuts`
-
-**Default:** `true`
 **Help** - show help - Usage: `--help, -h`
 
 
@@ -1106,8 +833,8 @@ can be used to authenticate requests to Powerhouse APIs like reactor-api (Switch
 
 Prerequisites:
   You must have a cryptographic identity. Run 'ph login' first to:
-  - Generate a keypair (stored in .ph/.keypair.json)
-  - Optionally link your Ethereum address (stored in .ph/.renown.json)
+  - Generate a keypair (stored in ~/.ph/identities/renown/.keypair.json)
+  - Optionally link your Ethereum address (stored in ~/.ph/identities/renown/.renown.json)
 
 Token Details:
   The generated token is a JWT (JSON Web Token) containing:
@@ -1265,20 +992,20 @@ It reads the powerhouse.config.json file and shows the packages that are current
 Serve the project's reactor-mcp tools to a coding agent over stdio.
 
 Use it as the MCP server command in .mcp.json, .cursor/mcp.json and
-.gemini/settings.json. Tools are listed at once, without waiting for Vetra.
-The first tool call connects to the project's running Vetra (found through
-.ph/vetra-runtime.json), or starts one in the background and waits for it to
-be ready: `ph run vetra --strictPort` when the project has a hosts/vetra
-host, else `ph vetra --strictPort --watch`. How the start goes is reported
-as MCP progress notifications when the client sent a progressToken, else on
+.gemini/settings.json. Tools are listed at once, without waiting for the
+project's dev stack. The first tool call connects to the running one (found
+through .ph/vetra-runtime.json), or starts one in the background and waits
+for it to be ready: `ph run dev --strictPort`, the project's hosts/dev host
+(hosts/vetra in a project that has it and no hosts/dev). How
+the start goes is reported as MCP progress notifications when the client sent a progressToken, else on
 stderr.
-Startup failures come back as tool errors carrying Vetra's output, which is
-also written to .ph/vetra.log.
+Startup failures come back as tool errors carrying the stack's output, which
+is also written to .ph/vetra.log.
 
 Beside reactor-mcp's tools it serves restartVetra, which stops the project's
-Vetra, starts it again and returns its URLs. When Vetra restarts some other
-way (stopped and started again, or `ph vetra --restart` in a project
-without a hosts/vetra host), the next tool call connects to the new one.
+dev stack, starts it again and returns its URLs. When the stack restarts some
+other way (stopped and started again), the next tool call connects to the new
+one.
 
 
 
@@ -1286,7 +1013,7 @@ without a hosts/vetra host), the next tool call connects to the new one.
 ### Options
 **Project Dir** - Powerhouse project to serve. Defaults to the nearest directory above the working directory that holds powerhouse.config.json. - Usage: `--project-dir <str>`
 
-**Start Timeout** - Seconds to wait for Vetra to answer /ready after starting it on the first tool call - Usage: `--start-timeout <number>`
+**Start Timeout** - Seconds to wait for the dev host to answer /ready after starting it on the first tool call - Usage: `--start-timeout <number>`
 
 **Default:** `120`
 
@@ -1331,7 +1058,7 @@ Run migrations
 
 **Strict Resolvers** - With --subgraphs or --subgraph: leave the resolver calls tsc rejects without a cast, so the project does not compile until each resolver's types agree with the schema. They are listed either way. - Usage: `--strict-resolvers`
 
-**Document Models** - Convert every schema-first document model into a code-first one, keeping each version's definition and reducers. The model gets the layout ph generate document-model --code-first writes: index.ts, upgrades/index.ts, and per version definition.ts, index.ts and modules/; the custom code of src/ moves into the version's directory. The generated code, src/ and &lt;name&gt;.json are removed. The names the generated code exported stay available from compat/v&lt;N&gt;/index.ts, imports of removed files are rewritten to it, and the document-models barrels are regenerated. A model that cannot keep the same definition is left as it is, with the reason. Upgrades no dependencies. - Usage: `--document-models`
+**Document Models** - Convert every schema-first document model into a code-first one, keeping each version's definition and reducers. The model gets the layout ph generate document-model --name writes: index.ts, upgrades/index.ts, and per version definition.ts, index.ts and modules/; the custom code of src/ moves into the version's directory. The generated code, src/ and &lt;name&gt;.json are removed. The names the generated code exported stay available from compat/v&lt;N&gt;/index.ts, imports of removed files are rewritten to it, and the document-models barrels are regenerated. A model that cannot keep the same definition is left as it is, with the reason. Upgrades no dependencies. - Usage: `--document-models`
 
 **Rename Conflicting Types** - With --document-models or --document-model: rename a model type that has the name of a scalar, such as Address, by prefixing the model's name (InvoiceAddress), instead of refusing the model. The GraphQL type name changes; the TypeScript name the model's compat exports keeps the old name. - Usage: `--rename-conflicting-types`
 
@@ -1344,11 +1071,11 @@ Run migrations
 
 ## Model Check
 Check this package's document models through one set of checks:
-every model directory in documentModelsDir, whether it stores a schema-first
-&lt;name&gt;.json or exports a code-first model from its index.ts. Writes nothing.
+every model directory in documentModelsDir, whether it stores the &lt;name&gt;.json of
+a legacy document model or exports a model from its index.ts. Writes nothing.
 
-`tsc` cannot run these checks: a code-first model compiles when its module is
-evaluated.
+`tsc` cannot run these checks: a document model with a definition compiles when
+its module is evaluated.
 
 --release (experimental) runs the checks `ph build --release` runs: these,
 the release checks, and host validation, which validates every model and the
@@ -1439,76 +1166,6 @@ Experimental: the command, its output and the JSON report can change in any rele
 **Help** - show help - Usage: `--help, -h`
 
 
-## Switchboard
-
-The switchboard command starts a local Switchboard instance, which acts as the document
-processing engine for Powerhouse projects. It provides the infrastructure for document
-models, processors, and real-time updates.
-
-**What it does:**
-- 1. Starts a local switchboard server
-- 2. Loads document models and processors
-- 3. Provides an API for document operations
-- 4. Enables real-time document processing
-- 5. Can authenticate with remote services using your identity from 'ph login'
-
-
-
-### Flags
-**Https** - Use https - Usage: `--https`
-
-**Dev** - enable development mode to load local packages - Usage: `--dev`
-
-**Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
-
-**Debug** - Log arguments passed to this command - Usage: `--debug`
-
-**Use Identity** - enable identity using keypair from ph login (uses ~/.ph/keypair.json) - Usage: `--use-identity`
-
-**Require Identity** - require existing keypair, fail if not found (implies --use-identity) - Usage: `--require-identity`
-
-**Migrate** - Run database migrations and exit - Usage: `--migrate`
-
-**Migrate Status** - Show migration status and exit - Usage: `--migrate-status`
-
-**Reset** - Wipe the local PGlite switchboard storage after confirmation, then exit - Usage: `--reset`
-
-**Yes** - Skip the interactive confirmation prompt for --reset (required for non-interactive use) - Usage: `--yes, -y`
-
-**Mcp** - enable Mcp route at /mcp - Usage: `--mcp`
-
-**Default:** `true`
-**Use Vetra Drive** - Use a Vetra drive - Usage: `--use-vetra-drive`
-
-**Default:** `false`
-**Help** - show help - Usage: `--help, -h`
-
-
-
-
-### Options
-**Https Key File** - path to the ssl key file - Usage: `--https-key-file <str>`
-
-**Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file <str>`
-
-**Remote Drives** - Specify remote drive URLs to use - Usage: `--remote-drives <str>`
-
-**Packages** - Comma-separated list of package names to load - Usage: `--packages <str>`
-
-**Environment:** `PH_PACKAGES`
-**Port** - Port to host the api - Usage: `--port <number>`
-
-**Default:** `4001`
-**Base Path** - base path for the API endpoints (overrides BASE_PATH) - Usage: `--base-path <str>`
-
-**Keypair Path** - path to custom keypair file for identity - Usage: `--keypair-path <str>`
-
-**Vetra Drive Id** - Specify a Vetra drive ID - Usage: `--vetra-drive-id <str>`
-
-**Default:** `vetra`
-**Db Path** - path to the database - Usage: `--db-path <str>`
-
-
 ## Login
 
 The login command authenticates you with Renown using your Ethereum wallet. This enables
@@ -1518,7 +1175,7 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 - 1. Generates or loads a cryptographic identity (DID) for the CLI
 - 2. Opens your browser to the Renown authentication page
 - 3. You authorize the CLI's DID to act on behalf of your Ethereum address
-- 4. Stores the credentials locally in .ph/.renown.json
+- 4. Stores the login in your home folder (~/.ph/identities/renown), for every project
   
 
 
@@ -1545,6 +1202,125 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
+
+
+## Whoami
+
+Show who acts here: your Renown login when you are logged in (`ph login`), else your
+pseudonym, an Ethereum key made without a login and shown as "Anonymous" and a short
+address. Reads files only; `--check` also asks Renown whether the login is still valid.
+  
+
+
+
+### Flags
+**Json** - Print the identity as JSON - Usage: `--json`
+
+**Check** - Ask Renown whether the login is still valid (network) - Usage: `--check`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+
+
+### Options
+**Renown Url** - Renown server URL. - Usage: `--renown-url <str>`
+
+**Environment:** `PH_CONNECT_RENOWN_URL`
+**Default:** `https//www.renown.id`
+
+
+## Logout
+
+The logout command withdraws your Renown login at Renown and deletes it from this computer,
+its key included. Your pseudonym acts again.
+
+
+
+### Options
+**Renown Url** - Renown server URL. - Usage: `--renown-url <str>`
+
+**Environment:** `PH_CONNECT_RENOWN_URL`
+**Default:** `https//www.renown.id`
+
+
+
+
+### Flags
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Identity Password
+Set, change or remove the password of your pseudonym, in the home folder and in every store it was copied into. Makes the pseudonym when there is none.
+
+
+
+### Flags
+**Remove** - Remove the password: the key is kept readable by your user only - Usage: `--remove`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Credentials List
+
+List the credentials this store's host accepts by its own record (`.ph/credentials` in the
+data folder): who, the session's label, who wrote it, its expiry and whether it verifies.
+  
+
+
+
+### Options
+**Data Dir** - The store's data folder (default: PH_USER_DATA_DIR, else the project) - Usage: `--data-dir <str>`
+
+
+
+
+### Flags
+**All** - Also list withdrawn credentials - Usage: `--all`
+
+**Json** - Print the records as JSON - Usage: `--json`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Credentials Withdraw
+
+Withdraw credential records by id prefix, address or label. A running host refuses a withdrawn
+credential from its next request, and the withdrawal holds after a restart.
+  
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Id Address Label *[required]*** - Records to withdraw: an id prefix, an address or a label - Usage: `[...id | address | label]`
+
+
+
+
+### Flags
+**Expired** - Remove expired records and the tombstones of expired ones - Usage: `--expired`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+
+
+### Options
+**Data Dir** - The store's data folder (default: PH_USER_DATA_DIR, else the project) - Usage: `--data-dir <str>`
 
 
 ## Install

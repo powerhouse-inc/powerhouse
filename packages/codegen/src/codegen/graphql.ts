@@ -8,7 +8,6 @@ import { Kind, parse } from "graphql";
 import type { ValidationSchemaPluginConfig } from "graphql-codegen-typescript-validation-schema";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { formatFileText } from "utils";
 import { format as oxfmtFormat } from "oxfmt";
 import {
@@ -17,13 +16,13 @@ import {
   projectScalarCodegenConfig,
   projectScalarsImportPath,
 } from "./project-scalars.js";
-import { resolveFromCodegen } from "./resolve-from-codegen.js";
+import { loadCodegenPlugin } from "./resolve-from-codegen.js";
 import { buildGraphqlDocumentStringForSpecification } from "./specification-schema.js";
 
 type PluginLoader = NonNullable<CodegenConfig["pluginLoader"]>;
 type CodegenPlugin = Awaited<ReturnType<PluginLoader>>;
-const pluginLoader: PluginLoader = async (name) =>
-  (await import(pathToFileURL(resolveFromCodegen(name)).href)) as CodegenPlugin;
+const pluginLoader: PluginLoader = (name) =>
+  loadCodegenPlugin(name) as Promise<CodegenPlugin>;
 
 export const scalars = Object.fromEntries(
   documentModelScalars.map(({ name, typescriptType }) => [

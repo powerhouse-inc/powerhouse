@@ -4,6 +4,7 @@
   "@powerhousedao/analytics-engine-knex": 0,
   "@powerhousedao/builder-tools": 54.7,
   "@powerhousedao/clint": 61.4,
+  "@powerhousedao/clint-common": 11.4,
   "@powerhousedao/codegen": 185.7,
   "@powerhousedao/connect": 92.2,
   "@powerhousedao/connect-core": 39.6,

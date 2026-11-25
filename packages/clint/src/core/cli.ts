@@ -1,8 +1,5 @@
 import fs from "node:fs";
-import path from "node:path";
-import { createRequire } from "node:module";
 import { Command as Commander } from "commander";
-import { z } from "zod";
 import type {
   AgentLoader,
   BootstrapOptions,
@@ -13,19 +10,17 @@ import type {
   Command,
   CommandContext,
   ConfigEnvVar,
+  IdentityConfiguration,
   Resolvable,
   ResolvedInteractiveConfig,
   Routine,
   RunOptions,
-  ServiceDefinition,
 } from "./types.js";
 import type {
   ReactorConfiguration,
   DocumentRegistry,
   AnyRegistry,
 } from "../integrations/powerhouse/types.js";
-import { connectServiceDefinition } from "../integrations/powerhouse/connect.js";
-import { resolveReactorDefaults } from "../integrations/powerhouse/ports.js";
 import { randomUUID } from "node:crypto";
 import { formatStreamChunk } from "./stream.js";
 import { getSchemaFields, slugToTitle, type FieldInfo } from "./schema.js";
@@ -37,6 +32,41 @@ import {
   generateConfigCommandHelp,
 } from "./config-command.js";
 import { createServiceCommands } from "./service-command.js";
+import {
+  connectRemoteServices,
+  refuseServiceStarts,
+  serveServices,
+} from "./service-control.js";
+import {
+  callControl,
+  ControlError,
+  processControlChannel,
+  protocolMismatch,
+} from "@powerhousedao/host-core/control-channel";
+import {
+  COMMAND_METHOD,
+  CommandTooLarge,
+  commandStoreSchema,
+  describeCaller,
+  readPipedStdin,
+  sendCommand,
+  serveCommands,
+  untilAborted,
+  type ForwardedCommand,
+} from "./command-control.js";
+import { captureOutput } from "./forwarded-output.js";
+import {
+  asOwnSigner,
+  callerSigningOf,
+  COMMAND_SIGNING,
+  withCallerSigning,
+} from "./forwarded-signing.js";
+import { callerAnswers } from "./caller-signing.js";
+import {
+  instanceDataDir,
+  instanceServicesDir,
+} from "@powerhousedao/host-core/instance";
+import { reportLegacyServiceState } from "./legacy-services.js";
 import { resolveServiceName } from "./services.js";
 import { createHelpCommand } from "./help-command.js";
 import { installSkills } from "./init.js";
@@ -48,11 +78,12 @@ import {
   DEFAULT_SKILL_INSTRUCTION,
 } from "./skill-commands.js";
 import type { SkillInvocation } from "./skill-commands.js";
-import { renderSkillTemplate } from "./templates.js";
+import { loadTemplates, renderSkillTemplate } from "./templates.js";
 import { createRoutine } from "./routine.js";
 import { createEventBus } from "./events.js";
 import { createProcessManager } from "./processes.js";
 import { createServiceManager } from "./services.js";
+import { createMemberServiceManager } from "./member-services.js";
 import {
   createRoutineServiceAdapter,
   createCompositeServiceManager,
@@ -60,11 +91,6 @@ import {
 import { createReplSession } from "../interactive/session.js";
 import { formatZodError } from "./errors.js";
 import { createLogger } from "./logger.js";
-import { createProxyServer, type ProxyServerInstance } from "./proxy.js";
-import {
-  buildServiceRoutes,
-  resolveImplicitProxyRoot,
-} from "./proxy-routes.js";
 import { createCliRuntime } from "./runtime.js";
 import { initLifecycle } from "./lifecycle.js";
 import type { BootTimings, LifecycleInitContext } from "./types.js";
@@ -81,10 +107,19 @@ interface ResolvedRunOptions {
   stderr: (message: string) => void;
   cwd: string;
   writeRaw: (text: string) => void;
+  writeRawErr: (text: string) => void;
   configFile?: string;
   resume?: string;
   interactiveInput?: AsyncIterable<string>;
   logLevel?: import("./types.js").LogLevel;
+  reactor?: RunOptions["reactor"];
+  onServe?: RunOptions["onServe"];
+  signal?: RunOptions["signal"];
+  members?: RunOptions["members"];
+  remoteServices?: RunOptions["remoteServices"];
+  serveCommand?: RunOptions["serveCommand"];
+  forward?: RunOptions["forward"];
+  store?: RunOptions["store"];
 }
 
 /**
@@ -146,26 +181,6 @@ export function defineCli<
     options = {
       ...options,
       configSchema: configObj.merge(secretsObj) as unknown as TSchema,
-    };
-  }
-
-  // Auto-inject proxy config fields when enabled
-  if (options.proxyEnabled && options.configSchema) {
-    const proxySchema = z.object({
-      proxyPort: z.coerce.number().default(0),
-      proxyHost: z.string().default("0.0.0.0"),
-      // Browser-facing base URL when deployed behind an ingress
-      // (env: {CLINAME}_PROXY_PUBLIC_URL). See ProxyServerOptions.publicUrl.
-      // A non-root pathname mounts the whole surface under that base path.
-      // The .url() check accepts scheme-less values like 'localhost:8090'
-      // (parsed with protocol 'localhost:'); resolveServiceProxyContext
-      // requires http(s) and treats anything else as unset.
-      proxyPublicUrl: z.string().url().optional(),
-    });
-    const configObj = options.configSchema as any;
-    options = {
-      ...options,
-      configSchema: configObj.merge(proxySchema) as unknown as TSchema,
     };
   }
 
@@ -269,7 +284,7 @@ export function defineCli<
 
   // Lazy singleton event bus — created on first access, shared everywhere.
   // This eliminates the dual-path wiring that caused stale references when
-  // services were added after defineCli() (e.g. configureReactor adding Connect).
+  // services were added after defineCli().
   let _eventBus: ReturnType<typeof createEventBus> | undefined;
   function getEventBus(): ReturnType<typeof createEventBus> {
     if (!_eventBus) _eventBus = createEventBus();
@@ -329,47 +344,22 @@ export function defineCli<
     agentLoader = loader;
   }
 
+  // How the command line signs as the person — set via configureIdentity()
+  let identityConfig: IdentityConfiguration | undefined;
+
+  function configureIdentity(config: IdentityConfiguration): void {
+    identityConfig = config;
+  }
+
   // Mutable reactor configuration — set via configureReactor()
   let reactorConfig: ReactorConfiguration | undefined;
 
   function configureReactor<R extends DocumentRegistry = AnyRegistry>(
     config: ReactorConfiguration<R>,
   ): void {
-    // Stamp port/name defaults from CLI name before anything else
-    const resolved = resolveReactorDefaults(options.name, config);
-    if (resolved.switchboard)
-      config = { ...config, switchboard: resolved.switchboard };
-    if (resolved.connect) config = { ...config, connect: resolved.connect };
-
-    // Auto-resolve Connect workdir and assetsDir from CLI root
-    if (config.connect?.enabled && options.root) {
-      const connect = { ...config.connect };
-      if (!connect.workdir) {
-        connect.workdir = resolveAppPackageDir(options.root, options.name);
-      }
-      if (connect.assetsDir === undefined && connect.workdir) {
-        const candidateDir = path.join(connect.workdir, "dist", "connect");
-        if (fs.existsSync(path.join(candidateDir, "index.html"))) {
-          connect.assetsDir = candidateDir;
-        }
-      }
-      config = { ...config, connect };
-    }
-
     // Erase R at the storage site — at runtime the registry is just a dict.
     // The generic only exists to type-check the caller's `create` factory.
     reactorConfig = config as unknown as ReactorConfiguration;
-
-    // Inject Connect service commands immediately
-    if (config.connect?.enabled) {
-      const def = connectServiceDefinition(config.connect);
-      for (const cmd of createServiceCommands(def)) {
-        if (!commandMap.has(cmd.id)) commandMap.set(cmd.id, cmd);
-      }
-      // Store the service definition for ServiceManager registration in run()
-      if (!options.services) options.services = [];
-      (options.services as any[]).push(def);
-    }
   }
 
   function getCommand(id: string): Command | undefined {
@@ -390,6 +380,7 @@ export function defineCli<
         : {},
       stdout: defaultStdout,
       runProcess: noop,
+      readStdin: readPipedStdin,
       ...base,
     };
     // Extend with runtime services if available
@@ -757,6 +748,11 @@ export function defineCli<
     resolvedDescription: string,
     onSkillInvocation?: (invocation: SkillInvocation) => Promise<void>,
     wraps?: import("./types.js").WrapRegistry,
+    /** Runs the command elsewhere; resolves false when it is to run here. */
+    elsewhere?: (
+      cmd: Command,
+      input: Record<string, unknown>,
+    ) => Promise<boolean>,
   ): Commander {
     const program = new Commander();
     program
@@ -778,16 +774,12 @@ export function defineCli<
       program.option("-R, --no-routine", "Skip routine activation");
     }
 
-    if (reactorConfig?.switchboard?.enabled) {
-      program.option("-A, --no-api", "Skip API (switchboard) activation");
-    }
-
-    if (reactorConfig?.connect?.enabled) {
-      program.option("-S, --no-studio", "Skip Studio (connect) activation");
-    }
-
     program.option("--verbose", "Enable debug-level logging");
     program.option("--meta", "Output CLI metadata as JSON");
+    program.option(
+      "--local",
+      "Run the command in this process, not in a running instance",
+    );
 
     if (agentLoader) {
       program.option("--resume <thread-id>", "Resume a previous conversation");
@@ -903,6 +895,7 @@ export function defineCli<
         } catch (err) {
           throw new Error(formatZodError(err, cmd.id));
         }
+        if (elsewhere && (await elsewhere(cmd, merged))) return;
         // Wrap the execution through the registered wrap registry. Identity
         // when no lifecycle hook is registered — pure passthrough.
         const result = wraps
@@ -983,20 +976,31 @@ export function defineCli<
   }
 
   /**
-   * Wire up ServiceManager (process + routine), event handlers, and proxy
-   * event wiring onto a freshly-built context.  Shared by bootstrap() and
-   * the interactive-mode startup in runImpl().
+   * Wire up ServiceManager (process + routine + compound members) and event
+   * handlers onto a freshly-built context.  Shared by bootstrap() and the
+   * interactive-mode startup in runImpl().
    */
   function wireServices(
     context: CommandContext,
     config: Record<string, unknown>,
     log: import("./types.js").Logger,
-    proxyInstance?: ProxyServerInstance,
+    members?: RunOptions["members"],
   ): void {
     const servicesNow = options.services && options.services.length > 0;
     let processServiceManager: import("./types.js").ServiceManager | undefined;
     if (servicesNow && options.services) {
-      const svcDir = userStoreFolder(options.name, "services");
+      // Under the data folder: an instance is a host plus a data folder, so
+      // two project folders keep, and list, their own services.
+      const svcDir = instanceServicesDir(
+        { dataDir: instanceDataDir(context.workdir) },
+        options.name,
+      );
+      reportLegacyServiceState({
+        legacyDir: userStoreFolder(options.name, "services"),
+        servicesDir: svcDir,
+        workdir: context.workdir,
+        warn: (message) => log.warn(message),
+      });
       processServiceManager = createServiceManager(options.services as any[], {
         config,
         servicesDir: svcDir,
@@ -1020,56 +1024,32 @@ export function defineCli<
       context.services = routineServiceAdapter;
     }
 
+    // The compound's members, beside the CLI's own services. A member named
+    // like one of those is left out: the CLI's service keeps its name.
+    if (members) {
+      const memberManager = createMemberServiceManager(members);
+      const own = context.services;
+      const routeMap = new Map<string, import("./types.js").ServiceManager>();
+      if (own) {
+        for (const svc of options.services ?? []) routeMap.set(svc.id, own);
+        if (routineServiceAdapter) {
+          routeMap.set(options.routine!.id!, own);
+        }
+      }
+      for (const member of members()) {
+        if (!routeMap.has(member.name)) {
+          routeMap.set(member.name, memberManager);
+        }
+      }
+      context.services = createCompositeServiceManager(
+        own ? [own, memberManager] : [memberManager],
+        routeMap,
+      );
+    }
+
     if (_eventBus && options.events) {
       for (const [event, handler] of Object.entries(options.events)) {
         _eventBus.on(event, (data: unknown) => handler(data, log));
-      }
-    }
-
-    // Proxy route wiring via event bus
-    if (proxyInstance) {
-      // All definitions (including the reactor-config Connect, pushed into
-      // options.services by configureReactor) are known here, so the implicit
-      // root resolves deterministically regardless of startup order.
-      const implicitRoot = resolveImplicitProxyRoot(
-        (options.services ?? []) as ServiceDefinition[],
-      );
-      if (implicitRoot) {
-        log.debug(
-          `Proxy: '${implicitRoot.serviceId}/${implicitRoot.captureName}' is the only website capture — serving it at '/' (set proxyRoot to make this explicit)`,
-        );
-      }
-      const bus = getEventBus();
-      bus.on("service:ready", (data: any) => {
-        if (!data?.id || !context.services) return;
-        const def = context.services.getDefinition(data.id);
-        if (!def) return;
-        const instances = context.services.list(data.id);
-        const inst = instances.find((i) => i.instanceId === data.instanceId);
-        if (!inst) return;
-        const routes = buildServiceRoutes(def, inst, implicitRoot, log);
-        for (const route of routes) {
-          proxyInstance.addRoute(route);
-        }
-      });
-      bus.on("service:stopped", (data: any) => {
-        if (data?.id) proxyInstance.removeRoutesBySource(`service:${data.id}`);
-      });
-      bus.on("service:failed", (data: any) => {
-        if (data?.id) proxyInstance.removeRoutesBySource(`service:${data.id}`);
-      });
-
-      // Wire proxy routes for services that are already running from a previous session
-      if (context.services) {
-        for (const inst of context.services.list()) {
-          if (inst.status !== "ready" || !inst.endpoints) continue;
-          const def = context.services.getDefinition(inst.serviceId);
-          if (!def) continue;
-          const routes = buildServiceRoutes(def, inst, implicitRoot, log);
-          for (const route of routes) {
-            proxyInstance.addRoute(route);
-          }
-        }
       }
     }
   }
@@ -1216,10 +1196,23 @@ export function defineCli<
         }),
       cwd: runOptions?.workdir ?? process.cwd(),
       writeRaw: runOptions?.stdout ?? defaultStdout,
+      writeRawErr: runOptions?.stderr
+        ? (text: string) => runOptions.stderr!(text.replace(/\n$/, ""))
+        : (text: string) => {
+            process.stderr.write(text);
+          },
       configFile: runOptions?.configFile,
       resume: runOptions?.resume,
       interactiveInput: runOptions?.interactiveInput,
       logLevel: runOptions?.logLevel,
+      reactor: runOptions?.reactor,
+      onServe: runOptions?.onServe,
+      signal: runOptions?.signal,
+      members: runOptions?.members,
+      remoteServices: runOptions?.remoteServices,
+      serveCommand: runOptions?.serveCommand,
+      forward: runOptions?.forward,
+      store: runOptions?.store,
     };
     return runImpl(argv, resolved);
   }
@@ -1262,8 +1255,7 @@ export function defineCli<
     let verboseFlag = false;
     let metaFlag = false;
     let noRoutineFlag = false;
-    let noApiFlag = false;
-    let noStudioFlag = false;
+    let localFlag = false;
     const frameworkFlags = new Set([
       "--resume",
       "--workdir",
@@ -1281,10 +1273,8 @@ export function defineCli<
         metaFlag = true;
       } else if (arg === "-R" || arg === "--no-routine") {
         noRoutineFlag = true;
-      } else if (arg === "-A" || arg === "--no-api") {
-        noApiFlag = true;
-      } else if (arg === "-S" || arg === "--no-studio") {
-        noStudioFlag = true;
+      } else if (arg === "--local") {
+        localFlag = true;
       } else if (frameworkFlags.has(arg) && i + 1 < preCommandArgs.length) {
         const value = preCommandArgs[i + 1]!;
         if (arg === "--workdir" || arg === "-w") workdirFlag = value;
@@ -1345,8 +1335,6 @@ export function defineCli<
       log,
     });
 
-    // One-shot detection — before the proxy bind so one-shot invocations skip
-    // it (they take the lazy dispatch and start no services).
     const postCmdArgs = userArgs.slice(subcommandIdx);
     const firstSubcmd = postCmdArgs[0];
     const isSubcommand =
@@ -1355,59 +1343,8 @@ export function defineCli<
     const isBuiltinFlag = preCommandArgs.some(
       (a) => a === "--help" || a === "-h" || a === "--version" || a === "-V",
     );
-    const willRunOneShot =
-      !interactiveFlag && (isSubcommand || isBuiltinFlag || metaFlag);
 
-    // Embedded proxy — skipped for one-shot invocations.
-    let proxyInstance: ProxyServerInstance | undefined;
-    if (options.proxyEnabled && !willRunOneShot) {
-      const proxyPort = (config as any).proxyPort ?? 0;
-      const proxyHost = (config as any).proxyHost ?? "0.0.0.0";
-      const proxyPublicUrl = (config as any).proxyPublicUrl as
-        | string
-        | undefined;
-      proxyInstance = await createProxyServer({
-        port: proxyPort,
-        host: proxyHost,
-        publicUrl: proxyPublicUrl,
-        logger: log,
-      });
-      for (const route of options.proxyRoutes ?? []) {
-        try {
-          proxyInstance.addRoute({
-            // Request paths always start with '/'; normalize so a bare
-            // 'preview' prefix doesn't silently never match.
-            prefix: route.prefix.startsWith("/")
-              ? route.prefix
-              : `/${route.prefix}`,
-            upstream: new URL(route.upstream),
-            ws: route.ws ?? false,
-            source: "static",
-          });
-        } catch (err) {
-          log.warn(
-            `Invalid proxyRoutes entry '${route.prefix}': ${err instanceof Error ? err.message : String(err)}`,
-          );
-        }
-      }
-      const proxy = proxyInstance;
-      context.proxy = {
-        url: proxy.url,
-        port: proxy.port,
-        routes: () =>
-          proxy.getRoutes().map((r) => ({
-            prefix: r.prefix,
-            upstream: r.upstream?.toString(),
-            ws: r.ws,
-            source: r.source,
-            redirectTo: r.redirectTo,
-            exact: r.exact,
-          })),
-        addRoute: (route) => proxy.addRoute(route),
-      };
-    }
-
-    wireServices(context, config, log, proxyInstance);
+    wireServices(context, config, log, opts.members);
 
     // Run lifecycle hooks after config resolves, before runtime construction.
     // Identity wraps when no hook is registered; otherwise composed contributions.
@@ -1440,7 +1377,14 @@ export function defineCli<
       ? resolveValue(options.interactive.welcome, resolvableCtx)
       : undefined;
 
-    // Create CLI runtime for lifecycle management (reactor, switchboard, agent, routine)
+    // The run's reactor: a host runner's (RunOptions.reactor) stands in for
+    // the configured one.
+    const supplyReactor = opts.reactor;
+    const runReactor: ReactorConfiguration | undefined = supplyReactor
+      ? { create: (setup) => supplyReactor(setup, reactorConfig) }
+      : reactorConfig;
+
+    // Create CLI runtime for lifecycle management (reactor, agent, routine)
     const runtime = createCliRuntime({
       cliName: options.name,
       cliVersion: options.version,
@@ -1450,13 +1394,10 @@ export function defineCli<
       context,
       log,
       commandMap,
-      reactorConfig,
+      reactorConfig: runReactor,
       agentLoader,
       routine,
       skipRoutineStart: noRoutineFlag,
-      proxyInstance,
-      enableSwitchboard: !noApiFlag,
-      enableConnect: !noStudioFlag,
       attachmentJwtHandler: options.attachmentJwtHandler?.({
         workdir,
         config: typedConfig,
@@ -1469,7 +1410,8 @@ export function defineCli<
     });
 
     // Wire lazy accessors onto the context
-    if (reactorConfig) context.reactor = runtime.getReactor;
+    if (runReactor) context.reactor = runtime.getReactor;
+    if (supplyReactor) context.reactorAttached = true;
     context.agent = runtime.getAgent;
 
     // Handle --meta: output metadata JSON and exit (ignoring all other args)
@@ -1514,32 +1456,337 @@ export function defineCli<
       return renderSkillTemplate(template, ctx).rendered.trim();
     }
 
+    /**
+     * One turn of the agent, its answer written as it streams. Resolves false
+     * when the CLI has no agent.
+     */
+    async function streamPrompt(
+      prompt: string,
+      to: {
+        raw: (text: string) => void;
+        line: (message: string) => void;
+        resume?: string;
+        signal?: AbortSignal;
+      } = { raw: writeRaw, line: stdout, resume: resumeId },
+    ): Promise<boolean> {
+      const agentProvider = await runtime.getAgent();
+      if (!agentProvider) return false;
+      const threadId = to.resume ?? randomUUID();
+      for await (const chunk of agentProvider.stream(prompt, {
+        threadId,
+        tools: commandMap,
+        ...(to.signal ? { abortSignal: to.signal } : {}),
+      })) {
+        to.raw(formatStreamChunk(chunk));
+      }
+      to.line("");
+      to.line(
+        `\x1b[2mThread: ${threadId}  (continue with: ${options.name} --resume ${threadId} "your message")\x1b[0m`,
+      );
+      return true;
+    }
+
     // Skill invocation handler for command mode — routes to agent with skill prefix
     async function handleSkillInvocation(invocation: SkillInvocation) {
-      const agentProvider = await runtime.getAgent();
-      if (!agentProvider) {
+      if (!(await runtime.getAgent())) {
         stderr("Agent not available — cannot invoke skill");
         exit(1);
         return;
       }
-      const prompt = renderSkillPrompt(invocation);
-      const threadId = resumeId ?? randomUUID();
-      for await (const chunk of agentProvider.stream(prompt, {
-        threadId,
-        tools: commandMap,
-      })) {
-        writeRaw(formatStreamChunk(chunk));
-      }
-      stdout("");
-      stdout(
-        `\x1b[2mThread: ${threadId}  (continue with: ${options.name} --resume ${threadId} "your message")\x1b[0m`,
+      await loadTemplates();
+      await streamPrompt(renderSkillPrompt(invocation));
+    }
+
+    /** What `cmd` needs of a running instance. */
+    const needsOf = (cmd: Command) =>
+      cmd.needs ?? (skillIds.has(cmd.id) ? "agent" : "nothing");
+    const readsStdin = (cmd: Command, input: Record<string, unknown>) =>
+      typeof cmd.stdin === "function" ? cmd.stdin(input) : cmd.stdin === true;
+
+    /**
+     * A command the running instance executes for a caller in another
+     * process: with this instance's reactor and agent, its output to the
+     * caller. Resolves with the exit code; rejects only when it was cancelled.
+     */
+    async function runForwarded(run: ForwardedCommand): Promise<number> {
+      const { request, caller } = run;
+      const line = (message: string) => run.stdout(`${message}\n`);
+      const fail = (message: string) => run.stderr(`${message}\n`);
+      const what = request.command ?? "a prompt";
+      log.debug(
+        `Running ${what} for ${caller.user || "an unnamed user"} (pid ${caller.pid}).`,
+      );
+      context.emit?.("command:forwarded", {
+        command: request.command,
+        user: caller.user,
+        pid: caller.pid,
+      });
+      // What the command prints straight to the process (console.log,
+      // process.stdout.write) is its caller's too, for as long as it runs,
+      // and what it writes to the reactor its caller signs.
+      const signing = callerSigningOf({
+        ...(run.request.signer ? { signer: run.request.signer } : {}),
+        asks: run.asks,
+        ask: (kind, payload) => run.ask(kind, payload),
+      });
+      return captureOutput(run, () =>
+        withCallerSigning(signing, () => executeForwarded(run, line, fail)),
       );
     }
 
+    async function executeForwarded(
+      run: ForwardedCommand,
+      line: (message: string) => void,
+      fail: (message: string) => void,
+    ): Promise<number> {
+      const { request, caller } = run;
+      try {
+        if (request.prompt !== undefined) {
+          // The agent's turn is the agent's work: it signs as the instance.
+          const answered = await untilAborted(
+            asOwnSigner(() =>
+              streamPrompt(request.prompt!, {
+                raw: run.stdout,
+                line,
+                signal: run.signal,
+                ...(request.resume ? { resume: request.resume } : {}),
+              }),
+            ),
+            run.signal,
+          );
+          if (answered) return 0;
+          fail(`${options.name} has no agent to answer a prompt.`);
+          return 1;
+        }
+        const cmd = commandMap.get(request.command!);
+        if (!cmd || cmd.id === "cli-docs") {
+          fail(`Unknown command: ${request.command}`);
+          return 1;
+        }
+        if (needsOf(cmd) === "nothing") {
+          fail(
+            `${cmd.id} runs in the process that calls it, not in the running ${options.name}.`,
+          );
+          return 1;
+        }
+        const input = request.input ?? {};
+        let parsed;
+        try {
+          parsed = cmd.inputSchema.parse(input);
+        } catch (err) {
+          fail(formatZodError(err, cmd.id));
+          return 1;
+        }
+        const ctx: CommandContext = {
+          ...context,
+          stdout: run.stdout,
+          log: createLogger(request.verbose ? "debug" : logLevel, fail),
+          signal: run.signal,
+          caller,
+          readStdin: readsStdin(cmd, input)
+            ? () => Promise.resolve(request.stdin)
+            : () =>
+                Promise.reject(
+                  new Error(
+                    `${cmd.id} reads piped input but does not declare it (stdin), so the caller's was not sent. Pass the input as an option or a file.`,
+                  ),
+                ),
+        };
+        delete ctx._onToolOutput;
+        ctx.runProcess = (command, runOpts) =>
+          processManager.run(command, {
+            ...runOpts,
+            onOutput: (text) => ctx.stdout(text + "\n"),
+          });
+        const result = await untilAborted(
+          lifecycle.wraps.command(cmd.id, () => cmd.execute(parsed, ctx)),
+          run.signal,
+        );
+        if (isSkillInvocation(result)) {
+          await loadTemplates();
+          const answered = await untilAborted(
+            asOwnSigner(() =>
+              streamPrompt(renderSkillPrompt(result), {
+                raw: run.stdout,
+                line,
+                signal: run.signal,
+                ...(request.resume ? { resume: request.resume } : {}),
+              }),
+            ),
+            run.signal,
+          );
+          if (answered) return 0;
+          fail("Agent not available — cannot invoke skill");
+          return 1;
+        }
+        const output = formatResult(result);
+        if (output !== undefined) line(output);
+        return 0;
+      } catch (err: any) {
+        // Answered as cancelled by the channel.
+        if (run.signal.aborted) throw err;
+        fail(err instanceof Error ? err.message : String(err));
+        return typeof err?.exitCode === "number" && err.exitCode !== 0
+          ? err.exitCode
+          : 1;
+      }
+    }
+
+    /** Where a command that needs a running instance is refused without one. */
+    const noInstance = (what: string) =>
+      `${what} runs in a running ${options.name}, and none runs for ${workdir}. ` +
+      `Start it with ${opts.serveCommand ? `\`${opts.serveCommand}\`` : "`ph run <host>`"}, then run this again.`;
+
+    /**
+     * Sends a command (or a prompt) that needs the reactor or the agent to
+     * the running instance and shows its output. Resolves with the exit code,
+     * or undefined when it is to run in this process.
+     */
+    async function inInstance(
+      what:
+        | { command: Command; input: Record<string, unknown> }
+        | { prompt: string },
+    ): Promise<number | undefined> {
+      const forward = opts.forward;
+      if (!forward || localFlag) return undefined;
+      if ("command" in what && needsOf(what.command) === "nothing") {
+        return undefined;
+      }
+      const name =
+        "command" in what
+          ? `${options.name} ${what.command.id}`
+          : `A prompt to ${options.name}`;
+      const { target } = forward;
+      const control = target?.control;
+      if (!control) {
+        if (target?.protocol !== undefined) {
+          stderr(
+            `${name} was not sent to the running ${options.name}${target.pid ? ` (pid ${target.pid})` : ""}. ${protocolMismatch(target.protocol)}`,
+          );
+          return 1;
+        }
+        if (!forward.required) return undefined;
+        stderr(noInstance(name));
+        return 1;
+      }
+      // Whether it is there and takes commands, before anything is sent.
+      let hello: {
+        methods?: unknown;
+        signing?: unknown;
+        store?: unknown;
+      } | null;
+      try {
+        hello = (await callControl(control, "hello", undefined, {
+          timeoutMs: 5_000,
+        })) as typeof hello;
+        const methods = Array.isArray(hello?.methods) ? hello.methods : [];
+        if (!methods.includes(COMMAND_METHOD)) {
+          if (!forward.required) return undefined;
+          stderr(
+            `${name} needs a running ${options.name}; the instance for ${workdir}${target.pid ? ` (pid ${target.pid})` : ""} takes no commands.`,
+          );
+          return 1;
+        }
+      } catch (err) {
+        if (!(err instanceof ControlError)) throw err;
+        if (err.code === "unreachable") {
+          if (!forward.required) return undefined;
+          stderr(noInstance(name));
+        } else {
+          stderr(err.message);
+        }
+        return 1;
+      }
+      // A command's writes are signed here, as the person, when this Cli
+      // says how; an instance that cannot ask for that is refused.
+      const signs = identityConfig !== undefined && "command" in what;
+      if (signs && hello?.signing !== COMMAND_SIGNING) {
+        stderr(
+          `${name} was not sent: the running ${options.name}${target.pid ? ` (pid ${target.pid})` : ""} is another version and cannot sign as you. Restart it${opts.serveCommand ? ` (\`${opts.serveCommand}\`)` : ""}, then run this again.`,
+        );
+        return 1;
+      }
+      const stdin =
+        "command" in what && readsStdin(what.command, what.input)
+          ? await readPipedStdin()
+          : undefined;
+      // Output waits while a password may be asked on this terminal.
+      let held: (() => void)[] | undefined;
+      const hold = (on: boolean) => {
+        if (on) {
+          held ??= [];
+          return;
+        }
+        const waiting = held ?? [];
+        held = undefined;
+        for (const write of waiting) write();
+      };
+      const writeOut = (text: string) =>
+        held ? held.push(() => writeRaw(text)) : writeRaw(text);
+      const writeErr = (text: string) =>
+        held ? held.push(() => opts.writeRawErr(text)) : opts.writeRawErr(text);
+      const store = commandStoreSchema.safeParse(hello?.store);
+      const answers = signs
+        ? callerAnswers({
+            identity: identityConfig!,
+            workdir,
+            dataDir: instanceDataDir(workdir),
+            interactive: stdin === undefined && process.stdin.isTTY === true,
+            ...(store.success ? { store: store.data } : {}),
+            hold,
+          })
+        : undefined;
+      const stop = new AbortController();
+      const abort = () => stop.abort();
+      process.once("SIGINT", abort);
+      process.once("SIGTERM", abort);
+      opts.signal?.addEventListener("abort", abort, { once: true });
+      if (opts.signal?.aborted) abort();
+      try {
+        return await sendCommand(
+          control,
+          {
+            cli: options.name,
+            version: options.version,
+            ...("command" in what
+              ? { command: what.command.id, input: what.input }
+              : { prompt: what.prompt }),
+            ...(resumeId ? { resume: resumeId } : {}),
+            workdir,
+            ...describeCaller(),
+            ...(verboseFlag ? { verbose: true } : {}),
+            ...(stdin === undefined ? {} : { stdin }),
+          },
+          {
+            stdout: writeOut,
+            stderr: writeErr,
+            signal: stop.signal,
+            ...(answers
+              ? {
+                  asks: answers.asks,
+                  onAsk: (kind: string, payload: unknown) =>
+                    answers.onAsk(kind, payload),
+                }
+              : {}),
+          },
+        );
+      } catch (err) {
+        if (err instanceof ControlError && err.code === "cancelled") return 130;
+        if (!(err instanceof ControlError || err instanceof CommandTooLarge)) {
+          throw err;
+        }
+        stderr(err.message);
+        return 1;
+      } finally {
+        process.off("SIGINT", abort);
+        process.off("SIGTERM", abort);
+        opts.signal?.removeEventListener("abort", abort);
+      }
+    }
+
     // ── Dispatch ─────────────────────────────────────────────────────
-    // --no-routine / --no-api suppress their respective keep-alive reasons
+    // --no-routine suppresses the keep-alive reason
     const effectiveRoutine = noRoutineFlag ? undefined : routine;
-    const effectiveApi = !noApiFlag && reactorConfig?.switchboard?.enabled;
 
     // Interaction mode: how the CLI does I/O
     // - headless: no input loop, execute and exit (or serve until killed)
@@ -1558,27 +1805,46 @@ export function defineCli<
         : "interactive-streaming";
 
     // Keep-alive: why the process stays running after primary work completes
-    // Orthogonal to interaction mode — a headless CLI with switchboard blocks on signals
-    const hasKeepAlive =
-      !!effectiveRoutine || !!effectiveApi || !!proxyInstance;
+    // Orthogonal to interaction mode — a headless CLI with a routine blocks on signals
+    const hasKeepAlive = !!effectiveRoutine;
 
     if (isBuiltinFlag || (!interactiveFlag && (isSubcommand || hasPrompt))) {
       // ── Command execution (any mode): subcommand or prompt without -i → execute, exit ──
-      if (hasPrompt) {
-        const agentProvider = await runtime.getAgent();
-        if (agentProvider) {
-          const prompt = promptArgs.join(" ");
-          const threadId = resumeId ?? randomUUID();
-          for await (const chunk of agentProvider.stream(prompt, {
-            threadId,
-            tools: commandMap,
-          })) {
-            writeRaw(formatStreamChunk(chunk));
-          }
-          stdout("");
-          stdout(
-            `\x1b[2mThread: ${threadId}  (continue with: ${options.name} --resume ${threadId} "your message")\x1b[0m`,
+      // A command ends: the services it names are a running instance's, or
+      // none it may start (they would end with it).
+      if (context.services && isSubcommand && !isBuiltinFlag) {
+        const local = context.services;
+        const remote = opts.remoteServices
+          ? await connectRemoteServices(local, opts.remoteServices)
+          : undefined;
+        context.services =
+          remote ?? refuseServiceStarts(local, opts.serveCommand);
+      }
+      if (opts.remoteServices && !isBuiltinFlag) {
+        context.serving = opts.remoteServices;
+      }
+      // What a command needs of a running instance it gets there, when the
+      // run says so; this process then starts no reactor and no agent.
+      let exitCode: number | undefined;
+      if (opts.forward?.required && !localFlag && !isBuiltinFlag) {
+        const none = (what: string) => () =>
+          Promise.reject(
+            new Error(
+              `This command asked for the ${what}, which the running ${options.name} holds: it must declare needs: "${what}" to run there.`,
+            ),
           );
+        if (!supplyReactor) context.reactor = none("reactor");
+        context.agent = none("agent");
+      }
+      if (hasPrompt) {
+        const prompt = promptArgs.join(" ");
+        exitCode = await inInstance({ prompt });
+        if (exitCode !== undefined) {
+          await runtime.teardown();
+          if (exitCode !== 0) exit(exitCode);
+          return;
+        }
+        if (await streamPrompt(prompt)) {
           await runtime.teardown();
           return;
         }
@@ -1590,10 +1856,20 @@ export function defineCli<
         resolvedDescription,
         agentLoader ? handleSkillInvocation : undefined,
         lifecycle.wraps,
+        async (cmd, input) => {
+          exitCode = await inInstance({ command: cmd, input });
+          return exitCode !== undefined;
+        },
       );
       try {
         await program.parseAsync(argv);
       } catch (err: any) {
+        // A failed command still stops what it started.
+        try {
+          await runtime.teardown();
+        } catch {
+          // the command's own error is the one to report
+        }
         if (err.exitCode === 0) {
           exit(0);
           return;
@@ -1605,8 +1881,41 @@ export function defineCli<
       }
 
       await runtime.teardown();
+      if (exitCode) exit(exitCode);
     } else if (interactiveFlag || hasKeepAlive) {
       // ── Interactive or keep-alive: -i OR hasKeepAlive ──────────────
+
+      // 0. The run keeps going: a host runner records it before it starts.
+      if (opts.onServe) {
+        try {
+          const answer = await opts.onServe();
+          if (answer) {
+            await runtime.teardown();
+            stdout(answer.running);
+            exit(0);
+            return;
+          }
+        } catch (err) {
+          await runtime.teardown();
+          stderr(err instanceof Error ? err.message : String(err));
+          exit(1);
+          return;
+        }
+      }
+      // Commands typed beside this run reach its services on the process's
+      // control channel, when the host runner opened one, and those that
+      // need its reactor or agent run here.
+      const control = processControlChannel();
+      if (control) {
+        const served = {
+          name: options.name,
+          version: options.version,
+          workdir,
+          ...(opts.store ? { store: opts.store } : {}),
+        };
+        if (context.services) serveServices(control, context.services, served);
+        serveCommands(control, served, runForwarded);
+      }
 
       // 1. PREAMBLE — validate interactive config, build session if needed
       let session: import("../interactive/types.js").ReplSession | undefined;
@@ -1631,10 +1940,11 @@ export function defineCli<
             return !!agentLoader;
           },
           get hasReactor() {
-            return !!reactorConfig;
+            return !!runReactor;
           },
           configureAgent,
           configureReactor,
+          configureIdentity,
           getCommand,
           listCommands,
           execute,
@@ -1675,6 +1985,7 @@ export function defineCli<
             onStart: async (append) => {
               await runtime.startupSequence(append);
             },
+            ...(opts.signal ? { signal: opts.signal } : {}),
           });
           /* istanbul ignore next */
           await runtime.teardown();
@@ -1708,7 +2019,7 @@ export function defineCli<
             if (result.text) stdout(result.text);
           }
 
-          // EOF without /exit — show exit message (active services, resume hint)
+          // EOF without /exit — show exit message (services stopping, resume hint)
           if (!exitedViaCommand) {
             stdout(session!.exitMessage);
           }
@@ -1717,7 +2028,11 @@ export function defineCli<
           if (hasKeepAlive) {
             stdout("Stdin closed — still serving. Press Ctrl+C to stop.");
             await new Promise<void>((resolve) => {
+              let stopped = false;
               const onSignal = async () => {
+                if (stopped) return;
+                stopped = true;
+                opts.signal?.removeEventListener("abort", onSignal);
                 const suppress = () => {};
                 process.removeListener("SIGINT", onSignal);
                 process.removeListener("SIGTERM", onSignal);
@@ -1730,6 +2045,9 @@ export function defineCli<
               };
               process.on("SIGINT", onSignal);
               process.on("SIGTERM", onSignal);
+              // A stop from the process this CLI runs in (its compound).
+              opts.signal?.addEventListener("abort", onSignal, { once: true });
+              if (opts.signal?.aborted) void onSignal();
             });
             return; // teardown already called in signal handler
           }
@@ -1752,7 +2070,11 @@ export function defineCli<
 
           stdout("Serving — press Ctrl+C to stop.");
           await new Promise<void>((resolve) => {
+            let stopped = false;
             const onSignal = async () => {
+              if (stopped) return;
+              stopped = true;
+              opts.signal?.removeEventListener("abort", onSignal);
               // Suppress duplicate signals from parent (pnpm) during teardown
               const suppress = () => {};
               process.removeListener("SIGINT", onSignal);
@@ -1767,6 +2089,9 @@ export function defineCli<
             };
             process.on("SIGINT", onSignal);
             process.on("SIGTERM", onSignal);
+            // A stop from the process this CLI runs in (its compound).
+            opts.signal?.addEventListener("abort", onSignal, { once: true });
+            if (opts.signal?.aborted) void onSignal();
           });
           return; // teardown already called in signal handler
         }
@@ -1901,7 +2226,8 @@ export function defineCli<
             : {},
           ...(svc.shutdown && {
             shutdown: {
-              signal: String(svc.shutdown.signal),
+              // A host service is asked to stop through its stdin.
+              signal: svc.run ? "stdin" : String(svc.shutdown.signal),
               timeout: svc.shutdown.timeout,
             },
           }),
@@ -1956,40 +2282,6 @@ export function defineCli<
       ? options.description
       : options.description({ workdir: activeWorkdir, config: {} as TMerged });
 
-  /**
-   * Resolve the -app companion package directory using Node module resolution.
-   * Falls back to the sibling directory convention for workspace layouts.
-   */
-  function resolveAppPackageDir(cliRoot: string, cliName: string): string {
-    // Try Node module resolution first (works for npm global, pnpm global, etc.).
-    // Any failure — missing/unreadable package.json, unresolvable module, no
-    // matching package.json walking up — falls through to the sibling fallback.
-    try {
-      const cliPkgPath = path.join(cliRoot, "package.json");
-      const cliPkg = JSON.parse(fs.readFileSync(cliPkgPath, "utf8"));
-      const fullName = cliPkg.name as string; // e.g. "@powerhousedao/ph-clint-cli"
-      const appPkgName = fullName.replace(/-cli$/, "-app"); // e.g. "@powerhousedao/ph-clint-app"
-
-      const req = createRequire(cliPkgPath);
-      const entry = req.resolve(appPkgName);
-      // Walk up from the resolved entry to find the package root
-      let dir = path.dirname(entry);
-      while (dir !== path.dirname(dir)) {
-        const candidate = path.join(dir, "package.json");
-        if (fs.existsSync(candidate)) {
-          const pkg = JSON.parse(fs.readFileSync(candidate, "utf8"));
-          if (pkg.name === appPkgName) return dir;
-        }
-        dir = path.dirname(dir);
-      }
-    } catch {
-      // Fall through to sibling convention
-    }
-    // Fall back to sibling directory (workspace layout)
-    const bareName = cliName.replace(/^@[^/]+\//, "");
-    return path.resolve(cliRoot, `../${bareName}-app`);
-  }
-
   cliRef = {
     name: options.name,
     version: options.version,
@@ -2004,6 +2296,7 @@ export function defineCli<
     },
     configureAgent,
     configureReactor,
+    configureIdentity,
     getCommand,
     listCommands,
     execute,

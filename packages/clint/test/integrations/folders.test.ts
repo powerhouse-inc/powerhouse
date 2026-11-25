@@ -2,37 +2,25 @@
 // (jest ran transpile-only); this file carries pre-existing type drift. Runtime
 // assertions are unchanged. Tighten opportunistically when touching the file.
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { randomBytes } from "node:crypto";
-import { rm } from "node:fs/promises";
+import type { InProcessReactorClientModule } from "@powerhousedao/reactor";
 import {
   createFolderOperations,
   createFolderCommands,
 } from "../../src/integrations/powerhouse/folders.js";
-import { buildReactor } from "../../src/integrations/powerhouse/reactor.js";
 import { ensureDrive } from "../../src/integrations/powerhouse/drive.js";
-import type {
-  FolderOperations,
-  ReactorClientModule,
-} from "../../src/integrations/powerhouse/types.js";
+import type { FolderOperations } from "../../src/integrations/powerhouse/types.js";
+import { buildTestReactor } from "../fixtures/in-process-reactor.js";
 
 // ── Real reactor setup ──────────────────────────────────────────
 
-const testDir = join(
-  tmpdir(),
-  `folders-test-${randomBytes(4).toString("hex")}`,
-);
-let reactorModule: ReactorClientModule;
+let reactorModule: InProcessReactorClientModule;
 let driveId: string;
 
 beforeAll(async () => {
-  reactorModule = await buildReactor({
-    documentModels: [],
-    storagePath: join(testDir, "reactor-storage"),
-    enableSync: false,
+  reactorModule = await buildTestReactor();
+  const drive = await ensureDrive(reactorModule.client, {
+    name: "folder-test-drive",
   });
-  const drive = await ensureDrive(reactorModule, { name: "folder-test-drive" });
   driveId = drive.id;
 }, 30_000);
 
@@ -43,7 +31,6 @@ afterAll(async () => {
       await status.completed;
     } catch {}
   }
-  await rm(testDir, { recursive: true, force: true }).catch(() => {});
 });
 
 // ── FolderOperations tests (real reactor) ────────────────────────
@@ -275,6 +262,78 @@ describe("createFolderOperations", () => {
     expect(fileNode.name).toBe("Week 1 Report");
     expect(fileNode.parentFolder).toBe(weeklyFolder.id);
     expect(fileNode.documentType).toBe("powerhouse/document-model");
+  });
+});
+
+// ── On the calls the remote client has ───────────────────────────
+
+/** What the folder operations may call: what GraphQLReactorClient has too. */
+const FOLDER_CLIENT_METHODS = ["get", "newDocument"] as const;
+const FOLDER_WRITE_METHODS = [
+  "create",
+  "execute",
+  "addRelationship",
+  "removeRelationship",
+  "rename",
+] as const;
+
+/** The client reduced to those methods, so a call outside them fails here. */
+function remoteShaped(client: any) {
+  const pick = (source: any, names: readonly string[]) =>
+    Object.fromEntries(
+      names.map((name) => [name, source[name].bind(source)] as const),
+    );
+  return {
+    ...pick(client, FOLDER_CLIENT_METHODS),
+    write: pick(client.write, FOLDER_WRITE_METHODS),
+  };
+}
+
+describe("createFolderOperations on the remote client's calls", () => {
+  const childIds = async (client: any) =>
+    (await client.getOutgoingRelationships(driveId, "child")).results.map(
+      (c: any) => c.header.id,
+    );
+
+  it("createDocument creates the document, its file node in the folder and its child edge", async () => {
+    const client = reactorModule.client as any;
+    const ops = createFolderOperations(remoteShaped(client), driveId);
+
+    const { documentId } = await ops.createDocument(
+      "powerhouse/document-model",
+      "remote/created",
+      "Created remotely",
+    );
+
+    const folderId = await ops.ensureFolder("remote/created");
+    const nodes = (await client.get(driveId)).state.global.nodes;
+    expect(nodes.filter((n: any) => n.id === documentId)).toEqual([
+      expect.objectContaining({
+        kind: "file",
+        name: "Created remotely",
+        documentType: "powerhouse/document-model",
+        parentFolder: folderId,
+      }),
+    ]);
+    expect(await childIds(client)).toContain(documentId);
+    const document = await client.get(documentId);
+    expect(document.header.name).toBe("Created remotely");
+  });
+
+  it("addDocument names the document, and removeDocument unlinks it", async () => {
+    const client = reactorModule.client as any;
+    const ops = createFolderOperations(remoteShaped(client), driveId);
+    const doc = await client.createEmpty("powerhouse/document-model");
+    const docId = doc.header.id;
+
+    await ops.addDocument(docId, "remote/linked", "Linked remotely");
+    expect((await client.get(docId)).header.name).toBe("Linked remotely");
+    expect(await childIds(client)).toContain(docId);
+
+    await ops.removeDocument(docId);
+    const nodes = (await client.get(driveId)).state.global.nodes;
+    expect(nodes.find((n: any) => n.id === docId)).toBeUndefined();
+    expect(await childIds(client)).not.toContain(docId);
   });
 });
 

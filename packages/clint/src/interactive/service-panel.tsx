@@ -4,7 +4,7 @@ import { Box, Text, useInput, useStdout } from "ink";
 import Spinner from "ink-spinner";
 import type { ServiceManager, ServiceInstanceStatus } from "../core/types.js";
 import type { ProjectScanResult } from "../core/project-scanner.js";
-import { resolveServiceName } from "../core/services.js";
+import { hostCommandLine, resolveServiceName } from "../core/services.js";
 
 interface ServicePanelProps {
   services: ServiceManager;
@@ -384,14 +384,16 @@ export function ServicePanel({
           </Text>
           <Text>
             <Text bold>Command: </Text>
-            {typeof def?.command === "function"
-              ? "(dynamic)"
-              : (def?.command ?? "—")}
+            {def?.run
+              ? hostCommandLine(def.run)
+              : typeof def?.command === "function"
+                ? "(dynamic)"
+                : (def?.command ?? "—")}
           </Text>
           {def?.shutdown && (
             <Text>
               <Text bold>Shutdown:</Text>
-              {` ${def.shutdown.signal} (timeout ${def.shutdown.timeout}ms)`}
+              {` ${def.shutdown.signal ?? "stdin"} (timeout ${def.shutdown.timeout}ms)`}
             </Text>
           )}
           {def?.restart?.enabled && (

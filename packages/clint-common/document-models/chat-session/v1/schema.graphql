@@ -1,0 +1,305 @@
+scalar Unknown
+scalar DateTime
+scalar Address
+scalar AttachmentRef
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+enum SessionStatus {
+  ACTIVE
+  COMPLETED
+  ABORTED
+  ERROR
+}
+
+enum MessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+  TOOL
+}
+
+enum ContentPartType {
+  TEXT
+  IMAGE
+  FILE
+  TOOL_CALL
+  TOOL_RESULT
+  REASONING
+  ERROR
+}
+
+type AgentInfo {
+  id: String
+  name: String
+  model: String
+  description: String
+  attachment: AttachmentRef
+}
+
+type MessageUsage {
+  promptTokens: Int
+  completionTokens: Int
+  totalTokens: Int
+}
+
+type UsageSummary {
+  totalPromptTokens: Int!
+  totalCompletionTokens: Int!
+  totalTokens: Int!
+  totalSteps: Int!
+  totalMessages: Int!
+  totalToolCalls: Int!
+}
+
+type ContentPart {
+  id: OID!
+  type: ContentPartType!
+  text: String
+  toolCallId: String
+  toolName: String
+  args: String
+  result: String
+  isError: Boolean
+  mediaType: String
+  url: URL
+  attachment: AttachmentRef
+  filename: String
+  error: String
+}
+
+type TurnFailure {
+  userMessageId: OID!
+  code: String!
+  message: String!
+  retryable: Boolean!
+  failedAt: DateTime!
+}
+
+type Message {
+  id: OID!
+  role: MessageRole!
+  content: [ContentPart!]!
+  stepIndex: Int
+  createdAt: DateTime!
+  usage: MessageUsage
+  finishedAt: DateTime
+  finishReason: String
+  pickedUpAt: DateTime
+  failure: TurnFailure
+}
+
+type ChatSessionState {
+  threadId: String
+  resourceId: String
+  agent: AgentInfo
+  status: SessionStatus!
+  startedAt: DateTime
+  endedAt: DateTime
+  messages: [Message!]!
+  usage: UsageSummary
+  interruptRequested: Boolean
+  retryRequestedFor: OID
+  retryRequestedAt: DateTime
+}
+
+# system
+
+input AgentInfoInput {
+  id: String
+  name: String
+  model: String
+  description: String
+}
+
+input StartSessionInput {
+  threadId: String!
+  resourceId: String!
+  agent: AgentInfoInput!
+  startedAt: DateTime!
+}
+
+input SetAgentInfoInput {
+  id: String
+  name: String
+  model: String
+  description: String
+}
+
+input EndSessionInput {
+  status: SessionStatus!
+  endedAt: DateTime!
+}
+
+input UpdateUsageSummaryInput {
+  totalPromptTokens: Int
+  totalCompletionTokens: Int
+  totalTokens: Int
+  totalSteps: Int
+  totalMessages: Int
+  totalToolCalls: Int
+}
+
+input AddSystemMessageInput {
+  id: OID!
+  text: String!
+  createdAt: DateTime!
+}
+
+input SetAgentImageInput {
+  attachment: AttachmentRef
+}
+
+input SetAgentDescriptionInput {
+  description: String!
+}
+
+# user
+
+input UserContentPartInput {
+  id: OID!
+  type: ContentPartType!
+  text: String
+  mediaType: String
+  url: URL
+  attachment: AttachmentRef
+  filename: String
+}
+
+input AddUserMessageInput {
+  id: OID!
+  content: [UserContentPartInput!]!
+  createdAt: DateTime!
+}
+
+input DeleteUserMessageInput {
+  messageId: OID!
+}
+
+input AbortSessionInput {
+  endedAt: DateTime!
+}
+
+input InterruptAgentInput {
+  _: Boolean
+}
+
+input RetryTurnInput {
+  userMessageId: OID!
+  requestedAt: DateTime!
+}
+
+input ResumeSessionInput {
+  resumedAt: DateTime!
+}
+
+# agent
+
+input AssistantContentPartInput {
+  id: OID!
+  type: ContentPartType!
+  text: String
+  toolCallId: String
+  toolName: String
+  args: String
+  mediaType: String
+  url: URL
+  attachment: AttachmentRef
+  filename: String
+  error: String
+}
+
+input AddAssistantMessageInput {
+  id: OID!
+  content: [AssistantContentPartInput!]!
+  stepIndex: Int
+  createdAt: DateTime!
+}
+
+input AppendAssistantContentInput {
+  messageId: OID!
+  part: AssistantContentPartInput!
+}
+
+input UpdateAssistantContentInput {
+  messageId: OID!
+  partId: OID!
+  text: String
+  args: String
+  error: String
+}
+
+input SetMessageUsageInput {
+  messageId: OID!
+  promptTokens: Int
+  completionTokens: Int
+  totalTokens: Int
+}
+
+input FinishAssistantMessageInput {
+  messageId: OID!
+  finishReason: String
+  finishedAt: DateTime!
+}
+
+input MarkMessagePickedUpInput {
+  messageId: OID!
+  pickedUpAt: DateTime!
+}
+
+input FailTurnInput {
+  id: OID!
+  userMessageId: OID!
+  code: String!
+  message: String!
+  retryable: Boolean!
+  failedAt: DateTime!
+}
+
+input ClearRetryRequestInput {
+  _: Boolean
+}
+
+# tool
+
+input ToolResultPartInput {
+  id: OID!
+  type: ContentPartType!
+  toolCallId: String!
+  toolName: String!
+  result: String
+  isError: Boolean
+  text: String
+  mediaType: String
+  url: URL
+  attachment: AttachmentRef
+}
+
+input AddToolResultInput {
+  id: OID!
+  content: [ToolResultPartInput!]!
+  stepIndex: Int
+  createdAt: DateTime!
+}
+
+input AddToolOutputInput {
+  messageId: OID!
+  partId: OID!
+  toolCallId: String!
+  toolName: String!
+  text: String!
+}

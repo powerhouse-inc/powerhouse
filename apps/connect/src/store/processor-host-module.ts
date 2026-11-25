@@ -14,13 +14,9 @@ import {
 import {
   createAnalyticsStore,
   type IProcessorHostModule,
-  type IReactorClient,
   setPGliteDB,
 } from "@powerhousedao/reactor-browser";
 import { getDb } from "../pglite.db.js";
-
-/** @deprecated Use IReactorClient from @powerhousedao/reactor-browser */
-export type IReactorDispatch = IReactorClient;
 
 class NullAttachmentService implements IAttachmentService {
   reserve(): Promise<never> {

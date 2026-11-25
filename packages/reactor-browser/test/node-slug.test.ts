@@ -5,13 +5,10 @@ import {
   generateId,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import {
-  addSelectedNodeIdEventHandler,
-  setSelectedNode,
-} from "../src/hooks/selected-node.js";
+import { setSelectedNode } from "../src/hooks/selected-node.js";
+import { addSelectedNodeIdEventHandler } from "../src/hooks/set-selected-node.js";
 import {
   extractDriveIdFromSlug,
-  extractNodeIdFromPath,
   extractNodeIdFromSlug,
   findDriveBySlug,
   makeDriveSlug,
@@ -48,7 +45,6 @@ describe("node slugs", () => {
 
     expect(nodeSlug).toBe(`groceries-${id}`);
     expect(extractNodeIdFromSlug(nodeSlug)).toBe(id);
-    expect(extractNodeIdFromPath(`/d/drive/${nodeSlug}`)).toBe(id);
   });
 
   it("round-trips derived ids, with or without a name", () => {

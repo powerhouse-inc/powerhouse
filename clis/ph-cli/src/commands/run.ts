@@ -8,18 +8,22 @@ import {
   restPositionals,
   string,
 } from "cmd-ts";
+import { isDevHost } from "../utils/dev-host.js";
 
 export const runHost = command({
   name: "run",
   description:
     "Run a host from the project's hosts/ folder: `ph run <host> [verb]`. " +
     "The host's own host.js names the runner module; the verb defaults to `run`. " +
-    "Arguments after the verb go to the runner, which names the ones it accepts.",
+    "Arguments after the verb go to the runner, which names the ones it accepts. " +
+    "`ph run <package>/<host>` runs a host that an installed package supplies.",
   args: {
     host: positional({
       type: string,
       displayName: "host",
-      description: "Folder name under hosts/ (e.g. vetra, connect).",
+      description:
+        "Folder name under hosts/ (e.g. dev, connect), or `<package>/<host>` " +
+        "for one in an installed package's hosts/ (e.g. `@acme/tools/studio`).",
     }),
     verb: positional({
       type: optional(string),
@@ -58,6 +62,18 @@ export const runHost = command({
     }),
   },
   handler: async (args) => {
+    // The user's supervisor is no host of the project: nothing of it is
+    // loaded.
+    if (args.host === "supervisor") {
+      const { runSupervisorCommand } =
+        await import("@powerhousedao/ph-run/supervisor");
+      process.exitCode = await runSupervisorCommand({
+        verb: args.verb,
+        argv: args.argv,
+        stop: args.stop === true,
+      });
+      return;
+    }
     if (args.explain !== undefined) {
       const { explainHost } = await import("../services/run/explain.js");
       await explainHost({ host: args.host, topic: args.explain });
@@ -75,9 +91,9 @@ export const runHost = command({
       debug: args.debug,
       argv: args.argv,
     };
-    // hosts/vetra is what `ph vetra` routes to (run-sugar.ts): its stack
-    // keeps the runtime record `ph vetra` and `ph mcp` read.
-    if (args.host === "vetra") {
+    // What `ph dev` is sugar for (run-sugar.ts): the stack keeps the runtime
+    // record `ph mcp` reads.
+    if (isDevHost(args.host)) {
       const { runVetraHost } = await import("../services/run/vetra-host.js");
       await runVetraHost(run);
       return;

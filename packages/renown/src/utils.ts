@@ -2,6 +2,10 @@ import type { JwtCredentialPayload } from "did-jwt-vc";
 import { createVerifiableCredentialJwt, verifyCredential } from "did-jwt-vc";
 import { Resolver } from "did-resolver";
 import { getResolver as keyDidResolver } from "key-did-resolver";
+import {
+  CARRIED_CREDENTIAL_CLAIM,
+  compactCarriedCredential,
+} from "./carried-credential.js";
 import type {
   AuthVerifiedCredential,
   CreateBearerTokenOptions,
@@ -117,6 +121,9 @@ export async function createAuthBearerToken(
   issuer: Issuer,
   options?: CreateBearerTokenOptions,
 ) {
+  const carried = options?.credential
+    ? compactCarriedCredential(options.credential)
+    : undefined;
   const vcPayload: JwtCredentialPayload = {
     sub: issuer.did,
     vc: {
@@ -129,6 +136,7 @@ export async function createAuthBearerToken(
       } satisfies IAuthCredentialSubject,
     },
     aud: options?.aud,
+    ...(carried ? { [CARRIED_CREDENTIAL_CLAIM]: carried } : {}),
   };
 
   const jwt = await createVerifiableCredentialJwt(vcPayload, issuer, {

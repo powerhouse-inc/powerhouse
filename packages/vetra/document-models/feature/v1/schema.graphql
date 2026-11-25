@@ -1,0 +1,453 @@
+scalar Unknown
+scalar DateTime
+scalar Attachment
+scalar Address
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+type FeatureState {
+  name: String
+  summary: String
+  scope: FeatureScope!
+  premise: String
+  expectedEffect: String
+  reasoning: String
+  targets: [OutcomeTarget!]!
+  segments: [SegmentRef!]!
+  role: RoleRef
+  relatedStep: JobStepRef
+  confidence: Confidence
+  effort: Effort
+  impact: Impact
+  targetRelease: String
+  evidence: [Evidence!]!
+  notes: String
+  status: FeatureStatus!
+  promotion: PromotionEvent
+  parentFeature: FeatureRef
+  wbs: WbsRef
+  agentFeedback: AgentFeedback!
+}
+
+type OutcomeTarget {
+  id: OID!
+  outcome: OutcomeRef!
+  expectedImportanceChange: Int
+  expectedSatisfactionChange: Int
+  notes: String
+}
+
+type OutcomeRef {
+  documentId: PHID!
+  objectId: OID!
+  statement: String
+  scope: String
+}
+
+type SegmentRef {
+  id: OID!
+  documentId: PHID!
+  objectId: OID!
+  name: String
+  description: String
+}
+
+type RoleRef {
+  documentId: PHID!
+  objectId: OID!
+  name: String
+  kind: String
+}
+
+type JobStepRef {
+  documentId: PHID!
+  objectId: OID!
+  name: String
+  category: String
+}
+
+type FeatureRef {
+  documentId: PHID!
+  name: String
+  status: String
+}
+
+type WbsRef {
+  documentId: PHID!
+  name: String
+  status: String
+}
+
+type PromotionEvent {
+  promotedAt: DateTime!
+  promotedBy: String
+  rationale: String
+}
+
+type Evidence {
+  id: OID!
+  source: EvidenceSource!
+  recordedAt: DateTime
+  content: String!
+}
+
+enum EvidenceSource {
+  BUILDER
+  AI_SIMULATION
+  USER_RESEARCH
+}
+
+enum FeatureScope {
+  MICRO_MVP
+  MARKET_MVP
+  INCREMENTAL
+  MAINTENANCE
+}
+
+enum FeatureStatus {
+  PROPOSED
+  EVALUATING
+  COMMITTED
+  IN_SPEC
+  ARCHIVED
+  PARKED
+}
+
+enum Confidence {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Effort {
+  SMALL
+  MEDIUM
+  LARGE
+}
+
+enum Impact {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+type AgentFeedback {
+  readyForFeedback: Boolean!
+  suggestions: [Suggestion!]!
+}
+
+type Suggestion {
+  id: OID!
+  createdAt: DateTime!
+  agent: String!
+  content: String!
+  resolution: SuggestionResolution
+}
+
+type SuggestionResolution {
+  resolvedAt: DateTime!
+  decision: SuggestionDecision!
+  comment: String
+  changeApplied: Boolean!
+}
+
+enum SuggestionDecision {
+  ACCEPTED
+  DISMISSED
+}
+
+# definition
+
+input SetFeatureNameInput {
+  name: String!
+}
+
+input ClearFeatureNameInput {
+  _: Boolean
+}
+
+input SetSummaryInput {
+  summary: String!
+}
+
+input ClearSummaryInput {
+  _: Boolean
+}
+
+input SetScopeInput {
+  scope: FeatureScope!
+}
+
+input SetPremiseInput {
+  premise: String!
+}
+
+input ClearPremiseInput {
+  _: Boolean
+}
+
+input SetExpectedEffectInput {
+  expectedEffect: String!
+}
+
+input ClearExpectedEffectInput {
+  _: Boolean
+}
+
+input SetReasoningInput {
+  reasoning: String!
+}
+
+input ClearReasoningInput {
+  _: Boolean
+}
+
+input SetNotesInput {
+  notes: String!
+}
+
+input ClearNotesInput {
+  _: Boolean
+}
+
+input SetTargetReleaseInput {
+  targetRelease: String!
+}
+
+input ClearTargetReleaseInput {
+  _: Boolean
+}
+
+input SetConfidenceInput {
+  confidence: Confidence!
+}
+
+input SetEffortInput {
+  effort: Effort!
+}
+
+input SetImpactInput {
+  impact: Impact!
+}
+
+input ClearEstimatesInput {
+  _: Boolean
+}
+
+# targets
+
+input AddOutcomeTargetInput {
+  id: OID!
+  outcomeDocumentId: PHID!
+  outcomeObjectId: OID!
+  outcomeStatement: String
+  outcomeScope: String
+  expectedImportanceChange: Int
+  expectedSatisfactionChange: Int
+  notes: String
+  insertBefore: OID
+}
+
+input UpdateOutcomeTargetInput {
+  id: OID!
+  expectedImportanceChange: Int
+  expectedSatisfactionChange: Int
+  notes: String
+}
+
+input UpdateOutcomeTargetSnippetInput {
+  id: OID!
+  statement: String
+  scope: String
+}
+
+input RemoveOutcomeTargetInput {
+  id: OID!
+}
+
+input ReorderOutcomeTargetsInput {
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+# segment_refs
+
+input AddSegmentRefInput {
+  id: OID!
+  documentId: PHID!
+  objectId: OID!
+  name: String
+  description: String
+  insertBefore: OID
+}
+
+input UpdateSegmentRefSnippetInput {
+  id: OID!
+  name: String
+  description: String
+}
+
+input RemoveSegmentRefInput {
+  id: OID!
+}
+
+input ReorderSegmentRefsInput {
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+# references
+
+input SetRoleInput {
+  documentId: PHID!
+  objectId: OID!
+  name: String
+  kind: String
+}
+
+input UpdateRoleSnippetInput {
+  name: String
+  kind: String
+}
+
+input ClearRoleInput {
+  _: Boolean
+}
+
+input SetRelatedStepInput {
+  documentId: PHID!
+  objectId: OID!
+  name: String
+  category: String
+}
+
+input UpdateRelatedStepSnippetInput {
+  name: String
+  category: String
+}
+
+input ClearRelatedStepInput {
+  _: Boolean
+}
+
+input SetParentFeatureInput {
+  documentId: PHID!
+  name: String
+  status: String
+}
+
+input UpdateParentFeatureSnippetInput {
+  name: String
+  status: String
+}
+
+input ClearParentFeatureInput {
+  _: Boolean
+}
+
+input SetWbsInput {
+  documentId: PHID!
+  name: String
+  status: String
+}
+
+input UpdateWbsSnippetInput {
+  name: String
+  status: String
+}
+
+input ClearWbsInput {
+  _: Boolean
+}
+
+# lifecycle
+
+input StartEvaluationInput {
+  _: Boolean
+}
+
+input CommitFeatureInput {
+  _: Boolean
+}
+
+input PromoteToSpecInput {
+  promotedAt: DateTime!
+  promotedBy: String
+  rationale: String
+}
+
+input ArchiveFeatureInput {
+  reason: String
+}
+
+input ParkFeatureInput {
+  reason: String
+}
+
+input ReopenFeatureInput {
+  _: Boolean
+}
+
+input ClearPromotionInput {
+  _: Boolean
+}
+
+# evidence
+
+input AddEvidenceInput {
+  id: OID!
+  source: EvidenceSource!
+  content: String!
+  recordedAt: DateTime
+  insertBefore: OID
+}
+
+input UpdateEvidenceInput {
+  id: OID!
+  source: EvidenceSource
+  content: String
+  recordedAt: DateTime
+}
+
+input RemoveEvidenceInput {
+  id: OID!
+}
+
+# agent_feedback
+
+input SetReadyForFeedbackInput {
+  ready: Boolean!
+}
+
+input AddSuggestionInput {
+  id: OID!
+  createdAt: DateTime!
+  agent: String!
+  content: String!
+}
+
+input ResolveSuggestionInput {
+  id: OID!
+  resolvedAt: DateTime!
+  decision: SuggestionDecision!
+  comment: String
+  changeApplied: Boolean!
+}
+
+input RemoveSuggestionInput {
+  id: OID!
+}

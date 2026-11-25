@@ -241,10 +241,10 @@ Each PGlite directory is a plain Postgres data directory (`PGDATA`), and Postgre
 | Variable                      | Description                                                                    | Default          |
 | ----------------------------- | ------------------------------------------------------------------------------ | ---------------- |
 | `PH_REACTOR_DATABASE_URL`     | Postgres URL for reactor storage; also triggers the entrypoint's migrations    | _unset_ (PGlite) |
-| `PH_SWITCHBOARD_DATABASE_URL` | Postgres URL for the read model and (as fallback) the reactor                  | _unset_ (PGlite) |
-| `DATABASE_URL`                | Postgres URL for the read model (checked before `PH_SWITCHBOARD_DATABASE_URL`) | _unset_ (PGlite) |
+| `PH_SWITCHBOARD_DATABASE_URL` | Older name, still read: fallback for the reactor store and the read model      | _unset_ (PGlite) |
+| `DATABASE_URL`                | Postgres URL for the read model                                                | _unset_ (PGlite) |
 
-For a single-database deployment (the normal case, and what the repo's compose files do), set `PH_REACTOR_DATABASE_URL` and `PH_SWITCHBOARD_DATABASE_URL` to the same URL.
+For a single-database deployment (the normal case), set `PH_REACTOR_DATABASE_URL` and `DATABASE_URL` to the same URL. The repo's compose files set `PH_SWITCHBOARD_DATABASE_URL` where this page says `DATABASE_URL`; that keeps working.
 
 | Variable                             | Description                                                                                                                                                                           | Default                        |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
@@ -263,7 +263,7 @@ For a single-database deployment (the normal case, and what the repo's compose f
 
 #### Telemetry
 
-Processor timing and memory telemetry share one surface: the `processorTiming` and `memoryTelemetry` inspection fields, the Processors and Memory tabs of the reactor monitor, and the `catch-up slowest` and `memory:` lines of `ph vetra` and `ph switchboard`.
+Processor timing and memory telemetry share one surface: the `processorTiming` and `memoryTelemetry` inspection fields, the Processors and Memory tabs of the reactor monitor, and the `catch-up slowest` and `memory:` lines of `ph dev` and `ph switchboard`.
 
 | Variable                                  | Description                                                                                                                                  | Default                             |
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
@@ -295,7 +295,7 @@ The memory leak signal is the used heap right after a major GC, not `heapUsed`, 
 | Variable                    | Description                                                          | Default                     |
 | --------------------------- | -------------------------------------------------------------------- | --------------------------- |
 | `PORT`                      | Port the server listens on (exported as `PH_SWITCHBOARD_PORT`)       | `3000`                      |
-| `PH_SWITCHBOARD_PORT`       | Explicit port override                                               | `$PORT`                     |
+| `PH_SWITCHBOARD_PORT`       | Set by the entrypoint from `PORT`; what the `switchboard` bin reads  | `$PORT`                     |
 | `PH_DEFAULT_DRIVE_TYPE`     | `powerhouse/document-drive` or `powerhouse/reactor-drive`            | _unset_                     |
 | `PH_PACKAGES`               | Comma-separated packages installed via pnpm at startup               | `""`                        |
 | `PH_REGISTRY_PACKAGES`      | Comma-separated packages loaded over HTTP from the registry at start | `""`                        |
@@ -309,7 +309,8 @@ The memory leak signal is the used heap right after a major GC, not `heapUsed`, 
 | -------------------------- | ------------------------------------------------------ | ------- |
 | `SENTRY_DSN`               | Sentry DSN for error tracking                          | `""`    |
 | `SENTRY_ENV`               | Sentry environment name (e.g. "production", "staging") | `""`    |
-| `SENTRY_TRACING_ENABLED`   | `false` = errors-only Sentry mode (no tracing)         | _unset_ |
+| `SENTRY_TRACING_ENABLED`   | `false` keeps spans out of Sentry (errors only)        | _unset_ |
+| `ENABLE_TRACING`           | `true` requests tracing outside production             | `false` |
 | `TEMPO_ENDPOINT`           | OTLP HTTP endpoint for trace export (Grafana Tempo)    | `""`    |
 | `PYROSCOPE_SERVER_ADDRESS` | Pyroscope server address for performance profiling     | `""`    |
 

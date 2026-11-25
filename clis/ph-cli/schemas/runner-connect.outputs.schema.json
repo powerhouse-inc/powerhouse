@@ -17,6 +17,15 @@
       },
       "required": ["connect"],
       "additionalProperties": false
+    },
+    "localSignIn": {
+      "type": "object",
+      "properties": {
+        "open": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "required": ["origin", "endpoints"],

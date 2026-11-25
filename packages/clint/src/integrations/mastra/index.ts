@@ -32,7 +32,11 @@ export { getMastraPaths } from "./paths.js";
 export { mapMastraStream } from "./stream.js";
 export { commandsToMastraTools } from "./tools.js";
 export { discoverMcpTools, disconnectAllMcp } from "./mcp.js";
+export type { McpBearer } from "./mcp.js";
 export { MarkdownConversationLogger, loggedStream } from "./logging.js";
+
+/** RequestContext key holding the chat thread id of an agent stream. */
+export const CLINT_THREAD_ID_KEY = "clint.threadId";
 
 /**
  * Create convenience helpers for building Mastra agents.
@@ -79,6 +83,7 @@ export function createMastraHelpers(ctx: AgentSetupContext): MastraHelpers {
             services,
             log,
             options?.MCPClient,
+            options?.mcpBearer,
           );
           log?.debug(
             `[getTools] CLI tools: ${Object.keys(cliTools).length}, MCP tools: ${Object.keys(mcpTools).length}`,
@@ -110,10 +115,7 @@ export function createMastraHelpers(ctx: AgentSetupContext): MastraHelpers {
       // lifecycle hook (e.g. observability) contributes wrap.tool.
       const wrapped: Record<string, any> = {};
       for (const [name, tool] of Object.entries(filtered)) {
-        wrapped[name] = ctx.wraps.tool(
-          name,
-          tool as { execute: (...args: unknown[]) => unknown },
-        );
+        wrapped[name] = ctx.wraps.tool(name, tool);
       }
       return wrapped;
     },
@@ -201,12 +203,7 @@ export function createMastraHelpers(ctx: AgentSetupContext): MastraHelpers {
           for (const [name, tool] of Object.entries(tools ?? {})) {
             const t = tool as { execute?: (...args: unknown[]) => unknown };
             wrapped[name] =
-              typeof t.execute === "function"
-                ? ctx.wraps.tool(
-                    name,
-                    t as { execute: (...args: unknown[]) => unknown },
-                  )
-                : tool;
+              typeof t.execute === "function" ? ctx.wraps.tool(name, t) : tool;
           }
           return wrapped;
         };
@@ -245,7 +242,13 @@ export function createMastraHelpers(ctx: AgentSetupContext): MastraHelpers {
         prompt: AgentPromptInput,
         opts?: Parameters<AgentProvider["stream"]>[1],
       ): AsyncGenerator<StreamChunk> {
-        const streamOpts: Record<string, unknown> = { maxSteps };
+        // savePerStep: persist each finished step to thread memory, so a turn
+        // cut off by a provider error keeps its completed tool calls (Mastra
+        // otherwise saves only on finish; ignored under observational memory).
+        const streamOpts: Record<string, unknown> = {
+          maxSteps,
+          savePerStep: true,
+        };
         if (providerOptions) streamOpts.providerOptions = providerOptions;
         // Keep the stream open across background-task continuations. Mastra
         // falls through to a regular stream() when no memory/thread is set.
@@ -256,6 +259,13 @@ export function createMastraHelpers(ctx: AgentSetupContext): MastraHelpers {
             thread: opts.threadId,
             resource: "cli-user",
           };
+          // Lets input processors tell which chat thread a step belongs to
+          // (clint-common's steer processor injects that thread's steers).
+          const { RequestContext } =
+            await import("@mastra/core/request-context");
+          const requestContext = new RequestContext();
+          requestContext.set(CLINT_THREAD_ID_KEY, opts.threadId);
+          streamOpts.requestContext = requestContext;
         }
 
         // Pass abort signal through to Mastra agent

@@ -14,7 +14,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { isBuiltin } from "node:module";
-import { delimiter, join } from "node:path";
+import { delimiter, join, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   generatePiece,
@@ -22,6 +22,7 @@ import {
   generatePieceTrigger,
 } from "@powerhousedao/codegen";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
+import { packageJsonExports } from "@powerhousedao/shared/clis/constants";
 import type { Manifest } from "@powerhousedao/shared/document-model";
 import {
   afterAll,
@@ -34,6 +35,9 @@ import {
   vi,
 } from "vitest";
 import { runBuild } from "../src/services/build.js";
+import { BuildRefusal } from "../src/services/package-build/pipeline/steps.js";
+import { buildPackage } from "../src/services/package-build/run-build.js";
+import { standardBuildSteps } from "../src/services/package-build/steps/standard.js";
 import type { BuildArgs } from "../src/types.js";
 import { treeDigest } from "./staged-build-project.js";
 
@@ -334,7 +338,381 @@ describe("runBuild on a mixed package", () => {
         descriptor: "dist/node/pieces/wave/descriptor.json",
       },
     ]);
+    // No cli/index.ts, so no Cli to announce.
+    expect(manifest.cli).toBeUndefined();
     expect(warnings).toEqual([]);
+  }, 120_000);
+});
+
+/** What a package's `./cli` export holds, as far as this test drives it. */
+type BuiltCli = {
+  name: string;
+  run(
+    argv: string[],
+    options: {
+      stdout: (message: string) => void;
+      stderr: (message: string) => void;
+      exit: (code: number) => void;
+    },
+  ): Promise<void>;
+};
+
+describe("runBuild on a package that exports a Cli", () => {
+  const fixture = join(fixtures, "cli-package");
+  const dist = join(fixture, "dist");
+  const clint = join(
+    import.meta.dirname,
+    "..",
+    "..",
+    "..",
+    "packages",
+    "clint",
+  );
+
+  beforeAll(() => {
+    if (!existsSync(join(clint, "dist", "index.mjs"))) {
+      throw new Error(
+        "Build @powerhousedao/clint first: the fixture's Cli is defined with it.",
+      );
+    }
+    // clint resolves from the package the way pnpm would link its peer.
+    rmSync(join(fixture, "node_modules"), { recursive: true, force: true });
+    mkdirSync(join(fixture, "node_modules", "@powerhousedao"), {
+      recursive: true,
+    });
+    symlinkSync(
+      clint,
+      join(fixture, "node_modules", "@powerhousedao", "clint"),
+      linkType,
+    );
+  });
+
+  afterAll(() => {
+    rmSync(join(fixture, "node_modules"), { recursive: true, force: true });
+  });
+
+  it("builds ./cli for node with clint left to the host, types it and marks the dist manifest", async () => {
+    const sourceManifest = join(fixture, "powerhouse.manifest.json");
+    const manifestBefore = readFileSync(sourceManifest);
+    clean(fixture);
+    process.chdir(fixture);
+
+    await runBuild(args);
+
+    // Where the export list points, and only in the node build.
+    expect(packageJsonExports["./cli"]).toEqual({
+      types: "./dist/types/cli/index.d.ts",
+      node: "./dist/node/cli/index.mjs",
+    });
+    const built = join(fixture, packageJsonExports["./cli"].node);
+    expect(existsSync(built)).toBe(true);
+    expect(existsSync(join(fixture, packageJsonExports["./cli"].types))).toBe(
+      true,
+    );
+    expect(existsSync(join(dist, "browser", "cli"))).toBe(false);
+
+    // clint stays a bare import: the host's copy runs the Cli.
+    const source = readFileSync(built, "utf8");
+    expect(bareImports(source)).toContain("@powerhousedao/clint");
+    expect(source).not.toContain("Unknown command:");
+
+    // The dist manifest says the package ships a Cli; the source is untouched.
+    const manifest = readJson<Manifest>(join(dist, "powerhouse.manifest.json"));
+    expect(manifest.cli).toBe(true);
+    expect(readFileSync(sourceManifest).equals(manifestBefore)).toBe(true);
+
+    // The built export is a Cli whose commands run.
+    const { cli } = (await import(pathToFileURL(built).href)) as {
+      cli: BuiltCli;
+    };
+    expect(cli.name).toBe("fixture-cli");
+    const printed: string[] = [];
+    let exitCode: number | undefined;
+    await cli.run(["node", "fixture-cli", "hello", "--name", "Ada"], {
+      stdout: (message) => printed.push(message),
+      stderr: (message) => printed.push(message),
+      exit: (code) => {
+        exitCode = code;
+      },
+    });
+    expect(printed).toEqual(["Hello, Ada!"]);
+    expect(exitCode).toBeUndefined();
+
+    // tsc found the Cli's types through the linked clint, and the package
+    // declares clint as a peer: no warning.
+    expect(warnings).toEqual([]);
+  }, 120_000);
+});
+
+// The Cli is its own pass: a host runs it from the installed package, so what
+// package.json declares stays a bare import that install provides, while a
+// devDependency, which no install of the package brings, is inlined like the
+// project's own source.
+describe("runBuild on a Cli that imports declared and dev-only packages", () => {
+  let fixture: string;
+  let dist: string;
+  const clint = join(
+    import.meta.dirname,
+    "..",
+    "..",
+    "..",
+    "packages",
+    "clint",
+  );
+
+  function write(file: string, content: string) {
+    mkdirSync(join(fixture, file, ".."), { recursive: true });
+    writeFileSync(join(fixture, file), content);
+  }
+
+  // An ESM package with a root and a ./sub export, each exporting `name`.
+  function install(pkg: string, name: string, marker: string) {
+    const dir = `node_modules/${pkg}`;
+    write(
+      `${dir}/package.json`,
+      JSON.stringify({
+        name: pkg,
+        version: "1.0.0",
+        type: "module",
+        exports: {
+          ".": { types: "./index.d.ts", default: "./index.js" },
+          "./sub": { types: "./sub.d.ts", default: "./sub.js" },
+        },
+      }),
+    );
+    for (const [file, value] of [
+      ["index", `${marker}_ROOT`],
+      ["sub", `${marker}_SUB`],
+    ]) {
+      write(`${dir}/${file}.js`, `export const ${name} = "${value}";\n`);
+      write(`${dir}/${file}.d.ts`, `export declare const ${name}: string;\n`);
+    }
+  }
+
+  // Every built .mjs under dir, by path relative to it.
+  function bundles(dir: string): Map<string, string> {
+    const out = new Map<string, string>();
+    for (const entry of readdirSync(dir, { recursive: true })) {
+      const file = String(entry);
+      if (file.endsWith(".mjs")) {
+        out.set(file, readFileSync(join(dir, file), "utf8"));
+      }
+    }
+    return out;
+  }
+
+  beforeAll(() => {
+    if (!existsSync(join(clint, "dist", "index.mjs"))) {
+      throw new Error(
+        "Build @powerhousedao/clint first: the fixture's Cli is defined with it.",
+      );
+    }
+    fixture = mkdtempSync(join(fixtures, ".cli-deps-build-"));
+    dist = join(fixture, "dist");
+    cpSync(join(fixtures, "cli-package"), fixture, {
+      recursive: true,
+      filter: (source) =>
+        !/[\\/](node_modules|dist)$|\.tsbuildinfo$/.test(source),
+    });
+    // A peer the Cli never imports: declared, but not one the Cli leaves out.
+    write(
+      "package.json",
+      JSON.stringify({
+        name: "@fixture/cli-package",
+        version: "1.0.0",
+        private: true,
+        license: "MIT",
+        type: "module",
+        dependencies: { "declared-a": "1.0.0" },
+        peerDependencies: {
+          "@powerhousedao/clint": "*",
+          "unused-peer": "^1.0.0",
+        },
+        devDependencies: { "dev-b": "1.0.0" },
+      }),
+    );
+    install("declared-a", "declared", "DECLARED");
+    install("dev-b", "dev", "DEV_ONLY");
+    mkdirSync(join(fixture, "node_modules", "@powerhousedao"), {
+      recursive: true,
+    });
+    symlinkSync(
+      clint,
+      join(fixture, "node_modules", "@powerhousedao", "clint"),
+      linkType,
+    );
+    write("cli/own.ts", 'export const own = "PROJECT_SOURCE_MARKER";\n');
+    write(
+      "cli/index.ts",
+      [
+        'import { defineCli, defineCommand } from "@powerhousedao/clint";',
+        'import { declared } from "declared-a";',
+        'import { declared as declaredSub } from "declared-a/sub";',
+        'import { dev } from "dev-b";',
+        'import { z } from "zod";',
+        'import { own } from "./own.js";',
+        "",
+        "const markers = defineCommand({",
+        '  id: "markers",',
+        '  description: "Print what each import gave",',
+        "  inputSchema: z.object({}),",
+        "  execute: () =>",
+        '    Promise.resolve([declared, declaredSub, dev, own].join(" ")),',
+        "});",
+        "",
+        "export const cli = defineCli({",
+        '  name: "fixture-deps-cli",',
+        '  version: "1.0.0",',
+        '  description: "A Cli with every kind of import",',
+        "  commands: [markers],",
+        "});",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  afterAll(() => {
+    if (fixture) rmSync(fixture, { recursive: true, force: true });
+  });
+
+  it("leaves the declared package to the install and inlines the rest", async () => {
+    process.chdir(fixture);
+
+    await runBuild(args);
+
+    const cli = bundles(join(dist, "node", "cli"));
+    expect([...cli.keys()]).toContain("index.mjs");
+    const code = [...cli.values()].join("\n");
+    const imported = bareImports(code);
+    // The root and the subpath stay bare imports; so does clint, the host's.
+    expect(imported).toEqual(
+      expect.arrayContaining([
+        "declared-a",
+        "declared-a/sub",
+        "@powerhousedao/clint",
+      ]),
+    );
+    expect(code).not.toContain("DECLARED_ROOT");
+    expect(code).not.toContain("DECLARED_SUB");
+    // The devDependency and the project's own module are inlined.
+    expect(imported).not.toContain("dev-b");
+    expect(code).toContain("DEV_ONLY_ROOT");
+    expect(code).toContain("PROJECT_SOURCE_MARKER");
+
+    // The node build no longer takes the Cli: nothing outside node/cli has it.
+    for (const [file, built] of bundles(join(dist, "node"))) {
+      if (file.startsWith(`cli${sep}`)) continue;
+      expect(built, file).not.toContain("PROJECT_SOURCE_MARKER");
+    }
+
+    // One line counts what the Cli leaves to the install, declared-a and
+    // clint: the unused peer is declared, but the Cli imports nothing of it.
+    const logged = vi
+      .mocked(console.log)
+      .mock.calls.map((parts) => parts.map(String).join(" "));
+    expect(logged).toContain(
+      "cli: 2 declared packages stay external, installed with the package",
+    );
+    expect(readJson<Manifest>(join(dist, "powerhouse.manifest.json")).cli).toBe(
+      true,
+    );
+
+    // The built Cli runs, its bare imports resolved from node_modules.
+    const { cli: built } = (await import(
+      pathToFileURL(join(dist, "node", "cli", "index.mjs")).href
+    )) as { cli: BuiltCli };
+    const printed: string[] = [];
+    await built.run(["node", "fixture-deps-cli", "markers"], {
+      stdout: (message) => printed.push(message),
+      stderr: (message) => printed.push(message),
+      exit: () => {},
+    });
+    expect(printed).toEqual([
+      "DECLARED_ROOT DECLARED_SUB DEV_ONLY_ROOT PROJECT_SOURCE_MARKER",
+    ]);
+    expect(warnings).toEqual([]);
+  }, 120_000);
+});
+
+// clint stays external to every Cli build, so a package that does not declare
+// it publishes a Cli importing a package nobody promised to install.
+describe("runBuild on a Cli whose package does not declare clint", () => {
+  let fixture: string;
+  const clint = join(
+    import.meta.dirname,
+    "..",
+    "..",
+    "..",
+    "packages",
+    "clint",
+  );
+  const missingPeer =
+    "a package with a Cli declares `@powerhousedao/clint` as a peer: run `ph migrate`, or add it";
+
+  beforeAll(() => {
+    if (!existsSync(join(clint, "dist", "index.mjs"))) {
+      throw new Error(
+        "Build @powerhousedao/clint first: the fixture's Cli is defined with it.",
+      );
+    }
+    fixture = mkdtempSync(join(fixtures, ".cli-no-clint-build-"));
+    cpSync(join(fixtures, "cli-package"), fixture, {
+      recursive: true,
+      filter: (source) =>
+        !/[\\/](node_modules|dist)$|\.tsbuildinfo$/.test(source),
+    });
+    // clint only as the dev pin every project gets, which no install of the
+    // package brings.
+    writeFileSync(
+      join(fixture, "package.json"),
+      JSON.stringify({
+        name: "@fixture/cli-package",
+        version: "1.0.0",
+        private: true,
+        license: "MIT",
+        type: "module",
+        devDependencies: { "@powerhousedao/clint": "*" },
+      }),
+    );
+    mkdirSync(join(fixture, "node_modules", "@powerhousedao"), {
+      recursive: true,
+    });
+    symlinkSync(
+      clint,
+      join(fixture, "node_modules", "@powerhousedao", "clint"),
+      linkType,
+    );
+  });
+
+  afterAll(() => {
+    if (fixture) rmSync(fixture, { recursive: true, force: true });
+  });
+
+  it("warns, and still builds the Cli", async () => {
+    process.chdir(fixture);
+
+    await runBuild(args);
+
+    expect(warnings).toEqual([`⚠ ${missingPeer}`]);
+    expect(existsSync(join(fixture, "dist", "node", "cli", "index.mjs"))).toBe(
+      true,
+    );
+  }, 120_000);
+
+  it("refuses under --release, leaving the previous output", async () => {
+    process.chdir(fixture);
+    const before = treeDigest(fixture, ["dist"]);
+    // Without the release steps that record the package's files and check
+    // its definitions in a worker: only the Cli pass's answer is under test.
+    const steps = standardBuildSteps.filter(
+      ({ id }) => id !== "release-start" && id !== "definitions",
+    );
+
+    const built = buildPackage({ ...args, release: true }, { steps });
+
+    await expect(built).rejects.toThrow(new BuildRefusal(`✘ ${missingPeer}`));
+    expect(warnings).toEqual([]);
+    expect(treeDigest(fixture, ["dist"])).toEqual(before);
   }, 120_000);
 });
 
@@ -371,8 +749,9 @@ describe("runBuild on a package with no pieces", () => {
     expect(existsSync(join(dist, "types", "index.d.ts"))).toBe(true);
     expect(existsSync(join(dist, "style.css"))).toBe(true);
 
-    // No piece directory, and the manifest copy is the source byte for byte.
+    // No piece or Cli directory, and the manifest copy is the source byte for byte.
     expect(existsSync(join(dist, "node", "pieces"))).toBe(false);
+    expect(existsSync(join(dist, "node", "cli"))).toBe(false);
     expect(existsSync(join(dist, "node", "scalars"))).toBe(false);
     expect(existsSync(join(dist, "browser", "scalars"))).toBe(false);
     expect(

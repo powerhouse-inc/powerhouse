@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/shared",
-  "version": "6.3.0-dev.11",
+  "version": "6.4.0-next.6",
   "type": "module",
   "sideEffects": false,
   "publishConfig": {
@@ -110,6 +110,26 @@
     "./clis/ph-dir": {
       "source": "./clis/ph-dir.ts",
       "import": "./dist/clis/ph-dir.mjs"
+    },
+    "./clis/owner-only": {
+      "source": "./clis/owner-only.ts",
+      "import": "./dist/clis/owner-only.mjs"
+    },
+    "./clis/identity": {
+      "source": "./clis/identity.ts",
+      "import": "./dist/clis/identity.mjs"
+    },
+    "./clis/credential-records": {
+      "source": "./clis/credential-records.ts",
+      "import": "./dist/clis/credential-records.mjs"
+    },
+    "./clis/sessions": {
+      "source": "./clis/sessions.ts",
+      "import": "./dist/clis/sessions.mjs"
+    },
+    "./clis/local-sign-in": {
+      "source": "./clis/local-sign-in.ts",
+      "import": "./dist/clis/local-sign-in.mjs"
     },
     "./clis/real-paths": {
       "source": "./clis/real-paths.ts",

@@ -13,7 +13,7 @@ import path from "node:path";
 import type { Duplex } from "node:stream";
 import tls from "node:tls";
 import sirv from "sirv";
-import type { ConnectPreviewArgs } from "./classic-args.js";
+import type { ConnectPreviewArgs } from "./service-args.js";
 import {
   assertConnectBuild,
   cacheHeaders,
@@ -21,11 +21,14 @@ import {
   isProxiedRequest,
   overrideFromEnv,
   precompressedAssets,
+  resolveServedFiles,
+  servedFilesStep,
   serveOverrideStep,
   shellSwapFor,
   type ConnectMiddleware,
   type ConnectServeOverride,
 } from "./connect-serve.js";
+import { localSignInStep, type LocalSignInOptions } from "./local-sign-in.js";
 
 /**
  * Serves a built Connect with what a running app has anyway. The other way to
@@ -248,7 +251,11 @@ function listen(
       };
       const onListening = () => {
         server.off("error", onError);
-        resolve(candidate);
+        // The port bound: port 0 asks the system for a free one.
+        const address = server.address();
+        resolve(
+          typeof address === "object" && address ? address.port : candidate,
+        );
       };
       server.once("error", onError);
       server.once("listening", onListening);
@@ -264,9 +271,15 @@ export async function runConnectServer(
   dirname = process.cwd(),
   {
     proxy,
+    serveFiles,
+    localSignIn,
   }: {
     /** The switchboard origin whose paths this server proxies (runner.proxy). */
     proxy?: string;
+    /** Files served by name, read against `dirname` (runner.serveFiles). */
+    serveFiles?: Readonly<Record<string, string>>;
+    /** Sign-in by link: this server's loopback endpoint (F3d). */
+    localSignIn?: Omit<LocalSignInOptions, "port" | "base">;
   } = {},
 ): Promise<ConnectServer> {
   serveOverride ??= overrideFromEnv();
@@ -274,9 +287,18 @@ export async function runConnectServer(
   assertConnectBuild(args.outDir, outDir, dirname);
   const base = connectBaseOf(args, outDir, dirname);
   const target = proxy ? new URL(new URL(proxy).origin) : undefined;
+  const served = serveFiles
+    ? servedFilesStep(resolveServedFiles(serveFiles, dirname), base)
+    : undefined;
+  const bound: { port?: number } = {};
+  // First: it answers no other origin, so open CORS must not reach it.
+  const signIn = localSignIn
+    ? localSignInStep({ ...localSignIn, base, port: () => bound.port })
+    : undefined;
 
   const server = createServer(
     inOrder([
+      ...(signIn ? [signIn] : []),
       cacheHeaders(outDir, base),
       precompressedAssets(outDir, base),
       ...(serveOverride
@@ -292,6 +314,7 @@ export async function runConnectServer(
         : []),
       openCors,
       hostCheck,
+      ...(served ? [served] : []),
       ...(target ? [proxyStep(target)] : []),
       baseStep(base),
       assetsStep(outDir),
@@ -309,6 +332,7 @@ export async function runConnectServer(
   }
 
   const port = await listen(server, args.port, args.host, args.strictPort);
+  bound.port = port;
   const shown = args.host?.includes(":") ? `[${args.host}]` : args.host;
   const url = `http://${shown ?? "localhost"}:${port}${base}`;
   if (args.printUrls) console.log(`  ➜  Local:   ${url}`);
@@ -316,6 +340,7 @@ export async function runConnectServer(
     resolvedUrls: { local: [url], network: [] },
     close: () =>
       new Promise((resolve, reject) => {
+        signIn?.dispose();
         server.close((error) => (error ? reject(error) : resolve()));
         server.closeAllConnections();
         for (const socket of upgraded) socket.destroy();

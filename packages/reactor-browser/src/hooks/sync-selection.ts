@@ -65,11 +65,3 @@ export function addSyncSelectionOnPopStateEventHandler() {
   popStateHandlerAdded = true;
   window.addEventListener("popstate", syncOnPopState);
 }
-
-/** @deprecated Set the store's `navigation`; its router handles back/forward. */
-export const addSetSelectedDriveOnPopStateEventHandler =
-  addSyncSelectionOnPopStateEventHandler;
-
-/** @deprecated Set the store's `navigation`; its router handles back/forward. */
-export const addSetSelectedNodeOnPopStateEventHandler =
-  addSyncSelectionOnPopStateEventHandler;

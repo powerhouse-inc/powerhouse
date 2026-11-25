@@ -344,7 +344,7 @@ describe("standalone ph run", () => {
     expect(vi.mocked(startSwitchboard)).not.toHaveBeenCalled();
   });
 
-  it("refuses to start a second live instance and frees its port", async () => {
+  it("a second start returns the live instance, starts nothing and binds no port", async () => {
     const port = await ephemeralPort();
     const project = makeProject({
       switchboard: `export default { name: "lab-switchboard", runner: { module: ${JSON.stringify(SWITCHBOARD_SRC)}, port: ${port} } };`,
@@ -358,12 +358,35 @@ describe("standalone ph run", () => {
       verb: "run",
       pid: process.ppid,
       startedAt: new Date().toISOString(),
-      outputs: {},
+      outputs: {
+        origin: "http://localhost:4801",
+        endpoints: { graphql: "http://localhost:4801/graphql" },
+        drives: {},
+      },
     });
     const { startRun } = await import("@powerhousedao/ph-run/start-run");
-    await expect(
-      startRun({ host: "switchboard", projectRoot: project }),
-    ).rejects.toThrow(/already running for this project/);
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
+    vi.mocked(startSwitchboard).mockClear();
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      await expect(
+        startRun({ host: "switchboard", projectRoot: project }),
+      ).resolves.toMatchObject({
+        running: {
+          pid: process.ppid,
+          switchboardUrl: "http://localhost:4801",
+          ports: { "lab-switchboard": 4801 },
+          key: { host: "lab-switchboard", dataDir: project },
+        },
+      });
+      expect(String(log.mock.calls[0]?.[0])).toContain(
+        `lab-switchboard is already running for this project (pid ${process.ppid},`,
+      );
+    } finally {
+      log.mockRestore();
+    }
+    expect(vi.mocked(startSwitchboard)).not.toHaveBeenCalled();
     expect(await isFree(port)).toBe(true);
     expect(readRunRecord(project, "lab-switchboard")?.pid).toBe(process.ppid);
   });

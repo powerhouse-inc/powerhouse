@@ -39,6 +39,8 @@ import type {
   AttachmentHeader,
 } from "@powerhousedao/reactor-attachments";
 import type { AttachmentRef } from "@powerhousedao/reactor";
+import type { BearerTokenProvider } from "@powerhousedao/reactor-browser/graphql-client";
+import type { ISigner } from "@powerhousedao/shared/document-model";
 
 export type {
   IAttachmentService,
@@ -186,6 +188,7 @@ export interface TypedReactorClient<R extends DocumentRegistry> extends Omit<
     sourceIdentifier: string,
     targetIdentifier: string,
     relationshipType: string,
+    metadata?: Record<string, unknown>,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<R[T]["document"]>;
@@ -222,28 +225,6 @@ export interface TypedDocumentChangeEvent<
   documents: Array<R[T]["document"]>;
 }
 
-// ── Reactor client module ────────────────────────────────────────
-
-/**
- * Structural type for the ReactorClientModule returned by
- * @powerhousedao/reactor's ReactorClientBuilder.buildModule().
- *
- * Used as the boundary type between buildReactor() and its consumers
- * (ensureDrive, startSwitchboard, buildDefaultReactor). The actual module
- * has additional properties; this captures the subset ph-clint uses.
- *
- * Imported via `import type` — zero runtime coupling.
- */
-export interface ReactorClientModule {
-  client: IReactorClient;
-  reactor: {
-    kill(): { completed: Promise<void> };
-    findByType(
-      documentType: string,
-    ): Promise<{ results?: Array<{ header: { id: string } }> } | undefined>;
-  };
-}
-
 // ── Drive entry ──────────────────────────────────────────────────
 
 /**
@@ -258,8 +239,6 @@ export interface DriveEntry {
   name: string;
   /** Role: 'personal' = agent's own workspace, 'watched' = observed from elsewhere. */
   role: "personal" | "watched";
-  /** For watched remote drives: the Switchboard URL to sync from. */
-  remoteUrl?: string;
 }
 
 // ── Folder operations ────────────────────────────────────────────
@@ -324,25 +303,62 @@ export interface ReactorContext<R extends DocumentRegistry = AnyRegistry> {
   drives?: DriveEntry[];
   /** The personal drive ID (first drive with role 'personal'). */
   personalDriveId?: string;
-  /** Phase 2: Switchboard GraphQL URL (e.g. http://localhost:4001/graphql). */
+  /** The switchboard's GraphQL URL (e.g. http://localhost:4001/graphql). */
   switchboardUrl?: string;
-  /** Phase 2: Switchboard drive URL (e.g. http://localhost:4001/d/{driveId}). */
+  /** The default drive's URL on the switchboard (e.g. http://localhost:4001/d/{driveId}). */
   driveUrl?: string;
-  /** Phase 2: Switchboard MCP URL (e.g. http://localhost:4001/mcp). */
-  mcpUrl?: string;
-  /** Phase 3: Connect web UI URL (e.g. http://localhost:3000). */
-  connectUrl?: string;
   /**
    * Switchboard-provided attachment service. Constructed externally
    * (switchboard owns createRemoteAttachmentService) and passed in via
-   * ReactorSetupContext.attachments. Upload and read sites reach it here.
-   * Undefined when no attachment service is wired.
+   * ReactorSetupContext.attachments; a remote attach that is passed none
+   * builds one for the switchboard it attached to. Upload and read sites
+   * reach it here. Undefined when no attachment service is wired.
    */
   attachments?: IAttachmentService;
-  /** Internal: the ReactorClientModule, passed to startSwitchboard(). */
-  _module?: ReactorClientModule;
+  /**
+   * Whether the agent may write a document right now (see
+   * `createReactorWrites`). Triggers that write on the agent's behalf skip a
+   * document this refuses and look again on `powerhouse:writes:ready`.
+   */
+  writes?: ReactorWrites;
   /** Teardown — called by the framework on CLI exit. */
   shutdown(): Promise<void>;
+}
+
+/** See `ReactorContext.writes`. */
+export interface ReactorWrites {
+  /** The agent's signer can sign as a user. */
+  ready(): boolean;
+  /** The agent may write this document now (its policy, readiness and the host's rules). */
+  canWrite(document: {
+    header: {
+      id: string;
+      documentType?: string;
+      protocolVersions?: Record<string, number> | null;
+    };
+  }): boolean;
+}
+
+/**
+ * What `ensureDrive` and a `DriveConfig.resolveId` call on a client. Both an
+ * `IReactorClient` (in-process or remote) and a Cli's `ReactorContext.client`
+ * fit it as they are: the typed client is the same object, and these
+ * members read any document as a plain `PHDocument`.
+ */
+export interface EnsureDriveClient {
+  get(
+    identifier: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<PHDocument>;
+  find(
+    search: SearchFilter,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<PHDocument>>;
+  newDocument: IReactorClient["newDocument"];
+  write: Pick<IReactorClient["write"], "create">;
 }
 
 /**
@@ -360,6 +376,23 @@ export interface DriveConfig {
    *  drive in. Stored on `header.meta.preferredEditor` at creation time. Has
    *  no effect on drives that already exist. */
   preferredEditor?: string;
+  /**
+   * Resolve the drive's id before anything else (for example from a pointer
+   * the host keeps for a drive whose id it cannot fix in advance). An id that
+   * resolves wins; undefined falls through to `id` and the name match. It
+   * gets the client `ensureDrive` was given.
+   */
+  resolveId?: (client: EnsureDriveClient) => Promise<string | undefined>;
+  /** Match an existing drive by name when no id resolves. Default: true. */
+  matchByName?: boolean;
+  /**
+   * Whether the drive may be created now. When this returns false and no
+   * drive resolves, none is created: the reactor starts without it (its id
+   * is '') and the host creates it later.
+   */
+  canCreate?: () => boolean;
+  /** Called with the id of a drive that was just created. */
+  onCreated?: (id: string) => Promise<void> | void;
 }
 
 /**
@@ -369,75 +402,6 @@ export interface DriveConfig {
 export interface SubscriptionConfig<R extends DocumentRegistry = AnyRegistry> {
   /** Filter by document type(s). */
   documentTypes?: Array<keyof R & string>;
-}
-
-/**
- * Switchboard (Phase 2) configuration.
- */
-export interface SwitchboardConfig {
-  /** Enable Switchboard. Default: false. */
-  enabled: boolean;
-  /** Hostname/IP to bind to. Default: 'localhost'. */
-  host?: string;
-  /** HTTP port. Default: derived from CLI name via hash. */
-  port?: number;
-  /** Number of ports to scan starting from `port`. Default: 1. */
-  portRange?: number;
-  /** Service label for preflight messages. Default: '{cliName}-api'. */
-  name?: string;
-  /**
-   * Registry URL forwarded to the switchboard's `HttpPackageLoader`. When
-   * set, the `Packages` GraphQL subgraph is registered (install/uninstall
-   * mutations) and dynamic package resolution is enabled.
-   */
-  registryUrl?: string;
-}
-
-/**
- * Connect UI (Phase 3) configuration.
- */
-export interface ConnectConfig {
-  /** Enable Connect. Default: false. */
-  enabled: boolean;
-  /** HTTP port. Default: derived from CLI name via hash. */
-  port?: number;
-  /** Number of ports to scan starting from `port`. Default: 1. */
-  portRange?: number;
-  /** Working directory for `ph connect` (must be a Reactor Package project). */
-  workdir?: string;
-  /** Service ID for ServiceManager. Default: '{cliName}-studio'. */
-  name?: string;
-  /** Path to pre-built Connect static assets. When set, serves via static file server instead of Vite dev server. */
-  assetsDir?: string;
-  // Precompress assets to brotli/gzip on first boot (static mode). Opt-in; only
-  // safe for bundles immutable after boot (in-place rewrites stale the .br/.gz).
-  precompress?: boolean;
-  /**
-   * Package registry URL forwarded to Connect via
-   * `PH_CONNECT_PACKAGES_REGISTRY`. The vite config reads this to resolve
-   * Powerhouse packages for in-browser dynamic imports.
-   */
-  registryUrl?: string;
-}
-
-/**
- * Options for definePowerhouseIntegration().
- */
-export interface PowerhouseIntegrationOptions<
-  R extends DocumentRegistry = AnyRegistry,
-> {
-  /** Document model modules to register with the Reactor. */
-  documentModels: DocumentModelModule[];
-  /** Document registry for typed client narrowing. Usually built with `defineRegistry([...modules] as const)`. */
-  registry?: R;
-  /** Default drive to create/find on startup. */
-  drive?: DriveConfig;
-  /** Subscribe to document changes → event bus. */
-  subscriptions?: SubscriptionConfig<R>;
-  /** Phase 2: Switchboard (GraphQL + MCP endpoint). Requires Phase 1. */
-  switchboard?: SwitchboardConfig;
-  /** Phase 3: Connect web UI. Requires Phase 2. */
-  connect?: ConnectConfig;
 }
 
 /**
@@ -457,14 +421,19 @@ export interface ReactorSetupContext<R extends DocumentRegistry = AnyRegistry> {
   workspace: WorkdirStore;
   emit?: import("../../core/types.js").EmitFn<R>;
   on?: import("../../core/types.js").OnFn<R>;
-  /** Switchboard config — passed by the framework so create() can set enableSync. */
-  switchboard?: SwitchboardConfig;
   /**
    * Switchboard-provided attachment service to thread through to ReactorContext.
    * The service is constructed externally (switchboard owns createRemoteAttachmentService)
    * and relayed here so the create() factory can place it on the returned context.
    */
   attachments?: IAttachmentService;
+  /**
+   * Mints the bearer for a switchboard's `/attachments/*` routes, from
+   * `CliOptions.attachmentJwtHandler`. A remote attach without `attachments`
+   * builds its attachment service with it, else with the remote's
+   * `tokenProvider`.
+   */
+  attachmentJwtHandler?: (url: string) => Promise<string | undefined>;
 }
 
 /**
@@ -474,20 +443,88 @@ export interface ReactorSetupContext<R extends DocumentRegistry = AnyRegistry> {
 export interface ReactorConfiguration<
   R extends DocumentRegistry = AnyRegistry,
 > {
-  /** Factory that builds and returns a ReactorContext. */
+  /**
+   * Factory that builds and returns a ReactorContext, when no host runner
+   * attaches the CLI to a switchboard (a test fake, a custom client, or an
+   * error naming how to run the CLI).
+   */
   create: (ctx: ReactorSetupContext<R>) => Promise<ReactorContext<R>>;
-  /** Connect web UI service configuration — commands injected immediately. */
-  connect?: ConnectConfig;
-  /** Switchboard service configuration. */
-  switchboard?: SwitchboardConfig;
+  /**
+   * What the reactor holds when a host runner attaches it to a remote
+   * switchboard instead of calling `create` (see `RunOptions.reactor`):
+   * read by `attachDefaultReactor`, never by `create`. A function is called
+   * with the setup context at attach time, for what depends on the workdir
+   * or the config (an identity, a token).
+   */
+  remote?: RemoteReactorSource<R>;
 }
 
 /**
- * Internal handle for the Switchboard instance.
+ * A signer opened at the first write it signs: a session whose credential is
+ * issued then, so a Cli that never writes makes none.
  */
-export interface SwitchboardInstance {
-  switchboardUrl: string;
-  driveUrl: string;
-  mcpUrl: string;
-  shutdown(): Promise<void>;
+export interface LazySigner {
+  /** Whether a write can be signed now; `writes.ready()` reads it. */
+  ready(): boolean;
+  /** The signer of a write made now; opened at the first. */
+  open(): Promise<ISigner>;
+}
+
+/** `ReactorConfiguration.remote`: the config, or how to build it at attach. */
+export type RemoteReactorSource<R extends DocumentRegistry = AnyRegistry> =
+  | RemoteReactorConfig<R>
+  | ((
+      setup: ReactorSetupContext<R>,
+    ) => RemoteReactorConfig<R> | Promise<RemoteReactorConfig<R>>);
+
+/**
+ * What a CLI's reactor holds on a remote switchboard: the models its client
+ * signs and reduces with, the drives to find or create there, the changes
+ * to bridge to the event bus, and who it writes as. No drive: the drive the
+ * address names. No signer: writes go out unsigned and the switchboard signs
+ * them with its own key. While a forwarded command runs, its writes are
+ * signed by its caller instead, whose bearer its requests carry (see
+ * `Cli.configureIdentity`).
+ */
+export interface RemoteReactorConfig<R extends DocumentRegistry = AnyRegistry> {
+  /** Any model module fits, as for the reactor and its clients. */
+  documentModels?: readonly DocumentModelModule<any>[];
+  /** Single drive (sugar for drives: [{ ...drive, role: 'personal' }]). */
+  drive?: DriveConfig;
+  /** First 'personal' drive = personalDriveId = driveId. */
+  drives?: Array<DriveConfig & { role: "personal" | "watched" }>;
+  subscriptions?: SubscriptionConfig<R>;
+  /**
+   * Signs the actions the client pushes, read on every write (see
+   * `createReactorWrites`): a signer whose `user` is set later, by a
+   * sign-in, takes effect without a new attach. A {@link LazySigner} is
+   * opened at the first write it signs, so a session can be made then.
+   *
+   * Limit: while the signer has no user (a lazy one: is not ready), every
+   * push is refused with `SignerNotReadyError`, a write to a legacy document
+   * included, whatever `legacyDocuments` says. The client asks for its
+   * signer before it knows which document it writes, so the resolver cannot
+   * pass a legacy write through unsigned. Give a signer only where the
+   * documents written are v2, or once its user is known.
+   */
+  signer?: ISigner | LazySigner;
+  /** The bearer per request, for an authenticated switchboard. */
+  tokenProvider?: BearerTokenProvider;
+  /**
+   * Subscribe to changes of the signer's user; returns an unsubscribe
+   * function. On each change the realtime socket reconnects with the
+   * current bearer, and `powerhouse:writes:ready` is emitted when writes
+   * become possible.
+   */
+  onSignerChange?: (listener: () => void) => () => void;
+  /** See `WriteRules.legacyDocuments` (`writes.canWrite`). Default: `sign-when-ready`. */
+  legacyDocuments?: "refuse" | "sign-when-ready";
+  /** Which documents the agent acts on by itself (`writes.canWrite`). */
+  accepts?: (document: {
+    header: {
+      id: string;
+      documentType?: string;
+      protocolVersions?: Record<string, number> | null;
+    };
+  }) => boolean;
 }

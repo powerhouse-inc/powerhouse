@@ -686,9 +686,10 @@ describe("runCompound", () => {
     });
   });
 
-  it("refuses to start when a live record of this project exists (lock)", async () => {
+  it("a second start returns the running instance and starts nothing", async () => {
     const { dir } = makeProject();
-    const { writeRunRecord } = await import("../src/run-record.js");
+    const { readRunRecord, runRecordPath, writeRunRecord } =
+      await import("../src/run-record.js");
     writeRunRecord(dir, {
       version: 2,
       host: "app",
@@ -697,9 +698,46 @@ describe("runCompound", () => {
       verb: "dev",
       pid: process.pid,
       startedAt: "x",
-      members: {},
+      members: {
+        switchboard: {
+          host: "switchboard",
+          runnerModule: "fake-runner",
+          kind: "reactor",
+          verb: "dev",
+          outputs: {
+            origin: "http://localhost:4801",
+            endpoints: { graphql: "http://localhost:4801/graphql" },
+            drives: {},
+          },
+        },
+      },
     });
-    await expect(run(dir)).rejects.toThrow(/already running/);
+    const before = readRunRecord(dir, "app");
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      const result = await run(dir);
+      expect(result.started).toEqual([]);
+      expect(result.running).toMatchObject({
+        pid: process.pid,
+        recordPath: runRecordPath(dir, "app"),
+        switchboardUrl: "http://localhost:4801",
+        ports: { switchboard: 4801 },
+        endpoints: {
+          "switchboard.graphql": "http://localhost:4801/graphql",
+        },
+      });
+      expect(result.running?.key).toMatchObject({ host: "app", dataDir: dir });
+      const said = log.mock.calls.map((call) => String(call[0])).join("\n");
+      expect(said).toContain(
+        `app is already running for this project (pid ${process.pid}`,
+      );
+      expect(said).toContain("http://localhost:4801/graphql");
+      expect(said).toContain("Nothing was started.");
+    } finally {
+      log.mockRestore();
+    }
+    // the running instance's record is its own
+    expect(readRunRecord(dir, "app")).toEqual(before);
   });
 
   it("refuses a foreign-project record", async () => {

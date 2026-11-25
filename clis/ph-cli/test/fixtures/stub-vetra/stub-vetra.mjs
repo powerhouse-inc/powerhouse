@@ -1,4 +1,4 @@
-// Stands in for `ph vetra`: `node stub-vetra.mjs <port> <projectName> [fail]`.
+// Stands in for `ph dev`: `node stub-vetra.mjs <port> <projectName> [fail]`.
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";

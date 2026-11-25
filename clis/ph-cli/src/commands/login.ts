@@ -11,12 +11,24 @@ This command:
 1. Generates or loads a cryptographic identity (DID) for the CLI
 2. Opens your browser to the Renown authentication page
 3. You authorize the CLI's DID to act on behalf of your Ethereum address
-4. Stores the credentials locally in .ph/.renown.json
+4. Stores the login in your home folder (~/.ph/identities/renown), for every project
   `,
   args: loginArgs,
   handler: async (args) => {
     if (args.debug) {
       console.log(args);
+    }
+
+    if (args.status) {
+      const { runWhoami } = await import("../services/identity.js");
+      process.exitCode = await runWhoami(args);
+      return;
+    }
+
+    if (args.logout) {
+      const { runLogout } = await import("../services/identity.js");
+      process.exitCode = await runLogout(args);
+      return;
     }
 
     const { getRenown } = await import("../services/auth.js");
@@ -27,30 +39,11 @@ This command:
       process.exit(0);
     }
 
-    if (args.status) {
-      const { getAuthStatus } = await import("@renown/sdk/node");
-      const status = getAuthStatus(renown);
-      if (!status.authenticated || !status.address) {
-        console.log("Not authenticated with an Ethereum address.");
-        console.log('Run "ph login" to authenticate.');
-      } else {
-        console.log("Authenticated");
-        console.log(`  ETH Address: ${status.address}`);
-        console.log(`  User DID: ${status.userDid}`);
-        console.log(`  Chain ID: ${status.chainId}`);
-        console.log(`  CLI DID: ${status.cliDid}`);
-        console.log(
-          `  Authenticated at: ${status.authenticatedAt?.toLocaleString()}`,
-        );
-        console.log(`  Renown URL: ${status.baseUrl}`);
-      }
-      process.exit(0);
-    }
-
-    if (args.logout) {
-      await handleLogout();
-      process.exit(0);
-    }
+    const { identityDataDir } =
+      await import("@powerhousedao/shared/clis/identity");
+    const { projectLoginNotice } = await import("../services/identity.js");
+    const notice = projectLoginNotice(identityDataDir());
+    if (notice) console.warn(notice);
 
     const { browserLogin } = await import("@renown/sdk/node");
 
@@ -100,20 +93,3 @@ This command:
     process.exit(0);
   },
 });
-
-export async function handleLogout() {
-  const { getRenown } = await import("../services/auth.js");
-  const renown = await getRenown();
-  if (!renown.user) {
-    console.log("Not currently authenticated.");
-    return;
-  }
-
-  try {
-    await renown.logout();
-    console.log("Successfully logged out.");
-  } catch (error) {
-    console.error("Failed to clear credentials.");
-    console.debug(error);
-  }
-}

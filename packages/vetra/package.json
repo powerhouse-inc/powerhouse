@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/vetra",
-  "version": "6.3.0-dev.11",
+  "version": "6.4.0-next.6",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": false,
@@ -46,15 +46,10 @@
       "types": "./dist/processors/index.d.ts",
       "import": "./dist/processors/index.js"
     },
-    "./codegen": {
-      "source": "./codegen/index.ts",
-      "types": "./dist/codegen/index.d.ts",
-      "import": "./dist/codegen/index.js"
-    },
-    "./codegen/spec": {
-      "source": "./codegen/spec.ts",
-      "types": "./dist/codegen/spec.d.ts",
-      "import": "./dist/codegen/spec.js"
+    "./drive-layout": {
+      "source": "./drive-layout/index.ts",
+      "types": "./dist/drive-layout/index.d.ts",
+      "import": "./dist/drive-layout/index.js"
     },
     "./manifest": "./dist/powerhouse.manifest.json",
     "./style.css": "./style.css",
@@ -71,11 +66,7 @@
     "build": "pnpm run build:bundle",
     "build:bundle": "tsdown",
     "generate": "ph-cli generate",
-    "reactor": "ph-cli reactor",
-    "service": "ph-cli service",
-    "migrate": "ph-cli migrate",
-    "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
-    "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
+    "migrate": "ph-cli migrate"
   },
   "dependencies": {
     "@powerhousedao/codegen": "workspace:*",

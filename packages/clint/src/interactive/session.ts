@@ -9,7 +9,7 @@ import {
   getCompletionSuffix,
 } from "./completions.js";
 import { getSchemaFields } from "../core/schema.js";
-import { renderMarkdown } from "./markdown.js";
+import { loadMarkdown, renderMarkdown } from "./markdown.js";
 import { formatStreamChunk } from "../core/stream.js";
 import { formatZodError } from "../core/errors.js";
 import {
@@ -17,7 +17,7 @@ import {
   DEFAULT_SKILL_INSTRUCTION,
 } from "../core/skill-commands.js";
 import type { SkillInvocation } from "../core/skill-commands.js";
-import { renderSkillTemplate } from "../core/templates.js";
+import { loadTemplates, renderSkillTemplate } from "../core/templates.js";
 
 /**
  * Format a command result for display.
@@ -153,6 +153,10 @@ export function createReplSession(opts: ReplSessionOptions): ReplSession {
   const commandIds = commands.map((c) => c.id);
   const hasDefaultCommand = cli.hasAgent;
 
+  // The renderer loads while the session starts, so the first result does
+  // not wait for it. A failed load surfaces at the awaited call.
+  void loadMarkdown().catch(() => {});
+
   // Prompting state — null when not prompting
   let prompting: PromptingState | null = null;
 
@@ -183,7 +187,7 @@ export function createReplSession(opts: ReplSessionOptions): ReplSession {
   function buildExitMessage(): string {
     const parts: string[] = [];
 
-    // Report any services still running
+    // Name the running services; they stop with the session.
     if (context.services) {
       const dim = "\x1b[2m";
       const reset = "\x1b[0m";
@@ -192,9 +196,7 @@ export function createReplSession(opts: ReplSessionOptions): ReplSession {
         .filter((s) => s.status === "ready" || s.status === "starting");
       for (const svc of active) {
         const where = svc.workdir ? ` ${dim}\`${svc.workdir}\`${reset}` : "";
-        parts.push(
-          `${svc.name} still active${where}\n  ${dim}Run \`${cli.name} ${svc.serviceId}-stop\` to shut it down${reset}\n`,
-        );
+        parts.push(`Stopping ${svc.name}${where}\n`);
       }
     }
 
@@ -253,6 +255,7 @@ export function createReplSession(opts: ReplSessionOptions): ReplSession {
       const result = await cli.execute(commandId, args, context);
       context.stdout = origStdout;
       if (isSkillInvocation(result)) {
+        await loadTemplates();
         return handleAgentPrompt(renderSkillPromptFromInvocation(result));
       }
       const text = formatResult(result);
@@ -269,6 +272,7 @@ export function createReplSession(opts: ReplSessionOptions): ReplSession {
         sessionRef?.onStreamChunk?.(resultChunk, streamParts.join(""));
       }
 
+      await loadMarkdown();
       const rendered = renderMarkdown(text);
       const prefix = captured.length > 0 ? captured.join("") : "";
       const combined =
@@ -676,6 +680,7 @@ export function createReplSession(opts: ReplSessionOptions): ReplSession {
       // keep tool segments as pre-formatted with ⎿ indentation.
       // Trim each segment to remove \n padding from formatStreamChunk,
       // then join with \n\n so segments have visual separation.
+      await loadMarkdown();
       const rendered = segments
         .map((seg) => {
           const trimmed = seg.content.trim();

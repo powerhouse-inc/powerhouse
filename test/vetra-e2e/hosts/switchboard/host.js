@@ -1,8 +1,7 @@
 // @ts-check
 import config from "../../powerhouse.config.json" with { type: "json" };
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "test-package-vetra-switchboard",
 
   runner: {
@@ -31,4 +30,4 @@ export default {
     // the drive is OWNED in exactly one place.
     drives: [{ slug: "powerhouse", name: "test-package-vetra" }],
   },
-};
+});

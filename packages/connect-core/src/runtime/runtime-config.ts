@@ -17,7 +17,7 @@ const loader = () =>
 
 export type LoadRuntimeConfigOptions = {
   /** The host's plugin modules: the composition's transform the config, and
-   * the active ones' UI loads (every one's without a composition). */
+   * their UI loads. */
   plugins?: () => Promise<Record<string, ConnectPluginDefinition>>;
 };
 
@@ -50,30 +50,26 @@ export async function loadRuntimeConfig(
     config = resolveOriginPlaceholders(config, origin);
     loader().prime(config);
   }
-  // R3: a served composition (projected from host.js runner.plugins by the
-  // uniform-runners connect runner) runs the plugin pipeline over the config
-  // BEFORE the cache warms — every downstream consumer sees the transformed
-  // config through the classic paths. Runtime-flagged (query/stored override
-  // beats the composition's own presence acting as the config flag); no
-  // composition = classic boot, byte-identical.
-  if (config.connect?.composition) {
-    const { isRuntimeFlagEnabled } = await import("./runtime-flag.js");
-    const enabled = isRuntimeFlagEnabled({
-      queryKey: "pluginRunner",
-      storageKey: "ph:flag:pluginRunner",
-      readConfigFlag: () => true,
-    });
-    if (enabled) {
-      const { applyComposition } =
-        (await pluginHost) ?? (await import("../plugins/plugin-host.js"));
-      config.connect = await applyComposition(config.connect);
-      loader().prime(config);
-    }
+  // R3: the composition (projected from host.js runner.plugins by the connect
+  // runner) runs the plugin pipeline over the config BEFORE the cache warms:
+  // every downstream consumer sees the transformed config. A config served
+  // without one (a build nothing overrides) boots the default composition,
+  // worked out here by the function `ph run`'s dev and serve use.
+  let composition = config.connect.composition;
+  if (!composition) {
+    const { defaultConnectComposition } =
+      await import("@powerhousedao/host-core/plugins");
+    composition = defaultConnectComposition(config.connect);
+    config.connect = { ...config.connect, composition };
   }
+  const { applyComposition } =
+    (await pluginHost) ?? (await import("../plugins/plugin-host.js"));
+  config.connect = await applyComposition(config.connect);
+  loader().prime(config);
   if (pluginHost && pluginUi) {
     await pluginHost;
     const { loadConnectPluginUi } = await pluginUi;
-    await loadConnectPluginUi(config.connect.composition);
+    await loadConnectPluginUi(composition);
   }
   return config;
 }

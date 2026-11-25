@@ -1,0 +1,237 @@
+scalar Unknown
+scalar DateTime
+scalar Attachment
+scalar Address
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+type AudienceSheetState {
+  segments: [Segment!]!
+  agentFeedback: AgentFeedback!
+}
+
+type Segment {
+  id: OID!
+  name: String!
+  description: String
+  roles: [RoleRef!]!
+  outcomePriorities: [OutcomePriority!]!
+  evidence: [Evidence!]!
+}
+
+type RoleRef {
+  id: OID!
+  documentId: PHID!
+  objectId: OID!
+  name: String
+  kind: String
+}
+
+type OutcomePriority {
+  id: OID!
+  outcome: OutcomeRef!
+  importance: Int!
+  satisfaction: Int!
+  opportunity: Float!
+  source: EvidenceSource!
+  notes: String
+}
+
+type OutcomeRef {
+  documentId: PHID!
+  objectId: OID!
+  statement: String
+  scope: String
+}
+
+type Evidence {
+  id: OID!
+  source: EvidenceSource!
+  recordedAt: DateTime
+  content: String!
+}
+
+enum EvidenceSource {
+  BUILDER
+  AI_SIMULATION
+  USER_RESEARCH
+}
+
+type AgentFeedback {
+  readyForFeedback: Boolean!
+  suggestions: [Suggestion!]!
+}
+
+type Suggestion {
+  id: OID!
+  createdAt: DateTime!
+  agent: String!
+  content: String!
+  resolution: SuggestionResolution
+}
+
+type SuggestionResolution {
+  resolvedAt: DateTime!
+  decision: SuggestionDecision!
+  comment: String
+  changeApplied: Boolean!
+}
+
+enum SuggestionDecision {
+  ACCEPTED
+  DISMISSED
+}
+
+# segments
+
+input AddSegmentInput {
+  id: OID!
+  name: String!
+  description: String
+  insertBefore: OID
+}
+
+input UpdateSegmentInput {
+  id: OID!
+  name: String
+  description: String
+}
+
+input RemoveSegmentInput {
+  id: OID!
+}
+
+input ReorderSegmentsInput {
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+input AddSegmentRoleInput {
+  segmentId: OID!
+  id: OID!
+  documentId: PHID!
+  objectId: OID!
+  name: String
+  kind: String
+  insertBefore: OID
+}
+
+input UpdateSegmentRoleSnippetInput {
+  segmentId: OID!
+  id: OID!
+  name: String
+  kind: String
+}
+
+input RemoveSegmentRoleInput {
+  segmentId: OID!
+  id: OID!
+}
+
+input ReorderSegmentRolesInput {
+  segmentId: OID!
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+input AddOutcomePriorityInput {
+  segmentId: OID!
+  id: OID!
+  outcomeDocumentId: PHID!
+  outcomeObjectId: OID!
+  outcomeStatement: String
+  outcomeScope: String
+  importance: Int!
+  satisfaction: Int!
+  source: EvidenceSource!
+  notes: String
+  insertBefore: OID
+}
+
+input UpdateOutcomePriorityInput {
+  segmentId: OID!
+  id: OID!
+  importance: Int
+  satisfaction: Int
+  source: EvidenceSource
+  notes: String
+}
+
+input UpdateOutcomePrioritySnippetInput {
+  segmentId: OID!
+  id: OID!
+  statement: String
+  scope: String
+}
+
+input RemoveOutcomePriorityInput {
+  segmentId: OID!
+  id: OID!
+}
+
+input ReorderOutcomePrioritiesInput {
+  segmentId: OID!
+  ids: [OID!]!
+  insertBefore: OID
+}
+
+input AddSegmentEvidenceInput {
+  segmentId: OID!
+  id: OID!
+  source: EvidenceSource!
+  content: String!
+  recordedAt: DateTime
+  insertBefore: OID
+}
+
+input UpdateSegmentEvidenceInput {
+  segmentId: OID!
+  id: OID!
+  source: EvidenceSource
+  content: String
+  recordedAt: DateTime
+}
+
+input RemoveSegmentEvidenceInput {
+  segmentId: OID!
+  id: OID!
+}
+
+# agent_feedback
+
+input SetReadyForFeedbackInput {
+  ready: Boolean!
+}
+
+input AddSuggestionInput {
+  id: OID!
+  createdAt: DateTime!
+  agent: String!
+  content: String!
+}
+
+input ResolveSuggestionInput {
+  id: OID!
+  resolvedAt: DateTime!
+  decision: SuggestionDecision!
+  comment: String
+  changeApplied: Boolean!
+}
+
+input RemoveSuggestionInput {
+  id: OID!
+}

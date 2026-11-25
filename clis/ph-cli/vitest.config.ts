@@ -1,3 +1,5 @@
+import os from "node:os";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
@@ -8,11 +10,12 @@ export default defineConfig({
   resolve: {
     // Its source rather than its build, so a test can mock what it's made of.
     alias: {
-      "@powerhousedao/ph-run/classic-args": phRun("services/classic-args.ts"),
+      "@powerhousedao/ph-run/service-args": phRun("services/service-args.ts"),
       "@powerhousedao/ph-run/connect-serve": phRun("services/connect-serve.ts"),
       "@powerhousedao/ph-run/connect-server": phRun(
         "services/connect-server.ts",
       ),
+      "@powerhousedao/ph-run/local-sign-in": phRun("services/local-sign-in.ts"),
       "@powerhousedao/ph-run/member-config": phRun("runners/member-config.ts"),
       "@powerhousedao/ph-run/runners/connect": phRun("runners/connect.ts"),
       "@powerhousedao/ph-run/runners/switchboard": phRun(
@@ -24,6 +27,12 @@ export default defineConfig({
   },
   test: {
     include: ["test/**/*.test.ts"],
+    // Never the user's own login: commands that reach it (publish) make one.
+    env: {
+      PH_IDENTITY_HOME: path.join(os.tmpdir(), "ph-cli-test-identities"),
+      // A runner asked to open a sign-in link opens none in a test.
+      BROWSER: "none",
+    },
     // A file's first test pays for loading the runners, which takes longer
     // than the default on Windows.
     testTimeout: process.platform === "win32" ? 20_000 : 5_000,

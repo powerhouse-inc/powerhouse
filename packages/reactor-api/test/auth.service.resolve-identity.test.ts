@@ -21,6 +21,7 @@ const mockVerifyAuthBearerToken = vi.fn();
 vi.mock("@renown/sdk", () => ({
   verifyAuthBearerToken: (...args: unknown[]) =>
     mockVerifyAuthBearerToken(...args),
+  carriedCredentialOf: () => undefined,
 }));
 
 const ADMINS = ["0xadmin1", "0xadmin2"];
@@ -176,6 +177,7 @@ describe("resolveIdentity: true, enabled: false (identity without enforcement)",
       address: "0xuser",
       chainId: 1,
       appId: "did:key:zApp",
+      networkId: "eip155",
     });
   });
 

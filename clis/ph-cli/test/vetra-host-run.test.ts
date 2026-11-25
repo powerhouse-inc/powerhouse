@@ -16,21 +16,15 @@ import {
   runVetraHost,
   vetraRecordOfRun,
 } from "../src/services/run/vetra-host.js";
-import {
-  runVetraRefusal,
-  vetraRuntimeRefusal,
-} from "../src/utils/vetra-instance.js";
-import {
-  currentPhCliVetraCommand,
-  vetraCommandFor,
-} from "../src/utils/vetra-launch.js";
+import { vetraRuntimeRefusal } from "../src/utils/vetra-instance.js";
+import { currentPhCliRunVetraCommand } from "../src/utils/vetra-launcher.js";
 import {
   readVetraRuntime,
   writeVetraRuntime,
   type VetraRuntimeRecord,
 } from "../src/utils/vetra-runtime.js";
 
-/** `ph run vetra` keeps the record `ph vetra` keeps. The stack itself is
+/** `ph run vetra` keeps the record `ph mcp` reads. The stack itself is
  * startRun's; these tests hand back what a ready compound returns. */
 
 vi.mock("@powerhousedao/ph-run/start-run", () => ({ startRun: vi.fn() }));
@@ -108,7 +102,7 @@ afterEach(() => {
 });
 
 describe("the record of a ready vetra stack", () => {
-  it("carries the fields ph vetra writes, from the members' outputs", () => {
+  it("carries the fields ph dev writes, from the members' outputs", () => {
     const record = vetraRecordOfRun(
       PROJECT_NAME,
       compoundResult(switchboardOutputs, connectOutputs),
@@ -251,7 +245,94 @@ describe("ph run vetra", () => {
     });
   });
 
-  it("refuses while a live ph vetra holds the project", async () => {
+  it("a second start returns the running instance and starts nothing", async () => {
+    const dir = makeProject();
+    mkdirSync(join(dir, "hosts", "vetra"), { recursive: true });
+    writeFileSync(
+      join(dir, "hosts", "vetra", "host.js"),
+      'export default { name: "vetra", runner: { module: "@powerhousedao/host-core/runners/compound" }, children: {} };\n',
+    );
+    writeRunRecord(dir, {
+      version: 2,
+      host: "vetra",
+      projectName: PROJECT_NAME,
+      kind: "compound",
+      verb: "dev",
+      pid: OTHER_PID,
+      startedAt: new Date().toISOString(),
+      members: {
+        switchboard: {
+          host: "switchboard",
+          runnerModule: "m",
+          kind: "reactor",
+          verb: "dev",
+          outputs: switchboardOutputs,
+        },
+      },
+    });
+    writeVetraRuntime(dir, otherVetra());
+    answersReady();
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await expect(
+      runVetraHost({ host: "vetra", projectRoot: dir }),
+    ).resolves.toMatchObject({
+      running: {
+        pid: OTHER_PID,
+        switchboardUrl: "http://localhost:41837",
+        ports: { switchboard: 41837 },
+      },
+    });
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining(
+        `vetra is already running for this project (pid ${OTHER_PID},`,
+      ),
+    );
+    expect(startRun).not.toHaveBeenCalled();
+    expect(readVetraRuntime(dir)?.pid).toBe(OTHER_PID);
+  });
+
+  it("a second start prints a fresh sign-in link for the running Connect", async () => {
+    const dir = makeProject();
+    mkdirSync(join(dir, "hosts", "vetra"), { recursive: true });
+    writeFileSync(
+      join(dir, "hosts", "vetra", "host.js"),
+      'export default { name: "vetra", runner: { module: "@powerhousedao/host-core/runners/compound" }, children: {} };\n',
+    );
+    writeRunRecord(dir, {
+      version: 2,
+      host: "vetra",
+      projectName: PROJECT_NAME,
+      kind: "compound",
+      verb: "dev",
+      pid: OTHER_PID,
+      startedAt: new Date().toISOString(),
+      members: {
+        connect: {
+          host: "connect",
+          runnerModule: "m",
+          kind: "reactor",
+          verb: "dev",
+          outputs: { ...connectOutputs, localSignIn: { open: false } },
+        },
+      },
+      extra: { signIn: { secret: "c2VjcmV0LWZvci10aGUtdGVzdA" } },
+    });
+    writeVetraRuntime(dir, otherVetra());
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await runVetraHost({ host: "vetra", projectRoot: dir });
+    const links = log.mock.calls
+      .map(([line]) => String(line))
+      .filter((line) => line.includes("Sign in: "));
+    expect(links).toHaveLength(1);
+    expect(links[0]).toContain(
+      `${connectOutputs.endpoints.connect}#ph-sign-in=`,
+    );
+    expect(startRun).not.toHaveBeenCalled();
+  });
+
+  it("refuses while a live ph dev holds the project", async () => {
     const dir = makeProject("vetra");
     writeVetraRuntime(dir, otherVetra());
     answersReady();
@@ -288,6 +369,25 @@ describe("ph run vetra", () => {
     expect(readVetraRuntime(dir)?.pid).toBe(process.pid);
   });
 
+  it("takes --restart for itself: the runners do not get it", async () => {
+    const dir = makeProject("vetra");
+    writeVetraRuntime(dir, otherVetra({ pid: DEAD_PID }));
+    vi.mocked(startRun).mockResolvedValue(compoundResult(switchboardOutputs));
+
+    await runVetraHost({
+      host: "vetra",
+      projectRoot: dir,
+      argv: ["--restart", "--strictPort"],
+    });
+
+    expect(startRun).toHaveBeenCalledWith({
+      host: "vetra",
+      projectRoot: dir,
+      argv: ["--strictPort"],
+    });
+    expect(readVetraRuntime(dir)?.pid).toBe(process.pid);
+  });
+
   it("writes no record for build, and does not ask who is running", async () => {
     const dir = makeProject("vetra");
     writeVetraRuntime(dir, otherVetra());
@@ -302,72 +402,40 @@ describe("ph run vetra", () => {
     expect(readVetraRuntime(dir)?.pid).toBe(OTHER_PID);
   });
 
-  it("is what the run command dispatches hosts/vetra to, and only that", async () => {
-    const dir = makeProject("vetra", "switchboard");
-    const cwd = vi.spyOn(process, "cwd").mockReturnValue(dir);
-    vi.mocked(startRun).mockResolvedValue(compoundResult(switchboardOutputs));
+  it.each(["dev", "vetra"])(
+    "is what the run command dispatches hosts/%s to, and only that",
+    async (host) => {
+      const dir = makeProject(host, "switchboard");
+      const cwd = vi.spyOn(process, "cwd").mockReturnValue(dir);
+      vi.mocked(startRun).mockResolvedValue(compoundResult(switchboardOutputs));
 
-    await runHost.handler({
-      host: "vetra",
-      verb: undefined,
-      debug: undefined,
-      stop: undefined,
-      explain: undefined,
-      argv: [],
-    });
-    expect(readVetraRuntime(dir)?.pid).toBe(process.pid);
+      await runHost.handler({
+        host,
+        verb: undefined,
+        debug: undefined,
+        stop: undefined,
+        explain: undefined,
+        argv: [],
+      });
+      expect(readVetraRuntime(dir)?.pid).toBe(process.pid);
 
-    const other = makeProject("switchboard");
-    cwd.mockReturnValue(other);
-    await runHost.handler({
-      host: "switchboard",
-      verb: undefined,
-      debug: undefined,
-      stop: undefined,
-      explain: undefined,
-      argv: [],
-    });
-    expect(startRun).toHaveBeenCalledTimes(2);
-    expect(readVetraRuntime(other)).toBeUndefined();
-  });
+      const other = makeProject("switchboard");
+      cwd.mockReturnValue(other);
+      await runHost.handler({
+        host: "switchboard",
+        verb: undefined,
+        debug: undefined,
+        stop: undefined,
+        explain: undefined,
+        argv: [],
+      });
+      expect(startRun).toHaveBeenCalledTimes(2);
+      expect(readVetraRuntime(other)).toBeUndefined();
+    },
+  );
 });
 
-describe("the two guards see each other", () => {
-  const runRecord = (pid: number, projectName = PROJECT_NAME) => ({
-    version: 2 as const,
-    host: "vetra",
-    projectName,
-    kind: "compound" as const,
-    verb: "dev",
-    pid,
-    // Written now: a live pid counts only when its process started before.
-    startedAt: new Date().toISOString(),
-    members: {},
-  });
-
-  it("ph vetra refuses while a live ph run vetra holds the project", () => {
-    const dir = makeProject("vetra");
-    writeRunRecord(dir, runRecord(OTHER_PID));
-    expect(runVetraRefusal(dir, PROJECT_NAME)).toBe(
-      `Vetra is already running for this project through \`ph run vetra\` (pid ${OTHER_PID}). Stop it before starting another.`,
-    );
-  });
-
-  it("ph vetra refuses a live run record of another project", () => {
-    const dir = makeProject("vetra");
-    writeRunRecord(dir, runRecord(OTHER_PID, "someone-else"));
-    expect(runVetraRefusal(dir, PROJECT_NAME)).toBe(
-      `.ph/run/vetra.json describes a live "someone-else", but this project is "${PROJECT_NAME}". Refusing to start a second instance.`,
-    );
-  });
-
-  it("ph vetra starts without a run record, or over a stale one", () => {
-    const dir = makeProject();
-    expect(runVetraRefusal(dir, PROJECT_NAME)).toBeUndefined();
-    writeRunRecord(dir, runRecord(DEAD_PID));
-    expect(runVetraRefusal(dir, PROJECT_NAME)).toBeUndefined();
-  });
-
+describe("the guard of ph run vetra", () => {
   it("ph run vetra is not refused by the record it wrote itself", async () => {
     const dir = makeProject("vetra");
     writeVetraRuntime(dir, otherVetra({ pid: process.pid }));
@@ -379,24 +447,26 @@ describe("the two guards see each other", () => {
 });
 
 describe("what the ph mcp launcher starts", () => {
-  it("is ph run vetra, strict port, in a project with a hosts/vetra host", () => {
-    const dir = makeProject("switchboard", "connect", "vetra");
-    expect(vetraCommandFor(dir)).toEqual({
+  it("is ph run dev, strict port", () => {
+    for (const dir of [
+      makeProject("dev", "connect", "switchboard"),
+      makeProject("dev", "vetra"),
+      makeProject(),
+    ]) {
+      expect(currentPhCliRunVetraCommand(dir)).toEqual({
+        command: process.execPath,
+        args: [process.argv[1], "run", "dev", "--strictPort"],
+        label: "ph run dev",
+      });
+    }
+  });
+
+  it("is ph run vetra in a project with hosts/vetra and no hosts/dev", () => {
+    const dir = makeProject("vetra", "connect", "switchboard");
+    expect(currentPhCliRunVetraCommand(dir)).toEqual({
       command: process.execPath,
       args: [process.argv[1], "run", "vetra", "--strictPort"],
       label: "ph run vetra",
     });
-  });
-
-  it("stays classic ph vetra without one", () => {
-    expect(vetraCommandFor(makeProject())).toEqual(currentPhCliVetraCommand());
-    expect(vetraCommandFor(makeProject("switchboard"))).toEqual(
-      currentPhCliVetraCommand(),
-    );
-    expect(currentPhCliVetraCommand().args.slice(1)).toEqual([
-      "vetra",
-      "--strictPort",
-      "--watch",
-    ]);
   });
 });

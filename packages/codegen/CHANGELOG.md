@@ -1,3 +1,105 @@
+## 6.4.0-next.6 (2026-11-25)
+
+### 🩹 Fixes
+
+- **codegen:** load graphql-codegen plugins with node's own require ([6f610ff251](https://github.com/powerhouse-inc/powerhouse/commit/6f610ff251))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.4.0-next.5 (2026-11-25)
+
+### 🚀 Features
+
+- **document-model,ph-cli:** say "legacy document model" and "legacy subgraph" in messages ([c51b86ca4a](https://github.com/powerhouse-inc/powerhouse/commit/c51b86ca4a))
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **ph-cli:** ph mcp signs an mcp client's writes as the client's own session ([56e89cb281](https://github.com/powerhouse-inc/powerhouse/commit/56e89cb281))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
+## 6.4.0-next.3 (2026-11-23)
+
+### 🚀 Features
+
+- ⚠️  **codegen,ph-cli:** scaffold a neutral dev host, nothing of vetra ([82e68e2330](https://github.com/powerhouse-inc/powerhouse/commit/82e68e2330))
+- ⚠️  **switchboard,connect:** no built-in vetra package ([1e9b9ba2c6](https://github.com/powerhouse-inc/powerhouse/commit/1e9b9ba2c6))
+- ⚠️  **ph-cli:** generate stubs only, no dependency on the vetra package ([329d9de807](https://github.com/powerhouse-inc/powerhouse/commit/329d9de807))
+
+### ⚠️  Breaking Changes
+
+- **codegen,ph-cli:** scaffold a neutral dev host, nothing of vetra  ([82e68e2330](https://github.com/powerhouse-inc/powerhouse/commit/82e68e2330))
+  new projects have hosts/dev in place of hosts/vetra, and
+  the dev Connect port comes from the connect host, not vetra.connectPort.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+- **switchboard,connect:** no built-in vetra package  ([1e9b9ba2c6](https://github.com/powerhouse-inc/powerhouse/commit/1e9b9ba2c6))
+  switchboard dev mode and Connect studio mode no longer
+  load @powerhousedao/vetra by themselves.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+- **ph-cli:** generate stubs only, no dependency on the vetra package  ([329d9de807](https://github.com/powerhouse-inc/powerhouse/commit/329d9de807))
+  ph generate --document and --extract are removed.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
+## 6.4.0-next.2 (2026-11-23)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 6.4.0-next.1 (2026-11-22)
+
+### 🚀 Features
+
+- **vetra:** move the ideate and build spec documents from vetra-cli ([bfc530d0f3](https://github.com/powerhouse-inc/powerhouse/commit/bfc530d0f3))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
+## 6.4.0-next.0 (2026-11-22)
+
+### 🚀 Features
+
+- **codegen,ph-cli,shared:** a package with a cli declares clint as a versioned peer ([40936957cb](https://github.com/powerhouse-inc/powerhouse/commit/40936957cb))
+- **ph-cli,shared:** the cli of a package is its own build, with declared packages external ([8504275af5](https://github.com/powerhouse-inc/powerhouse/commit/8504275af5))
+- **clint-common:** port the chat-session package from ph-clint dev.113 ([d21119c6a9](https://github.com/powerhouse-inc/powerhouse/commit/d21119c6a9))
+- **host-core,clint,ph-run:** own-process compound members and a foreground cli member ([6447402ebe](https://github.com/powerhouse-inc/powerhouse/commit/6447402ebe))
+- **clint:** add the ./cli package export and the cli runner ([64bb9f10c9](https://github.com/powerhouse-inc/powerhouse/commit/64bb9f10c9))
+- ⚠️  **config:** superseded powerhouse.config.json keys are errors ([5db0117db3](https://github.com/powerhouse-inc/powerhouse/commit/5db0117db3))
+- **ph-cli:** ph run connect build takes --base and --packages-registry ([894d5a7f31](https://github.com/powerhouse-inc/powerhouse/commit/894d5a7f31))
+- ⚠️  **ph-cli:** a project without hosts is an error ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+
+### 🩹 Fixes
+
+- **host-core,ph-run:** linux failures in the next/6.4 checks ([0fdc5a4797](https://github.com/powerhouse-inc/powerhouse/commit/0fdc5a4797))
+- **codegen:** scaffold hosts use the form of satisfies that type-checks ([bd34ba1ad9](https://github.com/powerhouse-inc/powerhouse/commit/bd34ba1ad9))
+- **codegen,ph-cli:** ph migrate handles javascript files and leaves ignored files alone ([687cd2555d](https://github.com/powerhouse-inc/powerhouse/commit/687cd2555d))
+- **codegen:** the scaffolded switchboard entrypoint migrates with ph run ([fb185f5842](https://github.com/powerhouse-inc/powerhouse/commit/fb185f5842))
+
+### ⚠️  Breaking Changes
+
+- **config:** superseded powerhouse.config.json keys are errors  ([5db0117db3](https://github.com/powerhouse-inc/powerhouse/commit/5db0117db3))
+  ph run refuses a project whose powerhouse.config.json sets studio.host,
+  studio.https, studio.openBrowser, reactor.https, reactor.storage or switchboard.database.url.
+  Run ph migrate, or move the value to the host file and remove the key.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **ph-cli:** a project without hosts is an error  ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+  the classic commands need a hosts/ folder; run ph migrate.
+  Co-Authored-By: Claude <noreply@anthropic.com>
 ## 6.3.0-dev.11 (2026-11-24)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

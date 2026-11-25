@@ -1,3 +1,150 @@
+## 6.4.0-next.6 (2026-11-25)
+
+### 🩹 Fixes
+
+- **clint:** a cli's reactor client holds the drive and document-model models ([1580a4759a](https://github.com/powerhouse-inc/powerhouse/commit/1580a4759a))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.4.0-next.5 (2026-11-25)
+
+### 🚀 Features
+
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **ph-cli:** ph mcp signs an mcp client's writes as the client's own session ([56e89cb281](https://github.com/powerhouse-inc/powerhouse/commit/56e89cb281))
+- **clint:** mcp endpoints an agent discovers carry the bearer its consumer gives ([1a3418e488](https://github.com/powerhouse-inc/powerhouse/commit/1a3418e488))
+- **clint:** a cli's own signer may open at its first write; uploads bear as writes do ([462bcf6e5a](https://github.com/powerhouse-inc/powerhouse/commit/462bcf6e5a))
+- **clint:** a forwarded command signs as the person who typed it ([a88446954d](https://github.com/powerhouse-inc/powerhouse/commit/a88446954d))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+- **clint:** a service's -ps shows what the supervisor knows of it ([0649a43d07](https://github.com/powerhouse-inc/powerhouse/commit/0649a43d07))
+- **host-core:** the supervisor applies the restart policy to the instances it holds ([5c345bda8c](https://github.com/powerhouse-inc/powerhouse/commit/5c345bda8c))
+- **clint:** start host services through the user's supervisor when one runs ([675845ac9e](https://github.com/powerhouse-inc/powerhouse/commit/675845ac9e))
+- **clint:** run commands that need the reactor or the agent in the running instance ([14ad8e0ad2](https://github.com/powerhouse-inc/powerhouse/commit/14ad8e0ad2))
+- **host-core:** control protocol 2 with streamed output, cancel and owner-only access ([72bd0e46f3](https://github.com/powerhouse-inc/powerhouse/commit/72bd0e46f3))
+- **clint:** keep service state under the data folder ([5e3704da8d](https://github.com/powerhouse-inc/powerhouse/commit/5e3704da8d))
+
+### 🩹 Fixes
+
+- write credential and key files readable by their user only ([f48508f643](https://github.com/powerhouse-inc/powerhouse/commit/f48508f643))
+- **clint:** direct prints of a forwarded command reach its caller ([d506becebb](https://github.com/powerhouse-inc/powerhouse/commit/d506becebb))
+- **clint:** load the markdown renderer when the interactive session starts ([2b1049cec1](https://github.com/powerhouse-inc/powerhouse/commit/2b1049cec1))
+
+### 🔥 Performance
+
+- **clint:** load templating, markdown and the proxy on first use ([3c848d3a98](https://github.com/powerhouse-inc/powerhouse/commit/3c848d3a98))
+
+### ❤️ Thank You
+
+- Claude
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
+## 6.4.0-next.3 (2026-11-23)
+
+### 🚀 Features
+
+- ⚠️  **switchboard,connect:** no built-in vetra package ([1e9b9ba2c6](https://github.com/powerhouse-inc/powerhouse/commit/1e9b9ba2c6))
+- ⚠️  **ph-cli:** generate stubs only, no dependency on the vetra package ([329d9de807](https://github.com/powerhouse-inc/powerhouse/commit/329d9de807))
+- **clint:** give a command the control record of the cli it runs beside ([30fdb322a8](https://github.com/powerhouse-inc/powerhouse/commit/30fdb322a8))
+- **clint,host-core:** control channel so service commands reach the running cli ([2f08407d7e](https://github.com/powerhouse-inc/powerhouse/commit/2f08407d7e))
+
+### ⚠️  Breaking Changes
+
+- **switchboard,connect:** no built-in vetra package  ([1e9b9ba2c6](https://github.com/powerhouse-inc/powerhouse/commit/1e9b9ba2c6))
+  switchboard dev mode and Connect studio mode no longer
+  load @powerhousedao/vetra by themselves.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+- **ph-cli:** generate stubs only, no dependency on the vetra package  ([329d9de807](https://github.com/powerhouse-inc/powerhouse/commit/329d9de807))
+  ph generate --document and --extract are removed.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
+## 6.4.0-next.2 (2026-11-23)
+
+### 🚀 Features
+
+- **clint:** give a command the control record of the cli it runs beside ([30fdb322a8](https://github.com/powerhouse-inc/powerhouse/commit/30fdb322a8))
+- **clint,host-core:** control channel so service commands reach the running cli ([2f08407d7e](https://github.com/powerhouse-inc/powerhouse/commit/2f08407d7e))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
+## 6.4.0-next.1 (2026-11-22)
+
+### 🚀 Features
+
+- **vetra:** move the ideate and build spec documents from vetra-cli ([bfc530d0f3](https://github.com/powerhouse-inc/powerhouse/commit/bfc530d0f3))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
+## 6.4.0-next.0 (2026-11-22)
+
+### 🚀 Features
+
+- **clint:** a service may be a host run through spawnHost ([4a210ca632](https://github.com/powerhouse-inc/powerhouse/commit/4a210ca632))
+- **clint:** a remote attach carries the switchboard's attachment service ([54cf8dc188](https://github.com/powerhouse-inc/powerhouse/commit/54cf8dc188))
+- **clint:** remote attach carries the Cli's identity and a remote built at attach ([4585da6b7c](https://github.com/powerhouse-inc/powerhouse/commit/4585da6b7c))
+- **codegen,ph-cli,shared:** a package with a cli declares clint as a versioned peer ([40936957cb](https://github.com/powerhouse-inc/powerhouse/commit/40936957cb))
+- **ph-cli,shared:** the cli of a package is its own build, with declared packages external ([8504275af5](https://github.com/powerhouse-inc/powerhouse/commit/8504275af5))
+- **host-core:** an installed package supplies hosts, addressed as <package>/<host> ([677b136c62](https://github.com/powerhouse-inc/powerhouse/commit/677b136c62))
+- **clint:** the proxy as a member of a generic compound ([ea12e76b93](https://github.com/powerhouse-inc/powerhouse/commit/ea12e76b93))
+- **clint:** the skill build reads the package's cli metadata ([698ffc7842](https://github.com/powerhouse-inc/powerhouse/commit/698ffc7842))
+- **clint-common:** port the chat-session package from ph-clint dev.113 ([d21119c6a9](https://github.com/powerhouse-inc/powerhouse/commit/d21119c6a9))
+- **host-core,clint,ph-run:** own-process compound members and a foreground cli member ([6447402ebe](https://github.com/powerhouse-inc/powerhouse/commit/6447402ebe))
+- **clint:** add the ./cli package export and the cli runner ([64bb9f10c9](https://github.com/powerhouse-inc/powerhouse/commit/64bb9f10c9))
+- ⚠️  **clint:** catch up with ph-clint dev.113 for a remote reactor ([7863d7ef3f](https://github.com/powerhouse-inc/powerhouse/commit/7863d7ef3f))
+- **clint:** export the mastra, powerhouse and testing surfaces ([bcec896ac9](https://github.com/powerhouse-inc/powerhouse/commit/bcec896ac9))
+- ⚠️  **reactor-attachments:** remove PreprocessResult.data and stream ([afe219c5a6](https://github.com/powerhouse-inc/powerhouse/commit/afe219c5a6))
+- **ph-cli:** ph run connect build takes --base and --packages-registry ([894d5a7f31](https://github.com/powerhouse-inc/powerhouse/commit/894d5a7f31))
+- ⚠️  **switchboard:** the plugin host is the only boot path ([fc8ba25655](https://github.com/powerhouse-inc/powerhouse/commit/fc8ba25655))
+- ⚠️  **ph-cli:** a project without hosts is an error ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+
+### 🩹 Fixes
+
+- **host-core,ph-run:** linux failures in the next/6.4 checks ([0fdc5a4797](https://github.com/powerhouse-inc/powerhouse/commit/0fdc5a4797))
+- **clint-common,clint:** chat-session attachment fields are attachment refs ([ebbfda2bed](https://github.com/powerhouse-inc/powerhouse/commit/ebbfda2bed))
+- **clint,clint-common:** attachment reads name the document that references the attachment ([c26c9ce1eb](https://github.com/powerhouse-inc/powerhouse/commit/c26c9ce1eb))
+- **clint:** folder operations use only calls the remote client has ([76ca656864](https://github.com/powerhouse-inc/powerhouse/commit/76ca656864))
+- **clint,clint-common:** close the gaps the vetra-cli port found ([b9b8c7c477](https://github.com/powerhouse-inc/powerhouse/commit/b9b8c7c477))
+- **clint:** the proxy member binds 127.0.0.1 by default ([80d6d7c224](https://github.com/powerhouse-inc/powerhouse/commit/80d6d7c224))
+
+### ⚠️  Breaking Changes
+
+- **clint:** catch up with ph-clint dev.113 for a remote reactor  ([7863d7ef3f](https://github.com/powerhouse-inc/powerhouse/commit/7863d7ef3f))
+  ensureDrive takes the reactor client, not the reactor
+  module, and creates a drive in one write with its name set at creation.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+- **reactor-attachments:** remove PreprocessResult.data and stream  ([afe219c5a6](https://github.com/powerhouse-inc/powerhouse/commit/afe219c5a6))
+  PreprocessResult no longer has `data` or `stream()`. Read `blob` and
+  pass it to `send()`, which accepts a Blob.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **switchboard:** the plugin host is the only boot path  ([fc8ba25655](https://github.com/powerhouse-inc/powerhouse/commit/fc8ba25655))
+  FEATURE_PLUGIN_HOST_ENABLED=false refuses to start, and
+  FEATURE_PLUGIN_HOST_ENABLED=1 without declared plugins no longer boots
+  every built-in plugin. reactor.workflows in a host file fails validation.
+  A host with only readModel.url must name its reactor store. The config
+  file's workflows.enabled no longer turns workflows on in Switchboard.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **ph-cli:** a project without hosts is an error  ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+  the classic commands need a hosts/ folder; run ph migrate.
+  Co-Authored-By: Claude <noreply@anthropic.com>
 ## 6.3.0-dev.11 (2026-11-24)
 
 This was a version bump only for @powerhousedao/clint to align it with other projects, there were no code changes.

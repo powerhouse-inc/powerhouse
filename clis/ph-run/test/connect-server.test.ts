@@ -12,7 +12,7 @@ import {
   isAllowedHost,
   runConnectServer,
 } from "../src/services/connect-server.js";
-import type { ConnectPreviewArgs } from "../src/services/classic-args.js";
+import type { ConnectPreviewArgs } from "../src/services/service-args.js";
 
 const PROJECT = resolve(__dirname, "../../../test/test-consumer-project");
 

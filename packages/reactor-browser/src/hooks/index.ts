@@ -53,10 +53,8 @@ export * from "./url-state.js";
 export * from "./ph-store.js";
 // selectDrive stays internal.
 export {
-  addSelectedDriveIdEventHandler,
   preloadDrive,
   setSelectedDrive,
-  setSelectedDriveId,
   usePreloadDrive,
   useSelectedDrive,
   useSelectedDriveId,
@@ -65,11 +63,6 @@ export {
 } from "./selected-drive.js";
 export * from "./selected-folder.js";
 export * from "./selected-node.js";
-export {
-  addSetSelectedDriveOnPopStateEventHandler,
-  addSyncSelectionOnPopStateEventHandler,
-  syncSelectionFromPath,
-} from "./sync-selection.js";
 export * from "./selected-timeline-item.js";
 export * from "./subgraph-modules.js";
 export * from "./supported-document-types.js";
@@ -89,3 +82,4 @@ export * from "./close-node.js";
 export * from "./link-props.js";
 export * from "./use-attachments.js";
 export * from "./backend-auth.js";
+export * from "./local-sign-in.js";

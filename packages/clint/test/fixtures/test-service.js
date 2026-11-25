@@ -18,7 +18,13 @@
  *   TEST_SERVICE_PORT   — port number to include in readiness message
  *   READY_DELAY         — ms to wait before printing readiness (slow mode)
  *   CRASH_DELAY         — ms to wait before crashing (crash mode)
+ *   TEST_SERVICE_REPORT_PID — when set, first prints "test-service pid <pid>"
+ *                         (the shell's pid is not this process's on Windows)
  */
+
+if (process.env.TEST_SERVICE_REPORT_PID) {
+  console.log(`test-service pid ${process.pid}`);
+}
 
 const mode = process.env.TEST_SERVICE_MODE || "ready";
 const port = process.env.TEST_SERVICE_PORT || "0";

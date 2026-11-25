@@ -1,0 +1,44 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild",
+    "declarationDir": "./dist/types",
+    "resolveJsonModule": true,
+    "types": ["node", "vitest/globals"],
+    "lib": ["ESNext", "dom", "dom.iterable"],
+    "paths": {
+      "document-models": ["./document-models/index.ts"],
+      "document-models/*": ["./document-models/*/index.ts"],
+      "editors": ["./editors/index.ts"],
+      "editors/*": ["./editors/*/index.ts"],
+      "processors/*": ["./processors/*/index.ts"],
+      "subgraphs": ["./subgraphs/index.ts"],
+      "subgraphs/*": ["./subgraphs/*/index.ts"]
+    }
+  },
+  "include": ["**/*", "./powerhouse.manifest.json"],
+  "exclude": ["dist", "node_modules", ".ph"],
+  "references": [
+    {
+      "path": "../clint"
+    },
+    {
+      "path": "../design-system"
+    },
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../reactor"
+    },
+    {
+      "path": "../reactor-attachments"
+    },
+    {
+      "path": "../reactor-browser"
+    },
+    {
+      "path": "../shared"
+    }
+  ]
+}

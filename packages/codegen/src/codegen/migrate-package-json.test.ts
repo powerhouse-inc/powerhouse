@@ -1,4 +1,5 @@
 import {
+  CLINT_PACKAGE,
   packageJsonExports,
   packageScripts,
 } from "@powerhousedao/shared/clis/constants";
@@ -76,7 +77,8 @@ describe("the scripts migrate manages", () => {
     });
     expect(scripts.lint).toBe(packageScripts.lint);
     expect(scripts.build).toBe(packageScripts.build);
-    expect(scripts.vetra).toBe(packageScripts.vetra);
+    expect(scripts.dev).toBe(packageScripts.dev);
+    expect(scripts).not.toHaveProperty("vetra");
     expect(kept).toEqual([]);
   });
 
@@ -87,17 +89,21 @@ describe("the scripts migrate manages", () => {
       reactor: "ph-cli reactor",
     });
     expect(scripts.connect).toBe("ph-cli run connect");
+    // No longer scripts of the scaffold, but still the values it wrote.
     expect(scripts.vetra).toBe("ph-cli run vetra");
-    // No longer a script of the scaffold, but still the value it wrote.
     expect(scripts.reactor).toBe("ph-cli run switchboard");
     expect(kept).toEqual([]);
   });
 
   it("leaves the classic commands when the project has no such host", () => {
     const own = { connect: "ph-cli connect" };
-    const { scripts, kept } = migratedScripts(own, (name) => name !== "vetra");
+    const { scripts, kept } = migratedScripts(
+      own,
+      (name) => name !== "vetra" && name !== "dev",
+    );
     expect(scripts.connect).toBe("ph-cli run connect");
-    // No vetra host: none is added.
+    // No dev or vetra host: no script is added for one.
+    expect(scripts).not.toHaveProperty("dev");
     expect(scripts).not.toHaveProperty("vetra");
     expect(
       migratedScripts({ vetra: "ph-cli vetra" }, () => false).scripts.vetra,
@@ -168,6 +174,44 @@ describe("the dependencies of a migrated project", () => {
       workspacePackageNames: [],
     });
     expect(again).toEqual(managed);
+  });
+});
+
+describe("the dependencies of a migrated project with a Cli", () => {
+  const NEXT = "6.3.0-dev.1";
+  const migrateCli = (packageJson: PackageJson) =>
+    resolveManagedDependencies({
+      packageJson,
+      features: ["cli"],
+      fullyQualifiedVersion: NEXT,
+      workspacePackageNames: [],
+    });
+
+  it("adds clint as a peer at the migrated version, beside its dev pin", () => {
+    const { peerDependencies, devDependencies } = migrateCli({
+      peerDependencies: { "document-model": "6.0.0" },
+      devDependencies: { [CLINT_PACKAGE]: "6.0.0" },
+    });
+    expect(peerDependencies).toHaveProperty(CLINT_PACKAGE, NEXT);
+    expect(devDependencies).toHaveProperty(CLINT_PACKAGE, NEXT);
+  });
+
+  it("moves clint out of dependencies to its peer and dev pin", () => {
+    const managed = migrateCli({
+      dependencies: { [CLINT_PACKAGE]: "6.0.0", luxon: "^3.0.0" },
+    });
+    expect(managed.dependencies).toEqual({ luxon: "^3.0.0" });
+    expect(managed.peerDependencies).toHaveProperty(CLINT_PACKAGE, NEXT);
+    expect(managed.devDependencies).toHaveProperty(CLINT_PACKAGE, NEXT);
+  });
+
+  it("keeps a catalog: ref", () => {
+    const { peerDependencies, devDependencies } = migrateCli({
+      peerDependencies: { [CLINT_PACKAGE]: "catalog:" },
+      devDependencies: { [CLINT_PACKAGE]: "catalog:" },
+    });
+    expect(peerDependencies).toHaveProperty(CLINT_PACKAGE, "catalog:");
+    expect(devDependencies).toHaveProperty(CLINT_PACKAGE, "catalog:");
   });
 });
 
@@ -248,7 +292,8 @@ describe("the scripts of a new project", () => {
 
   it("run the project's hosts, with no classic command", () => {
     expect(scaffolded.scripts.connect).toBe("ph-cli run connect");
-    expect(scaffolded.scripts.vetra).toBe("ph-cli run vetra");
+    expect(scaffolded.scripts.dev).toBe("ph-cli run dev");
+    expect(scaffolded.scripts).not.toHaveProperty("vetra");
     for (const name of [
       "reactor",
       "service",
@@ -264,7 +309,7 @@ describe("scripts under retired names", () => {
   const startup =
     "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh";
 
-  it("moves reactor to the switchboard host and drops the startup scripts", () => {
+  it("moves reactor to the switchboard host and drops the service scripts", () => {
     const { scripts } = migratedScripts({
       reactor: "ph-cli reactor",
       "service-startup": startup,
@@ -272,7 +317,7 @@ describe("scripts under retired names", () => {
     });
     expect(scripts.reactor).toBe("ph-cli run switchboard");
     expect(scripts).not.toHaveProperty("service-startup");
-    expect(scripts.service).toBe("ph-cli service");
+    expect(scripts).not.toHaveProperty("service");
     expect(migratedScripts(scripts).scripts).toEqual(scripts);
   });
 
@@ -283,6 +328,7 @@ describe("scripts under retired names", () => {
     ).toBe("ph-cli reactor");
     const own = {
       reactor: "ph-cli reactor --port 5000",
+      service: "pm2 start ecosystem.config.js",
       "service-startup": "bash ./startup.sh",
     };
     expect(migratedScripts(own).scripts).toMatchObject(own);

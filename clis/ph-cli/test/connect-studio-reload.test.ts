@@ -5,6 +5,7 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { writeScaffoldHosts } from "./hosts-project.js";
 import { removeDir, stopProcess } from "./processes.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -32,6 +33,8 @@ function makeProject(appName: string): string {
     JSON.stringify({ name: "studio-reload-test", type: "module" }),
   );
   writeConfig(dir, appName);
+  // `ph connect` does not run in a project without hosts.
+  writeScaffoldHosts(dir, "studio-reload-test");
   return dir;
 }
 
@@ -56,20 +59,13 @@ type Studio = {
   spawnError?: Error;
 };
 
+// `ph connect studio` is `ph run connect dev`: it takes the runner's
+// arguments, which have no --ignore-local, --print-urls or
+// --bind-cli-shortcuts (the runner never binds the shortcuts).
 function startStudio(dir: string, port: number): Studio {
   const child = spawn(
     process.execPath,
-    [
-      PH_CLI,
-      "connect",
-      "studio",
-      "--port",
-      String(port),
-      "--strictPort",
-      "--ignore-local",
-      "--print-urls=false",
-      "--bind-cli-shortcuts=false",
-    ],
+    [PH_CLI, "connect", "studio", "--port", String(port), "--strictPort"],
     { cwd: dir, stdio: ["ignore", "pipe", "pipe"] },
   );
   const closed = new Promise<void>((resolve) => {

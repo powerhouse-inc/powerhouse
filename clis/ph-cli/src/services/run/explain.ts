@@ -10,14 +10,19 @@ import {
   explainDrivePlan,
   findDeadConnectConfig,
   formatPath,
+  hostFileLabel,
+  isBuiltinEnvName,
   isToken,
   loadHost,
   loadProducers,
   memberForRef,
+  memberProcessOf,
   mergeDrivePlan,
+  moduleRootOf,
   outputRefsOf,
   outputSitesOf,
   planCompound,
+  planForeground,
   probeRun,
   processResolveEnv,
   producerOutputsSchemas,
@@ -26,7 +31,9 @@ import {
   resolveHostOutputs,
   resolvePluginContributions,
   resolveRunnerModule,
+  RunnerError,
   runnerOutputsSchema,
+  runRecordKey,
   runRecordOutputSource,
   validateDeclaredHost,
   validateHost,
@@ -44,8 +51,9 @@ import {
  * same declared validation `ph run` does first (so a printed explain is a
  * host that loads). `drives`: the merged drive plan with provenance
  * (browser-only plugins listed as unresolvable). `outputs`: the resolution
- * plan — consumed outputs and their producers, `$env` names, the compound
- * start order the tokens imply, which producers are running and, for a
+ * plan — consumed outputs and their producers, `$env` names, where
+ * `${package}` points, the compound start order the tokens imply, which
+ * producers are running and, for a
  * running producer, the value each token resolves to now. A `$map` in
  * `reactor.drives` is shown as the token and, when its producer runs, as the
  * drives it renders.
@@ -74,6 +82,11 @@ interface MemberView {
   runner: RunnerModule;
   specifier: string;
   file: string;
+  /** Where its plugin specifiers resolve from: its package, else the
+   * project. Also what `${package}` is in it. */
+  moduleRoot: string;
+  /** The package that supplies its host. */
+  packageName?: string;
   /** Where the effective `config` lives (a wrapper `config` is a full
    * statement in the compound's file). */
   configWhere: string;
@@ -84,6 +97,10 @@ interface LoadedView {
   runner: RunnerModule;
   specifier: string;
   file: string;
+  /** Where its plugin specifiers resolve from, and `${package}`. */
+  moduleRoot: string;
+  /** The package that supplies the host. */
+  packageName?: string;
   /** Set for a compound. */
   members?: MemberView[];
   /** Where tokens resolve NOW (for printing values): a standalone host's
@@ -96,14 +113,19 @@ async function loadView(
   projectRoot: string,
   name: string,
 ): Promise<LoadedView> {
+  // As `ph run` finds it: a package's host resolves its modules there, and
+  // its compound's bare members look there first.
   const loaded = await loadHost(projectRoot, name);
+  const scope = loaded.package;
+  const moduleRoot = moduleRootOf(projectRoot, loaded);
   const specifier = loaded.host.runner.module;
-  const runner = await resolveRunnerModule(projectRoot, specifier);
-  const file = `hosts/${name}/host.js`;
+  const runner = await resolveRunnerModule(moduleRoot, specifier);
+  const file = hostFileLabel(loaded.name, scope);
   if (runner.kind !== "compound") {
     const producers = await loadProducers(
       projectRoot,
       outputRefsOf(loaded.host),
+      scope,
     );
     validateDeclaredHost(runner, specifier, loaded.host, file, {
       outputsSchemaOf: producerOutputsSchemas(producers),
@@ -114,7 +136,15 @@ async function loadView(
       producers,
       projectName: readProjectName(projectRoot),
     });
-    return { host: loaded.host, runner, specifier, file, source };
+    return {
+      host: loaded.host,
+      runner,
+      specifier,
+      file,
+      moduleRoot,
+      ...(scope ? { packageName: scope.name } : {}),
+      source,
+    };
   }
   validateDeclaredHost(runner, specifier, loaded.host, file);
   validateHost(runner, specifier, loaded.host, file, { tokens: "allow" });
@@ -124,22 +154,24 @@ async function loadView(
   );
   const members: MemberView[] = [];
   for (const [key, wrapper] of Object.entries(children)) {
-    const host: ReactorView = applyChildWrapper(
-      (await loadHost(projectRoot, wrapper.host)).host,
-      wrapper,
-    );
+    const member = await loadHost(projectRoot, wrapper.host, { scope });
+    const host: ReactorView = applyChildWrapper(member.host, wrapper);
     const memberSpecifier = host.runner.module;
+    const memberRoot = moduleRootOf(projectRoot, member);
+    const memberFile = hostFileLabel(member.name, member.package);
     members.push({
       key,
       wrapper,
       host,
-      runner: await resolveRunnerModule(projectRoot, memberSpecifier),
+      runner: await resolveRunnerModule(memberRoot, memberSpecifier),
       specifier: memberSpecifier,
-      file: `hosts/${wrapper.host}/host.js`,
+      file: memberFile,
+      moduleRoot: memberRoot,
+      ...(member.package ? { packageName: member.package.name } : {}),
       configWhere:
         wrapper.config !== undefined
-          ? `hosts/${name}/host.js (children.${key}.config)`
-          : `hosts/${wrapper.host}/host.js`,
+          ? `${file} (children.${key}.config)`
+          : memberFile,
     });
   }
   const refs = members.map((m) => ({ key: m.key, host: m.wrapper.host }));
@@ -163,7 +195,7 @@ async function loadView(
   // compound runs (its record carries every member's outputs).
   const probe = probeRun(
     projectRoot,
-    loaded.host.name,
+    runRecordKey(loaded.host.name, scope?.name),
     readProjectName(projectRoot),
   );
   const live = new Map<string, unknown>();
@@ -176,7 +208,16 @@ async function loadView(
     probe.status === "live"
       ? compoundOutputSource(refs, live, loaded.host.name)
       : undefined;
-  return { host: loaded.host, runner, specifier, file, members, source };
+  return {
+    host: loaded.host,
+    runner,
+    specifier,
+    file,
+    moduleRoot,
+    ...(scope ? { packageName: scope.name } : {}),
+    members,
+    source,
+  };
 }
 
 /** A token's value from running producers, or undefined (producer not
@@ -212,7 +253,7 @@ export async function explainHost(options: ExplainOptions): Promise<void> {
     const verb = view.host.runner.defaultVerb ?? "run";
     for (const m of view.members) {
       await explainDrives(
-        projectRoot,
+        { projectRoot, moduleRoot: m.moduleRoot },
         `${options.host} › ${m.key} (${m.wrapper.host})`,
         m.host,
         verb,
@@ -224,7 +265,7 @@ export async function explainHost(options: ExplainOptions): Promise<void> {
     return;
   }
   await explainDrives(
-    projectRoot,
+    { projectRoot, moduleRoot: view.moduleRoot },
     options.host,
     view.host,
     "run",
@@ -237,7 +278,9 @@ export async function explainHost(options: ExplainOptions): Promise<void> {
 /* ------------------------------------------------------------------ drives */
 
 async function explainDrives(
-  projectRoot: string,
+  /** Drive ids are the project's; plugin specifiers resolve from
+   * `moduleRoot` (a package's host: the package). */
+  roots: { projectRoot: string; moduleRoot: string },
   label: string,
   host: ReactorView,
   verb: string,
@@ -245,10 +288,11 @@ async function explainDrives(
   configWhere: string,
   source?: OutputSource,
 ): Promise<void> {
+  const { projectRoot } = roots;
   const entries: PluginEntryData[] = host.runner.plugins ?? [];
   const contributions =
     entries.length > 0
-      ? await resolvePluginContributions(projectRoot, verb, entries, where)
+      ? await resolvePluginContributions(roots.moduleRoot, verb, entries, where)
       : { drives: [], unresolved: [] };
   const contributed = contributions.drives.map(({ declaration, source }) => {
     const parsed = drivesSchema.safeParse([declaration]);
@@ -375,7 +419,7 @@ function printConsumes(
   }
   const { env: processEnv } = processResolveEnv(process.cwd());
   for (const site of env) {
-    const builtin = site.name === "userData" || site.name === "projectRoot";
+    const builtin = isBuiltinEnvName(site.name);
     const state =
       builtin || processEnv?.[site.name] !== undefined
         ? "set"
@@ -388,11 +432,29 @@ function printConsumes(
   }
 }
 
+/** Where `${package}` points, for a host that names it (as `"${package}"`
+ * sugar or `{ $env: "package" }`): a path, never a secret. */
+function printPackageRoot(
+  host: unknown,
+  indent: string,
+  view: { moduleRoot: string; packageName?: string },
+): void {
+  const named =
+    JSON.stringify(host).includes("${package}") ||
+    envSitesOf(host).some((site) => site.name === "package");
+  if (!named) return;
+  const whose = view.packageName
+    ? `the root of ${view.packageName}, which supplies the host`
+    : "the project root: a project host";
+  console.log(`${indent}\${package} = ${view.moduleRoot} (${whose})`);
+}
+
 function explainOutputs(name: string, view: LoadedView): void {
   if (!view.members) {
     const source = view.source;
     console.log(`[${name}] ${view.specifier}`);
     console.log(`  produces: ${outputKeys(view.runner)}`);
+    printPackageRoot(view.host, "  ", view);
     printConsumes(
       view.host,
       "  ",
@@ -426,24 +488,63 @@ function explainOutputs(name: string, view: LoadedView): void {
     })),
     startOrder,
   );
+  // The member that owns the terminal starts last, as `ph run` starts it;
+  // a compound that breaks its rules fails here as it would there.
+  const planned = planForeground(
+    members.map((m) => ({
+      key: m.key,
+      specifier: m.specifier,
+      member: m.wrapper,
+      runner: m.runner,
+    })),
+    plan,
+    startOrder ? { startOrder } : {},
+  );
+  const broken = planned.issues.at(0);
+  if (broken) {
+    throw new RunnerError(`hosts/${name}: ${broken.message}`, broken.hint);
+  }
+  const processes = new Map(
+    members.map((m) => [
+      m.key,
+      memberProcessOf(m.wrapper, {
+        foreground: m.key === planned.foreground,
+        besideForeground: planned.foreground !== undefined,
+        oneShot: false,
+      }),
+    ]),
+  );
+  // Where each member runs, once that is not the compound's process alone.
+  const showWhere =
+    planned.foreground !== undefined || [...processes.values()].includes("own");
+  const whereOf = (key: string) => {
+    if (!showWhere) return "";
+    if (key === planned.foreground) {
+      return "  [in front: owns the terminal; its end ends the stack]";
+    }
+    return processes.get(key) === "own"
+      ? "  [own process]"
+      : "  [in the compound's process]";
+  };
   console.log(
     `[${name}] start order (${plan.source === "tokens" ? "from the output tokens" : "config.startOrder, checked against the tokens"}):`,
   );
-  plan.order.forEach((key, index) => {
+  planned.order.forEach((key, index) => {
     const m = members.find((x) => x.key === key);
     const needs = plan.edges
       .filter((e) => e.consumer === key)
       .map((e) => e.producer);
     console.log(
-      `  ${index + 1}. ${key} (${m?.wrapper.host ?? "?"})${needs.length ? `  after ${needs.join(", ")}` : ""}`,
+      `  ${index + 1}. ${key} (${m?.wrapper.host ?? "?"})${needs.length ? `  after ${needs.join(", ")}` : ""}${whereOf(key)}`,
     );
   });
   console.log("  Ctrl-C stops members in reverse order (consumers first).");
-  for (const key of plan.order) {
+  for (const key of planned.order) {
     const m = members.find((x) => x.key === key);
     if (!m) continue;
     console.log(`[${name} › ${key} (${m.wrapper.host})] ${m.specifier}`);
     console.log(`  produces: ${outputKeys(m.runner)}`);
+    printPackageRoot(m.host, "  ", m);
     printConsumes(
       m.host,
       "  ",

@@ -75,7 +75,7 @@ function makeRegisterModule(packages: string[], projectRoot: string): string {
  * Emits a virtual module `ph-bundled-packages-virtual` whose default export
  * is a `register(packageManager)` function. When called at runtime (from
  * Connect's bootstrap), it registers each bundled package with the package
- * manager the same way Common/Vetra are registered — meaning they work
+ * manager the same way Common is registered — meaning they work
  * offline without the registry being reachable.
  *
  * When the list is empty, the module exports a no-op function so Connect's

@@ -1,8 +1,13 @@
-import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { HOST_NAME_MESSAGE, hostNameSchema } from "./host-schemas.js";
+import {
+  HOST_NAME_MESSAGE,
+  hostNameSchema,
+  PACKAGE_NAME_PATTERN,
+} from "./host-schemas.js";
+import { instanceKey, instanceRunDir } from "./instance-key.js";
+import { writeOwnerOnlyFile } from "./owner-only.js";
 import { runRecordSchema, type RunRecord } from "./run-record-schema.js";
 
 export {
@@ -15,6 +20,10 @@ export {
 /**
  * Record I/O for `.ph/run/<host>.json`, keyed by host name so N hosts
  * (vetra, desktop, …) coexist. The record shape is run-record-schema.ts (v2).
+ * A host an installed package supplies is keyed `<package>/<name>`
+ * ({@link runRecordKey}) and filed in a folder named after the package,
+ * `.ph/run/@scope/pkg/<name>.json`, so it never meets a project host of the
+ * same name. The functions below take either key.
  */
 
 export type RunProbe =
@@ -25,22 +34,81 @@ export type RunProbe =
 
 type Env = Readonly<Record<string, string | undefined>>;
 
-// Under the project's .ph tree — relocated with it by PH_USER_DATA_DIR. The
-// readers take `env` so a launcher can read a child's records.
+/** The key a host's record is filed under: its `name`, behind the package
+ * that supplies it when it is not the project's own (`@acme/tools/studio`),
+ * as `ph run` addresses the host. */
+export function runRecordKey(name: string, hostPackage?: string): string {
+  return hostPackage === undefined ? name : `${hostPackage}/${name}`;
+}
+
+/** The key of a record as read: where it is filed. */
+export function recordKeyOf(record: Pick<RunRecord, "host" | "package">) {
+  return runRecordKey(record.host, record.package);
+}
+
+// Under the data folder's .ph tree — relocated with it by PH_USER_DATA_DIR.
+// The readers take `env` so a launcher can read a child's records.
 const runDir = (projectDir: string, env: Env = process.env) =>
-  path.join(resolvePhDir(projectDir, env), "run");
-function recordPath(projectDir: string, hostName: string, env?: Env): string {
+  instanceRunDir(instanceKey("", projectDir, env));
+
+/** The file of an instance's record: `(host, data folder)` is its path. */
+export function runRecordPath(
+  projectDir: string,
+  key: string,
+  env?: Env,
+): string {
+  return recordPath(projectDir, key, env);
+}
+function recordPath(projectDir: string, key: string, env?: Env): string {
   const dir = runDir(projectDir, env);
-  const file = path.resolve(dir, `${hostName}.json`);
+  const slash = key.lastIndexOf("/");
+  const hostName = key.slice(slash + 1);
+  const pkg = slash === -1 ? undefined : key.slice(0, slash);
+  const folder =
+    pkg === undefined
+      ? path.resolve(dir)
+      : path.resolve(dir, ...pkg.split("/"));
+  const file = path.resolve(folder, `${hostName}.json`);
   if (
     !hostNameSchema.safeParse(hostName).success ||
-    path.dirname(file) !== path.resolve(dir)
+    (pkg !== undefined && !PACKAGE_NAME_PATTERN.test(pkg)) ||
+    path.dirname(file) !== folder
   ) {
-    throw new Error(
-      `"${hostName}" can't name a run record. ${HOST_NAME_MESSAGE}`,
-    );
+    throw new Error(`"${key}" can't name a run record. ${HOST_NAME_MESSAGE}`);
   }
   return file;
+}
+
+/** The record keys under `.ph/run/`: `<name>.json` files, and those in a
+ * package's folder (`<pkg>/` or `@scope/<pkg>/`). */
+function recordKeys(dir: string): string[] {
+  const entries = (at: string) => {
+    try {
+      return fs.readdirSync(at, { withFileTypes: true });
+    } catch {
+      return [];
+    }
+  };
+  const records = (at: string, prefix: string) =>
+    entries(at)
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .map((entry) => `${prefix}${entry.name.slice(0, -".json".length)}`);
+  const keys = records(dir, "");
+  for (const entry of entries(dir)) {
+    if (!entry.isDirectory()) continue;
+    const at = path.join(dir, entry.name);
+    if (!entry.name.startsWith("@")) {
+      keys.push(...records(at, `${entry.name}/`));
+      continue;
+    }
+    for (const inner of entries(at)) {
+      if (!inner.isDirectory()) continue;
+      keys.push(
+        ...records(path.join(at, inner.name), `${entry.name}/${inner.name}/`),
+      );
+    }
+  }
+  return keys;
 }
 
 export function readRunRecord(
@@ -61,27 +129,16 @@ export function readRunRecord(
   return parsed.success ? parsed.data : undefined;
 }
 
-/** Every valid v2 record under `.ph/run/` (invalid and v1 files skipped). */
+/** Every valid v2 record under `.ph/run/`, package hosts' included (invalid
+ * and v1 files skipped). */
 export function listRunRecords(
   projectDir: string,
   env: Env = process.env,
 ): RunRecord[] {
-  let files: string[];
-  try {
-    files = fs.readdirSync(runDir(projectDir, env));
-  } catch {
-    return [];
-  }
-  return files
-    .filter((file) => file.endsWith(".json"))
-    .flatMap((file) => {
-      const record = readRunRecord(
-        projectDir,
-        file.slice(0, -".json".length),
-        env,
-      );
-      return record ? [record] : [];
-    });
+  return recordKeys(runDir(projectDir, env)).flatMap((key) => {
+    const record = readRunRecord(projectDir, key, env);
+    return record ? [record] : [];
+  });
 }
 
 /** The project identity the live/foreign probe compares: package.json
@@ -99,10 +156,17 @@ export function readProjectName(projectDir: string): string {
 }
 
 export function writeRunRecord(projectDir: string, record: RunRecord): void {
-  const target = recordPath(projectDir, record.host);
+  const target = recordPath(projectDir, recordKeyOf(record));
   const valid = runRecordSchema.parse(record);
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, `${JSON.stringify(valid, null, 2)}\n`);
+  const text = `${JSON.stringify(valid, null, 2)}\n`;
+  if (valid.extra?.control === undefined && valid.extra?.signIn === undefined) {
+    fs.writeFileSync(target, text);
+    return;
+  }
+  // It holds the control channel's token or the sign-in secret: the user's
+  // alone.
+  writeOwnerOnlyFile(target, text);
 }
 
 export function clearRunRecord(

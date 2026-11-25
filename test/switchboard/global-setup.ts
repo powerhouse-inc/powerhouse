@@ -65,6 +65,7 @@ export async function setup() {
       cwd: import.meta.dirname,
       env: { ...process.env, PH_SWITCHBOARD_PORT: PORT },
       stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
     });
     // Drained, or a full pipe would block the switchboard's writes.
     proc.stdout?.on(

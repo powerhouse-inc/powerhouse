@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { asInstance } from "./forwarded-output.js";
 import type { EventBus } from "./types.js";
 import type {
   AnyRegistry,
@@ -18,7 +19,10 @@ export function createEventBus<
 
   return {
     emit: ((event: string, data?: unknown): void => {
-      emitter.emit(event, data);
+      // Listeners are the instance's own reactions: what they print stays
+      // with the instance, also when a command run for another terminal
+      // emitted the event.
+      asInstance(() => emitter.emit(event, data));
     }) as EventBus<R>["emit"],
     on: ((event: string, handler: (data?: unknown) => void): void => {
       emitter.on(event, handler);

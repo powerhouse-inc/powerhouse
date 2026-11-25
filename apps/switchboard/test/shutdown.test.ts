@@ -5,6 +5,7 @@ import {
   type Database,
   type InProcessReactorClientModule,
 } from "@powerhousedao/reactor";
+import type { HostPlugin, ResolvedPlugin } from "@powerhousedao/host-core";
 import type { ILogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -209,32 +210,35 @@ describe("SwitchboardReactor.shutdown", () => {
   it("an aborted boot tears the owned reactor down once, through its shutdown", async () => {
     const reactor = watchOwnedReactor();
     const exit = stubExit();
-    const previousSource = process.env.RENOWN_SOURCE;
-    // No loaded package serves the renown read model: the boot aborts after
-    // the reactor and the api are up.
-    process.env.RENOWN_SOURCE = "self";
+    // A plugin that fails as subgraphs register: the boot aborts after the
+    // reactor and the api are up.
+    const failing: ResolvedPlugin = {
+      plugin: {
+        name: "fails-at-subgraphs",
+        appliesTo: "switchboard",
+        hooks: {
+          onSubgraphsRegistering: () => {
+            throw new Error("the plugin refused to register");
+          },
+        },
+      } as HostPlugin,
+      provenance: "built-in",
+      entry: { enabled: true, verbs: "*", config: {}, module: "fails" },
+    };
     const port = await freePort();
 
-    try {
-      await expect(
-        bootSwitchboard(
-          {
-            server: { port: port, strictPort: true },
-            storage: { readModel: { url: join(tempRoot, "read-model") } },
-            features: { workflows: false, mcp: false },
-            packages: { disableLocal: true },
-            identity: { keypairPath: join(tempRoot, "identity.json") },
-          },
-          { logger: stubLogger() },
-        ),
-      ).rejects.toThrow(/no loaded package serves/);
-    } finally {
-      if (previousSource === undefined) {
-        delete process.env.RENOWN_SOURCE;
-      } else {
-        process.env.RENOWN_SOURCE = previousSource;
-      }
-    }
+    await expect(
+      bootSwitchboard(
+        {
+          server: { port: port, strictPort: true },
+          storage: { readModel: { url: join(tempRoot, "read-model") } },
+          features: { workflows: false, mcp: false },
+          packages: { disableLocal: true },
+          identity: { keypairPath: join(tempRoot, "identity.json") },
+        },
+        { logger: stubLogger(), pluginComposition: [failing] },
+      ),
+    ).rejects.toThrow(/refused to register/);
 
     expect(reactor.kill).toHaveBeenCalledTimes(1);
     expect(reactor.destroy).toHaveBeenCalledTimes(1);

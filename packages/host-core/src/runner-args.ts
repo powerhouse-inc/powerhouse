@@ -21,6 +21,9 @@ export interface RunnerArgsSchema {
   /** Retired switches and what to do instead: accepted, one warning, no
    * effect. */
   retired?: Readonly<Record<string, string>>;
+  /** Every argument goes to the runner as typed, unchecked: a runner whose
+   * host parses its own (the Cli runner hands them to the Cli). */
+  passthrough?: boolean;
 }
 
 const isStrings = (value: unknown): value is readonly string[] =>
@@ -40,7 +43,9 @@ export function isRunnerArgsSchema(value: unknown): value is RunnerArgsSchema {
     isStrings(schema.flags) &&
     (schema.memberOptions === undefined ||
       isStringRecord(schema.memberOptions)) &&
-    (schema.retired === undefined || isStringRecord(schema.retired))
+    (schema.retired === undefined || isStringRecord(schema.retired)) &&
+    (schema.passthrough === undefined ||
+      typeof schema.passthrough === "boolean")
   );
 }
 
@@ -141,7 +146,8 @@ export interface RunnerArgvTarget {
  * The arguments a standalone runner receives as `ctx.argv`: `argv` checked
  * against the runner's schema, retired switches warned about and dropped.
  * Nothing is dropped silently: an argument the runner does not accept, or any
- * argument for a runner without a schema, fails.
+ * argument for a runner without a schema, fails. A `passthrough` runner gets
+ * them all, in order.
  */
 export function checkRunnerArgv(
   argv: readonly string[],
@@ -156,6 +162,7 @@ export function checkRunnerArgv(
       "Set these in the host file instead.",
     );
   }
+  if (schema.passthrough) return [...argv];
   const options = new Set(schema.options);
   const accepted = new Set(acceptedBy(schema));
   const kept: string[] = [];
@@ -194,11 +201,17 @@ export interface CompoundArgvMember {
  * (`--switchboard-port 4001` reaches that member as `--port 4001`). An
  * argument no member accepts fails, as does one that would set the same
  * option on several members.
+ *
+ * With a `foreground` member (the one that owns the terminal) the members
+ * take only their member-named options, at the front; the first other
+ * argument, or a literal `--`, starts the foreground member's own, checked
+ * against its runner's schema (a passthrough runner takes them as typed).
  */
 export function splitCompoundArgv(
   argv: readonly string[],
   host: string,
   members: readonly CompoundArgvMember[],
+  foreground?: string,
 ): Map<string, string[]> {
   const perMember = new Map<string, string[]>(members.map((m) => [m.key, []]));
   if (argv.length === 0) return perMember;
@@ -206,6 +219,50 @@ export function splitCompoundArgv(
   const schemas = members.flatMap((m) =>
     isRunnerArgsSchema(m.schema) ? [{ key: m.key, schema: m.schema }] : [],
   );
+  const owner = members.find((m) => m.key === foreground);
+  if (owner) {
+    let i = 0;
+    for (; i < argv.length; i++) {
+      const token = argv[i];
+      if (token === "--") {
+        i++;
+        break;
+      }
+      const equals = token.startsWith("-") ? token.indexOf("=") : -1;
+      const name = equals === -1 ? token : token.slice(0, equals);
+      const named = schemas.filter(
+        ({ key, schema }) =>
+          key !== owner.key && schema.memberOptions?.[name] !== undefined,
+      );
+      if (named.length === 0) break;
+      if (named.length > 1) {
+        throw new RunnerError(
+          `${where}: ${name} matches the members ${named.map((m) => m.key).join(", ")}.`,
+          "Set the option in each member's host file instead.",
+        );
+      }
+      const { key, schema } = named[0];
+      const option = schema.memberOptions?.[name] ?? name;
+      if (equals !== -1) {
+        // `--switchboard-port=4001` keeps its `=4001`
+        perMember.get(key)?.push(option + token.slice(name.length));
+      } else if (i + 1 >= argv.length) {
+        throw new RunnerError(`${where}: ${name} needs a value.`);
+      } else {
+        perMember.get(key)?.push(option, argv[i + 1]);
+        i++;
+      }
+    }
+    perMember.set(
+      owner.key,
+      checkRunnerArgv(argv.slice(i), {
+        host,
+        runner: owner.runner,
+        schema: owner.schema,
+      }),
+    );
+    return perMember;
+  }
   // plain option name -> the member names it goes by
   const memberNames = new Map<string, string[]>();
   for (const { schema } of schemas) {

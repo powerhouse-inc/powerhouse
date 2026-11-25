@@ -17,6 +17,16 @@ async function main(args: string[]) {
       "Usage: ph-run run <host> [verb] [--debug] [--stop] [runner arguments]",
     );
   }
+  // The user's supervisor is no host of the project: nothing of it is loaded.
+  if (host === "supervisor") {
+    const { runSupervisorCommand } = await import("./services/supervisor.js");
+    process.exitCode = await runSupervisorCommand({
+      verb,
+      argv,
+      stop: own.includes("--stop"),
+    });
+    return;
+  }
   if (own.includes("--stop")) {
     await stopRunningHost({ host });
     return;

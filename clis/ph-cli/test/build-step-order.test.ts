@@ -104,9 +104,11 @@ describe("orderBuildSteps", () => {
       "definitions",
       "browser-bundle",
       "node-bundle",
+      "cli-bundle",
       "pieces",
       "dist-manifest",
       "offered-routes",
+      "cli-export",
       "stylesheet",
       "release-approval",
     ]);

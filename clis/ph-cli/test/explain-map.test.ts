@@ -1,6 +1,7 @@
 import {
   mkdirSync,
   mkdtempSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -264,5 +265,93 @@ describe("--explain with $map", () => {
       /1\. cli-switchboard \(switchboard\)\n {2}2\. cli-connect \(connect\) {2}after cli-switchboard/,
     );
     expect(outputs).toContain('"slug":"workflows"');
+  });
+});
+
+describe("--explain for a host a package supplies", () => {
+  it("explains a package's compound as ph run starts it: bare members from the package first, its runners from there", async () => {
+    const dir = makeProject({ connect });
+    // @acme/tools ships a switchboard over a runner only it has, and a
+    // compound whose bare `switchboard` is its own and `connect` the
+    // project's.
+    const pack = path.join(dir, "node_modules", "@acme", "tools");
+    const runners = path.join(pack, "node_modules", "pack-runners");
+    mkdirSync(runners, { recursive: true });
+    writeFileSync(
+      path.join(pack, "package.json"),
+      JSON.stringify({ name: "@acme/tools", type: "module" }),
+    );
+    writeFileSync(
+      path.join(runners, "package.json"),
+      JSON.stringify({
+        name: "pack-runners",
+        type: "module",
+        exports: {
+          "./switchboard": "./switchboard.js",
+          "./compound": "./compound.js",
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(runners, "compound.js"),
+      `export const kind = "compound";
+export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
+export async function run() {}
+`,
+    );
+    writeFileSync(
+      path.join(runners, "switchboard.js"),
+      `import { z } from "zod";
+export const kind = "reactor";
+export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
+export const outputsSchema = z.strictObject({
+  origin: z.url(),
+  drives: z.record(z.string(), z.strictObject({ id: z.string(), url: z.url() })),
+});
+export async function run() {}
+`,
+    );
+    // Both name `${package}`: each member gets the root of whoever supplies
+    // its host.
+    const dist = { dist: "${package}/dist" };
+    const hosts = {
+      switchboard: {
+        name: "tools-switchboard",
+        runner: { module: "pack-runners/switchboard" },
+        config: dist,
+      },
+      stack: {
+        name: "stack",
+        runner: { module: "pack-runners/compound" },
+        children: {
+          sb: { host: "switchboard" },
+          ui: { host: "connect", config: dist },
+        },
+      },
+    };
+    for (const [name, host] of Object.entries(hosts)) {
+      mkdirSync(path.join(pack, "hosts", name), { recursive: true });
+      writeFileSync(
+        path.join(pack, "hosts", name, "host.js"),
+        `export default ${JSON.stringify(host)};`,
+      );
+    }
+
+    const outputs = await explain(dir, "@acme/tools/stack", "outputs");
+    expect(outputs).toMatch(
+      /1\. sb \(switchboard\)\n {2}2\. ui \(connect\) {2}after sb/,
+    );
+    expect(outputs).toContain(
+      "[@acme/tools/stack › sb (switchboard)] pack-runners/switchboard",
+    );
+    expect(outputs).toContain(
+      "[@acme/tools/stack › ui (connect)] fake-runners/connect",
+    );
+    expect(outputs).toContain(
+      `[@acme/tools/stack › sb (switchboard)] pack-runners/switchboard\n  produces: origin, drives\n  \${package} = ${realpathSync(pack)} (the root of @acme/tools, which supplies the host)`,
+    );
+    expect(outputs).toContain(
+      `  \${package} = ${dir} (the project root: a project host)`,
+    );
   });
 });

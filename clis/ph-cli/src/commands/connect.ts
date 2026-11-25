@@ -1,77 +1,5 @@
-import {
-  connectBuildArgs,
-  connectConfigArgs,
-  connectPreviewArgs,
-  connectStudioArgs,
-} from "@powerhousedao/shared/clis/args";
+import { connectConfigArgs } from "@powerhousedao/shared/clis/args";
 import { command, subcommands } from "cmd-ts";
-export const studio = command({
-  name: "studio",
-  description: `The studio command starts the Connect Studio, a development environment for building
-and testing Powerhouse applications. It provides a visual interface for working with
-your project.
-
-This command:
-1. Starts a local Connect Studio server
-2. Provides a web interface for development
-3. Allows you to interact with your project components
-4. Supports various configuration options for customization
-`,
-  args: connectStudioArgs,
-  handler: async (args) => {
-    if (args.debug) {
-      console.log(args);
-    }
-    const { runConnectStudio } = await import("../services/connect-studio.js");
-    await runConnectStudio(args, undefined, undefined, {
-      reloadOnConfigChange: true,
-      devPlugins: { entries: [], where: "ph connect studio" },
-    });
-  },
-});
-
-export const build = command({
-  name: "build",
-  description: `The Connect build command creates a production build with the project's local and
-external packages included.
-
-Runtime-config overrides (all combinable — last wins on collision):
-  ph connect build                                    Build with the current source config.
-  ph connect build <key> <value>                      Build with a positional override applied (e.g. ph connect build connect.renown.url https://renown.staging).
-  ph connect build --<field> <value>                  Build with a per-field flag override (e.g. --renown-url https://renown.staging).
-  ph connect build --json '{"app":{"workflowsEnabled":true}}'
-                                                      Build with a bulk override. The payload is the connect.* block
-                                                      without the "connect" wrapper; unknown keys are rejected.
-
-Build has no read mode; passing only <key> without <value> errors out (use \`ph connect config <key>\` to read).
-`,
-  args: connectBuildArgs,
-  handler: async (args) => {
-    if (args.debug) {
-      console.log(args);
-    }
-
-    const { runConnectBuild } = await import("../services/connect-build.js");
-    await runConnectBuild(args);
-    process.exit(0);
-  },
-});
-
-export const preview = command({
-  name: "preview",
-  description: `The Connect preview command previews a built Connect project.
-NOTE: You must run \`ph connect build\` first
-`,
-  args: connectPreviewArgs,
-  handler: async (args) => {
-    if (args.debug) {
-      console.log(args);
-    }
-    const { runConnectPreview } =
-      await import("../services/connect-preview.js");
-    await runConnectPreview(args);
-  },
-});
 
 export const config = command({
   name: "config",
@@ -98,13 +26,13 @@ Writes go to:
   },
 });
 
+// `ph connect`, `ph connect studio`, `ph connect build` and
+// `ph connect preview` never reach this command: they are sugar for
+// `ph run connect dev|build|serve` (utils/run-sugar.ts).
 export const connect = subcommands({
   name: "connect",
-  description: `Powerhouse Connect commands. Use with \`studio\`, \`build\`, \`preview\`, or \`config\`. Defaults to \`studio\` if not specified.`,
+  description: `Powerhouse Connect. \`ph connect\` runs the project's connect host: it is \`ph run connect dev\`, as is \`ph connect studio\`; \`ph connect build\` is \`ph run connect build\` and \`ph connect preview\` is \`ph run connect serve\`. \`ph connect config\` reads and writes Connect's runtime configuration.`,
   cmds: {
-    studio,
-    build,
-    preview,
     config,
   },
 });

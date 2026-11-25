@@ -159,8 +159,9 @@ export async function ensureServers(): Promise<ChildProcess[]> {
           "node",
           [
             PH_CLI,
-            "connect",
-            "preview",
+            "run",
+            "connect-workflows",
+            "serve",
             "--port",
             String(CONNECT_PORT),
             "--strictPort",
@@ -211,7 +212,7 @@ export function buildConnectIfStale(): void {
     return;
   }
   console.log("▶ building Connect");
-  execSync(`node ${PH_CLI} connect build --workflows true`, {
+  execSync(`node ${PH_CLI} run connect-workflows build`, {
     cwd: CONSUMER,
     stdio: process.env.UI_SHOTS_VERBOSE ? "inherit" : "ignore",
   });

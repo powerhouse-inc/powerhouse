@@ -4,13 +4,16 @@ import {
 } from "@powerhousedao/shared/clis/constants";
 import {
   compoundStartVerb,
+  memberCycle,
   memberVerbOf,
+  planForeground,
   prepareMember,
   takesCspRegistrySync,
   type PreparedMember,
 } from "./compound.js";
 import { isBuiltinEnvName, substituteBuiltinEnv } from "./env-substitution.js";
-import { loadHost } from "./host-loader.js";
+import { loadHost, moduleRootOf } from "./host-loader.js";
+import { hostFileLabel, type HostPackage } from "./host-ref.js";
 import type { CheckStage, HostIssue } from "./host-issues.js";
 import type { ChildWrapper, CompoundWiring } from "./host-schemas.js";
 import {
@@ -45,6 +48,7 @@ import {
   hostSchemaIssues,
   kindShapeIssues,
   ONE_SHOT_VERBS,
+  packageBuildRefusal,
   resolveRunnerModule,
   type HostSchemaLike,
   type RunnerIssue,
@@ -73,25 +77,40 @@ export interface CheckHostResult {
   deferred: CheckDeferred[];
 }
 
-/** The `ph run` pipeline up to the verb, collecting every issue; starts nothing. */
+/** The `ph run` pipeline up to the verb, collecting every issue; starts
+ * nothing. `name` is a ref: a project host, or `<package>/<host>`. */
 export async function checkHost(
   name: string,
   options: CheckHostOptions,
 ): Promise<CheckHostResult> {
   const result: CheckHostResult = { issues: [], warnings: [], deferred: [] };
-  const file = `hosts/${name}/host.js`;
-  const issue = issuer(result, file);
+  let file = `hosts/${name}/host.js`;
   const verb = options.verb ?? "run";
   let host: Record<string, unknown> & { runner: { module: string } };
   let runner: RunnerModule;
+  let hostPackage: HostPackage | undefined;
   try {
-    host = (await loadHost(options.projectRoot, name)).host;
-    runner = await resolveRunnerModule(options.projectRoot, host.runner.module);
+    const loaded = await loadHost(options.projectRoot, name);
+    host = loaded.host;
+    hostPackage = loaded.package;
+    file = hostFileLabel(loaded.name, hostPackage);
+    runner = await resolveRunnerModule(
+      moduleRootOf(options.projectRoot, loaded),
+      host.runner.module,
+    );
   } catch (error) {
-    issue("load", "", error);
+    issuer(result, file)("load", "", error);
     return result;
   }
   const specifier = host.runner.module;
+  // As `ph run` refuses it: a package's hosts are built by the package.
+  if (hostPackage && ONE_SHOT_VERBS.has(verb)) {
+    issuer(result, file)(
+      "declared",
+      packageBuildRefusal(name, hostPackage, verb),
+    );
+    return result;
+  }
 
   if (runner.kind === "compound") {
     await checkCompound(result, options, {
@@ -100,18 +119,20 @@ export async function checkHost(
       runner,
       specifier,
       verb,
+      hostPackage,
     });
     return result;
   }
 
   const refs = outputRefsOf(host);
-  const producers = await loadProducers(options.projectRoot, refs);
+  const producers = await loadProducers(options.projectRoot, refs, hostPackage);
   await checkSubject(result, options, {
     file,
     host,
     runner,
     specifier,
     verb,
+    hostPackage,
     outputsSchemaOf: producerOutputsSchemas(producers),
     self: "outputs",
   });
@@ -124,6 +145,8 @@ interface Subject {
   runner: RunnerModule;
   specifier: string;
   verb: string;
+  /** The package that supplies the host. */
+  hostPackage?: HostPackage;
 }
 
 interface ReactorSubject extends Subject {
@@ -181,7 +204,11 @@ async function checkSubject(
   const issue = issuer(result, subject.file);
   const { runner, specifier, file } = subject;
   const declared = checkDeclared(result, subject, subject.outputsSchemaOf);
-  const resolveEnv = processResolveEnv(options.projectRoot, options.env);
+  const resolveEnv = processResolveEnv(
+    options.projectRoot,
+    options.env,
+    subject.hostPackage,
+  );
   const patch = subject.patch ?? ((host) => host);
 
   // A one-shot verb (build) resolves nothing; its verb gets the declared host.
@@ -298,18 +325,39 @@ async function checkCompound(
   const prepared: PreparedMember[] = [];
   for (const [key, member] of Object.entries(children)) {
     try {
-      prepared.push(await prepareMember(options.projectRoot, key, member));
+      prepared.push(
+        await prepareMember(
+          options.projectRoot,
+          key,
+          member,
+          subject.hostPackage,
+        ),
+      );
     } catch (error) {
       issuer(result, `hosts/${member.host}/host.js`)("load", "", error);
     }
+  }
+  try {
+    const cycle = await memberCycle(options.projectRoot, prepared);
+    if (cycle) {
+      issue("declared", {
+        path: "children",
+        message: `compound member cycle: ${cycle.join(" -> ")}.`,
+        hint: "A compound cannot run itself, directly or through another compound.",
+      });
+    }
+  } catch (error) {
+    issue("load", "children", error);
   }
   const members = Object.entries(children).map(([key, m]) => ({
     key,
     host: m.host,
   }));
+  // The member that owns the terminal, by the rules `ph run` applies.
+  let foreground: string | undefined;
   if (prepared.length === members.length) {
     try {
-      planCompound(
+      const plan = planCompound(
         prepared.map((m) => ({
           key: m.key,
           host: m.member.host,
@@ -320,6 +368,9 @@ async function checkCompound(
         })),
         wiring.startOrder,
       );
+      const planned = planForeground(prepared, plan, wiring);
+      for (const i of planned.issues) issue("declared", i);
+      foreground = planned.foreground;
     } catch (error) {
       issue("declared", "", error);
     }
@@ -341,13 +392,27 @@ async function checkCompound(
       : { error: `names member "${target.key}", which was not prepared.` };
   };
   for (const m of prepared) {
+    // As `ph run` starts it: the foreground member at its own default verb,
+    // and not at all at a one-shot verb.
+    const isForeground = m.key === foreground;
+    if (isForeground && ONE_SHOT_VERBS.has(verb)) continue;
+    if (m.hostPackage && ONE_SHOT_VERBS.has(verb)) {
+      issue("declared", {
+        ...packageBuildRefusal(m.ref, m.hostPackage, verb),
+        path: `children.${m.key}`,
+      });
+      continue;
+    }
     const csp = wiring.cspRegistrySync === true && takesCspRegistrySync(m);
     await checkSubject(result, options, {
       file: m.file,
       host: m.draft,
       runner: m.runner,
       specifier: m.specifier,
-      verb: memberVerbOf(verb, m.draft.runner),
+      ...(m.hostPackage ? { hostPackage: m.hostPackage } : {}),
+      verb: isForeground
+        ? (m.draft.runner.defaultVerb ?? "run")
+        : memberVerbOf(verb, m.draft.runner),
       outputsSchemaOf,
       self: { members },
       ...(csp

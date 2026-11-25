@@ -26,7 +26,8 @@ function stubLogger(): ILogger {
 }
 
 /**
- * Boots with FEATURE_PLUGIN_HOST_ENABLED=1, sandboxing the env exactly like
+ * Boots a declared composition (every built-in plugin unless the override
+ * passes its own), sandboxing the env exactly like
  * boot-mcp-enabled.test.ts: temp PH_REACTOR_DATABASE_URL, MCP_ENABLED cleared
  * so it never leaks into the plugin-host composition under test, and every
  * touched env var restored in `finally`. Workflows stay off by default here
@@ -41,15 +42,10 @@ async function withPluginHostSwitchboard(
   const tempRoot = await mkdtemp(
     join(tmpdir(), "switchboard-plugin-presence-"),
   );
-  const names = [
-    "PH_REACTOR_DATABASE_URL",
-    "MCP_ENABLED",
-    "FEATURE_PLUGIN_HOST_ENABLED",
-  ];
+  const names = ["PH_REACTOR_DATABASE_URL", "MCP_ENABLED"];
   const previous = names.map((name) => [name, process.env[name]] as const);
   process.env.PH_REACTOR_DATABASE_URL = join(tempRoot, "reactor-storage");
   delete process.env.MCP_ENABLED;
-  process.env.FEATURE_PLUGIN_HOST_ENABLED = "1";
   let switchboard: Awaited<ReturnType<typeof startSwitchboard>> | undefined;
 
   try {
@@ -65,7 +61,11 @@ async function withPluginHostSwitchboard(
           global: { name: "Default Drive" },
         },
       },
-      { logger: stubLogger(), ...override.deps },
+      {
+        logger: stubLogger(),
+        pluginComposition: builtinSwitchboardPlugins(),
+        ...override.deps,
+      },
     );
     await run(switchboard);
     await switchboard.shutdown();
@@ -104,8 +104,8 @@ async function getReservation(port: number): Promise<number> {
   return response.status;
 }
 
-describe("plugin-host composition presence (FEATURE_PLUGIN_HOST_ENABLED)", () => {
-  it("NO composition passed (every built-in): mcp mounted, attachments present", async () => {
+describe("plugin-host composition presence (a declared composition)", () => {
+  it("every built-in plugin: mcp mounted, attachments present", async () => {
     await withPluginHostSwitchboard({}, async (switchboard) => {
       expect(switchboard.mcpEnabled).toBe(true);
       expect(await postMcp(switchboard.port)).not.toBe(404);
@@ -123,7 +123,7 @@ describe("plugin-host composition presence (FEATURE_PLUGIN_HOST_ENABLED)", () =>
     );
   }, 60_000);
 
-  // Presence is activation (R2.6c fix): flag-on, startSwitchboard skips the
+  // Presence is activation (R2.6c fix): declared, startSwitchboard skips the
   // classic mcp/workflows resolvers and initServer normalizes unset values to
   // OFF after transformServerOptions — an absent plugin actually deactivates
   // its subsystem.
@@ -153,7 +153,7 @@ describe("plugin-host composition presence (FEATURE_PLUGIN_HOST_ENABLED)", () =>
     );
   }, 60_000);
 
-  it("an explicit mcp: false option still wins when no composition is passed", async () => {
+  it("an explicit mcp: false option still wins over the mcp plugin", async () => {
     await withPluginHostSwitchboard(
       { config: { features: { mcp: false } } },
       async (switchboard) => {
@@ -165,10 +165,9 @@ describe("plugin-host composition presence (FEATURE_PLUGIN_HOST_ENABLED)", () =>
 });
 
 describe("plugin-host workflows presence (transformServerOptions)", () => {
-  // A real boot's workflows.enabled is resolved classically (env/config,
-  // default OFF) in startSwitchboard BEFORE the plugin host is even
-  // constructed (server.mts resolveWorkflowsEnabled ~line 1545, pluginHost
-  // gate at ~line 407) — by the time the workflows plugin's
+  // A boot without a declared composition resolves workflows.enabled
+  // classically (env, default OFF) in startSwitchboard BEFORE the plugin host
+  // is even constructed — by the time the workflows plugin's
   // transformServerOptions hook runs, options.workflows.enabled is already a
   // definite boolean, so its "unless explicit false" short-circuit can never
   // observe an "unset" value through that path. Exercising the hook directly

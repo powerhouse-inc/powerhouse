@@ -31,7 +31,7 @@ Routes import `@tanstack/react-router`. A project from `ph init` has it as a `pe
    }
    ```
 
-2. Open `/inventory` in Vetra Studio, at the `connectUrl` in `.ph/vetra-runtime.json`.
+2. Open `/inventory` in the Connect that `ph dev` runs, at the `connectUrl` in `.ph/vetra-runtime.json`.
 
 A file outside `_app/` is a full page, without Connect's layout:
 

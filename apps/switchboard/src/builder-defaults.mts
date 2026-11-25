@@ -21,8 +21,7 @@ import type { ILogger } from "document-model";
 
 export type SwitchboardReactorDefaultsOptions = {
   // Extra models registered alongside the baseline (document-model, drive,
-  // reactor-drive, reactor-group). Pass vetra models here in studio/dev.
-  // Deduped by id.
+  // reactor-drive, reactor-group). Deduped by id.
   documentModels?: DocumentModelModule[];
   /** Upgrade manifests for versioned models, one per document type. */
   upgradeManifests?: UpgradeManifest<readonly number[]>[];

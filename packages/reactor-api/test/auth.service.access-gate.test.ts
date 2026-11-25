@@ -10,6 +10,7 @@ const mockVerifyAuthBearerToken = vi.fn();
 vi.mock("@renown/sdk", () => ({
   verifyAuthBearerToken: (...args: unknown[]) =>
     mockVerifyAuthBearerToken(...args),
+  carriedCredentialOf: () => undefined,
 }));
 
 const ADMIN = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";

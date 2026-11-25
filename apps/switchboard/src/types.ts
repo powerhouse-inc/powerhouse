@@ -45,6 +45,12 @@ export type IdentityOptions = {
   /** Path to the keypair file. Defaults to ~/.ph/keypair.json */
   keypairPath?: string;
   /**
+   * Path to the Renown user file (`.renown.json`), which Renown writes when
+   * it is missing. With `keypairPath`, nothing of the identity lands in the
+   * working directory's `.ph`.
+   */
+  storagePath?: string;
+  /**
    * If true, won't start without an existing keypair.
    * Use this to ensure the switchboard only runs with an authenticated identity.
    */
@@ -119,7 +125,7 @@ export type StartServerOptions = {
   /**
    * If true, fail immediately when the requested port is in use instead of
    * falling back to the next free port. Matches the semantics of Vite's
-   * `--strictPort` flag that flows through the `ph vetra` command.
+   * `--strictPort` flag that flows through the `ph dev` command.
    */
   strictPort?: boolean;
   dev?: boolean;
@@ -147,10 +153,9 @@ export type StartServerOptions = {
   mcp?: boolean;
   /** The declared plugin composition to boot with: the resolved host.js
    * runner.plugins entries, supplied by the uniform-runners switchboard
-   * runner (R2 step 2) or a test. Read only under `features.pluginHost: true`
-   * (FEATURE_PLUGIN_HOST_ENABLED=1), where omitted = every built-in plugin.
-   * Without that the default composition boots: the subsystems MCP_ENABLED,
-   * PH_WORKFLOWS_ENABLED and the config file turn on. Resolved plugins, not
+   * runner (R2 step 2) or a test. A plugin's presence is the switch. Omitted:
+   * the default composition boots, the subsystems MCP_ENABLED and
+   * PH_WORKFLOWS_ENABLED turn on. Resolved plugins, not
    * specifiers — resolution happens at the runner against the PROJECT
    * dependency tree. */
   pluginComposition?: ResolvedPlugin[];
@@ -162,7 +167,7 @@ export type StartServerOptions = {
    * decides, then PGLITE_WORKERS_DEFAULT. */
   pgliteWorkers?: boolean;
   /** Powerhouse workflows: the runtime, its subgraph, its webhooks and its
-   * document models. Wins over PH_WORKFLOWS_ENABLED and the config file. */
+   * document models. Wins over PH_WORKFLOWS_ENABLED. */
   workflows?: {
     enabled?: boolean;
     /** OAuth2 apps the publisher owns (`oauth_app` on a connection): per app,
@@ -283,7 +288,7 @@ export type SwitchboardReactor = {
   /** Whether the workflow runtime's operation intake is indexing. Undefined
    * when workflows are off; unavailable means no document trigger fires. */
   workflowTriggers?: WorkflowTriggersCapability;
-  /** Whether workflows are on, after the option, PH_WORKFLOWS_ENABLED and the config file. */
+  /** Whether workflows are on, after the option and PH_WORKFLOWS_ENABLED. */
   workflowsEnabled: boolean;
   /** The boot list of importable models workers and workflow pieces load; empty when none are resolved. */
   modelManifest(): ModelManifestEntry[];

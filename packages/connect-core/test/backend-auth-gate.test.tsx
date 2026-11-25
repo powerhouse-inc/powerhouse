@@ -5,11 +5,13 @@ import {
   addBackendAuthEventHandler,
   addDrivesEventHandler,
   addFullReactorClientEventHandler,
+  addLocalSignInEventHandler,
   getPHStore,
   setBackendAuth,
   setFullReactorClient,
+  setLocalSignIn,
 } from "@powerhousedao/reactor-browser";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
@@ -26,6 +28,7 @@ beforeAll(() => {
   window.ph = {};
   addDrivesEventHandler();
   addBackendAuthEventHandler();
+  addLocalSignInEventHandler();
   addFullReactorClientEventHandler();
 });
 
@@ -162,5 +165,70 @@ describe("BackendAuthGate", () => {
     expect(
       screen.getByRole("button", { name: /switch account/i }),
     ).toBeTruthy();
+  });
+});
+
+describe("the gate for a sign-in by link", () => {
+  afterEach(() => setLocalSignIn(undefined));
+
+  function Probe() {
+    return <output>{String(useBackendAuthGate())}</output>;
+  }
+
+  it("says how to get a fresh link once this computer's sign-in ended", () => {
+    setLocalSignIn({ status: "ended", reason: "withdrawn-here" });
+    setBackendAuth({ requiresAuth: true, status: 401, at: "t" });
+    render(<BackendAuthGate mode="login" />);
+    expect(screen.getByRole("dialog").textContent).toContain(
+      "Your sign-in to this computer's identity has ended. Run `ph dev` (or `ph vetra`) in the project again: it prints a fresh link.",
+    );
+  });
+
+  it("asks the password the key is locked with, even before a refusal", async () => {
+    const submit = vi.fn(() => Promise.resolve());
+    setLocalSignIn({ status: "password", submit, dismiss: vi.fn() });
+    render(<Probe />);
+    expect(screen.getByRole("status").textContent).toBe("local-sign-in");
+
+    render(<BackendAuthGate mode="local-sign-in" />);
+    const input = screen.getByLabelText("Password");
+    fireEvent.change(input, { target: { value: "secret" } });
+    fireEvent.click(screen.getByRole("button", { name: "Unlock" }));
+    await waitFor(() => expect(submit).toHaveBeenCalledWith("secret"));
+  });
+
+  it("says a link was used, and lets the person go on without it", () => {
+    const dismiss = vi.fn();
+    setLocalSignIn({ status: "failed", reason: "used-code", dismiss });
+    render(<BackendAuthGate mode="local-sign-in" />);
+    expect(screen.getByRole("dialog").textContent).toContain(
+      "This sign-in link was used already.",
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Continue without signing in" }),
+    );
+    expect(dismiss).toHaveBeenCalledOnce();
+  });
+
+  it("points a Renown login on this computer to Renown", () => {
+    setLocalSignIn({
+      status: "failed",
+      reason: "renown-login",
+      label: "alice.eth",
+      dismiss: vi.fn(),
+    });
+    render(<BackendAuthGate mode="local-sign-in" />);
+    expect(screen.getByRole("dialog").textContent).toContain(
+      "logged in with Renown as alice.eth",
+    );
+    expect(
+      screen.getByRole("button", { name: "Sign in with Renown" }),
+    ).toBeTruthy();
+  });
+
+  it("leaves an ended sign-in to the backend's answer", () => {
+    setLocalSignIn({ status: "ended", reason: "expired" });
+    render(<Probe />);
+    expect(screen.getByRole("status").textContent).toBe("null");
   });
 });

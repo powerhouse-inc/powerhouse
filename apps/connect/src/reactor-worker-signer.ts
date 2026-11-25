@@ -1,5 +1,5 @@
 import type { ReactorFeatureFlags, SignerConfig } from "@powerhousedao/reactor";
-import type { ReactorIdentity } from "@powerhousedao/reactor-browser/rpc";
+import type { UserActionSigner } from "@powerhousedao/shared/document-model";
 import { RenownCryptoSigner, type IRenownCrypto } from "@renown/sdk/crypto";
 import {
   createConnectSignerConfig,
@@ -20,7 +20,7 @@ export type WorkerSignerConstruct = {
 export async function createWorkerSignerConfig(
   crypto: IRenownCrypto,
   construct: WorkerSignerConstruct,
-  identity: ReactorIdentity | undefined,
+  identity: UserActionSigner | undefined,
 ): Promise<{ signer: RenownCryptoSigner; signerConfig: SignerConfig }> {
   const signer = new RenownCryptoSigner(crypto, RENOWN_APP_NAME, identity);
   const signerConfig = await createConnectSignerConfig(

@@ -40,8 +40,8 @@ async function studioConfig(
   const { createServer } = await import("vite");
   const { runConnectStudio } =
     await import("../src/services/connect-studio.js");
-  const { classicConnectStudioArgs } =
-    await import("../src/services/classic-args.js");
+  const { connectStudioServiceArgs } =
+    await import("../src/services/service-args.js");
   vi.mocked(createServer).mockReset();
   vi.mocked(createServer).mockResolvedValue({
     listen: vi.fn().mockResolvedValue(undefined),
@@ -50,7 +50,7 @@ async function studioConfig(
   } as unknown as ViteDevServer);
   await runConnectStudio(
     {
-      ...(await classicConnectStudioArgs()),
+      ...(await connectStudioServiceArgs()),
       printUrls: false,
       bindCLIShortcuts: false,
     },

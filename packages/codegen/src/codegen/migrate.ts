@@ -7,6 +7,8 @@ import {
   getPackageManagerAtPowerhouseProjectDirPath,
   getPowerhouseProjectInstallCommand,
   LEGACY_LINT_FORMAT_DEPENDENCIES,
+  LEGACY_DEV_HOST,
+  LEGACY_DEV_HOST_DEV_DEPENDENCIES,
   LEGACY_LINT_FORMAT_FILES,
   lowestVersion,
   packageJsonExports,
@@ -73,6 +75,7 @@ import { sortByKey } from "./utils.js";
 const PINNED_WORKSPACE_PACKAGES = [
   ...VERSIONED_PEER_DEPENDENCIES,
   ...VERSIONED_DEV_DEPENDENCIES,
+  ...LEGACY_DEV_HOST_DEV_DEPENDENCIES,
   ...Object.values(FEATURE_DEPENDENCIES).flatMap((f) => [
     ...f.peerVersioned,
     ...f.devVersioned,
@@ -153,18 +156,21 @@ function preserveProtected(
 // and dev sets or updated there, and leaves `dependencies` for them, as
 // syncFeatureDependencies moves it. Every other entry is the project's own and
 // stays in the field the project wrote it in; in `dependencies` only a
-// workspace package's version is updated.
+// workspace package's version is updated. LEGACY_DEV_HOST_DEV_DEPENDENCIES are
+// managed only with `hasLegacyDevHost`: the project has hosts/vetra.
 export function resolveManagedDependencies(input: {
   packageJson: PackageJson;
   features: readonly Feature[];
   fullyQualifiedVersion: string;
   workspacePackageNames: readonly string[];
+  hasLegacyDevHost?: boolean;
 }) {
   const {
     packageJson,
     features,
     fullyQualifiedVersion,
     workspacePackageNames,
+    hasLegacyDevHost = false,
   } = input;
   const featurePeerVersioned = features.flatMap(
     (f) => FEATURE_DEPENDENCIES[f].peerVersioned as readonly string[],
@@ -189,6 +195,7 @@ export function resolveManagedDependencies(input: {
   // peer pipe omits — a dev-only feature dep is stripped from peers by that.
   const managedDevVersioned = [
     ...VERSIONED_DEV_DEPENDENCIES,
+    ...(hasLegacyDevHost ? LEGACY_DEV_HOST_DEV_DEPENDENCIES : []),
     ...managedPeerVersioned,
     ...featureDevVersioned,
   ];
@@ -584,6 +591,7 @@ export async function migrate(
             features: detectFeatures(projectDir),
             fullyQualifiedVersion,
             workspacePackageNames,
+            hasLegacyDevHost: hasHost(LEGACY_DEV_HOST),
           }),
           hasHost,
         ),
@@ -605,7 +613,7 @@ export async function migrate(
     }
     if (migratePowerhouseConfig(projectDir)) {
       console.log(
-        "Removed the scaffolded connect.instance defaults from powerhouse.config.json, so Vetra Studio picks its reactor client",
+        "Removed the scaffolded connect.instance defaults from powerhouse.config.json, so the dev host picks its reactor client",
       );
     }
     const homeBackground = migrateHomeBackground(projectDir);

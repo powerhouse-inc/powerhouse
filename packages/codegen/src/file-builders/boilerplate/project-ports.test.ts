@@ -49,11 +49,10 @@ describe("applyProjectCustomizations port assignment", () => {
     ) as {
       reactor: { port: number };
       studio: { port: number };
-      vetra: { connectPort: number };
     };
     expect(config.reactor.port).toBe(expected.switchboardPort);
     expect(config.studio.port).toBe(expected.studioPort);
-    expect(config.vetra.connectPort).toBe(expected.vetraConnectPort);
+    expect(config).not.toHaveProperty("vetra");
 
     for (const rel of [
       ".mcp.json",
@@ -68,7 +67,7 @@ describe("applyProjectCustomizations port assignment", () => {
     }
   });
 
-  it("keeps the remote-drive coordinates alongside the assigned port", async () => {
+  it("writes the remote-drive url, and no port beside it", async () => {
     const dir = scaffold();
     const remoteDrive = "http://example.test/d/vetra-abc";
 
@@ -80,12 +79,26 @@ describe("applyProjectCustomizations port assignment", () => {
 
     const config = JSON.parse(
       readFileSync(join(dir, "powerhouse.config.json"), "utf8"),
-    ) as { vetra: { connectPort: number; driveId: string; driveUrl: string } };
-    expect(config.vetra.driveId).toBe("vetra-abc");
-    expect(config.vetra.driveUrl).toBe(remoteDrive);
-    expect(config.vetra.connectPort).toBe(
-      deriveProjectPorts("my-package").vetraConnectPort,
+    ) as { vetra: unknown };
+    expect(config.vetra).toEqual({ driveUrl: remoteDrive });
+  });
+
+  it("gives a cloned project with hosts/vetra a Connect port for that host", async () => {
+    const dir = scaffold();
+    mkdirSync(join(dir, "hosts", "vetra"), { recursive: true });
+    writeFileSync(
+      join(dir, "hosts", "vetra", "host.js"),
+      "export default {};\n",
     );
+
+    await applyProjectCustomizations({ name: "my-package", projectDir: dir });
+
+    const config = JSON.parse(
+      readFileSync(join(dir, "powerhouse.config.json"), "utf8"),
+    ) as { vetra: unknown };
+    expect(config.vetra).toEqual({
+      connectPort: deriveProjectPorts("my-package").vetraConnectPort,
+    });
   });
 
   it("gives two differently named projects different ports", async () => {
@@ -111,25 +124,21 @@ describe("buildPowerhouseConfigTemplate", () => {
     const config = JSON.parse(raw) as {
       studio: { port: number };
       reactor: { port: number };
-      vetra: { connectPort: number };
     };
     const expected = deriveProjectPorts("my-package");
     expect(config.reactor.port).toBe(expected.switchboardPort);
     expect(config.studio.port).toBe(expected.studioPort);
-    expect(config.vetra.connectPort).toBe(expected.vetraConnectPort);
+    expect(config).not.toHaveProperty("vetra");
   });
 
-  it("keeps the remote drive alongside connectPort", async () => {
+  it("emits the remote drive url, and no port beside it", async () => {
     const raw = await buildPowerhouseConfigTemplate({
       name: "my-package",
       remoteDrive: "http://example.test/d/vetra-abc",
     });
-    const config = JSON.parse(raw) as {
-      vetra: { connectPort: number; driveId: string; driveUrl: string };
-    };
-    expect(config.vetra.driveId).toBe("vetra-abc");
-    expect(config.vetra.connectPort).toBe(
-      deriveProjectPorts("my-package").vetraConnectPort,
-    );
+    const config = JSON.parse(raw) as { vetra: unknown };
+    expect(config.vetra).toEqual({
+      driveUrl: "http://example.test/d/vetra-abc",
+    });
   });
 });

@@ -143,16 +143,13 @@ const telemetrySchema = z.object({
 
 /**
  * `ACCESS`. A string refined rather than an enum, so an unknown value is
- * refused by name, and `members` points at what replaces it.
+ * refused by name.
  */
 const accessModeSchema = z.string().superRefine((mode, ctx) => {
   if (mode === "open" || mode === "licensed") return;
   ctx.addIssue({
     code: "custom",
-    message:
-      mode === "members"
-        ? "ACCESS=members is not supported; use ACCESS=licensed with Vetra's gate"
-        : `ACCESS=${mode} is not supported: use ACCESS=open (the default) or ACCESS=licensed`,
+    message: `ACCESS=${mode} is not supported: use ACCESS=open (the default) or ACCESS=licensed`,
   });
 });
 
@@ -187,11 +184,14 @@ const authSchema = z.object({
   wsRecheckMs: nonNegative.optional(),
   /** The first verified caller becomes the admin of a host with none. */
   ownerClaim: z.boolean().default(false),
-  /** Keep verified credentials, and rely on them while Renown is away. */
+  /** No longer read (warned when on): Renown's answers are always kept. */
   offlineCredentials: z.boolean().default(false),
+  /** Renown unreachable: refuse a credential with no record and no answer. */
+  refuseUnseenOffline: z.boolean().default(false),
   access: accessSchema.prefault({}),
   renown: z
     .object({
+      /** No longer read (warned): records, then Renown, decide. */
       source: z.enum(["self", "remote", "kept"]).optional(),
       url: z.string().min(1).optional(),
       switchboardUrl: z.string().min(1).optional(),
@@ -243,13 +243,9 @@ const privacySchema = z.object({
 const featuresSchema = z.object({
   /** Unset: on unless a plugin composition leaves it out. */
   mcp: z.boolean().optional(),
-  /** Unset: the config file's `workflows.enabled`, then off. */
+  /** Unset: off unless a plugin composition lists it. */
   workflows: z.boolean().optional(),
   documentModelSubgraphs: z.boolean().default(true),
-  /** Unset: the plugin host runs the default composition, the subsystems the
-   * switches above turn on. `true`: it runs the declared composition, where a
-   * plugin's presence is the switch. `false`: the deprecated inline boot. */
-  pluginHost: z.boolean().optional(),
   privacy: privacySchema.prefault({}),
 });
 
@@ -281,6 +277,9 @@ const attachmentsSchema = z.object({
 
 const identitySchema = z.object({
   keypairPath: z.string().optional(),
+  /** The Renown user file (`.renown.json`); unset: in the `.ph` of
+   * `storage.userDataDir` when that is set, else `<cwd>/.ph/.renown.json`. */
+  storagePath: z.string().optional(),
   requireExisting: z.boolean().optional(),
   baseUrl: z.string().optional(),
 });

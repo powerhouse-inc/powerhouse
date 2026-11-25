@@ -1,15 +1,19 @@
-import { RenownBuilder, type IRenown } from "@renown/sdk/node";
+import type { IRenown } from "@renown/sdk/node";
 
 // Singleton instance of Renown
 let renownInstance: IRenown | null = null;
 
 /**
- * Get or create the Renown instance
- * Uses PH_RENOWN_PRIVATE_KEY env var if set, otherwise generates/loads from file
+ * The Renown login in the home folder (`~/.ph/identities/renown`), the same
+ * for every project. PH_RENOWN_PRIVATE_KEY still overrides its key.
  */
 export async function getRenown(baseUrl?: string): Promise<IRenown> {
   if (!renownInstance) {
-    renownInstance = await new RenownBuilder("ph-cli", { baseUrl }).build();
+    const { homeLoginRenown } = await import("@renown/sdk/identity");
+    renownInstance = await homeLoginRenown({
+      appName: "ph-cli",
+      ...(baseUrl ? { baseUrl } : {}),
+    });
   }
   return renownInstance;
 }

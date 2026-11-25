@@ -12,9 +12,6 @@ export interface IProcessorHostModule extends IReactorProcessorHostModuleBase {
   attachments: IAttachmentClient;
 }
 
-/** @deprecated Use `IProcessorHostModule`. */
-export type IReactorProcessorHostModule = IProcessorHostModule;
-
 /** Takes the host module and builds processor factories using its context. */
 export type ProcessorFactoryBuilder =
   BaseProcessorFactoryBuilder<IProcessorHostModule>;

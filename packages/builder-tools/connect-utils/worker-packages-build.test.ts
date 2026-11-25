@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   prebuildWorkerPackages,
   WORKER_PACKAGES_MANIFEST,
+  workerLocalPackages,
   type WorkerPackageManifestEntry,
 } from "./worker-packages-build.js";
 
@@ -111,6 +112,51 @@ describe("prebuildWorkerPackages", () => {
   );
 
   it(
+    "builds a library package from its ./document-models export",
+    { timeout: 120_000 },
+    async () => {
+      writeFileSync(
+        join(projectDir, "package.json"),
+        JSON.stringify({ name: "the-project" }),
+      );
+      const lib = join(projectDir, "node_modules/@x/lib");
+      mkdirSync(join(lib, "dist/document-models"), { recursive: true });
+      writeFileSync(
+        join(lib, "package.json"),
+        JSON.stringify({
+          name: "@x/lib",
+          version: "2.0.0",
+          exports: {
+            "./document-models": {
+              types: "./dist/document-models/index.d.ts",
+              import: "./dist/document-models/index.js",
+            },
+          },
+        }),
+      );
+      writeFileSync(
+        join(lib, "dist/document-models/index.js"),
+        `export const reducer = () => "lib";\n`,
+      );
+      const errorRef: { message?: string } = {};
+      const built = await prebuildWorkerPackages({
+        dirname: projectDir,
+        packages: ["@x/lib"],
+        outDir,
+        errorRef,
+      });
+      expect(errorRef.message).toBeUndefined();
+      expect(built).toEqual([
+        {
+          name: "@x/lib",
+          version: "2.0.0",
+          file: workerPackageFileName("@x/lib"),
+        },
+      ]);
+    },
+  );
+
+  it(
     "externalizes a precomputed safe vendor subset without walking the vendor",
     { timeout: 120_000 },
     async () => {
@@ -134,4 +180,38 @@ describe("prebuildWorkerPackages", () => {
       expect(code).toContain("../../__vendor__/zod.js");
     },
   );
+});
+
+describe("workerLocalPackages", () => {
+  let projectDir: string;
+  const packages = [
+    { packageName: "@x/lib", provider: "local" },
+    { packageName: "@x/remote", provider: "registry" },
+  ];
+
+  beforeEach(() => {
+    projectDir = mkdtempSync(join(tmpdir(), "ph-worker-local-packages-"));
+    writeProject(projectDir, `export const reducer = 1;\n`);
+  });
+
+  afterEach(() => {
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it("names the configured local packages and the project that ships models", () => {
+    expect(workerLocalPackages(projectDir, packages)).toEqual([
+      "@x/lib",
+      "fixture-pkg",
+    ]);
+  });
+
+  it("leaves the project out, even when configured, for a server that serves it live", () => {
+    expect(
+      workerLocalPackages(
+        projectDir,
+        [...packages, { packageName: "fixture-pkg", provider: "local" }],
+        { own: false },
+      ),
+    ).toEqual(["@x/lib"]);
+  });
 });

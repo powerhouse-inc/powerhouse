@@ -21,14 +21,13 @@ function stubLogger(): ILogger {
   return logger as unknown as ILogger;
 }
 
-const ENV = ["PH_REACTOR_DATABASE_URL", "FEATURE_PLUGIN_HOST_ENABLED"];
+const ENV = ["PH_REACTOR_DATABASE_URL"];
 let previousEnv: (readonly [string, string | undefined])[] = [];
 let tempRoots: string[] = [];
 let running: Switchboard[] = [];
 
 beforeEach(() => {
   previousEnv = ENV.map((name) => [name, process.env[name]] as const);
-  delete process.env.FEATURE_PLUGIN_HOST_ENABLED;
 });
 
 afterEach(async () => {

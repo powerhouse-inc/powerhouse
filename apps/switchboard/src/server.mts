@@ -48,7 +48,6 @@ import {
   telemetryDir,
   type CanonicalDocumentId,
   type ClientInitializerDependencies,
-  type CredentialVerifier,
   type DocumentPermissionDatabase,
   type IPackageLoader,
   type PgliteFactory,
@@ -63,7 +62,7 @@ import {
   type PGliteLike,
 } from "@powerhousedao/reactor-api/pglite-node";
 import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
-import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
+import type { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
 import { createAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import {
   createReactorDriveWriteStrategy,
@@ -80,9 +79,7 @@ import {
 } from "@powerhousedao/reactor-drive/subgraph";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import {
-  createLocalCredentialVerifier,
   RENOWN_READ_MODEL_SUBGRAPH,
-  type CredentialCheck,
   type IRenown,
   type SwitchboardRequestFn,
 } from "@renown/sdk/node";
@@ -96,7 +93,6 @@ import net from "node:net";
 import path from "path";
 import { Pool } from "pg";
 import type { ViteDevServer } from "vite";
-import { registerAttachmentRoutes } from "./attachments/index.js";
 import {
   parseOAuthApps,
   type OAuthAppConfig,
@@ -106,17 +102,12 @@ import {
   registerAttachmentReferenceReadModelOnModule,
 } from "./attachment-reference-read-model.mjs";
 import { installFatalErrorShutdown, raiseSigterm } from "./fatal-shutdown.mjs";
-import {
-  resolvePrivacy,
-  startPrivacy,
-  type ResolvedPrivacy,
-  type RunningPrivacy,
-} from "./privacy.mjs";
+import type { RunningPrivacy } from "./privacy.mjs";
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import {
+  configFileWorkflowsNotice,
   createSwitchboardPluginHost,
   defaultSwitchboardPlugins,
-  type SwitchboardPluginHost,
 } from "./plugin-host.mjs";
 import {
   assertProjectionWorkerSupported,
@@ -143,8 +134,6 @@ import {
   composeWorkflowRuntime,
   modelManifestSource,
   assertWorkflowPackageLoadable,
-  isWorkflowSingletonConflict,
-  retryWorkflowSingleton,
   workflowSingletonLossHandler,
   type WorkflowSingletonRetry,
   type ComposedWorkflowRuntime,
@@ -236,7 +225,21 @@ function warnIgnoredFlushInterval(logger: ILogger): void {
  * the port is free, false if the OS reports it in use. Any other error is
  * surfaced so we don't silently mask real issues (permissions, bad host, …).
  */
-export async function isPortAvailable(port: number): Promise<boolean> {
+export async function isPortAvailable(
+  port: number,
+  host?: string,
+): Promise<boolean> {
+  // The host the server binds, first: on Windows a wildcard bind succeeds
+  // beside another process's listener on one address (127.0.0.1).
+  if (host !== undefined && host !== "::" && host !== "0.0.0.0") {
+    let free: boolean;
+    try {
+      free = await probePort(port, host);
+    } catch (error) {
+      throw portProbeError(port, error);
+    }
+    if (!free) return false;
+  }
   try {
     // `::` is dual-stack on most systems, so it sees IPv6 and IPv4 listeners.
     return await probePort(port, "::");
@@ -310,8 +313,6 @@ function readConfigOAuthApps(
   );
 }
 
-// An unreadable config file means "not configured", not a boot failure:
-// workflows are opt-in.
 /** `PH_KEYFRAMES` (or a caller's layer) wins whole over the project config. */
 export function resolveKeyframes(
   configured: SwitchboardConfig["storage"]["keyframes"],
@@ -324,24 +325,17 @@ export function resolveKeyframes(
     : parseKeyframeSettings(fromFile, `${configPath} reactor.keyframes`);
 }
 
-function readConfigWorkflowsEnabled(configPath: string): boolean {
-  try {
-    return getConfig(configPath).workflows?.enabled ?? false;
-  } catch {
-    return false;
-  }
-}
-
 async function resolveServerPort(
   requested: number,
   strictPort: boolean,
   logger: ILogger,
+  host?: string,
 ): Promise<number> {
   // 0 asks the OS for a free port at bind time: nothing to probe.
   if (requested === 0 || strictPort) return requested;
   for (let i = 0; i < PORT_FALLBACK_ATTEMPTS; i++) {
     const candidate = requested + i;
-    if (await isPortAvailable(candidate)) {
+    if (await isPortAvailable(candidate, host)) {
       if (candidate !== requested) {
         logger.info(
           `Port ${requested} is in use. Falling back to port ${candidate}.`,
@@ -558,40 +552,32 @@ async function initServer(
   } = options;
 
   // R2 plugin pipeline: the carved subsystems run as built-in plugins through
-  // the hook moments marked along this function. `features.pluginHost: true`
-  // boots the declared composition; unset boots the default one, built from
-  // the switches startSwitchboard resolved, so the same subsystems run as on
-  // the inline path. Only an explicit false (FEATURE_PLUGIN_HOST_ENABLED=false)
-  // still runs the inline path below, which is deprecated.
-  const pluginHost: SwitchboardPluginHost | null =
-    config.features.pluginHost === false
-      ? null
-      : createSwitchboardPluginHost(
-          {
-            logger,
-            options: options as unknown as Record<string, unknown>,
-            config,
-            renown,
-          },
-          config.features.pluginHost === true
-            ? options.pluginComposition
-            : defaultSwitchboardPlugins({
-                mcp: options.mcp !== false,
-                workflows: options.workflows?.enabled === true,
-              }),
-        );
-  if (pluginHost) {
-    options = await pluginHost.transformOptions(options);
-    // Presence is activation: whatever no plugin (or explicit option) set
-    // stays OFF. The mcp/workflows plugins set these true at
-    // transformServerOptions; their absence must actually deactivate. The
-    // default composition arrives with both already resolved.
-    options.mcp ??= false;
-    options.workflows = {
-      ...options.workflows,
-      enabled: options.workflows?.enabled === true,
-    };
-  }
+  // the hook moments marked along this function. A caller's
+  // `pluginComposition` is the declared composition; without one the default
+  // composition boots, built from the switches startSwitchboard resolved.
+  const pluginHost = createSwitchboardPluginHost(
+    {
+      logger,
+      options: options as unknown as Record<string, unknown>,
+      config,
+      renown,
+    },
+    options.pluginComposition ??
+      defaultSwitchboardPlugins({
+        mcp: options.mcp !== false,
+        workflows: options.workflows?.enabled === true,
+      }),
+  );
+  options = await pluginHost.transformOptions(options);
+  // Presence is activation: whatever no plugin (or explicit option) set
+  // stays OFF. The mcp/workflows plugins set these true at
+  // transformServerOptions; their absence must actually deactivate. The
+  // default composition arrives with both already resolved.
+  options.mcp ??= false;
+  options.workflows = {
+    ...options.workflows,
+    enabled: options.workflows?.enabled === true,
+  };
   logger.level = config.logLevel;
   const dbPath = config.storage.readModel.url;
   const reactorDbUrl = config.storage.reactor.url;
@@ -630,7 +616,7 @@ async function initServer(
   // stale lock and WAL temp files, then detect PG_VERSION and migrate or
   // warn. Under PH_FORCE_PG_VERSION the dirs are wiped instead.
   // One process per PGlite store, before anything (the pre-flight included)
-  // touches it: hosts share one .ph tree, so a second `ph run …` / `ph vetra`
+  // touches it: hosts share one .ph tree, so a second `ph run …` / `ph dev`
   // in the same project must fail here instead of tearing the store.
   if (!inMemory) acquireStoreLocks(pgliteDirs);
   warnIgnoredFlushInterval(logger);
@@ -680,7 +666,6 @@ async function initServer(
       projectionWorker: false,
       reactorDbUrl,
       authEnforcement: config.protocol.featureFlags.authEnforcement,
-      renownSource: renownConfig.source,
     }).at(0);
     if (issue) throw new Error(issue);
   }
@@ -770,12 +755,8 @@ async function initServer(
   // Resolved in startSwitchboard, which owns the flag mechanism; initServer
   // only reads the answer.
   const workflowsEnabled = options.workflows?.enabled === true;
-  // Resolved before the reactor is built: a bad secret fails the boot early.
-  // Under the plugin host the privacy plugin owns this resolve (same
-  // fail-fast timing, in transformServerOptions above).
-  const privacyConfig = pluginHost
-    ? ({ enabled: false } as ResolvedPrivacy)
-    : resolvePrivacy(options.privacy, {});
+  // The privacy plugin resolved its config in transformServerOptions above,
+  // before the reactor is built: a bad secret fails the boot early.
 
   // Through the package manager like any other, so one route carries the
   // models, the subgraphs and the piece.
@@ -803,8 +784,6 @@ async function initServer(
   const memoryTelemetry = createMemoryTelemetry(config, reactorLogger);
   // The models workers and workflow pieces import; only on a reactor built here.
   let workerModels: ModelManifestSource | undefined;
-  // Bound once the api serves the renown read model; see `localCredentialCheck`.
-  let localRenownRequest: SwitchboardRequestFn | undefined;
   const initializeClient = async (
     documentModels: DocumentModelModule[],
     {
@@ -916,24 +895,9 @@ async function initServer(
       reactorBuilder,
     );
 
-    // Subpath import keeps vetra's React editors out of the node bundle.
-    const vetraDocumentModels: DocumentModelModule[] = dev
-      ? (
-          Object.values(
-            await import("@powerhousedao/vetra/document-models"),
-          ) as unknown[]
-        ).filter(
-          (m): m is DocumentModelModule =>
-            typeof m === "object" &&
-            m !== null &&
-            "documentModel" in m &&
-            "reducer" in m,
-        )
-      : [];
-
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
       signalHandlers: options.signalHandlers,
-      documentModels: [...documentModels, ...vetraDocumentModels],
+      documentModels,
       upgradeManifests,
       // Always: an explicit undoV3 false enables nothing but must still reach
       // the reactor.
@@ -953,25 +917,15 @@ async function initServer(
         config.protocol.createSignaturePolicy,
         { hasSigner: renown !== null, logger },
       ),
+      // Renown at its URL, for workers too; F4 moves the reactor onto the
+      // door's verifier.
       trustPolicy: reactorFeatureFlags.authEnforcement
         ? await getRenownTrustPolicyConfig(
-            renownConfig.source === "self"
-              ? {
-                  source: "self",
-                  request: (query, variables) =>
-                    localRenownRequest
-                      ? localRenownRequest(query, variables)
-                      : Promise.reject(
-                          new Error(
-                            "The local renown read model is not bound yet",
-                          ),
-                        ),
-                }
-              : {
-                  source: "remote",
-                  renownUrl: renownConfig.url,
-                  switchboardUrl: renownConfig.switchboardUrl,
-                },
+            {
+              source: "remote",
+              renownUrl: renownConfig.url,
+              switchboardUrl: renownConfig.switchboardUrl,
+            },
             renown,
           )
         : getDelegationTrustPolicyConfig(renown),
@@ -1208,18 +1162,16 @@ async function initServer(
     }
   };
 
-  // Reading credentials from this switchboard's own reactor needs the GraphQL
-  // manager, which only exists once the api is up: bind the check afterwards.
-  let localCredentialCheck: CredentialCheck | undefined;
-  const verifyCredential: CredentialVerifier | undefined =
-    renownConfig.source === "self"
-      ? (params) =>
-          localCredentialCheck
-            ? localCredentialCheck(params)
-            : Promise.reject(
-                new Error("The local renown read model is not bound yet"),
-              )
-      : undefined;
+  // Whether this switchboard serves the renown read model is known once the
+  // api is up; a credential check that reaches Renown before then waits.
+  let settleInProcessRenown: (
+    request: SwitchboardRequestFn | undefined,
+  ) => void = () => {};
+  const inProcessRenown = new Promise<SwitchboardRequestFn | undefined>(
+    (resolve) => {
+      settleInProcessRenown = resolve;
+    },
+  );
 
   let defaultDriveUrl: undefined | string = undefined;
 
@@ -1242,12 +1194,6 @@ async function initServer(
       reportError,
     });
   }
-
-  // Vetra is builder-only and bundled (not CDN-loadable); lazy-load its
-  // processor only in dev, where builder tooling runs (e.g. `ph vetra`).
-  const vetraProcessorFactory = dev
-    ? (await import("@powerhousedao/vetra/processors")).processorFactory
-    : undefined;
 
   // get paths to local document models
   if (!options.disableLocalPackages) {
@@ -1338,9 +1284,6 @@ async function initServer(
       packages: packages,
       processorConfig: options.processorConfig,
       ...(renown ? { hostSigner: renown.signer } : {}),
-      processors: vetraProcessorFactory
-        ? { "@powerhousedao/vetra": [vetraProcessorFactory] }
-        : {},
       configFile: configPath,
       server: {
         basePath: config.server.basePath,
@@ -1369,10 +1312,10 @@ async function initServer(
       hostValidation: options.hostValidation,
       // The final update before readiness picks up everything added until then.
       hostRefreshesSupergraph: true,
-      // Already resolved for this reactor's own identity; reuse it so an
-      // invalid RENOWN_SOURCE is reported once, not once per resolution.
+      // Already resolved for this reactor's own identity; reuse it so a
+      // RENOWN_SOURCE still set is reported once, not once per resolution.
       renown: renownConfig,
-      verifyCredential,
+      inProcessRenown: () => inProcessRenown,
     },
     "switchboard",
   );
@@ -1382,66 +1325,57 @@ async function initServer(
   apiRef.current = api;
   const serverPort = api.port;
 
-  if (renownConfig.source === "self") {
-    const { graphqlManager: manager } = api;
+  // A switchboard serving the renown read model (a loaded package's) is
+  // Renown: credential checks ask that read model in process.
+  const { graphqlManager: manager } = api;
+  if (manager.getSubgraphByName(RENOWN_READ_MODEL_SUBGRAPH)) {
     // Credentials are checked from the first request, before the router update
-    // that readiness waits for: a package's read model gets its handler now.
-    if (
-      !manager.hasSubgraphHandler(RENOWN_READ_MODEL_SUBGRAPH) &&
-      manager.getSubgraphByName(RENOWN_READ_MODEL_SUBGRAPH)
-    ) {
+    // that readiness waits for: the read model gets its handler now.
+    if (!manager.hasSubgraphHandler(RENOWN_READ_MODEL_SUBGRAPH)) {
       try {
         await manager.updateRouter(true);
       } catch (error) {
+        settleInProcessRenown(undefined);
         await abortBoot(api);
         throw error;
       }
     }
-    // Refuse to serve rather than 401 every request: the read model comes from
-    // a loaded package, so a missing one is a deployment mistake.
     if (!manager.hasSubgraphHandler(RENOWN_READ_MODEL_SUBGRAPH)) {
+      settleInProcessRenown(undefined);
       await abortBoot(api);
       throw new Error(
-        'Renown credential verification is set to "self" (auth.renown.source ' +
-          `or RENOWN_SOURCE) but no loaded package serves the ` +
-          `"${RENOWN_READ_MODEL_SUBGRAPH}" subgraph. Install one ` +
-          "(@powerhousedao/renown-package) or set RENOWN_SOURCE=remote.",
+        `A loaded package registers the "${RENOWN_READ_MODEL_SUBGRAPH}" subgraph, but it has no handler: credentials cannot be checked against it.`,
       );
     }
-    localRenownRequest = (query, variables) =>
-      manager.executeSubgraphQuery(
-        RENOWN_READ_MODEL_SUBGRAPH,
-        query,
-        variables,
-      );
-    localCredentialCheck = createLocalCredentialVerifier(localRenownRequest, {
-      onError: (error) =>
-        logger.error("Renown read model query failed: @error", error),
-    });
+    const request: SwitchboardRequestFn = async (query, variables) => {
+      try {
+        return await manager.executeSubgraphQuery(
+          RENOWN_READ_MODEL_SUBGRAPH,
+          query,
+          variables,
+        );
+      } catch (error) {
+        logger.error("Renown read model query failed: @error", error);
+        throw error;
+      }
+    };
+    settleInProcessRenown(request);
     logger.info(
-      "Renown credentials will be verified against this switchboard's own " +
-        "renown read model",
+      "This switchboard serves the renown read model: credentials are checked " +
+        "against it in process",
     );
+  } else {
+    settleInProcessRenown(undefined);
   }
 
   // R2.3: the attachments plugin owns the route mount + service creation at
-  // onHttpMounting; the deprecated inline boot runs them here.
-  let attachmentService:
+  // onHttpMounting.
+  pluginHost.ctx.api = api;
+  pluginHost.ctx.serverPort = serverPort;
+  await pluginHost.observe("onHttpMounting");
+  const attachmentService = pluginHost.ctx.attachmentService as
     | ReturnType<typeof createRemoteAttachmentService>
     | undefined;
-  if (pluginHost) {
-    pluginHost.ctx.api = api;
-    pluginHost.ctx.serverPort = serverPort;
-    await pluginHost.observe("onHttpMounting");
-    attachmentService = pluginHost.ctx.attachmentService as
-      | ReturnType<typeof createRemoteAttachmentService>
-      | undefined;
-  } else {
-    registerAttachmentRoutes(api, { config: config.attachments });
-    attachmentService = createRemoteAttachmentService(
-      deriveAttachmentServiceConfig(options, serverPort, renown),
-    );
-  }
 
   if (process.env.SENTRY_DSN) {
     // Register Sentry error handler after all routes are established.
@@ -1454,20 +1388,17 @@ async function initServer(
   const { client, read, write, graphqlManager, documentModelRegistry } = api;
 
   const lateSubgraphs: Promise<unknown>[] = [];
-  if (pluginHost) {
-    pluginHost.ctx.client = client;
-    pluginHost.ctx.read = read;
-    pluginHost.ctx.write = write;
-    pluginHost.ctx.graphqlManager = graphqlManager;
-    pluginHost.ctx.lateSubgraphs = lateSubgraphs;
-    pluginHost.ctx.reactorClientModule = options.reactor ?? ownedReactorModule;
-    await pluginHost.observe("onReactorReady");
-  }
+  pluginHost.ctx.client = client;
+  pluginHost.ctx.read = read;
+  pluginHost.ctx.write = write;
+  pluginHost.ctx.graphqlManager = graphqlManager;
+  pluginHost.ctx.lateSubgraphs = lateSubgraphs;
+  pluginHost.ctx.reactorClientModule = options.reactor ?? ownedReactorModule;
+  await pluginHost.observe("onReactorReady");
 
   // The workflow runtime is a switchboard component: composed from what the
-  // api handed back, registered like any other late subgraph.
-  let workflows: ComposedWorkflowRuntime | undefined;
-  let workflowsRetry: WorkflowSingletonRetry | undefined;
+  // api handed back, registered like any other late subgraph. The workflows
+  // plugin drives both closures at onSubgraphsRegistering.
   const composeWorkflows = () =>
     composeWorkflowRuntime({
       reactorClient: client,
@@ -1536,127 +1467,37 @@ async function initServer(
         );
       });
   };
-  if (!pluginHost && workflowsEnabled) {
-    try {
-      workflows = await composeWorkflows();
-    } catch (error) {
-      // Without the claim this host must not run workflows, but everything
-      // else it serves still works, so it boots without the runtime.
-      if (!isWorkflowSingletonConflict(error)) throw error;
-      logger.warn(
-        `Workflows are enabled but another live process ("${error.owner ?? "unknown"}") ` +
-          `holds the workflow singleton until ${error.expiresAt ?? "unknown"}. ` +
-          "This Switchboard has booted WITHOUT the workflow runtime: no " +
-          "trigger of any kind fires here, and the workflow GraphQL face is " +
-          "absent. Everything else serves normally. Stop the other owner, or " +
-          "set PH_WORKFLOWS_SINGLETON_OWNER to the same stable name on the " +
-          "slot that owns workflows. This Switchboard retries the claim and " +
-          "starts workflows once the lease comes free.",
-      );
-      workflowsRetry = retryWorkflowSingleton({
-        compose: composeWorkflows,
-        onComposed: async (composed) => {
-          try {
-            await composed.start();
-          } catch (error) {
-            // Hands the lease back so a retry or another replica can claim it.
-            try {
-              await composed.stop();
-            } catch (stopError) {
-              logger.error(
-                "Stopping the late workflow runtime failed: @error",
-                stopError,
-              );
-            }
-            throw error;
-          }
-          logger.info("Workflow runtime started");
-          workflows = composed;
-          await registerWorkflowSubgraph(composed);
-          // Past boot nothing else rebuilds the router, so a subgraph
-          // registered now is not served until this runs.
-          try {
-            await graphqlManager.updateRouter(true);
-          } catch (error) {
-            reportFailure(
-              reporting,
-              error,
-              "Mounting the late workflow-runtime subgraph failed: @error",
-            );
-          }
-        },
-        logger,
-      });
-    }
-  }
-  if (workflows) {
-    lateSubgraphs.push(registerWorkflowSubgraph(workflows));
-    const runtime = workflows;
-    await withProgressHeartbeat(
-      { logger, label: "Starting the workflow runtime" },
-      () => runtime.start(),
-    );
-    logger.info("Workflow runtime started");
-    api.inspection?.facts.setWorkflows(true);
-  }
 
   // Plugins register their subgraphs here (push into lateSubgraphs, or mount
-  // directly like privacy). The call site carries the inline privacy block's
-  // failure semantics: stop workflows, abort the partial boot, rethrow.
-  if (pluginHost) {
-    pluginHost.ctx.workflowsOrchestration = {
-      enabled: options.workflows?.enabled === true,
-      composeWorkflows,
-      registerWorkflowSubgraph,
-      updateRouter: () => graphqlManager.updateRouter(true),
-      reportMountFailure: (error: unknown) =>
-        reportFailure(
-          reporting,
-          error,
-          "Mounting the late workflow-runtime subgraph failed: @error",
-        ),
-      setWorkflowsFact: () => api.inspection?.facts.setWorkflows(true),
-    };
-    try {
-      await pluginHost.observe("onSubgraphsRegistering");
-    } catch (error) {
-      await (
-        pluginHost.ctx.workflowsRetry as WorkflowSingletonRetry | undefined
-      )?.stop();
-      await (
-        pluginHost.ctx.workflows as ComposedWorkflowRuntime | undefined
-      )?.stop();
-      // Privacy starts ahead of workflows here, so a workflows failure finds
-      // it running.
-      await (pluginHost.ctx.privacy as RunningPrivacy | undefined)?.stop();
-      await abortBoot(api);
-      throw error;
-    }
-  }
-
-  let privacy: RunningPrivacy | undefined;
-  if (!pluginHost && privacyConfig.enabled) {
-    // The caller's reactor signs with a signer only the caller knows.
-    const signer = options.reactor
-      ? options.privacy?.signer
-      : (options.privacy?.signer ?? renown?.signer);
-    try {
-      privacy = await startPrivacy({
-        config: privacyConfig,
-        reactorModule: (options.reactor ?? ownedReactorModule)?.reactorModule,
-        signer,
-        authorizationService: api.authorizationService,
-        documentPermissionService: api.documentPermissionService,
-        graphqlManager,
-        readClient: read,
-        logger: logger.child(["privacy"]),
-      });
-    } catch (error) {
-      await workflowsRetry?.stop();
-      await workflows?.stop();
-      await abortBoot(api);
-      throw error;
-    }
+  // directly like privacy). A failure stops what already started, aborts the
+  // partial boot and rethrows.
+  pluginHost.ctx.workflowsOrchestration = {
+    enabled: options.workflows?.enabled === true,
+    composeWorkflows,
+    registerWorkflowSubgraph,
+    updateRouter: () => graphqlManager.updateRouter(true),
+    reportMountFailure: (error: unknown) =>
+      reportFailure(
+        reporting,
+        error,
+        "Mounting the late workflow-runtime subgraph failed: @error",
+      ),
+    setWorkflowsFact: () => api.inspection?.facts.setWorkflows(true),
+  };
+  try {
+    await pluginHost.observe("onSubgraphsRegistering");
+  } catch (error) {
+    await (
+      pluginHost.ctx.workflowsRetry as WorkflowSingletonRetry | undefined
+    )?.stop();
+    await (
+      pluginHost.ctx.workflows as ComposedWorkflowRuntime | undefined
+    )?.stop();
+    // Privacy starts ahead of workflows here, so a workflows failure finds
+    // it running.
+    await (pluginHost.ctx.privacy as RunningPrivacy | undefined)?.stop();
+    await abortBoot(api);
+    throw error;
   }
 
   // Ahead of the api: the runtime's store lives in the read-model database
@@ -1680,10 +1521,7 @@ async function initServer(
       stopCatchUpLoad();
       stopTimingLog();
       memoryTelemetry.stop();
-      if (pluginHost) await pluginHost.observe("onShutdown");
-      await privacy?.stop();
-      await workflowsRetry?.stop();
-      await workflows?.stop();
+      await pluginHost.observe("onShutdown");
       await api.dispose();
     })());
   apiRef.current = { dispose: drainApi };
@@ -1869,7 +1707,7 @@ async function initServer(
 
   // Drives exist (default created, remotes attached) — the barrier after the
   // future core drive seeding (R2 step 2 replaces the two blocks above).
-  if (pluginHost) await pluginHost.observe("onDrivesReady");
+  await pluginHost.observe("onDrivesReady");
 
   return {
     defaultDriveUrl,
@@ -1879,16 +1717,13 @@ async function initServer(
     attachmentReferenceProjection: api.attachmentReferenceProjection,
     // Read live: losing the singleton turns it unavailable.
     get workflowTriggers() {
-      return (
-        workflows ??
-        (pluginHost?.ctx.workflows as ComposedWorkflowRuntime | undefined)
-      )?.triggers;
+      return (pluginHost.ctx.workflows as ComposedWorkflowRuntime | undefined)
+        ?.triggers;
     },
     workflowsEnabled,
     modelManifest: () => workerModels?.modelManifest() ?? [],
     privacy: (() => {
-      const running =
-        privacy ?? (pluginHost?.ctx.privacy as RunningPrivacy | undefined);
+      const running = pluginHost.ctx.privacy as RunningPrivacy | undefined;
       return running ? { erasure: running.erasure } : undefined;
     })(),
     mcpEnabled: options.mcp !== false,
@@ -1951,23 +1786,27 @@ export const startSwitchboard = async (
     config.server.port,
     config.server.strictPort,
     logger,
+    config.server.host,
   );
 
   const options = serverOptionsOf(config, deps);
-  // CLASSIC resolution of the carved subsystems' switches, for the inline
-  // path and for the default composition, which lists the plugins these turn
-  // on (initServer). Under a declared composition the plugins own them
+  // CLASSIC resolution of the carved subsystems' switches, for the default
+  // composition, which lists the plugins these turn on (initServer). Under a
+  // declared composition (`deps.pluginComposition`) the plugins own them
   // (presence is activation): an ABSENT plugin can actually deactivate its
   // subsystem (initServer normalizes unset values to off after
   // transformServerOptions). An explicit config value always wins on every
   // path. The inspection switch is a core capability (not carved).
-  if (config.features.pluginHost !== true) {
+  if (options.pluginComposition === undefined) {
     options.mcp = config.features.mcp ?? true;
-    options.workflows = {
-      enabled:
-        config.features.workflows ?? readConfigWorkflowsEnabled(configPath),
-    };
+    options.workflows = { enabled: config.features.workflows ?? false };
   }
+  const workflowsNotice = configFileWorkflowsNotice({
+    declaredComposition: options.pluginComposition !== undefined,
+    workflows: config.features.workflows,
+    configFileEnabled: fileConfig.workflows?.enabled,
+  });
+  if (workflowsNotice) logger.warn(workflowsNotice);
   // This switchboard's own identity authenticates against the same Renown
   // instance it verifies incoming credentials against, unless told otherwise.
   const renownConfig = resolveRenownConfig(
@@ -1981,7 +1820,9 @@ export const startSwitchboard = async (
     baseUrl: options.identity?.baseUrl ?? renownConfig.url,
     // Under a relocated .ph tree the identity lives in the user's .ph tree
     // with the stores, never in the install dir. Unset: unchanged — renown's
-    // own `<cwd>/.ph/.keypair.json` default applies.
+    // own `<cwd>/.ph/.keypair.json` default applies. `storagePath` (the
+    // Renown user file) passes through as given; initRenown defaults it the
+    // same way.
     keypairPath:
       options.identity?.keypairPath ??
       (userDataDir

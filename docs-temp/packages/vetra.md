@@ -143,14 +143,14 @@ graph TD
 
     vetra --> connect["apps/connect<br/>hosts Vetra Studio"]
     vetra --> sb["apps/switchboard<br/>runs the processors server-side"]
-    vetra --> phcli["ph-cli<br/>ph vetra"]
+    vetra --> phcli["ph-cli<br/>ph dev"]
 ```
 
 | Consumer | How |
 |---|---|
 | `apps/connect` | Hosts Vetra Studio — the drive app and editors run inside Connect |
 | `apps/switchboard` | Registers the Vetra document models and runs the processors on the server |
-| `clis/ph-cli` | `ph vetra` boots the studio; `ph generate` shares the codegen path |
+| `clis/ph-cli` | `ph dev` boots the studio; `ph generate` shares the codegen path |
 
 ### The relationship to `codegen` and `ph-cli`
 

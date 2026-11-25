@@ -37,13 +37,13 @@ afterEach(() => {
   }
 });
 
-/** `ph vetra` keeps one Project for the whole process, so the tests below reuse
+/** `ph dev` keeps one Project for the whole process, so the tests below reuse
  * one instance — a fresh Project per run never goes stale and would pass unfixed. */
 function buildLongLivedProject() {
   return new Project(DEFAULT_PROJECT_OPTIONS);
 }
 
-/** Stands in for one `ph vetra` codegen run: scaffold the reducer file and flush
+/** Stands in for one `ph dev` codegen run: scaffold the reducer file and flush
  * it, leaving the SourceFile cached on the long-lived Project. */
 function scaffoldAndSave(project: Project, filePath: string) {
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(

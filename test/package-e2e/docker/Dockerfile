@@ -111,8 +111,8 @@ ARG PH_CONNECT_BASE_PATH="/"
 # overrides what gets baked into the runtime config — the browser uses this
 # URL to fetch the package from the registry at runtime.
 ARG BROWSER_REGISTRY_URL=http://localhost:8080
-# Still the classic command: `ph run connect build` takes neither --base nor
-# --packages-registry, and the scaffold's own Dockerfile builds this way in 6.3.
+# `ph connect build` is `ph run connect build`, as the scaffold's own
+# Dockerfile spells it.
 RUN ph connect build --base ${PH_CONNECT_BASE_PATH} --packages-registry ${BROWSER_REGISTRY_URL}
 
 FROM nginx:alpine AS connect

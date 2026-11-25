@@ -1,40 +1,23 @@
 import type { PHReactorRenown } from "@powerhousedao/shared/clis";
 import type { ILogger } from "document-model";
 
-/** Where the credential check reads from: a remote Renown or Switchboard
- * instance, this switchboard's own renown read model, or the credentials this
- * host keeps, for an identity no Renown holds. */
+/** The former credential sources. No longer read: a host checks its records,
+ * then Renown, and finds an in-process Renown (its read model) itself. */
 export type RenownSource = NonNullable<PHReactorRenown["source"]>;
 
 /** The `auth.renown` config block: which Renown instance to authenticate
  * against, before env overrides are applied. */
 export type RenownConfig = PHReactorRenown;
 
-/** Resolved renown coordinates. `url` also drives this reactor's own identity,
- * so it stays meaningful when `source` is "self". */
+/** Resolved renown coordinates; `url` also drives this reactor's own identity. */
 export type ResolvedRenownConfig = {
-  source: RenownSource;
   url: string | undefined;
   switchboardUrl: string | undefined;
 };
 
-/** Reading credentials from this reactor's own read model needs a host-supplied
- * verifier: core has no idea which subgraph serves that read model. */
-export function assertCredentialVerifierForSource(
-  source: RenownSource,
-  hasVerifier: boolean,
-): void {
-  if (source !== "self" || hasVerifier) {
-    return;
-  }
-  throw new Error(
-    'Renown credential verification is set to "self" (auth.renown.source or ' +
-      "RENOWN_SOURCE) but no verifyCredential was provided. A host that reads " +
-      "its own read model must pass one — see apps/switchboard, which builds " +
-      "it from @renown/sdk createLocalCredentialVerifier — or set " +
-      "RENOWN_SOURCE=remote to verify against a Renown instance.",
-  );
-}
+/** What the log says of a source setting that is still set. */
+export const RENOWN_SOURCE_IGNORED =
+  "RENOWN_SOURCE (auth.renown.source) is no longer read: a host checks a credential's record in its data folder, then Renown, and asks its own renown read model when it serves one. Remove the setting.";
 
 // Treat a blank env var as unset so `RENOWN_URL=` cannot blank out the config.
 function envOverride(value: string | undefined): string | undefined {
@@ -42,66 +25,21 @@ function envOverride(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-/** Resolve `auth.renown`; RENOWN_SOURCE / RENOWN_URL / SWITCHBOARD_URL win
- * over the config file, which wins over the SDK defaults. */
+/** Resolve `auth.renown`; RENOWN_URL / SWITCHBOARD_URL win over the config
+ * file, which wins over the SDK defaults. A source setting is warned of. */
 export function resolveRenownConfig(
   configured: RenownConfig | undefined,
   env: NodeJS.ProcessEnv,
   logger: ILogger,
 ): ResolvedRenownConfig {
+  // `null` is what `"source": null` in the config file deserialises to.
+  const source = envOverride(env.RENOWN_SOURCE) ?? configured?.source;
+  if (source !== undefined && source !== null) {
+    logger.warn(RENOWN_SOURCE_IGNORED);
+  }
   return {
-    source: resolveRenownSource(
-      envOverride(env.RENOWN_SOURCE) ?? configured?.source,
-      logger,
-    ),
     url: envOverride(env.RENOWN_URL) ?? configured?.url,
     switchboardUrl:
       envOverride(env.SWITCHBOARD_URL) ?? configured?.switchboardUrl,
   };
-}
-
-// `null` is reachable despite the types: it is what `"source": null` in the
-// config file deserialises to, and counts as unset like a blank env var.
-function resolveRenownSource(
-  value: string | null | undefined,
-  logger: ILogger,
-): RenownSource {
-  if (value === undefined || value === null) {
-    return "remote";
-  }
-  if (value === "self" || value === "remote" || value === "kept") {
-    return value;
-  }
-  logger.warn(
-    `Ignoring invalid renown source "${value}" (expected "self", "remote" or "kept") — using "remote"`,
-  );
-  return "remote";
-}
-
-/**
- * The credential-verification cache TTL for `AuthService`.
- *
- * `CREDENTIAL_VERIFICATION_CACHE_TTL_MS` wins when it is a non-negative number.
- * Otherwise the default depends on the source: with `"self"` the check is an
- * in-process read-model query, so caching buys little and only delays a
- * revocation — it defaults to `0` (no cache). A `"remote"` source returns
- * `undefined`, leaving AuthService's own default TTL in place.
- */
-export function resolveCredentialCacheTtlMs(
-  raw: string | undefined,
-  source: RenownSource,
-  logger: ILogger,
-): number | undefined {
-  const fallback = source === "self" ? 0 : undefined;
-  if (raw === undefined) {
-    return fallback;
-  }
-  const parsed = Number(raw);
-  if (raw.trim() !== "" && Number.isFinite(parsed) && parsed >= 0) {
-    return parsed;
-  }
-  logger.warn(
-    `Ignoring invalid CREDENTIAL_VERIFICATION_CACHE_TTL_MS="${raw}" (expected a non-negative number of milliseconds; 0 disables caching) — using the ${source === "self" ? "renown source=self default (0, no cache)" : "default TTL"}`,
-  );
-  return fallback;
 }

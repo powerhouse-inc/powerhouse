@@ -7,7 +7,7 @@
 ## Purpose
 
 Playwright coverage of the **Vetra studio** — the local development environment
-`ph vetra` starts (Vetra Studio, a local Connect, plus a local Switchboard with
+`ph dev` starts (Vetra Studio, a local Connect, plus a local Switchboard with
 `reactor-mcp`).
 
 It is also a real Vetra package in its own right: it has `powerhouse.config.json`,
@@ -102,8 +102,8 @@ Dependencies: `document-model`, `@powerhousedao/connect`,
 
 ```mermaid
 graph TD
-    phcli["ph-cli<br/>ph vetra"] --> ve["test/vetra-e2e"]
-    vetra["packages/vetra<br/>the studio"] -. "served by ph vetra" .-> ve
+    phcli["ph-cli<br/>ph dev"] --> ve["test/vetra-e2e"]
+    vetra["packages/vetra<br/>the studio"] -. "served by ph dev" .-> ve
     connect["apps/connect"] --> ve
     rb["reactor-browser<br/>incl. src/rpc worker path"] --> ve
     vdocs["test/versioned-documents<br/>Todo v1 / v2"] --> ve

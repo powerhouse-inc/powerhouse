@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-run",
-  "version": "6.3.0-dev.11",
+  "version": "6.4.0-next.6",
   "description": "Runs a project's hosts, with none of the tools that build one",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -31,11 +31,11 @@
       "import": "./dist/runners/switchboard.mjs",
       "default": "./dist/runners/switchboard.mjs"
     },
-    "./classic-args": {
-      "source": "./src/services/classic-args.ts",
-      "types": "./dist/services/classic-args.d.mts",
-      "import": "./dist/services/classic-args.mjs",
-      "default": "./dist/services/classic-args.mjs"
+    "./service-args": {
+      "source": "./src/services/service-args.ts",
+      "types": "./dist/services/service-args.d.mts",
+      "import": "./dist/services/service-args.mjs",
+      "default": "./dist/services/service-args.mjs"
     },
     "./connect-serve": {
       "source": "./src/services/connect-serve.ts",
@@ -49,6 +49,12 @@
       "import": "./dist/services/connect-server.mjs",
       "default": "./dist/services/connect-server.mjs"
     },
+    "./local-sign-in": {
+      "source": "./src/services/local-sign-in.ts",
+      "types": "./dist/services/local-sign-in.d.mts",
+      "import": "./dist/services/local-sign-in.mjs",
+      "default": "./dist/services/local-sign-in.mjs"
+    },
     "./member-config": {
       "source": "./src/runners/member-config.ts",
       "types": "./dist/runners/member-config.d.mts",
@@ -60,6 +66,12 @@
       "types": "./dist/services/run/start-run.d.mts",
       "import": "./dist/services/run/start-run.mjs",
       "default": "./dist/services/run/start-run.mjs"
+    },
+    "./supervisor": {
+      "source": "./src/services/supervisor.ts",
+      "types": "./dist/services/supervisor.d.mts",
+      "import": "./dist/services/supervisor.mjs",
+      "default": "./dist/services/supervisor.mjs"
     },
     "./switchboard": {
       "source": "./src/services/switchboard.ts",

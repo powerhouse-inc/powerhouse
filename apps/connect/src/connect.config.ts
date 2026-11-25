@@ -55,10 +55,7 @@ function getDeployBasePath() {
   return runtime.app?.basePath || import.meta.env.BASE_URL;
 }
 
-// Hardcoded literal defaults for `PHGlobalConfig` fields whose env-var
-// source was removed. The fields stay on the type so wired-but-dead SW /
-// hook consumers keep typechecking; values mirror the previous Zod
-// defaults.
+// Defaults for the `PHGlobalConfig` fields, read from the runtime config.
 function getBuiltInDefaults(): Omit<
   PHGlobalConfig,
   "basePath" | "routerBasename"
@@ -80,61 +77,17 @@ function getBuiltInDefaults(): Omit<
     allowList: undefined,
     allowedDocumentTypes: [],
     isDragAndDropEnabled: true,
-    isEditorDebugModeEnabled: false,
-    isEditorReadModeEnabled: false,
     isExternalControlsEnabled: false,
-    version: env.PH_CONNECT_VERSION,
     logLevel: runtime.app?.logLevel,
-    requiresHardRefresh: true,
     warnOutdatedApp: true,
     studioMode,
-    versionCheckInterval: 60 * 60 * 1000,
-    cliVersion: env.PH_CONNECT_CLI_VERSION,
-    fileUploadOperationsChunkSize: 50,
-    gaTrackingId: undefined,
     defaultDrivesUrl: runtime.drives?.defaultDrives?.find(
       (drive) => "url" in drive,
     )?.url,
-    drivesPreserveStrategy: runtime.drives?.preserveStrategy,
-    enabledEditors: undefined,
     disabledEditors,
-
-    /* Processors */
-    isExternalProcessorsEnabled: true,
-    // Analytics off by default; flip to true (or wire a runtime-config field)
-    // when we want analytics enabled out of the box.
-    isAnalyticsEnabled: false,
-    isAnalyticsExternalProcessorsEnabled:
-      env.PH_CONNECT_EXTERNAL_ANALYTICS_PROCESSORS_ENABLED,
-    analyticsDatabaseName: undefined,
-    isRelationalProcessorsEnabled: true,
-    isExternalRelationalProcessorsEnabled: true,
-
     renownUrl: runtime.renown?.url,
-    renownNetworkId: runtime.renown?.networkId,
-    renownChainId: runtime.renown?.chainId,
     switchboardUrl: runtime.renown?.switchboardUrl,
-    renownAdapters: runtime.renown?.adapters,
-    sentryRelease,
-    sentryDsn: runtime.sentry?.dsn ?? undefined,
-    sentryEnv: runtime.sentry?.env,
-    isDiffAnalyticsEnabled: env.PH_CONNECT_DIFF_ANALYTICS_ENABLED,
-    isDriveAnalyticsEnabled: env.PH_CONNECT_DRIVE_ANALYTICS_ENABLED,
-    isPublicDrivesEnabled: runtime.drives?.sections?.remote?.enabled,
-    isCloudDrivesEnabled: runtime.drives?.sections?.remote?.enabled ?? true,
-    isLocalDrivesEnabled: runtime.drives?.sections?.local?.enabled,
-    isSentryTracingEnabled: runtime.sentry?.tracing,
-    isDocumentModelSelectionSettingsEnabled: false,
     isAddDriveEnabled: runtime.drives?.allowAddDrive,
-    isAddPublicDrivesEnabled: runtime.drives?.sections?.remote?.allowAdd,
-    isDeletePublicDrivesEnabled: runtime.drives?.sections?.remote?.allowDelete,
-    isAddCloudDrivesEnabled: runtime.drives?.sections?.remote?.allowAdd ?? true,
-    isDeleteCloudDrivesEnabled:
-      runtime.drives?.sections?.remote?.allowDelete ?? true,
-    isAddLocalDrivesEnabled: runtime.drives?.sections?.local?.allowAdd,
-    isDeleteLocalDrivesEnabled: runtime.drives?.sections?.local?.allowDelete,
-    isAnalyticsDatabaseWorkerEnabled: false,
-    isExternalPackagesEnabled: runtime.packages?.externalEnabled,
   };
 }
 

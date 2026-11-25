@@ -14,8 +14,7 @@ import config from "../../powerhouse.config.json" with { type: "json" };
 import switchboard from "../switchboard/host.js";
 import connect from "../connect/host.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "desktop",
 
   runner: {
@@ -118,4 +117,4 @@ export default {
       },
     },
   },
-};
+});

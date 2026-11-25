@@ -117,7 +117,7 @@ let lastSignedAddress: string | undefined;
 // client when one happens. Read off the ambient client rather than imported, so
 // renown never pulls the graphql-client module graph in, and so a client without
 // the method (the non-GraphQL browser client) is a no-op.
-function notifyReactorClientCredentialsChanged(): void {
+export function notifyReactorClientCredentialsChanged(): void {
   const client = getPHStore()?.reactorClient as
     | { notifyCredentialsChanged?: () => void }
     | undefined;
@@ -216,22 +216,34 @@ export async function login(
 }
 
 export async function logout() {
+  const renown = getPHStore()?.renown;
   // Run the adapter's own logout first (Privy clears its session) so the next
   // login can't silently resume it. Adapters mount on demand, so activate when
   // none is mounted yet; with no activator (redirect-only) there is nothing to end.
+  // A key on this computer signed a local user in: no wallet session to end.
   try {
     const controller =
-      getActiveWalletController() ?? (await getWalletActivator()?.());
+      getActiveWalletController() ??
+      (renown?.user?.local ? undefined : await getWalletActivator()?.());
     await controller?.disconnect();
   } catch (error) {
     logger.error(error instanceof Error ? error.message : String(error));
   }
 
-  const renown = getPHStore()?.renown;
-  await renown?.logout();
-  resetSignInGuard();
-  notifyReactorClientCredentialsChanged();
+  await endSession(renown);
 
   // Clear the user parameter from URL to prevent auto-login on refresh
   clearUserParamFromUrl();
+}
+
+/**
+ * Ends `renown`'s session without a wallet: what dropping a refused or
+ * expired credential does, also before the instance is in the store.
+ */
+export async function endSession(
+  renown: IRenown | null | undefined,
+): Promise<void> {
+  await renown?.logout();
+  resetSignInGuard();
+  notifyReactorClientCredentialsChanged();
 }

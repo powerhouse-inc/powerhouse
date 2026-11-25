@@ -2,7 +2,9 @@ import type { IRenown } from "@renown/sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ambientRenownTokenProvider,
+  credentialRefusalOf,
   makeAuthMiddleware,
+  setCredentialRefusalHandler,
 } from "../../src/graphql-client/auth.js";
 import { GraphQLReactorClient } from "../../src/graphql-client/graphql-reactor-client.js";
 import type { ReactorGraphQLClient } from "../../src/graphql/types.js";
@@ -129,6 +131,90 @@ describe("makeAuthMiddleware", () => {
       "token service down",
     );
     expect(action).not.toHaveBeenCalled();
+  });
+});
+
+describe("a credential the switchboard refuses", () => {
+  afterEach(() => setCredentialRefusalHandler(undefined));
+
+  /** Refuses a bearer the first time with `reason`, then answers. */
+  function refuseOnce(reason: string) {
+    const calls: RequestInit[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => {
+      calls.push(init ?? {});
+      if (calls.length === 1) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ error: "Credentials no longer valid", reason }),
+            { status: 401 },
+          ),
+        );
+      }
+      return Promise.resolve(
+        Response.json({ data: { document: { document: documentFields } } }),
+      );
+    });
+    return calls;
+  }
+
+  it("is dropped, and the request goes again anonymously", async () => {
+    const calls = refuseOnce("expired");
+    let signedIn = true;
+    const handler = vi.fn(() => {
+      signedIn = false;
+      return Promise.resolve("anonymous" as const);
+    });
+    setCredentialRefusalHandler(handler);
+    const client = new GraphQLReactorClient({
+      url,
+      tokenProvider: () => Promise.resolve(signedIn ? "token-1" : undefined),
+    });
+
+    await expect(client.get("doc-1")).resolves.toMatchObject({
+      header: { id: "doc-1" },
+    });
+    expect(handler).toHaveBeenCalledWith({ reason: "expired", url });
+    expect(calls.map(authorizationOf)).toEqual(["Bearer token-1", null]);
+  });
+
+  it("goes again with a fresh bearer once the tab enrolled it", async () => {
+    const calls = refuseOnce("not-registered");
+    const tokens = ["token-1", "token-2"];
+    setCredentialRefusalHandler(() => Promise.resolve("again"));
+    const client = new GraphQLReactorClient({
+      url,
+      tokenProvider: () => Promise.resolve(tokens.shift()),
+    });
+
+    await client.get("doc-1");
+
+    expect(calls.map(authorizationOf)).toEqual([
+      "Bearer token-1",
+      "Bearer token-2",
+    ]);
+  });
+
+  it("stays an error without a handler, and goes once only", async () => {
+    const calls = refuseOnce("withdrawn-here");
+    const client = new GraphQLReactorClient({
+      url,
+      tokenProvider: () => Promise.resolve("token-1"),
+    });
+
+    await expect(client.get("doc-1")).rejects.toThrow();
+    expect(calls).toHaveLength(1);
+  });
+
+  it("reads the reason from graphql-request's error", () => {
+    expect(
+      credentialRefusalOf({
+        response: { status: 401, body: '{"reason":"expired"}' },
+      }),
+    ).toBe("expired");
+    expect(
+      credentialRefusalOf({ response: { status: 403, body: "{}" } }),
+    ).toBeUndefined();
+    expect(credentialRefusalOf(new Error("down"))).toBeUndefined();
   });
 });
 

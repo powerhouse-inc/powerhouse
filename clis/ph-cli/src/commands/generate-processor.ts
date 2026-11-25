@@ -10,7 +10,7 @@ import {
   optional,
   string,
 } from "cmd-ts";
-import { File, ModuleDir } from "../utils/fs-args.js";
+import { ModuleDir } from "../utils/fs-args.js";
 import {
   CommaSeparatedStrings,
   splitCommaSeparated,
@@ -75,13 +75,6 @@ export const generateProcessorCmd = command({
       defaultValue: () => ["switchboard" as const, "connect" as const],
       defaultValueIsSerializable: true,
     }),
-    document: option({
-      type: optional(File),
-      long: "document",
-      short: "d",
-      description:
-        "Path to a powerhouse/processor spec file (.phd or .json) to drive codegen",
-    }),
     dir: option({
       type: optional(ModuleDir),
       long: "dir",
@@ -92,12 +85,6 @@ export const generateProcessorCmd = command({
       long: "all",
       short: "a",
       description: "Re-generate all existing processors in the current project",
-    }),
-    extract: flag({
-      long: "extract",
-      short: "x",
-      description:
-        "Write a powerhouse/processor spec for each existing processor into specs/processors/",
     }),
     ...skipInstallArgs,
     ...debugArgs,

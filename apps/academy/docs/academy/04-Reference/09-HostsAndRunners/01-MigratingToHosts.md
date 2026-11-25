@@ -154,6 +154,9 @@ what you want.
 - Every key in [Settings](#settings), when the project already had host
   files. `ph migrate` does not edit host files it did not write.
 
+Delete every kept key before you go to 6.4: there, `ph run` stops with an
+error while one is still set.
+
 ### 6. Check the hosts
 
 ```bash
@@ -171,8 +174,8 @@ starting it. It exits with code 1 when it finds a problem.
 
 | Old                               | New                                 |
 | --------------------------------- | ----------------------------------- |
-| `ph vetra`                        | `ph run vetra`                      |
-| `ph vetra --watch`                | `ph run vetra`                      |
+| `ph vetra`                        | `ph run vetra`, or `ph dev`         |
+| `ph vetra --watch`                | `ph run vetra`, or `ph dev`         |
 | `ph vetra --interactive`          | `ph run vetra --interactive`        |
 | `ph connect`, `ph connect studio` | `ph run connect dev`                |
 | `ph connect build`                | `ph run connect build`              |
@@ -195,8 +198,9 @@ runner does not accept, `ph run` stops and lists the ones it does accept.
 
 ### Settings
 
-These `powerhouse.config.json` keys are read by the classic commands only.
-`ph run` ignores them, and 6.4 refuses them.
+In 6.3 these `powerhouse.config.json` keys are read by the classic commands
+only, and `ph run` ignores them. In 6.4 nothing reads them, they are gone from
+the config schema, and `ph run` stops with an error while one is set.
 
 | Old key in `powerhouse.config.json` | New home                                                             |
 | ----------------------------------- | -------------------------------------------------------------------- |
@@ -270,8 +274,9 @@ The host file exists, but `ph connect` and `ph switchboard` do not read it.
 Change the command in your scripts, Dockerfile and CI to the replacement the
 warning names. See [Commands](#commands).
 
-`ph vetra` is different: in a project with `hosts/vetra/host.js` it already
-runs `ph run vetra` and prints no warning.
+`ph vetra` is different: in 6.3, in a project with `hosts/vetra/host.js` it
+already runs `ph run vetra` and prints no warning. In 6.4 that is `ph dev`,
+and `ph vetra` opens Vetra Studio instead.
 
 ### `ph reactor` {/* #ph-reactor */}
 
@@ -312,23 +317,34 @@ lists the keys.
 
 ### A `powerhouse.config.json` key that 6.4 refuses {/* #config-keys */}
 
-A classic command prints:
+In 6.3 a classic command prints:
 
 ```text
 Warning: powerhouse.config.json sets <keys>: only the classic commands read them, and 6.4 refuses them. Move <key> to <new home>.
 ```
 
-`ph run` prints, for each key:
+In 6.3 `ph run` prints, for each key:
 
 ```text
 Warning: powerhouse.config.json "<key>" is ignored by `ph run` and is an error in 6.4. Set <new home> and remove the key.
 ```
 
-Move each key to the place the warning names and delete it from
-`powerhouse.config.json`. The full list is under [Settings](#settings).
+In 6.4 `ph run` stops, with one line for each key and a closing line:
 
-Under `ph run` the old key has no effect already. If a host started with a
-different address or database than you expected, this is the reason.
+```text
+powerhouse.config.json "<key>" was removed in 6.4. Set <new home> and remove the key.
+`ph migrate` moves the keys it can and says what to do with the rest. See https://academy.vetra.io/academy/Reference/HostsAndRunners/MigratingToHosts
+```
+
+For `studio.https` the line reads `No host setting replaces it: remove the
+key.`
+
+Move each key to the place the message names and delete it from
+`powerhouse.config.json`, or run `ph migrate`. The full list is under
+[Settings](#settings).
+
+Under `ph run` the old key had no effect in 6.3 already. If a host started
+with a different address or database than you expected, this is the reason.
 
 ### `FEATURE_PLUGIN_HOST_ENABLED` {/* #feature-plugin-host-enabled */}
 
@@ -365,7 +381,7 @@ the plugin out.
 ### Connect settings in the host `config` {/* #connect-chrome-settings */}
 
 ```text
-Warning: <host file>: config.drives.allowAddDrive is only read by the classic Connect boot, which 6.4 removes. List "@powerhousedao/connect/plugins/generic" under runner.plugins and set allowAddDrive / sections / icons / homeBackground in its entry config.
+Warning: <host file>: config.drives.allowAddDrive is only read while the host has no runner.plugins, by the default composition. List "@powerhousedao/connect/plugins/generic" under runner.plugins and set allowAddDrive / sections / icons / homeBackground in its entry config.
 ```
 
 Move the keys into the entry of the generic Connect plugin, as shown under
@@ -417,13 +433,64 @@ depend on environment variables that your own machine may not set.
 
 - A project without host files does not start. The error names `ph migrate`.
 - The classic boot path of `ph vetra`, `ph connect` and `ph switchboard` is
-  gone. The three names stay as short forms of `ph run <host>`, and
-  `ph connect studio`, `ph connect build` and `ph connect preview` stay as
-  short forms of the `dev`, `build` and `serve` verbs. A flag that has no
-  `ph run` argument fails.
+  gone. `ph connect` and `ph switchboard` stay as short forms of
+  `ph run <host>`, and `ph connect studio`, `ph connect build` and
+  `ph connect preview` stay as short forms of the `dev`, `build` and `serve`
+  verbs. A flag that has no `ph run` argument fails.
+- The dev mode `ph vetra` started is `ph dev`, the short form of
+  `ph run vetra`. `ph vetra` opens Vetra Studio: it is
+  `ph run @powerhousedao/vetra-cli/studio`, and installs
+  `@powerhousedao/vetra-cli` into the project first when the project lacks
+  it. Change `ph vetra` to `ph dev` in your scripts, Dockerfile and CI.
 - `ph reactor` is removed.
 - The `powerhouse.config.json` keys under [Settings](#settings) are errors.
 - `FEATURE_UNIFORM_RUNNERS_ENABLED=false` stops the start.
   `FEATURE_PLUGIN_HOST_ENABLED` is removed: the plugin host is the only path.
 - `reactor.workflows` and the `readModel.url` fallback in host files are
   removed.
+- The `splash`, `splashDark`, `loading.art` and `loading.artDark` keys of a
+  desktop host's `app.json` are errors. 6.3 prints no warning for them.
+
+### The loading images in `hosts/desktop/app.json` {/* #desktop-loading-images */}
+
+6.4 reads one key for the images of the desktop loading page: `background`.
+`ph run desktop` stops when `app.json` still sets one of the four keys it
+replaces, with one line for each:
+
+```text
+hosts/desktop/app.json: removed key:
+  splash was removed in 6.4; use a background layer, which shows the image above the status line: background: { layers: [{ src: "<image>", position: { bottom: "calc(50% + 32px)" }, width: "min(720px, 80vw)", maxHeight: "65vh" }] }.
+```
+
+| Removed key       | In `background`                                                       |
+| ----------------- | --------------------------------------------------------------------- |
+| `splash`          | A layer with the image as `src`, placed above the status line         |
+| `splashDark`      | `dark` in that layer's `src`: `{ "light": "…", "dark": "…" }`         |
+| `loading.art`     | A layer at `{ "bottom": 0, "right": 0 }`, or the image path by itself |
+| `loading.artDark` | `dark` in that layer's `src`                                          |
+
+An `app.json` with a splash and corner art in both schemes becomes:
+
+```json
+{
+  "background": {
+    "layers": [
+      {
+        "src": { "light": "./art/splash.png", "dark": "./art/splash-dark.png" },
+        "position": { "bottom": "calc(50% + 32px)" },
+        "width": "min(720px, 80vw)",
+        "maxHeight": "65vh"
+      },
+      {
+        "src": { "light": "./art/mark.svg", "dark": "./art/mark-dark.svg" },
+        "position": { "bottom": 0, "right": 0 },
+        "width": "clamp(220px, 30vw, 520px)"
+      }
+    ]
+  }
+}
+```
+
+With a `background` the page shows its layers and no app icon. An `app.json`
+that already sets `background` did not show the four keys: remove them.
+`ph migrate` does not rewrite `app.json`.

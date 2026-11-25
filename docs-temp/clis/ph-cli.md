@@ -94,7 +94,7 @@ This CLI is the entry point for three heavy e2e harnesses:
 |---|---|---|
 | `test/codegen` | `pnpm test:codegen` | 18 bun-test suites that run `ph generate`, then typecheck and build the output |
 | `test/package-e2e` | `pnpm test:e2e:package` | `ph init` → `ph generate` → `ph publish` → `ph install` → run, with a Dockerised registry and Playwright |
-| `test/vetra-e2e` | `pnpm test:e2e:vetra` | Playwright through the full Vetra studio, driven by `ph vetra` |
+| `test/vetra-e2e` | `pnpm test:e2e:vetra` | Playwright through the full Vetra studio, driven by `ph dev` |
 | `test/recipes-e2e` | `pnpm test:e2e:recipes` | Executes the CLI recipes the academy documents |
 
 Plus `.github/workflows/test-package-managers.yml`, which exercises the CLI under
@@ -132,6 +132,6 @@ process. That is why the root `pnpm build` filter list builds `apps/*` **before*
 | `ph-cmd` | The user-facing `ph` binary; finds the project's `ph-cli` and forwards |
 | `codegen` | Every `generate` subcommand delegates to it |
 | `builder-tools` | `ph build`, `ph connect build`, `ph connect preview` use its Vite config and plugins |
-| `vetra` | `ph vetra` boots the studio; the same codegen path runs reactively there |
+| `vetra` | `ph dev` boots the studio; the same codegen path runs reactively there |
 | `registry` | `install` / `publish` / `unpublish` / `registry-login` talk to it over the npm protocol |
 | `test/*` | Depended on as a devDependency by `package-e2e`, `vetra-e2e`, `test-consumer-project`, `versioned-documents`, and as a runtime dep by `test/codegen` |

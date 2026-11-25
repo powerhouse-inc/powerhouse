@@ -1,3 +1,8 @@
+import {
+  credentialRecordId,
+  readCredentialRecord,
+} from "@powerhousedao/shared/clis/credential-records";
+import { fileAccessList } from "@powerhousedao/shared/clis/owner-only";
 import { verifyDelegationProof } from "@renown/sdk/node";
 import { encryptKeystoreJson, Wallet } from "ethers";
 import fs from "node:fs";
@@ -117,6 +122,16 @@ describe("the key file", () => {
     expect(readKeystore(keyPath).address).toBe(address.slice(2).toLowerCase());
   });
 
+  it("writes the key readable by the OS user only", async () => {
+    const keyPath = path.join(dir, "local.key");
+    await createKeyFile(keyPath, "correct horse", QUICK);
+    if (process.platform === "win32") {
+      expect(fileAccessList(keyPath)).toHaveLength(1);
+    } else {
+      expect(fs.statSync(keyPath).mode & 0o777).toBe(0o600);
+    }
+  });
+
   it("replaces a key, with a new address", async () => {
     const keyPath = path.join(dir, "local.key");
     const first = await createKeyFile(keyPath, "correct horse", QUICK);
@@ -155,5 +170,17 @@ describe("the key file", () => {
     >;
     expect(kept[`${address.toLowerCase()}|1|${app}`]).toEqual(credential);
     expect(kept.other).toEqual({ id: "x" });
+  });
+
+  it("writes the record the switchboard accepts the credential by", async () => {
+    const keyPath = path.join(dir, "local.key");
+    const address = await createKeyFile(keyPath, "correct horse", QUICK);
+
+    const { credential } = await signDelegation(input(keyPath));
+
+    const id = credentialRecordId({ address, chainId: 1, sessionDid: app });
+    expect(
+      readCredentialRecord({ dataDir: path.join(dir, "local"), id }),
+    ).toMatchObject({ source: "desktop", credential });
   });
 });

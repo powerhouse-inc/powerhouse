@@ -403,6 +403,7 @@ describe("ph build --release", () => {
       "./scalars": entry("scalars/index", false),
       "./connect-routes": { browser: "./dist/browser/connect-routes.js" },
       "./pieces": { node: "./dist/node/pieces/index.mjs" },
+      "./cli": { node: "./dist/node/cli/index.mjs" },
     };
     made.write("package.json", JSON.stringify({ ...pkg, exports: generated }));
 

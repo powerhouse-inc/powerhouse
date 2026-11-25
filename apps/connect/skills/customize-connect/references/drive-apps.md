@@ -4,9 +4,9 @@ A drive app is the view Connect shows for a drive: its own listing, forms and to
 
 ## Make one
 
-Create a `powerhouse/app` document in the Vetra drive, the way the powerhouse-editors skill makes an editor: give it a name and the document types it holds, then set it to CONFIRMED. Codegen writes `editors/<app-id>/`:
+Run `ph generate app --name "<Name>"`, with `--document-types <type>,<type>` for the document types it holds; the powerhouse-editors skill has the steps. It writes `editors/<app-id>/`:
 
-- `editor.tsx`, the app's root. Codegen writes it once and never again, so edit it.
+- `editor.tsx`, the app's root. It is written once and never again, so edit it.
 - `components/`, a folder tree, folder contents and a create button to start from; it too stays yours.
 - `config.ts`, the app's `allowedDocumentTypes` and drag and drop.
 
@@ -38,7 +38,6 @@ A drive shows the app its `header.meta.preferredEditor` names. With none, or an 
 - **A new drive in the UI:** Create Drive's "Drive App" picker. Package apps are listed first, so a project's app is preselected.
 - **A new drive in code:** `addDrive(input, appId)` from `@powerhousedao/reactor-browser`, or `driveInput.preferredEditor` in the MCP `addDrive` tool.
 - **A drive every user gets:** a local entry in `connect.drives.defaultDrives` with `"app": "<app-id>"` ([runtime-config.md](./runtime-config.md)). Connect creates it on first boot and opens it in that app.
-- **The Vetra Preview drive:** `"vetra": { "previewDrive": { "app": "<app-id>" } }` in `powerhouse.config.json`. `ph vetra --watch` sets that app on the drive each time it starts, so a fresh clone gets it too.
 - **An existing drive:** `setPreferredEditorOnNode(driveId, appId)` from `@powerhousedao/reactor-browser`, which dispatches `setPreferredEditor`. Connect has no UI for this yet, so a project that needs it adds a button, e.g. on a page that lists the drives. The change syncs like any other drive operation.
 
 The home cards and `useAppModuleById(drive.header.meta?.preferredEditor)` show which app a drive uses.

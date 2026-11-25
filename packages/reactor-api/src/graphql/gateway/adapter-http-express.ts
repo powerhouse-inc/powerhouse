@@ -199,11 +199,8 @@ export class ExpressHttpAdapter implements IHttpAdapter {
   mount(
     path: string,
     handler: FetchHandler,
-    { prefix, exact }: { prefix?: boolean; exact?: boolean } = {},
+    { prefix: asPrefix = false }: { prefix?: boolean } = {},
   ): AdapterRouteHandle {
-    // `exact` never meant exact: it selected prefix matching. Kept as an alias
-    // so existing callers keep working while the name is retired.
-    const asPrefix = prefix ?? exact ?? false;
     this.#replaceDuplicates("fetch", path);
     const handle = this.#nextHandle++;
     this.#routes.set(handle, {

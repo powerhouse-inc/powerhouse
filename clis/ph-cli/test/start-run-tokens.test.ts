@@ -64,6 +64,7 @@ function makeProject(connect: Record<string, unknown>): {
       exports: {
         "./switchboard": "./switchboard.js",
         "./connect": "./connect.js",
+        "./cli": "./cli.js",
       },
     }),
   );
@@ -95,6 +96,18 @@ export async function run(host) {
   log({ name: host.name, host });
 }
 export const build = run;
+`,
+  );
+  // The terminal's owner in a compound, as the Cli runner is.
+  writeFileSync(
+    path.join(modules, "fake-runners", "cli.js"),
+    `${common}
+export const foreground = true;
+export const verbs = ["run"];
+export const argsSchema = { options: [], flags: [], passthrough: true };
+export async function run(host) {
+  log({ name: host.name });
+}
 `,
   );
   const write = (name: string, host: unknown) => {
@@ -308,7 +321,22 @@ describe("standalone ph run resolves output tokens", () => {
     );
   });
 
-  it("refuses a second live instance before its verb starts anything", async () => {
+  it("build gets the built-in string sugar, its tokens stay: ${package} is the project root of a project host", async () => {
+    const drive = withDrive(workflowsUrl);
+    const { dir, sink } = makeProject({
+      runner: { ...drive.runner, outDir: "${package}/dist/connect" },
+      config: { home: "${projectRoot}" },
+    });
+    await startRun({ host: "connect", verb: "build", projectRoot: dir });
+    const [call] = calls(sink) as (Call & {
+      host: { runner: { outDir?: string }; config?: unknown };
+    })[];
+    expect(call.host.runner.outDir).toBe(`${dir}/dist/connect`);
+    expect(call.host.config).toEqual({ home: dir });
+    expect(call.host.runner.plugins?.[0].config.drive).toEqual(workflowsUrl);
+  });
+
+  it("a second start is the live instance: its verb starts nothing", async () => {
     const { dir, sink } = makeProject({});
     liveSwitchboard(dir);
     // the live record's pid is this process: start-run tells it apart only
@@ -323,9 +351,17 @@ describe("standalone ph run resolves output tokens", () => {
       startedAt: "x",
       outputs: {},
     });
-    await expect(
-      startRun({ host: "switchboard", projectRoot: dir }),
-    ).rejects.toThrow(/lab-switchboard is already running for this project/);
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      await expect(
+        startRun({ host: "switchboard", projectRoot: dir }),
+      ).resolves.toMatchObject({ running: { pid: process.ppid } });
+      expect(String(log.mock.calls[0]?.[0])).toContain(
+        "lab-switchboard is already running for this project",
+      );
+    } finally {
+      log.mockRestore();
+    }
     expect(calls(sink)).toEqual([]);
   });
 });
@@ -352,6 +388,21 @@ describe("--explain outputs", () => {
     expect(await explain(dir, "connect")).toContain(
       'host "switchboard": running',
     );
+  });
+
+  it("prints where ${package} points; $env package is a built-in", async () => {
+    const { dir } = makeProject({
+      runner: { module: "fake-runners/connect", outDir: "${package}/dist" },
+      config: { root: { $env: "package" } },
+    });
+    const out = await explain(dir, "connect");
+    expect(out).toContain(
+      `  \${package} = ${dir} (the project root: a project host)`,
+    );
+    expect(out).toContain("config.root ← $env package [set]");
+    // A host that names no ${package} gets no line.
+    vi.restoreAllMocks();
+    expect(await explain(dir, "switchboard")).not.toContain("${package} =");
   });
 
   it("prints a compound's token-derived start order", async () => {
@@ -394,6 +445,55 @@ describe("--explain outputs", () => {
     expect(out).toContain(
       "reactor.drives[0].remote.url ← $output switchboard › drives.sektar.url",
     );
+  });
+
+  describe("a stack with a member that owns the terminal", () => {
+    const stack = (dir: string, extra: Record<string, unknown> = {}) => {
+      mkdirSync(path.join(dir, "hosts", "cli"), { recursive: true });
+      writeFileSync(
+        path.join(dir, "hosts", "cli", "host.js"),
+        `export default ${JSON.stringify({
+          name: "lab-cli",
+          runner: { module: "fake-runners/cli" },
+          config: {
+            graphql: {
+              $output: { host: "switchboard", path: ["endpoints", "graphql"] },
+            },
+          },
+        })};`,
+      );
+      mkdirSync(path.join(dir, "hosts", "stack"), { recursive: true });
+      writeFileSync(
+        path.join(dir, "hosts", "stack", "host.js"),
+        `export default ${JSON.stringify({
+          name: "stack",
+          runner: { module: "@powerhousedao/host-core/runners/compound" },
+          children: {
+            cli: { host: "cli" },
+            sb: { host: "switchboard" },
+            ui: { host: "connect", process: "shared" },
+          },
+          ...extra,
+        })};`,
+      );
+    };
+
+    it("prints it last, as `ph run` starts it, and where each member runs", async () => {
+      const { dir } = makeProject({});
+      stack(dir);
+      const out = await explain(dir, "stack");
+      expect(out).toMatch(
+        /1\. sb \(switchboard\) {2}\[own process\]\n {2}2\. ui \(connect\) {2}\[in the compound's process\]\n {2}3\. cli \(cli\) {2}after sb {2}\[in front: owns the terminal; its end ends the stack\]/,
+      );
+    });
+
+    it("refuses a stack that breaks its rules, as `ph run` would", async () => {
+      const { dir } = makeProject({});
+      stack(dir, { config: { startOrder: ["sb", "cli", "ui"] } });
+      await expect(explain(dir, "stack")).rejects.toThrow(
+        /hosts\/stack: config\.startOrder starts member "cli" \(fake-runners\/cli\) before ui, but it owns the terminal and starts last\.\n {2}Hint: Put it last in startOrder, or leave it out\./,
+      );
+    });
   });
 });
 

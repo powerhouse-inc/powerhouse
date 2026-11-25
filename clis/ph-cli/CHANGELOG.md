@@ -1,3 +1,139 @@
+## 6.4.0-next.6 (2026-11-25)
+
+### 🩹 Fixes
+
+- **builder-tools:** the dev reactor worker loads the listed local packages' models ([4f7801a70a](https://github.com/powerhouse-inc/powerhouse/commit/4f7801a70a))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.4.0-next.5 (2026-11-25)
+
+### 🚀 Features
+
+- **document-model,ph-cli:** say "legacy document model" and "legacy subgraph" in messages ([c51b86ca4a](https://github.com/powerhouse-inc/powerhouse/commit/c51b86ca4a))
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **ph-cli:** connect's servers sign pages in by link as the person's identity ([a4195ad4be](https://github.com/powerhouse-inc/powerhouse/commit/a4195ad4be))
+- **ph-cli:** ph mcp signs an mcp client's writes as the client's own session ([56e89cb281](https://github.com/powerhouse-inc/powerhouse/commit/56e89cb281))
+- **ph-cli:** list and withdraw a store's credential records ([bdb8ec7a01](https://github.com/powerhouse-inc/powerhouse/commit/bdb8ec7a01))
+- **switchboard:** find an in-process renown itself, drop the credential sources ([062bd5abc0](https://github.com/powerhouse-inc/powerhouse/commit/062bd5abc0))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+- **ph-cli:** log in for every project, add whoami and identity password ([3d01864eec](https://github.com/powerhouse-inc/powerhouse/commit/3d01864eec))
+- **ph-run:** add `ph run supervisor` ([c3d98ecdd4](https://github.com/powerhouse-inc/powerhouse/commit/c3d98ecdd4))
+- **host-core:** one instance per host and data folder ([2338c2d145](https://github.com/powerhouse-inc/powerhouse/commit/2338c2d145))
+
+### 🩹 Fixes
+
+- **ph-cli:** a second ph dev prints a fresh sign-in link too ([96f6c6168f](https://github.com/powerhouse-inc/powerhouse/commit/96f6c6168f))
+
+### ❤️ Thank You
+
+- Claude
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
+## 6.4.0-next.3 (2026-11-23)
+
+### 🚀 Features
+
+- ⚠️  **codegen,ph-cli:** scaffold a neutral dev host, nothing of vetra ([82e68e2330](https://github.com/powerhouse-inc/powerhouse/commit/82e68e2330))
+- ⚠️  **switchboard,connect:** no built-in vetra package ([1e9b9ba2c6](https://github.com/powerhouse-inc/powerhouse/commit/1e9b9ba2c6))
+- ⚠️  **ph-cli:** generate stubs only, no dependency on the vetra package ([329d9de807](https://github.com/powerhouse-inc/powerhouse/commit/329d9de807))
+
+### ⚠️  Breaking Changes
+
+- **codegen,ph-cli:** scaffold a neutral dev host, nothing of vetra  ([82e68e2330](https://github.com/powerhouse-inc/powerhouse/commit/82e68e2330))
+  new projects have hosts/dev in place of hosts/vetra, and
+  the dev Connect port comes from the connect host, not vetra.connectPort.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+- **switchboard,connect:** no built-in vetra package  ([1e9b9ba2c6](https://github.com/powerhouse-inc/powerhouse/commit/1e9b9ba2c6))
+  switchboard dev mode and Connect studio mode no longer
+  load @powerhousedao/vetra by themselves.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+- **ph-cli:** generate stubs only, no dependency on the vetra package  ([329d9de807](https://github.com/powerhouse-inc/powerhouse/commit/329d9de807))
+  ph generate --document and --extract are removed.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
+## 6.4.0-next.2 (2026-11-23)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
+## 6.4.0-next.1 (2026-11-22)
+
+### 🚀 Features
+
+- ⚠️  **ph-cli,ph-cmd,shared:** ph dev runs the dev mode, ph vetra opens vetra studio ([cafcbdb713](https://github.com/powerhouse-inc/powerhouse/commit/cafcbdb713))
+- **vetra:** move the ideate and build spec documents from vetra-cli ([bfc530d0f3](https://github.com/powerhouse-inc/powerhouse/commit/bfc530d0f3))
+
+### ⚠️  Breaking Changes
+
+- **ph-cli,ph-cmd,shared:** ph dev runs the dev mode, ph vetra opens vetra studio  ([cafcbdb713](https://github.com/powerhouse-inc/powerhouse/commit/cafcbdb713))
+  `ph vetra` no longer starts the project's vetra host. Use
+  `ph dev` (or `ph run vetra`) for the dev mode.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
+## 6.4.0-next.0 (2026-11-22)
+
+### 🚀 Features
+
+- **ph-run,ph-cli:** connect runner.serveFiles serves named files next to the build ([5733f02f35](https://github.com/powerhouse-inc/powerhouse/commit/5733f02f35))
+- **switchboard:** identity.storagePath names the renown user file ([877a9a33d4](https://github.com/powerhouse-inc/powerhouse/commit/877a9a33d4))
+- **host-core,ph-run,ph-cli:** a ${package} built-in for hosts a package supplies ([d7c83fcac8](https://github.com/powerhouse-inc/powerhouse/commit/d7c83fcac8))
+- **codegen,ph-cli,shared:** a package with a cli declares clint as a versioned peer ([40936957cb](https://github.com/powerhouse-inc/powerhouse/commit/40936957cb))
+- **ph-cli,shared:** the cli of a package is its own build, with declared packages external ([8504275af5](https://github.com/powerhouse-inc/powerhouse/commit/8504275af5))
+- **host-core:** an installed package supplies hosts, addressed as <package>/<host> ([677b136c62](https://github.com/powerhouse-inc/powerhouse/commit/677b136c62))
+- **clint-common:** port the chat-session package from ph-clint dev.113 ([d21119c6a9](https://github.com/powerhouse-inc/powerhouse/commit/d21119c6a9))
+- **host-core,clint,ph-run:** own-process compound members and a foreground cli member ([6447402ebe](https://github.com/powerhouse-inc/powerhouse/commit/6447402ebe))
+- **clint:** add the ./cli package export and the cli runner ([64bb9f10c9](https://github.com/powerhouse-inc/powerhouse/commit/64bb9f10c9))
+- **ph-cli:** ph run connect build takes --base and --packages-registry ([894d5a7f31](https://github.com/powerhouse-inc/powerhouse/commit/894d5a7f31))
+- ⚠️  **ph-cli:** the classic commands are sugar for ph run ([9976e40986](https://github.com/powerhouse-inc/powerhouse/commit/9976e40986))
+- ⚠️  **switchboard:** the plugin host is the only boot path ([fc8ba25655](https://github.com/powerhouse-inc/powerhouse/commit/fc8ba25655))
+- **ph-cli:** ph run vetra takes --restart ([fdcdf29081](https://github.com/powerhouse-inc/powerhouse/commit/fdcdf29081))
+- ⚠️  **ph-cli:** a project without hosts is an error ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+
+### 🩹 Fixes
+
+- **host-core,ph-run:** linux failures in the next/6.4 checks ([0fdc5a4797](https://github.com/powerhouse-inc/powerhouse/commit/0fdc5a4797))
+- **codegen,ph-cli:** ph migrate handles javascript files and leaves ignored files alone ([687cd2555d](https://github.com/powerhouse-inc/powerhouse/commit/687cd2555d))
+- **ph-cli:** write the build journal with the patient rename ([bd5dc1adc8](https://github.com/powerhouse-inc/powerhouse/commit/bd5dc1adc8))
+- **codegen:** the scaffolded switchboard entrypoint migrates with ph run ([fb185f5842](https://github.com/powerhouse-inc/powerhouse/commit/fb185f5842))
+- **ph-cli:** a config change restarts Studio with the host as it reads then ([e1d1a56d27](https://github.com/powerhouse-inc/powerhouse/commit/e1d1a56d27))
+
+### ⚠️  Breaking Changes
+
+- **ph-cli:** the classic commands are sugar for ph run  ([9976e40986](https://github.com/powerhouse-inc/powerhouse/commit/9976e40986))
+  `ph vetra`, `ph connect` and `ph switchboard` need the host files
+  under hosts/ and take the arguments of `ph run` only. `ph service` and `ph reactor`
+  are removed, as are the switchboard flags --use-vetra-drive and --vetra-drive-id.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **switchboard:** the plugin host is the only boot path  ([fc8ba25655](https://github.com/powerhouse-inc/powerhouse/commit/fc8ba25655))
+  FEATURE_PLUGIN_HOST_ENABLED=false refuses to start, and
+  FEATURE_PLUGIN_HOST_ENABLED=1 without declared plugins no longer boots
+  every built-in plugin. reactor.workflows in a host file fails validation.
+  A host with only readModel.url must name its reactor store. The config
+  file's workflows.enabled no longer turns workflows on in Switchboard.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **ph-cli:** a project without hosts is an error  ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+  the classic commands need a hosts/ folder; run ph migrate.
+  Co-Authored-By: Claude <noreply@anthropic.com>
 ## 6.3.0-dev.11 (2026-11-24)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

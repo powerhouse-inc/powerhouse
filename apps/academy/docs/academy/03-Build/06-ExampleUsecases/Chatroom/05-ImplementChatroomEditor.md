@@ -88,7 +88,7 @@ When building your editor component within the Powerhouse ecosystem, you have se
 2. **Tailwind CSS:** Vetra Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes.
 3. **Custom CSS Files:** You can import traditional CSS files to apply custom styles.
 
-Vetra Studio Preview provides a dynamic local environment. By running `ph vetra --watch`, you can visualize your components instantly as you build them.
+Vetra Studio Preview provides a dynamic local environment. By running `ph dev --watch`, you can visualize your components instantly as you build them.
 
 ## Build the editor with components
 
@@ -565,7 +565,7 @@ export const EditableLabel: React.FC<EditableLabelProps> = ({
 Now you can run Vetra Studio Preview and see the **ChatRoom** editor in action:
 
 ```bash
-ph vetra --watch
+ph dev --watch
 ```
 
 In Vetra Studio, in the bottom right corner you'll find a new Document Model that you can create: **ChatRoom**. Click on it to create a new ChatRoom document.

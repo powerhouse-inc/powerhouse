@@ -38,7 +38,7 @@ You can clone the repository and run Vetra Studio to see all the code in action:
 git clone https://github.com/powerhouse-inc/todo-demo
 cd todo-demo
 pnpm install
-ph vetra --watch
+ph dev --watch
 ```
 
 <details>

@@ -19,7 +19,6 @@ import {
   DRIVES_PRESERVE_STRATEGIES,
   LOG_LEVELS,
 } from "../constants.js";
-import { getConfig } from "../file-system/get-config.js";
 
 export const AGENTS: Agent[] = _AGENTS;
 
@@ -60,7 +59,7 @@ export const buildArgs = {
     type: boolean,
     long: "release",
     description:
-      "Experimental: check every document model as for a release and stop the build, previous output intact, when the check finds them invalid or cannot run; then write the release approval ph publish verifies",
+      "Experimental: check every document model as for a release and stop the build, previous output intact, when the check finds them invalid or cannot run; then write the release approval ph publish verifies; also refuse a package with a Cli that does not declare @powerhousedao/clint",
     defaultValue: () => false as const,
     defaultValueIsSerializable: true,
   }),
@@ -126,38 +125,18 @@ export const httpsKeyFile = option({
   type: optional(string),
   long: "https-key-file",
   description: "path to the ssl key file",
-  defaultValue: () => {
-    const baseConfig = getConfig();
-    const https = baseConfig.reactor?.https;
-    if (https === undefined) return undefined;
-    if (typeof https === "boolean") return undefined;
-    return https.keyPath;
-  },
 });
 
 export const httpsCertFile = option({
   type: optional(string),
   long: "https-cert-file",
   description: "path to the ssl cert file",
-  defaultValue: () => {
-    const baseConfig = getConfig();
-    const https = baseConfig.reactor?.https;
-    if (https === undefined) return undefined;
-    if (typeof https === "boolean") return undefined;
-    return https.certPath;
-  },
 });
 
 export const https = flag({
   type: optional(boolean),
   long: "https",
   description: "Use https",
-  defaultValue: () => {
-    const baseConfig = getConfig();
-    const https = baseConfig.reactor?.https;
-    if (typeof https === "boolean") return https;
-    return undefined;
-  },
 });
 
 export const vetraSwitchboardArgs = {

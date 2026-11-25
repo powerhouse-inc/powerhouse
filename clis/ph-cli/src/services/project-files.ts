@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
@@ -9,7 +10,15 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import {
+  dirname,
+  isAbsolute,
+  join,
+  posix,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 
 /** Directories that never hold the package's own sources. */
 const SKIPPED_DIRS = new Set([
@@ -29,19 +38,61 @@ export const toPosix = (path: string) => path.split(sep).join("/");
 export const errorText = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
 
-/** The package's files whose names match `pattern`, by project-relative POSIX path. */
+/**
+ * Whether git ignores a file or directory, by project-relative POSIX path.
+ * In a git work tree, the project's files are those `git ls-files` lists from
+ * its directory: tracked ones, and untracked ones git does not ignore.
+ * Outside a work tree, without git, or when git lists nothing there, as for a
+ * project in an ignored directory of another repository, nothing is ignored.
+ */
+export function ignoredByGit(projectDir: string): (path: string) => boolean {
+  const listed = spawnSync(
+    "git",
+    ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+    {
+      cwd: projectDir,
+      encoding: "utf8",
+      maxBuffer: 256 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "ignore"],
+    },
+  );
+  if (listed.status !== 0) return () => false;
+  // Each listed file and the directories above it, which a walk enters.
+  const kept = new Set<string>();
+  for (const file of listed.stdout.split("\0")) {
+    for (
+      let path = file;
+      path !== "" && path !== "." && !kept.has(path);
+      path = posix.dirname(path)
+    ) {
+      kept.add(path);
+    }
+  }
+  return kept.size === 0 ? () => false : (path) => !kept.has(path);
+}
+
+/**
+ * The package's files whose names match `pattern`, by project-relative POSIX
+ * path. Paths git ignores, such as build copies of sources, are left out.
+ */
 export function readProjectFiles(
   projectDir: string,
   pattern: RegExp,
 ): Map<string, Buffer> {
   const files = new Map<string, Buffer>();
+  const ignored = ignoredByGit(projectDir);
   const visit = (dir: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      const local = toPosix(relative(projectDir, path));
       if (entry.isDirectory()) {
-        if (!SKIPPED_DIRS.has(entry.name)) visit(join(dir, entry.name));
-      } else if (entry.isFile() && pattern.test(entry.name)) {
-        const path = join(dir, entry.name);
-        files.set(toPosix(relative(projectDir, path)), readFileSync(path));
+        if (!SKIPPED_DIRS.has(entry.name) && !ignored(local)) visit(path);
+      } else if (
+        entry.isFile() &&
+        pattern.test(entry.name) &&
+        !ignored(local)
+      ) {
+        files.set(local, readFileSync(path));
       }
     }
   };

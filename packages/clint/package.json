@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/clint",
-  "version": "6.3.0-dev.11",
-  "description": "The clint framework: AI-powered CLIs over the Powerhouse stack — clint-runner (services manager, REPL, proxy) and mastra-runner (headless agent host) for uniform-runners hosts.",
+  "version": "6.4.0-next.6",
+  "description": "The clint framework: AI-powered CLIs over the Powerhouse stack — mastra-runner (headless agent host), cli-runner (a package's ./cli in the terminal) and proxy-runner (one front port for a compound's members) for uniform-runners hosts.",
   "repository": {
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse",
@@ -21,17 +21,41 @@
       "import": "./dist/index.mjs",
       "default": "./dist/index.mjs"
     },
-    "./clint-runner": {
-      "source": "./src/runners/clint-runner.ts",
-      "types": "./dist/runners/clint-runner.d.mts",
-      "import": "./dist/runners/clint-runner.mjs",
-      "default": "./dist/runners/clint-runner.mjs"
-    },
     "./mastra-runner": {
       "source": "./src/runners/mastra-runner.ts",
       "types": "./dist/runners/mastra-runner.d.mts",
       "import": "./dist/runners/mastra-runner.mjs",
       "default": "./dist/runners/mastra-runner.mjs"
+    },
+    "./cli-runner": {
+      "source": "./src/runners/cli-runner.ts",
+      "types": "./dist/runners/cli-runner.d.mts",
+      "import": "./dist/runners/cli-runner.mjs",
+      "default": "./dist/runners/cli-runner.mjs"
+    },
+    "./proxy-runner": {
+      "source": "./src/runners/proxy-runner.ts",
+      "types": "./dist/runners/proxy-runner.d.mts",
+      "import": "./dist/runners/proxy-runner.mjs",
+      "default": "./dist/runners/proxy-runner.mjs"
+    },
+    "./mastra": {
+      "source": "./src/integrations/mastra/index.ts",
+      "types": "./dist/integrations/mastra/index.d.mts",
+      "import": "./dist/integrations/mastra/index.mjs",
+      "default": "./dist/integrations/mastra/index.mjs"
+    },
+    "./powerhouse": {
+      "source": "./src/integrations/powerhouse/index.ts",
+      "types": "./dist/integrations/powerhouse/index.d.mts",
+      "import": "./dist/integrations/powerhouse/index.mjs",
+      "default": "./dist/integrations/powerhouse/index.mjs"
+    },
+    "./testing": {
+      "source": "./src/testing/index.ts",
+      "types": "./dist/testing/index.d.mts",
+      "import": "./dist/testing/index.mjs",
+      "default": "./dist/testing/index.mjs"
     },
     "./package.json": "./package.json"
   },
@@ -48,7 +72,6 @@
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
-    "@powerhousedao/switchboard": "workspace:*",
     "cli-highlight": "^2.1.11",
     "commander": "catalog:",
     "document-model": "workspace:*",
@@ -63,15 +86,11 @@
     "zod": "catalog:"
   },
   "peerDependencies": {
-    "@electric-sql/pglite": ">=0.2.0",
     "@mastra/core": ">=1.41.0",
     "@mastra/libsql": ">=1.12.1",
     "@mastra/memory": ">=1.20.2"
   },
   "peerDependenciesMeta": {
-    "@electric-sql/pglite": {
-      "optional": true
-    },
     "@mastra/core": {
       "optional": true
     },

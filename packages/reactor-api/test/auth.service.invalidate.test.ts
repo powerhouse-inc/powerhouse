@@ -15,6 +15,7 @@ const mockVerifyCredential = vi.fn();
 vi.mock("@renown/sdk", () => ({
   verifyAuthBearerToken: (...args: unknown[]) =>
     mockVerifyAuthBearerToken(...args),
+  carriedCredentialOf: () => undefined,
 }));
 
 function makeVerified(address: string, chainId: number, issuer: string) {
@@ -148,6 +149,7 @@ describe("AuthService.isCredentialValid()", () => {
       address: "0xuser",
       chainId: 1,
       appId: "did:key:app1",
+      networkId: "eip155",
     });
   });
 

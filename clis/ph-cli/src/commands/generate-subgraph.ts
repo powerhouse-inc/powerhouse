@@ -1,6 +1,6 @@
 import { debugArgs } from "@powerhousedao/shared/clis/args";
 import { command, flag, option, optional, string } from "cmd-ts";
-import { File, ModuleDir } from "../utils/fs-args.js";
+import { ModuleDir } from "../utils/fs-args.js";
 import { skipInstallArgs } from "../utils/install-added-dependencies.js";
 
 export const generateSubgraphCmd = command({
@@ -14,13 +14,6 @@ export const generateSubgraphCmd = command({
       description:
         "Create a subgraph with this name. A subgraph directory that already exists keeps its form",
     }),
-    document: option({
-      type: optional(File),
-      long: "document",
-      short: "d",
-      description:
-        "Path to a powerhouse/subgraph spec file (.phd or .json) to generate a legacy subgraph from. A subgraph directory that already exists keeps its form",
-    }),
     dir: option({
       type: optional(ModuleDir),
       long: "dir",
@@ -31,12 +24,6 @@ export const generateSubgraphCmd = command({
       long: "all",
       short: "a",
       description: "Re-generate all existing subgraphs in the current project",
-    }),
-    extract: flag({
-      long: "extract",
-      short: "x",
-      description:
-        "Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/",
     }),
     ...skipInstallArgs,
     ...debugArgs,

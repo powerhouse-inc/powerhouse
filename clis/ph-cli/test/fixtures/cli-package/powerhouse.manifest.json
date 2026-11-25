@@ -1,0 +1,9 @@
+{
+  "name": "@fixture/cli-package",
+  "description": "A package that exports a Cli.",
+  "category": "Fixtures",
+  "documentModels": [],
+  "editors": [],
+  "processors": [],
+  "subgraphs": []
+}

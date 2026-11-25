@@ -1,5 +1,4 @@
 export * from "./documents.js";
-export * from "./drive-url.js";
 export * from "./drives.js";
 export * from "./download-document.js";
 export * from "./get-revision-from-date.js";

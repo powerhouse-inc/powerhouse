@@ -32,10 +32,16 @@ export function connectReactorClient(
   return client;
 }
 
+/** Who the worker signs as, and the credential its bearers carry (F3d). */
+export type ReactorSessionIdentity = ReactorIdentity & {
+  /** The user's credential: renown's `PowerhouseVerifiableCredential`. */
+  credential?: unknown;
+};
+
 // Push the current renown identity (null on logout) to the worker; re-send on login/logout.
 export function postReactorIdentity(
   router: MessageRouter,
-  user: ReactorIdentity | null,
+  user: ReactorSessionIdentity | null,
 ): void {
   router.post({ k: "identity", user });
 }

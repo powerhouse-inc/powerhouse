@@ -8,7 +8,7 @@ import {
   optional,
   string,
 } from "cmd-ts";
-import { File, ModuleDir } from "../utils/fs-args.js";
+import { ModuleDir } from "../utils/fs-args.js";
 import { CommaSeparatedStrings } from "../utils/comma-separated.js";
 
 export const generateAppCmd = command({
@@ -28,13 +28,6 @@ export const generateAppCmd = command({
       description:
         "The document types allowed by the new app (repeatable or comma-separated)",
     }),
-    document: option({
-      type: optional(File),
-      long: "document",
-      short: "d",
-      description:
-        "Path to a powerhouse/app spec file (.phd or .json) to drive codegen",
-    }),
     dir: option({
       type: optional(ModuleDir),
       long: "dir",
@@ -52,12 +45,6 @@ export const generateAppCmd = command({
       long: "all",
       short: "a",
       description: "Re-generate all existing apps in the current project",
-    }),
-    extract: flag({
-      long: "extract",
-      short: "x",
-      description:
-        "Write a powerhouse/app spec for each existing drive app into specs/apps/",
     }),
     ...debugArgs,
   },

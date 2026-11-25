@@ -11,7 +11,6 @@ import {
   bindPHStoreToWindow,
   createPHStore,
   PHStoreProvider,
-  showPHModal,
   useLinkProps,
 } from "@powerhousedao/reactor-browser";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
@@ -330,14 +329,5 @@ describe("Connect settings page", () => {
     click(screen.getByRole("button", { name: "Close" }));
     await vi.waitFor(() => expect(screen.getByTestId("home")).toBeTruthy());
     expect(history.location.pathname).toBe("/");
-  });
-
-  it("opens the page for showPHModal({ type: 'settings' })", async () => {
-    const { history } = mount("/");
-    await vi.waitFor(() => expect(screen.getByTestId("home")).toBeTruthy());
-    act(() => showPHModal({ type: "settings" }));
-    await vi.waitFor(() => expect(shownTab()).toBe("packages"));
-    expect(history.location.pathname).toBe("/settings/package-manager");
-    expect(store.modal).toBeUndefined();
   });
 });

@@ -84,7 +84,6 @@ You could then add the specific remote Vetra drive to your Powerhouse configurat
 
 ```json
 "vetra": {
-    "driveId": "bai-specifications",
     "driveUrl": "https://switchboard.staging.vetra.io/d/bai-specifications"
   }
 ```
@@ -109,7 +108,7 @@ Claude can connect directly to your project's Reactor via the [Model Context Pro
 }
 ```
 
-`ph mcp` serves the reactor-mcp tools over stdio from the project's own `ph-cli`. `node --run mcp` runs the project's `mcp` script (`ph-cli mcp`), which works on every platform. On the first tool call it connects to the project's running Vetra, or starts `ph vetra --watch` in the background and writes its output to `.ph/vetra.log`, so you don't need to start Vetra first.
+`ph mcp` serves the reactor-mcp tools over stdio from the project's own `ph-cli`. `node --run mcp` runs the project's `mcp` script (`ph-cli mcp`), which works on every platform. On the first tool call it connects to the project's running Vetra, or starts `ph run vetra --strictPort` in the background and writes its output to `.ph/vetra.log`, so you don't need to start Vetra first.
 
 For a client that doesn't start in the project directory, such as Claude Desktop, copy the entry from `.cursor/mcp.json` and replace `${workspaceFolder}` with the project's path. A project created before `ph mcp` points reactor-mcp at `http://localhost:4001/mcp`; run `ph migrate` to switch it to the launcher.
 

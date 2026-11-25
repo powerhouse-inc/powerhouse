@@ -17,6 +17,7 @@ export default defineConfig({
     include: [
       "src/codegen/scalar-codegen-golden.test.ts",
       "src/codegen/project-scalar-codegen.test.ts",
+      "src/codegen/resolve-from-codegen.test.ts",
       "src/codegen/migrate-package-json.test.ts",
       "src/codegen/features.test.ts",
       "src/utils/validation.test.ts",

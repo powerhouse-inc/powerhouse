@@ -6,10 +6,10 @@ import {
   getConnectBaseViteConfig,
   missingVendorEntries,
   prebuildConnectVendor,
-  ownProjectPackage,
   prebuildReactorWorker,
   prebuildWorkerPackages,
   resolveReactorWorkerSource,
+  workerLocalPackages,
   type PrebuiltReactorWorker,
   type PrebuiltVendor,
 } from "@powerhousedao/builder-tools";
@@ -391,19 +391,13 @@ async function prebuildLocalWorkerPackages(
   safeVendorImports: Record<string, string>,
 ): Promise<void> {
   const config = getConfig(join(dirname, "powerhouse.config.json"));
-  const configured = (config.packages ?? [])
-    .filter((p) => p.provider === "local")
-    .map((p) => p.packageName);
-  // The project itself is a local package in all but name: a vetra project
-  // declares no entry for itself, and its models are the ones the worker
-  // cannot otherwise get.
-  const own = ownProjectPackage(dirname);
-  const localPackages = [...new Set([...configured, ...(own ? [own] : [])])];
 
   const errorRef: { message?: string } = {};
   const built = await prebuildWorkerPackages({
     dirname,
-    packages: localPackages,
+    // The project itself is a local package in all but name: a vetra project
+    // declares no entry for itself.
+    packages: workerLocalPackages(dirname, config.packages),
     outDir: join(outDirAbs, "__reactor_worker__", "packages"),
     vendor: vendor
       ? { imports: vendor.imports, dir: join(outDirAbs, "__vendor__") }

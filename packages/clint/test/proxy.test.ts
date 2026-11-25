@@ -2,17 +2,9 @@ import { describe, it, expect, afterEach } from "vitest";
 import http from "node:http";
 import net from "node:net";
 import zlib from "node:zlib";
-import { createProxyServer } from "../src/core/proxy.js";
+import { createProxyServer, safeEnd } from "../src/core/proxy.js";
 import type { ProxyServerInstance } from "../src/core/proxy.js";
 import type { ProxyRoute } from "../src/core/proxy-routes.js";
-import {
-  buildSwitchboardRoutes,
-  buildServiceRoutes,
-} from "../src/core/proxy-routes.js";
-import type {
-  ServiceDefinition,
-  ServiceInstanceStatus,
-} from "../src/core/types.js";
 import { createLogger } from "../src/core/logger.js";
 
 const logger = createLogger("warn", () => {});
@@ -297,6 +289,54 @@ describe("createProxyServer", () => {
     expect(res.status).toBe(404);
   });
 
+  it("replaces a client-sent x-forwarded-host with the real Host (no spoofing)", async () => {
+    const seen: http.IncomingHttpHeaders[] = [];
+    const upstream = http.createServer((req, res) => {
+      seen.push(req.headers);
+      res.writeHead(200);
+      res.end("ok");
+    });
+    await new Promise<void>((r) => upstream.listen(0, "127.0.0.1", () => r()));
+    servers.push({
+      close: () => new Promise<void>((r) => upstream.close(() => r())),
+    });
+    const port = (upstream.address() as { port: number }).port;
+    const p = await startProxy();
+    p.addRoute({
+      prefix: "/api",
+      upstream: new URL(`http://127.0.0.1:${port}`),
+      ws: false,
+      source: "test",
+    });
+
+    const send = (headers: Record<string, string>) =>
+      new Promise<void>((resolve, reject) => {
+        const r = http.request(
+          { host: "127.0.0.1", port: p.port, path: "/api/x", headers },
+          (res) => {
+            res.resume();
+            res.on("end", () => resolve());
+          },
+        );
+        r.on("error", reject);
+        r.end();
+      });
+
+    // A DNS-rebinding page: Host is the attacker's name, and it sets its own
+    // X-Forwarded-Host claiming loopback.
+    await send({
+      host: "attacker.example:8090",
+      "x-forwarded-host": "localhost:8090",
+    });
+    await send({ host: "localhost:8090" });
+
+    expect(seen[0]["x-forwarded-host"]).toBe("attacker.example:8090");
+    expect(seen[1]["x-forwarded-host"]).toBe("localhost:8090");
+    // The real client hop is still appended to a client-sent x-forwarded-for.
+    await send({ host: "localhost:8090", "x-forwarded-for": "127.0.0.1" });
+    expect(seen[2]["x-forwarded-for"]).toBe("127.0.0.1,127.0.0.1");
+  });
+
   it("forwards requests to upstream", async () => {
     const upstream = await createUpstream("hello");
     const p = await startProxy();
@@ -397,6 +437,42 @@ describe("createProxyServer", () => {
     expect((await httpGet(`${p.url}/switchboard/attachmentsX`)).status).toBe(
       404,
     );
+  });
+
+  it("answers 503 (not 404) on a route whose upstream is still starting", async () => {
+    // A route held `unavailable` while its upstream starts. A 404 there tells
+    // a syncing browser the endpoint is gone; its sync channel treats that as
+    // permanent, stops polling and dead-letters every push. 503 says "retry".
+    const upstream = await createUpstream("svc");
+    const p = await startProxy();
+    p.addRoute({
+      prefix: "/svc",
+      ws: false,
+      source: "svc-pending",
+      unavailable: true,
+    });
+
+    const starting = await fetch(`${p.url}/svc/graphql/r`);
+    expect(starting.status).toBe(503);
+    expect(starting.headers.get("retry-after")).toBe("2");
+    await starting.text();
+    const listed = JSON.parse((await httpGet(`${p.url}/_proxy/routes`)).body);
+    expect(listed).toEqual([
+      expect.objectContaining({ prefix: "/svc", unavailable: true }),
+    ]);
+
+    // The real routes are longer prefixes, so they win once added.
+    p.addRoute({
+      prefix: "/svc/graphql",
+      upstream: new URL("/graphql", upstream.url),
+      ws: false,
+      source: "svc",
+    });
+    p.removeRoutesBySource("svc-pending");
+
+    const ready = await httpGet(`${p.url}/svc/graphql/r`);
+    expect(ready.status).toBe(200);
+    expect(JSON.parse(ready.body).path).toBe("/graphql/r");
   });
 
   it("returns 502 when upstream is unreachable", async () => {
@@ -1227,6 +1303,23 @@ describe("createProxyServer", () => {
 });
 
 describe("proxy routes end-to-end", () => {
+  /** A path route to `upstream`, under a source label. */
+  const route = (
+    prefix: string,
+    upstream: string,
+    source: string,
+    ws = false,
+  ): ProxyRoute => ({ prefix, upstream: new URL(upstream), ws, source });
+
+  /** A switchboard's routes under /switchboard: graphql, drives,
+   * attachments and (WebSocket) mcp. */
+  const switchboardRoutes = (sb: string, mcp: string): ProxyRoute[] => [
+    route("/switchboard/graphql", `${sb}/graphql`, "switchboard"),
+    route("/switchboard/d/", `${sb}/d/`, "switchboard"),
+    route("/switchboard/attachments/", `${sb}/attachments/`, "switchboard"),
+    route("/switchboard/mcp", `${mcp}/mcp`, "switchboard", true),
+  ];
+
   it("switchboard routes forward to correct upstreams", async () => {
     // Simulate switchboard (graphql + d/) and MCP as two separate upstreams
     const sbUpstream = await createUpstream("switchboard");
@@ -1239,7 +1332,7 @@ describe("proxy routes end-to-end", () => {
     });
     servers.push({ close: () => proxy.stop() });
 
-    const routes = buildSwitchboardRoutes(sbUpstream.url, mcpUpstream.url);
+    const routes = switchboardRoutes(sbUpstream.url, mcpUpstream.url);
     for (const r of routes) proxy.addRoute(r);
 
     // GraphQL endpoint → switchboard upstream
@@ -1274,28 +1367,14 @@ describe("proxy routes end-to-end", () => {
     });
     servers.push({ close: () => proxy.stop() });
 
-    const def: ServiceDefinition = {
-      id: "my-registry",
-      command: "echo",
-      readiness: {
-        pattern: /listening on (http:\/\/\S+)/,
-        captures: {
-          mcp: { group: 1, type: "api-mcp" },
-        },
-        timeout: 5000,
-      },
-    };
-
-    const instance: ServiceInstanceStatus = {
-      serviceId: "my-registry",
-      instanceId: "i1",
-      name: "my-registry",
-      status: "ready",
-      endpoints: { mcp: `${svcUpstream.url}/mcp` },
-    };
-
-    const routes = buildServiceRoutes(def, instance);
-    for (const r of routes) proxy.addRoute(r);
+    proxy.addRoute(
+      route(
+        "/my-registry/mcp",
+        `${svcUpstream.url}/mcp`,
+        "service:my-registry",
+        true,
+      ),
+    );
 
     const res = await httpGet(`${proxy.url}/my-registry/mcp`);
     expect(res.status).toBe(200);
@@ -1317,43 +1396,17 @@ describe("proxy routes end-to-end", () => {
     servers.push({ close: () => proxy.stop() });
 
     // Add switchboard routes
-    for (const r of buildSwitchboardRoutes(sbUpstream.url, mcpUpstream.url)) {
+    for (const r of switchboardRoutes(sbUpstream.url, mcpUpstream.url)) {
       proxy.addRoute(r);
     }
 
     // Add service routes
-    const def: ServiceDefinition = {
-      id: "ext-svc",
-      command: "echo",
-      readiness: {
-        patterns: [
-          {
-            name: "rest",
-            pattern: /REST at (http:\/\/\S+)/,
-            captures: { api: { group: 1, type: "api-rest" } },
-          },
-          {
-            name: "mcp",
-            pattern: /MCP at (http:\/\/\S+)/,
-            captures: { mcp: { group: 1, type: "api-mcp" } },
-          },
-        ],
-        timeout: 5000,
-      },
-    };
-    const instance: ServiceInstanceStatus = {
-      serviceId: "ext-svc",
-      instanceId: "i1",
-      name: "ext-svc",
-      status: "ready",
-      endpoints: {
-        api: `${svcUpstream.url}/api`,
-        mcp: `${svcUpstream.url}/mcp`,
-      },
-    };
-    for (const r of buildServiceRoutes(def, instance)) {
-      proxy.addRoute(r);
-    }
+    proxy.addRoute(
+      route("/ext-svc/api", `${svcUpstream.url}/api`, "service:ext-svc"),
+    );
+    proxy.addRoute(
+      route("/ext-svc/mcp", `${svcUpstream.url}/mcp`, "service:ext-svc", true),
+    );
 
     // Switchboard graphql → sb upstream
     const gqlRes = await httpGet(`${proxy.url}/switchboard/graphql`);
@@ -1394,5 +1447,369 @@ describe("proxy routes end-to-end", () => {
     // Switchboard still works
     const stillUp = await httpGet(`${proxy.url}/switchboard/graphql`);
     expect(stillUp.status).toBe(200);
+  });
+});
+
+describe("proxy survives responses and sockets that already ended", () => {
+  function startProxyWith(
+    upstreamUrl: string,
+    prefix = "/svc",
+  ): Promise<ProxyServerInstance> {
+    return createProxyServer({ port: 0, host: "127.0.0.1", logger }).then(
+      (p) => {
+        servers.push({ close: () => p.stop() });
+        p.addRoute({
+          prefix,
+          upstream: new URL(upstreamUrl),
+          ws: false,
+          source: "svc",
+        });
+        return p;
+      },
+    );
+  }
+
+  /** Collects process-level errors raised while the callback runs. */
+  async function collectProcessErrors(
+    run: () => Promise<void>,
+  ): Promise<Error[]> {
+    const errors: Error[] = [];
+    const onError = (e: Error) => {
+      errors.push(e);
+    };
+    const saved = process.listeners("uncaughtException");
+    process.removeAllListeners("uncaughtException");
+    process.on("uncaughtException", onError);
+    try {
+      await run();
+      await new Promise((r) => setTimeout(r, 100));
+    } finally {
+      process.removeListener("uncaughtException", onError);
+      for (const l of saved) process.on("uncaughtException", l);
+    }
+    return errors;
+  }
+
+  it("a client that disconnects mid-stream does not crash the proxy", async () => {
+    const upstream = await createSseUpstream(500);
+    const p = await startProxyWith(upstream.url);
+    const errors = await collectProcessErrors(async () => {
+      await new Promise<void>((resolve) => {
+        const req = http.get(`${p.url}/svc/events`, (res) => {
+          res.once("data", () => {
+            req.destroy();
+            resolve();
+          });
+        });
+        req.on("error", () => {});
+      });
+      await new Promise((r) => setTimeout(r, 700));
+    });
+    expect(errors).toEqual([]);
+    expect((await httpGet(`${p.url}/_proxy/health`)).status).toBe(200);
+  });
+
+  it("an upstream that dies after headers were sent ends the response once", async () => {
+    const upstream = await createStalledUpstream();
+    const p = await startProxyWith(upstream.url);
+    let settled: Settled | undefined;
+    const errors = await collectProcessErrors(async () => {
+      settled = await getAndSettle(`${p.url}/svc/x`, () =>
+        upstream.server.closeAllConnections(),
+      );
+    });
+    expect(errors).toEqual([]);
+    // One response: the 200 head that was already sent, then a torn-down body.
+    expect(settled?.status).toBe(200);
+    expect(settled?.body).not.toContain("Bad Gateway");
+    expect(settled?.complete).toBe(false);
+    expect((await httpGet(`${p.url}/_proxy/health`)).status).toBe(200);
+  });
+
+  it("a client that half-closes mid-upload while the upstream streams does not crash the proxy", async () => {
+    // The client sends an incomplete body and FINs, keeping its read side open.
+    // The proxy sees a request error while the response is still streaming.
+    const server = http.createServer((_req, res) => {
+      res.writeHead(200, { "Content-Type": "text/plain" });
+      const t = setInterval(() => res.write("chunk\n"), 20);
+      setTimeout(() => {
+        clearInterval(t);
+        res.end();
+      }, 400);
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    servers.push({
+      close: () =>
+        new Promise<void>((r) => {
+          server.closeAllConnections();
+          server.close(() => r());
+        }),
+    });
+    const port = (server.address() as { port: number }).port;
+    const p = await startProxyWith(`http://127.0.0.1:${port}`);
+    const errors = await collectProcessErrors(async () => {
+      await new Promise<void>((resolve) => {
+        const sock = net.connect(p.port, "127.0.0.1", () => {
+          sock.write(
+            "POST /svc/up HTTP/1.1\r\nHost: x\r\nContent-Length: 100\r\n\r\npartial",
+          );
+          setTimeout(() => sock.end(), 100);
+        });
+        sock.on("error", () => {});
+        sock.on("data", () => {});
+        sock.on("close", () => resolve());
+        setTimeout(() => {
+          sock.destroy();
+          resolve();
+        }, 1500);
+      });
+      await new Promise((r) => setTimeout(r, 500));
+    });
+    expect(errors).toEqual([]);
+    expect((await httpGet(`${p.url}/_proxy/health`)).status).toBe(200);
+  });
+
+  /** Raw TCP upstream that answers each connection with the given bytes. */
+  async function createRawUpstream(
+    respond: (sock: net.Socket) => void,
+  ): Promise<string> {
+    const socks = new Set<net.Socket>();
+    const server = net.createServer((sock) => {
+      socks.add(sock);
+      sock.on("error", () => {});
+      sock.once("data", () => respond(sock));
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    servers.push({
+      close: () =>
+        new Promise<void>((r) => {
+          for (const sk of socks) sk.destroy();
+          server.close(() => r());
+        }),
+    });
+    return `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  }
+
+  interface Settled {
+    status: number;
+    body: string;
+    complete: boolean;
+  }
+
+  async function getAndSettle(
+    url: string,
+    onData?: () => void,
+  ): Promise<Settled> {
+    return new Promise<Settled>((resolve) => {
+      let status = 0;
+      let body = "";
+      let complete = false;
+      const done = () => resolve({ status, body, complete });
+      const req = http.get(url, (res) => {
+        status = res.statusCode ?? 0;
+        res.on("data", (c: Buffer) => {
+          body += c.toString();
+          onData?.();
+        });
+        res.on("end", () => {
+          complete = true;
+        });
+        res.on("error", done);
+        res.on("close", done);
+      });
+      req.on("error", done);
+      setTimeout(() => {
+        req.destroy();
+        done();
+      }, 1500);
+    });
+  }
+
+  it("an upstream answering with non-HTTP bytes does not crash the proxy", async () => {
+    const url = await createRawUpstream((s) => {
+      s.write("GARBAGE not http at all\r\n\r\n");
+    });
+    const p = await startProxyWith(url);
+    let settled: Settled | undefined;
+    const errors = await collectProcessErrors(async () => {
+      settled = await getAndSettle(`${p.url}/svc/x`);
+    });
+    expect(errors).toEqual([]);
+    expect(settled?.status).toBe(502);
+    expect(settled?.body).toContain("Bad Gateway");
+    expect((await httpGet(`${p.url}/_proxy/health`)).status).toBe(200);
+  });
+
+  it("an upstream that sends a partial response then garbage does not crash the proxy", async () => {
+    const url = await createRawUpstream((s) => {
+      s.write(
+        "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n",
+      );
+      setTimeout(() => s.write("ZZZ garbage \x00\x01 not a chunk\r\n"), 30);
+      setTimeout(() => s.write("more garbage"), 80);
+    });
+    const p = await startProxyWith(url);
+    let settled: Settled | undefined;
+    const errors = await collectProcessErrors(async () => {
+      settled = await getAndSettle(`${p.url}/svc/x`);
+    });
+    expect(errors).toEqual([]);
+    expect(settled?.status).toBe(200);
+    // The head was already sent, so the proxy can only close the response.
+    expect((await httpGet(`${p.url}/_proxy/health`)).status).toBe(200);
+  });
+
+  it("an upstream that sends a status line, then garbage headers, does not crash the proxy", async () => {
+    const url = await createRawUpstream((s) => {
+      s.write("HTTP/1.1 200 OK\r\nContent-Length: 50\r\n\r\npartial");
+      setTimeout(() => s.write("HTTP/garbled\r\n\r\n"), 30);
+    });
+    const p = await startProxyWith(url);
+    let settled: Settled | undefined;
+    const errors = await collectProcessErrors(async () => {
+      settled = await getAndSettle(`${p.url}/svc/x`);
+    });
+    expect(errors).toEqual([]);
+    expect(settled?.status).toBe(200);
+    expect(settled?.complete).toBe(false);
+    expect((await httpGet(`${p.url}/_proxy/health`)).status).toBe(200);
+  });
+
+  it("an upstream that sends a full response then garbage in the same packet is answered 502 and does not crash the proxy", async () => {
+    const url = await createRawUpstream((s) => {
+      s.write(
+        "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nokGARBAGE not http\r\n\r\n",
+      );
+      setTimeout(() => s.write("more GARBAGE"), 30);
+    });
+    const p = await startProxyWith(url);
+    let settled: Settled | undefined;
+    const errors = await collectProcessErrors(async () => {
+      settled = await getAndSettle(`${p.url}/svc/x`);
+    });
+    expect(errors).toEqual([]);
+    // The parse error surfaces before the response is delivered.
+    expect(settled?.status).toBe(502);
+    expect(settled?.body).toContain("Bad Gateway");
+    expect((await httpGet(`${p.url}/_proxy/health`)).status).toBe(200);
+  });
+
+  it("an upstream that sends a full response and garbage later on the same socket delivers the response", async () => {
+    const url = await createRawUpstream((s) => {
+      s.write("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok");
+      setTimeout(() => s.write("GARBAGE not http\r\n\r\n"), 30);
+    });
+    const p = await startProxyWith(url);
+    let settled: Settled | undefined;
+    const errors = await collectProcessErrors(async () => {
+      settled = await getAndSettle(`${p.url}/svc/x`);
+    });
+    expect(errors).toEqual([]);
+    expect(settled?.status).toBe(200);
+    expect(settled?.body).toBe("ok");
+    expect((await httpGet(`${p.url}/_proxy/health`)).status).toBe(200);
+  });
+
+  it("an upstream that streams a body and then sends an invalid header block does not crash the proxy", async () => {
+    const url = await createRawUpstream((s) => {
+      s.write(
+        "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n\r\ndata: 1\n\n",
+      );
+      setTimeout(() => s.write("\r\n\r\nHTTP/9.9 xx\r\n\r\n"), 30);
+      setTimeout(() => s.write("data: 2\n\n"), 60);
+    });
+    const p = await startProxyWith(url);
+    let settled: Settled | undefined;
+    const errors = await collectProcessErrors(async () => {
+      settled = await getAndSettle(`${p.url}/svc/x`);
+    });
+    expect(errors).toEqual([]);
+    expect(settled?.status).toBe(200);
+    expect((await httpGet(`${p.url}/_proxy/health`)).status).toBe(200);
+  });
+
+  it("the error handler does not write to a response that already ended", async () => {
+    // Drive the real proxy error path with an upstream that resets after the
+    // response head, while the client socket is already gone.
+    const upstream = await createStalledUpstream();
+    const p = await startProxyWith(upstream.url);
+    const errors = await collectProcessErrors(async () => {
+      await new Promise<void>((resolve) => {
+        const req = http.get(`${p.url}/svc/x`, (res) => {
+          res.once("data", () => {
+            req.destroy();
+            upstream.server.closeAllConnections();
+            resolve();
+          });
+        });
+        req.on("error", () => {});
+      });
+    });
+    expect(errors).toEqual([]);
+  });
+});
+
+describe("safeEnd", () => {
+  function fakeRes(over: Partial<Record<string, unknown>> = {}) {
+    const calls: string[] = [];
+    const res = {
+      headersSent: false,
+      writable: true,
+      writableEnded: false,
+      destroyed: false,
+      getHeaderNames: () => [] as string[],
+      removeHeader: () => {},
+      writeHead: (status: number) => {
+        calls.push(`head:${status}`);
+      },
+      end: (body?: string) => {
+        calls.push(`end:${body ?? ""}`);
+      },
+      ...over,
+    };
+    return { res: res as unknown as http.ServerResponse, calls };
+  }
+
+  it("writes head and body on a fresh response", () => {
+    const { res, calls } = fakeRes();
+    safeEnd(res, 502, "x");
+    expect(calls).toEqual(["head:502", "end:x"]);
+  });
+
+  it("only ends a response whose head is already sent", () => {
+    const { res, calls } = fakeRes({ headersSent: true });
+    safeEnd(res, 502, "x");
+    expect(calls).toEqual(["end:"]);
+  });
+
+  it("does not fall through to an implicit 200 when not writable and nothing was sent", () => {
+    const { res, calls } = fakeRes({ writable: false });
+    safeEnd(res, 502, "x");
+    expect(calls).toEqual([]);
+  });
+
+  it("does nothing for a response that already ended", () => {
+    const { res, calls } = fakeRes({
+      headersSent: true,
+      writableEnded: true,
+      writable: false,
+    });
+    safeEnd(res, 502, "x");
+    expect(calls).toEqual([]);
+  });
+
+  it("does nothing when the client socket is destroyed", () => {
+    const { res, calls } = fakeRes({ destroyed: true });
+    safeEnd(res, 502, "x");
+    expect(calls).toEqual([]);
+  });
+
+  it("never throws when the response fails mid-write", () => {
+    const { res } = fakeRes({
+      writeHead: () => {
+        throw new Error("ERR_STREAM_WRITE_AFTER_END");
+      },
+    });
+    expect(() => safeEnd(res, 502, "x")).not.toThrow();
   });
 });

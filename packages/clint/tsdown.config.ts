@@ -4,8 +4,12 @@ import { dtsExportList } from "../../tsdown.dts.mjs";
 export default defineConfig({
   entry: [
     "src/index.ts",
-    "src/runners/clint-runner.ts",
     "src/runners/mastra-runner.ts",
+    "src/runners/cli-runner.ts",
+    "src/runners/proxy-runner.ts",
+    "src/integrations/mastra/index.ts",
+    "src/integrations/powerhouse/index.ts",
+    "src/testing/index.ts",
   ],
   outDir: "dist",
   // clint runs in the Node CLI context (ph run / generated CLIs).

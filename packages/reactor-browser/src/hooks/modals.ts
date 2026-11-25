@@ -6,7 +6,6 @@ import { makePHEventFunctions } from "./make-ph-event-functions.js";
 import {
   getPHNavigation,
   hasHostNavigation,
-  openTarget,
   recordToSearch,
   searchToRecord,
 } from "./navigation.js";
@@ -112,12 +111,8 @@ export function withoutModalSearch(
 }
 
 /** Shows a modal. With a host navigation, a routed one opens in the URL, in
- * place of the current entry, and "settings" opens the settings page. */
+ * place of the current entry. */
 export function showPHModal(modal: PHModal) {
-  if (modal.type === "settings" && hasHostNavigation()) {
-    openTarget({ settings: true });
-    return;
-  }
   const search = modalSearch(modal);
   if (search && hasHostNavigation()) {
     // A confirmation the store holds would hide it.

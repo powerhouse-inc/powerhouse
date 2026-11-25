@@ -1,7 +1,9 @@
 import {
   callerOverride,
+  connectBuildInvocationArgs,
   connectHandle,
   connectInvocationArgs,
+  localSignInPlan,
   serve as serveBuilt,
   servesDefaultComposition,
   serveWith,
@@ -11,9 +13,11 @@ import {
   type ConnectHostParsed,
   type ConnectInvocationArgs,
   type ConnectOutputs,
+  type LocalSignInIssuerFactory,
 } from "@powerhousedao/ph-run/runners/connect";
 import type { RunnerContext, RunnerHandle } from "@powerhousedao/host-core";
 import { getConfig } from "@powerhousedao/shared/clis";
+import { deepMerge } from "@powerhousedao/shared/connect";
 import { join } from "node:path";
 import type { ConnectStudioArgs } from "../types.js";
 
@@ -21,35 +25,48 @@ export * from "@powerhousedao/ph-run/runners/connect";
 
 export const verbs = ["run", "dev", "build", "serve"];
 
-/** The classic `ph connect studio` arguments, with the keys this host and
+/** The issuer of sign-in by link (F3d): the person's own identity, loaded at
+ * the first page that signs in. */
+const issuers: LocalSignInIssuerFactory = async (o) => {
+  const { createLocalSignInIssuer } = await import("@renown/sdk/local-sign-in");
+  return createLocalSignInIssuer(o);
+};
+
+/** The Connect studio arguments, with the keys this host and
  * this invocation own laid over them. An argument of this invocation
  * (`passed`) wins over the host file. */
 async function toStudioArgs(
   host: ConnectHostParsed,
   passed: ConnectInvocationArgs,
+  signsIn: boolean,
 ): Promise<ConnectStudioArgs> {
-  const { classicConnectStudioArgs } =
-    await import("../services/classic-args.js");
-  const classic = await classicConnectStudioArgs();
+  const { connectStudioServiceArgs } =
+    await import("../services/service-args.js");
+  const classic = await connectStudioServiceArgs();
   const runner = host.runner;
   return {
     ...classic,
     port: passed.port ?? runner.port ?? classic.port,
     // The bind address (runnerBaseSchema `host`); unset keeps vite's default.
     host: passed.host ?? runner.host ?? classic.host,
-    open: passed.open ?? runner.openBrowser === true,
+    // With sign-in, the link is opened, not the bare app.
+    open: !signsIn && (passed.open ?? runner.openBrowser === true),
     strictPort: passed.strictPort ?? runner.strictPort === true,
     cors: passed.cors ?? classic.cors,
     bindCLIShortcuts: false,
   };
 }
 
-// Per host: Studio and other hosts' dev servers run side by side in one project.
+// Per host: Studio and other hosts' dev servers run side by side in one
+// project. A package's host has the package in front, joined by `+`, which
+// no host name holds: `.vite-@acme+tools+connect`.
 const viteCacheOf = (host: ConnectHostParsed, ctx: RunnerContext) =>
   join(
     ctx.projectRoot,
     "node_modules",
-    `.vite-${host.name.replace(/[^\w.-]/g, "_")}`,
+    ctx.hostPackage
+      ? `.vite-${`${ctx.hostPackage.name}/${host.name}`.replace(/[^\w.@/-]/g, "_").replaceAll("/", "+")}`
+      : `.vite-${host.name.replace(/[^\w.-]/g, "_")}`,
   );
 
 async function startStudio(
@@ -59,9 +76,20 @@ async function startStudio(
 ): Promise<RunnerHandle<ConnectOutputs>> {
   await validateComposition(host, ctx);
   const { runConnectStudio } = await import("../services/connect-studio.js");
-  const args = await toStudioArgs(host, await connectInvocationArgs(host, ctx));
+  const passed = await connectInvocationArgs(host, ctx);
+  const askedOpen = passed.open ?? host.runner.openBrowser;
+  const signIn = localSignInPlan(host, ctx, {
+    byDefault: true,
+    ...(askedOpen === undefined ? {} : { open: askedOpen }),
+    issuers,
+  });
+  const args = await toStudioArgs(host, passed, signIn !== undefined);
   const studio: { stop?: () => Promise<void> } = {};
-  const override = callerOverride(host, ctx, ctx.verb);
+  // A host file projects powerhouse.config.json, so a change of that file
+  // changes the host: each restart of Studio serves the host as it reads
+  // then. Its port, routes, proxy and served files stay those of the start.
+  let override = callerOverride(host, ctx, ctx.verb);
+  const { reloadHost } = ctx;
   // Without `runner.plugins`, the default composition: worked out at each
   // start of Studio from the powerhouse.config.json it reads, with the
   // studio mode it always switches on.
@@ -72,19 +100,33 @@ async function startStudio(
           getConfig(join(process.cwd(), "powerhouse.config.json")),
           { app: { studioMode: true } },
         )
-    : override;
+    : reloadHost
+      ? () => override
+      : override;
   const server = await startUnderSupervisor(ctx, () =>
     runConnectStudio(args, undefined, served, {
       routes: host.runner.routes,
       cacheDir: viteCacheOf(host, ctx),
       proxy: host.runner.proxy?.target,
-      // As `ph connect studio` and `ph vetra` start it.
+      // Served as a build's servers serve them: a Studio's tab reads them
+      // in dev too.
+      ...(host.runner.serveFiles ? { serveFiles: host.runner.serveFiles } : {}),
+      // As `ph connect studio` and `ph dev` start it.
       reloadOnConfigChange: true,
+      ...(reloadHost
+        ? {
+            beforeRestart: async () => {
+              const reread = (await reloadHost()) as ConnectHostParsed;
+              override = callerOverride(reread, ctx, ctx.verb);
+            },
+          }
+        : {}),
       // A restart's server is started as the first is.
       restartWith: (start) => startUnderSupervisor(ctx, start),
       exposeStop: (stop) => {
         studio.stop = stop;
       },
+      ...(signIn ? { localSignIn: signIn.endpoint } : {}),
       // Only a dev server loads the host's dev-server plugins.
       ...(devServer && {
         devPlugins: {
@@ -101,7 +143,7 @@ async function startStudio(
     close: () => (studio.stop ? studio.stop() : server.close()),
   };
   // vite's dev server binds its default host ("localhost") here.
-  return connectHandle(current, { host: "localhost", port: args.port });
+  return connectHandle(current, { host: "localhost", port: args.port }, signIn);
 }
 
 /** Studio as a dev server, with the host's dev-server plugins. */
@@ -113,23 +155,37 @@ export const dev = (host: ConnectHostParsed, ctx: RunnerContext) =>
 export const run = (host: ConnectHostParsed, ctx: RunnerContext) =>
   startStudio(host, ctx, { devServer: false });
 
-/** P3.3 — `build`: the SAME service as classic `ph connect build`. */
+/** `build`: the Connect build service (`ph connect build` is sugar for it). */
 export async function build(
   host: ConnectHostParsed,
   ctx: RunnerContext,
 ): Promise<void> {
   await validateComposition(host, ctx);
   const { runConnectBuild } = await import("../services/connect-build.js");
-  const { classicConnectBuildArgs } =
-    await import("../services/classic-args.js");
-  const classic = await classicConnectBuildArgs();
+  const { connectBuildServiceArgs } =
+    await import("../services/service-args.js");
+  const classic = await connectBuildServiceArgs();
+  const passed = await connectBuildInvocationArgs(host, ctx);
   const args = {
     ...classic,
-    // Classic `ph connect`'s default: `dist/` is the package `ph build` writes.
+    // The default of the build arguments: `dist/` is the package `ph build` writes.
     outDir: host.runner.outDir ?? classic.outDir,
+    // `--packages-registry`: the top-level packageRegistryUrl of the build.
+    packagesRegistry: passed.packagesRegistry ?? classic.packagesRegistry,
+    connectBasePath: passed.connectBasePath ?? classic.connectBasePath,
   };
   // The host's config bakes in: its title, favicon, manifest, base path and loading shell.
-  await runConnectBuild(args, callerOverride(host, ctx, ctx.verb), {
+  const hostConfig = callerOverride(host, ctx, ctx.verb);
+  // `--base` wins over the host file, as an argument does: connect.app.basePath,
+  // where `ph connect build --base` put it. Laid over the host's config here
+  // too, as the service reads the flag off the command line of the process.
+  const override =
+    passed.connectBasePath === undefined
+      ? hostConfig
+      : deepMerge(hostConfig ?? {}, {
+          app: { basePath: passed.connectBasePath },
+        });
+  await runConnectBuild(args, override, {
     routes: host.runner.routes,
   });
 }
@@ -142,9 +198,11 @@ export async function serve(
 ): Promise<RunnerHandle<ConnectOutputs>> {
   const passed = await connectInvocationArgs(host, ctx);
   const open = passed.open ?? host.runner.openBrowser === true;
-  if (!open && process.env.PH_CONNECT_SERVER !== "vite") {
-    return serveBuilt(host, ctx);
+  // With sign-in by link, the link is opened, not the bare app.
+  const signsIn = !!host.runner.localSignIn;
+  if ((!open || signsIn) && process.env.PH_CONNECT_SERVER !== "vite") {
+    return serveBuilt(host, ctx, { issuers });
   }
   const { runConnectPreview } = await import("../services/connect-preview.js");
-  return serveWith(runConnectPreview, host, ctx);
+  return serveWith(runConnectPreview, host, ctx, { issuers });
 }

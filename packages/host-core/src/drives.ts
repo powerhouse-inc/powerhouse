@@ -86,7 +86,7 @@ export function resolveDriveDeclaration(
 /* ------------------------------------------------------------------ seeding */
 
 /** The minimal client surface the seeder needs — runners adapt their reactor
- * clients (IReactorClient, addDefaultDrive-style helpers) onto it. */
+ * clients (IReactorClient, ensureDrive-style helpers) onto it. */
 export interface DriveSeederClient {
   /** Return the existing drive's id for a slug, or undefined. */
   findDriveBySlug(slug: string): Promise<string | undefined>;

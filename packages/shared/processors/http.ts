@@ -21,6 +21,12 @@ export interface RouteUser {
   // So a request decides as the principal the write path presents, not as an
   // address with no key. Authenticated: verifying resolves this very DID.
   appKey: string;
+  // The session's label (`credentialSubject.app`, signed by the address), when
+  // the host saw the credential: "agent X" acting for `address`.
+  label?: string;
+  // What admitted the credential: this host's record, Renown, Renown's last
+  // answer while it cannot be reached, or the credential's signature alone.
+  via?: "record" | "renown" | "last-answer" | "signature";
 }
 
 // The resolution the scope performs before a handler runs. `RouteContext`

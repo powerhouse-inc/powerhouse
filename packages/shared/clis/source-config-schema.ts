@@ -101,48 +101,6 @@ export const sourceConfigSchema = {
           type: "number",
           description: "Port the reactor HTTP server listens on.",
         },
-        https: {
-          oneOf: [
-            { type: "boolean" },
-            {
-              type: "object",
-              additionalProperties: false,
-              required: ["keyPath", "certPath"],
-              properties: {
-                keyPath: {
-                  type: "string",
-                  description: "Path to TLS private key.",
-                },
-                certPath: {
-                  type: "string",
-                  description: "Path to TLS certificate.",
-                },
-              },
-            },
-          ],
-          description:
-            "Enable HTTPS. `true` for self-signed; object with key/cert paths for custom TLS.",
-        },
-        storage: {
-          type: "object",
-          additionalProperties: false,
-          required: ["type"],
-          description: "Reactor persistent storage backend.",
-          properties: {
-            type: {
-              type: "string",
-              enum: ["filesystem", "memory", "postgres", "browser"],
-            },
-            filesystemPath: {
-              type: "string",
-              description: "Required when `type: filesystem`.",
-            },
-            postgresUrl: {
-              type: "string",
-              description: "Required when `type: postgres`.",
-            },
-          },
-        },
         keyframes: {
           type: "object",
           additionalProperties: false,
@@ -208,16 +166,6 @@ export const sourceConfigSchema = {
       additionalProperties: false,
       description: "Switchboard server configuration.",
       properties: {
-        database: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            url: {
-              type: "string",
-              description: "Database connection URL.",
-            },
-          },
-        },
         port: {
           type: "number",
           description: "Port the switchboard HTTP server listens on.",
@@ -227,24 +175,11 @@ export const sourceConfigSchema = {
     studio: {
       type: "object",
       additionalProperties: false,
-      required: ["https"],
       description: "Connect Studio dev-server configuration.",
       properties: {
         port: {
           type: "number",
           description: "Port the studio dev server listens on.",
-        },
-        host: {
-          type: "string",
-          description: "Host interface to bind.",
-        },
-        https: {
-          type: "boolean",
-          description: "Serve studio over HTTPS.",
-        },
-        openBrowser: {
-          type: "boolean",
-          description: "Open a browser tab on studio start.",
         },
       },
     },
@@ -257,25 +192,29 @@ export const sourceConfigSchema = {
     vetra: {
       type: "object",
       additionalProperties: false,
-      description: "Vetra integration coordinates.",
+      description:
+        "Settings of a project's hosts/vetra, and the remote drive `ph init --remote-drive` records. A project without that host needs none of them.",
       properties: {
-        driveId: { type: "string" },
-        driveUrl: { type: "string" },
+        driveUrl: {
+          type: "string",
+          description:
+            "A remote drive the project was created from. Written by `ph init --remote-drive`; overridden by --remote-drive.",
+        },
         connectPort: {
           type: "integer",
           description:
-            "Port `ph vetra`'s Connect dev server listens on. Assigned per project by `ph init`. Overridden by PH_VETRA_CONNECT_PORT or --connect-port.",
+            "Port the Connect dev server of hosts/vetra listens on. Overridden by PH_VETRA_CONNECT_PORT or --connect-port.",
         },
         previewDrive: {
           type: "object",
           additionalProperties: false,
           description:
-            "The Vetra Preview drive `ph vetra` creates in watch mode.",
+            "The Vetra Preview drive hosts/vetra creates in watch mode.",
           properties: {
             app: {
               type: "string",
               description:
-                "Id of the drive app the preview drive opens in, e.g. a drive editor's `config.id`. `ph vetra` sets it on the drive each time it starts; leaving it out keeps the drive's current app.",
+                "Id of the drive app the preview drive opens in, e.g. a drive editor's `config.id`. `ph dev` sets it on the drive each time it starts; leaving it out keeps the drive's current app.",
             },
           },
         },

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/powerhouse-vetra-packages",
-  "version": "6.3.0-dev.11",
+  "version": "6.4.0-next.6",
   "description": "",
   "keywords": [],
   "author": "",
@@ -71,11 +71,7 @@
     "build": "tsx ./build",
     "test:watch": "vitest",
     "generate": "ph-cli generate",
-    "reactor": "ph-cli reactor",
-    "service": "ph-cli service",
-    "migrate": "ph-cli migrate",
-    "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
-    "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
+    "migrate": "ph-cli migrate"
   },
   "peerDependencies": {
     "graphql": "^16",

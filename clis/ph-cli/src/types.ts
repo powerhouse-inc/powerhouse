@@ -4,9 +4,6 @@ import type { build } from "./commands/build.js";
 import type {
   config as connectConfigCmd,
   connect,
-  build as connectBuild,
-  preview,
-  studio,
 } from "./commands/connect.js";
 import type { generateAppCmd } from "./commands/generate-app.js";
 import type { generateDocumentModelCmd } from "./commands/generate-document-model.js";
@@ -24,9 +21,7 @@ import type { install } from "./commands/install.js";
 import type { list } from "./commands/list.js";
 import type { login } from "./commands/login.js";
 import type { migrate } from "./commands/migrate.js";
-import type { switchboard } from "./commands/switchboard.js";
 import type { uninstall } from "./commands/uninstall.js";
-import type { vetra } from "./commands/vetra.js";
 
 export type CommandActionType<Args extends any[], Return = void> = (
   ...args: Args
@@ -53,18 +48,18 @@ export type GeneratePieceActionArgs = ParsedCmdResult<
 export type GeneratePieceTriggerArgs = ParsedCmdResult<
   typeof generatePieceTriggerCmd
 >;
-export type VetraArgs = ParsedCmdResult<typeof vetra>;
 export type MigrateArgs = ParsedCmdResult<typeof migrate>;
 export type BuildArgs = ParsedCmdResult<typeof build>;
-export type ConnectStudioArgs = ParsedCmdResult<typeof studio>;
-export type ConnectBuildArgs = ParsedCmdResult<typeof connectBuild>;
-export type ConnectPreviewArgs = ParsedCmdResult<typeof preview>;
+export type {
+  ConnectBuildArgs,
+  ConnectStudioArgs,
+} from "./services/service-args.js";
+export type { ConnectPreviewArgs } from "@powerhousedao/ph-run/service-args";
 export type ConnectConfigArgs = ParsedCmdResult<typeof connectConfigCmd>;
 export type ConnectArgs = ParsedCmdResult<typeof connect>;
 export type AccessTokenArgs = ParsedCmdResult<typeof accessToken>;
 export type InspectArgs = ParsedCmdResult<typeof inspect>;
 export type ListArgs = ParsedCmdResult<typeof list>;
-export type SwitchboardArgs = ParsedCmdResult<typeof switchboard>;
 export type LoginArgs = ParsedCmdResult<typeof login>;
 export type InstallArgs = ParsedCmdResult<typeof install>;
 export type UninstallArgs = ParsedCmdResult<typeof uninstall>;

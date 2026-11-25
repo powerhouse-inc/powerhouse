@@ -46,9 +46,6 @@
       "path": "../../packages/shared"
     },
     {
-      "path": "../../packages/vetra"
-    },
-    {
       "path": "../../packages/workflow"
     }
   ]

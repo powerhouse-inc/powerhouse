@@ -53,7 +53,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "create:todo": "tsx scripts/create-versioned-todo.ts && ph-cli generate document-model --document ./scripts/versioned-todo.zip",
+    "create:todo": "tsx scripts/create-versioned-todo.ts && ph-cli generate document-model --dir todo",
     "tsc": "tsc && tsc -p hosts",
     "lint": "cd ../.. && oxlint test/versioned-documents",
     "test": "vitest --run",
@@ -65,10 +65,7 @@
     "generate": "ph-cli generate",
     "connect": "ph-cli run connect",
     "reactor": "ph-cli run switchboard",
-    "service": "ph-cli service",
     "migrate": "ph-cli migrate",
-    "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
-    "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh",
     "lint:fix": "cd ../.. && oxlint test/versioned-documents --fix",
     "tsc:watch": "tsc --watch",
     "vetra": "ph-cli run vetra"

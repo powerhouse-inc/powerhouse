@@ -42,7 +42,7 @@ describe("writeGeneratedHostsFiles", () => {
       "hosts/README.md",
       "hosts/connect/host.js",
       "hosts/switchboard/host.js",
-      "hosts/vetra/host.js",
+      "hosts/dev/host.js",
       "hosts/desktop/host.js",
       "hosts/assistant/host.js",
       "hosts/cli/host.js",
@@ -82,39 +82,43 @@ describe("writeGeneratedHostsFiles", () => {
     expect(connect).toContain(`kind: "worker"`);
     expect(connect).toContain(`slug: "powerhouse"`);
 
-    const vetra = readFileSync(join(dir, "hosts/vetra/host.js"), "utf-8");
-    expect(vetra).toContain(`defaultVerb: "dev"`);
-    expect(vetra).toContain(`host: "connect"`);
-    expect(vetra).toContain("config.vetra?.connectPort");
-    // R4: generic compound + studio plugins (no vetra-specific runner).
-    expect(vetra).toContain("@powerhousedao/host-core/runners/compound");
-    expect(vetra).toContain("@powerhousedao/vetra-studio/switchboard");
-    expect(vetra).toContain("@powerhousedao/vetra-studio/connect");
-    expect(vetra).not.toContain("@powerhousedao/ph-cli/runners/compound");
+    // dev: the generic compound over the switchboard and Connect at the dev
+    // verb, with nothing of Vetra in it.
+    expect(existsSync(join(dir, "hosts/vetra"))).toBe(false);
+    const dev = readFileSync(join(dir, "hosts/dev/host.js"), "utf-8");
+    expect(dev).toContain(`name: "dev"`);
+    expect(dev).toContain(`defaultVerb: "dev"`);
+    expect(dev).toContain("@powerhousedao/host-core/runners/compound");
+    expect(dev).toContain('"dev-switchboard": { host: "switchboard" }');
+    expect(dev).toContain(`host: "connect"`);
+    expect(dev).not.toMatch(/vetra/i);
     // workflow plugins: the connect member reads the Workflows drive URL
     // from the switchboard member's outputs (an output token)
-    expect(vetra).toContain("@powerhousedao/connect/plugins/workflows");
-    expect(vetra).toContain(
+    expect(dev).toContain("@powerhousedao/connect/plugins/workflows");
+    expect(dev).toContain(
       `$output: { host: "switchboard", path: ["drives", "workflows", "url"] }`,
     );
-    expect(vetra).not.toContain("from:");
-    // Studio is a remote client of the switchboard member, on its Vetra
-    // drive, with the cookie banner off (as classic `ph vetra`)
-    expect(vetra).toContain(
-      `url: { $output: { host: "switchboard", path: ["drives", "vetra", "url"] } }`,
+    // Connect is a remote client of the switchboard member, on every drive
+    // it serves, with the cookie banner off
+    expect(dev).toContain(
+      `url: { $output: { host: "switchboard", path: ["drives", "powerhouse", "url"] } }`,
     );
-    expect(vetra).toContain("protocol: connect.reactor.protocol");
-    expect(vetra).toContain(
+    expect(dev).toContain(
+      '$map: {\n            over: { $output: { host: "switchboard", path: ["drives"] } },',
+    );
+    expect(dev).toContain("protocol: connect.reactor.protocol");
+    expect(dev).toContain(
       "app: { cookieBanner: false, ...connect.config.app }",
     );
-    // the vetra switchboard serves the switchboard host's drives too, next to
-    // the studio drives
-    expect(vetra).toContain("...(switchboard.reactor.drives ?? [])");
-    // the preview drive opens in the app powerhouse.config.json names; no
-    // key when it names none (a host value is never undefined)
-    expect(vetra).toContain("...(config.vetra?.previewDrive?.app");
-    expect(vetra).toContain(
-      "? { preferredEditor: config.vetra.previewDrive.app }",
+    // no host of the scaffold names Vetra
+    for (const host of readdirSync(join(dir, "hosts"))) {
+      const file = join(dir, "hosts", host, "host.js");
+      if (existsSync(file)) {
+        expect(readFileSync(file, "utf-8"), host).not.toMatch(/vetra/i);
+      }
+    }
+    expect(readFileSync(join(dir, "hosts/README.md"), "utf-8")).not.toMatch(
+      /vetra/i,
     );
 
     // P2.8: single-sourced protocol — the switchboard host references the
@@ -200,7 +204,6 @@ describe("writeGeneratedHostsFiles", () => {
     );
     expect(cli).not.toContain('path: ["endpoints", "graphql"]');
     expect(cli).not.toContain("127.0.0.1");
-    expect(cli).not.toContain("@powerhousedao/clint/clint-runner");
   });
 
   it("is preserve-on-migrate: never clobbers an existing host file", async () => {
@@ -212,9 +215,9 @@ describe("writeGeneratedHostsFiles", () => {
     await writeGeneratedHostsFiles(dir, "my-project");
     expect(readFileSync(file, "utf-8")).toContain("user-owned edit");
     // ...while still seeding files the project lacks:
-    rmSync(join(dir, "hosts/vetra/host.js"));
+    rmSync(join(dir, "hosts/dev/host.js"));
     await writeGeneratedHostsFiles(dir, "my-project");
-    expect(existsSync(join(dir, "hosts/vetra/host.js"))).toBe(true);
+    expect(existsSync(join(dir, "hosts/dev/host.js"))).toBe(true);
   });
 });
 
@@ -350,7 +353,7 @@ describe("typed hosts: ph generate hosts + tsc -p hosts", () => {
       "@powerhousedao/ph-cli/runners/connect",
       "@powerhousedao/ph-cli/runners/switchboard",
       "@powerhousedao/clint/mastra-runner",
-      "@powerhousedao/clint/clint-runner",
+      "@powerhousedao/clint/cli-runner",
       "@powerhousedao/desktop/runner",
       "@powerhousedao/switchboard/plugins/workflows",
       "@powerhousedao/connect/plugin-configs",
@@ -390,20 +393,44 @@ describe("typed hosts: ph generate hosts + tsc -p hosts", () => {
       readFileSync(join(dir, "powerhouse.config.d.json.ts"), "utf-8"),
     ).toContain("PowerhouseConfig");
 
-    // every scaffold host carries `@satisfies {PHHost}`, so the clean tsc
-    // run above type-checked each against its runner's declared schema
-    for (const host of [
+    // every scaffold host carries the checked form, `export default
+    // /** @satisfies {PHHost} */ ({...})`: TypeScript ignores a `@satisfies`
+    // tag placed before `export default`
+    const scaffoldHosts = [
       "connect",
       "switchboard",
-      "vetra",
+      "dev",
       "desktop",
       "assistant",
       "cli",
-    ]) {
-      expect(
-        readFileSync(join(dir, "hosts", host, "host.js"), "utf-8"),
-      ).toMatch(/^\/\*\* @satisfies \{PHHost\} \*\/\nexport default \{/m);
+    ];
+    const originals = new Map<string, string>();
+    for (const host of scaffoldHosts) {
+      const file = join(dir, "hosts", host, "host.js");
+      const source = readFileSync(file, "utf-8");
+      originals.set(file, source);
+      expect(source).toMatch(
+        /^export default \/\*\* @satisfies \{PHHost\} \*\/ \(\{$/m,
+      );
+      expect(source).not.toMatch(/^\/\*\* @satisfies \{PHHost\} \*\/$/m);
     }
+
+    // ...so a wrong field in any scaffold host fails `tsc -p hosts`
+    for (const [file, source] of originals) {
+      writeFileSync(
+        file,
+        source.replace(/^( {2}name: )/m, "  notAHostKey: 1,\n$1"),
+      );
+    }
+    const broken = tscHosts(dir);
+    expect(broken.status).not.toBe(0);
+    for (const host of scaffoldHosts) {
+      expect(
+        broken.errors.some((line) => line.includes(`${host}/host.js(`)),
+      ).toBe(true);
+    }
+    for (const [file, source] of originals) writeFileSync(file, source);
+    expect(tscHosts(dir)).toEqual({ status: 0, errors: [] });
 
     // a typed host consuming the generated tokens checks clean...
     writeFixture(
@@ -415,8 +442,7 @@ import { outputs as switchboard } from "../switchboard/outputs.js";
 /** @type {{ $output: { host: string; path: (string | number)[] } }} */
 export const workflowsUrl = switchboard.drives.workflows.url;
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "lab",
   runner: {
     module: "@powerhousedao/ph-cli/runners/switchboard",
@@ -424,7 +450,7 @@ export default {
     plugins: ["@powerhousedao/switchboard/plugins/workflows"],
   },
   reactor: { drives: [{ slug: "lab", name: "Lab" }] },
-};
+});
 `,
     );
     // ...while a typo, a wrong token path and a wrong plugin config fail.
@@ -441,8 +467,7 @@ export default {
       `// @ts-check
 import { outputs as switchboard } from "../switchboard/outputs.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "labconnect",
   runner: {
     module: "@powerhousedao/ph-cli/runners/connect",
@@ -463,7 +488,7 @@ export default {
     },
     renown: { switchboardUrl: switchboard.endpoints.graphql },
   },
-};
+});
 `,
     );
     writeFixture(
@@ -472,14 +497,13 @@ export default {
       `// @ts-check
 import { outputs as switchboard } from "../switchboard/outputs.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "badconfig",
   runner: { module: "@powerhousedao/ph-cli/runners/connect" },
   config: {
     drives: { defaultDrives: [{ url: switchboard.drives.workflows }] },
   },
-};
+});
 `,
     );
     writeFixture(
@@ -488,12 +512,11 @@ export default {
       `// @ts-check
 import { outputs as switchboard } from "../switchboard/outputs.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "badrenown",
   runner: { module: "@powerhousedao/ph-cli/runners/connect" },
   config: { renown: { url: switchboard.endpoints.graphql } },
-};
+});
 `,
     );
     writeFixture(
@@ -502,8 +525,7 @@ export default {
       `// @ts-check
 import { outputs as switchboard } from "../switchboard/outputs.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "baddrive",
   runner: {
     module: "@powerhousedao/ph-cli/runners/connect",
@@ -514,19 +536,18 @@ export default {
       },
     ],
   },
-};
+});
 `,
     );
     writeFixture(
       dir,
       "typo",
       `// @ts-check
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "typo",
   runner: { module: "@powerhousedao/ph-cli/runners/switchboard" },
   reactor: { drive: [{ slug: "lab", name: "Lab" }] },
-};
+});
 `,
     );
     writeFixture(
@@ -543,8 +564,7 @@ export default { name: "badpath", runner: { module: "x" } };
       dir,
       "badplugin",
       `// @ts-check
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "badplugin",
   runner: {
     module: "@powerhousedao/ph-cli/runners/connect",
@@ -552,7 +572,7 @@ export default {
       { module: "@powerhousedao/connect/plugins/generic", config: { allowAddDrives: true } },
     ],
   },
-};
+});
 `,
     );
     // $map (T4): the cli shape — every drive the switchboard serves, by a
@@ -568,8 +588,7 @@ export default {
 import connect from "../connect/host.js";
 import { outputs as switchboard } from "../switchboard/outputs.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "mapcli",
   runner: { module: "@powerhousedao/host-core/runners/compound" },
   children: {
@@ -590,7 +609,7 @@ export default {
       },
     },
   },
-};
+});
 `,
     );
     writeFixture(
@@ -599,8 +618,7 @@ export default {
       `// @ts-check
 import { outputs as switchboard } from "../switchboard/outputs.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "mapbad",
   runner: { module: "@powerhousedao/ph-cli/runners/connect" },
   reactor: {
@@ -611,7 +629,7 @@ export default {
       },
     },
   },
-};
+});
 `,
     );
     const { status, errors } = tscHosts(dir);

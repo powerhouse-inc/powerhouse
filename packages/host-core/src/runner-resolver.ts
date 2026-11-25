@@ -1,6 +1,8 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import type { ControlRecord } from "./control-channel.js";
+import type { HostPackage } from "./host-ref.js";
 import { runnerKindSchema, type RunnerKind } from "./host-schemas.js";
 import {
   checkOutputPaths,
@@ -17,7 +19,9 @@ import { findToken, tokenKeyOf, type TokenMode } from "./tokens.js";
 /**
  * Resolves a host's `runner.module` specifier from the PROJECT's dependency
  * tree (not ph-cli's), imports it, and checks the runner-module contract:
- * `{ run, hostSchema, kind, outputsSchema?, verbs?, ...optionalVerbs }`.
+ * `{ run, hostSchema, kind, outputsSchema?, verbs?, ...optionalVerbs }`. For
+ * a host an installed package supplies, the caller passes the package's
+ * folder as the root (`moduleRootOf`).
  */
 
 export class RunnerError extends Error {
@@ -28,7 +32,13 @@ export class RunnerError extends Error {
 }
 
 export interface RunnerContext {
+  /** The project: the working directory, its `.ph/` state and stores, also
+   * for a host a package supplies. */
   projectRoot: string;
+  /** Set when an installed package supplies the host
+   * (`ph run <package>/<host>`): the module specifiers the host names (its
+   * plugins, a Cli's package) resolve from `root`, as its runner did. */
+  hostPackage?: HostPackage;
   /** The verb this runner runs at. For a compound member it is the member's
    * OWN effective verb (e.g. "serve" under a compound at "run"). */
   verb: string;
@@ -40,6 +50,51 @@ export interface RunnerContext {
    * `ph run <host> [verb]`, checked against the runner's `argsSchema`. They
    * win over the host file. A compound member gets its own share. */
   argv?: readonly string[];
+  /** The host this verb received, read from disk again: loaded, resolved and
+   * validated as the first was. For a dev server that follows the project's
+   * files; a process keeps the first evaluation of a host file otherwise.
+   * Rejects when the files no longer make a valid host. Not set for a
+   * compound member. */
+  reloadHost?: () => Promise<unknown>;
+  /** Set when this runner is a compound's foreground member (its module
+   * exports `foreground: true`): it runs in the compound's process, last,
+   * and its handle's `exited` ends the stack. */
+  foreground?: ForegroundContext;
+}
+
+/** What a compound hands its foreground member. */
+export interface ForegroundContext {
+  /** The other members as the stack sees them now. */
+  members(): readonly MemberStatus[];
+  /** The stack already runs in another process: nothing of it was started
+   * for this run, which reads its outputs from the live record and must
+   * end (a command beside the stack). */
+  beside: boolean;
+  /** The stack as `ph run` addresses it (its run record's key). */
+  stack?: string;
+  /** Beside a stack that answers on a control channel: where. */
+  control?: ControlRecord;
+}
+
+/**
+ * One member of a running compound, in the fields a services manager shows
+ * for a service instance (`ServiceInstanceStatus` in clint): the service id
+ * is the member's name, its endpoints are its URL outputs.
+ */
+export interface MemberStatus {
+  /** The member's key in `children`. */
+  name: string;
+  /** Its host folder. */
+  host: string;
+  process: "own" | "shared";
+  status: "starting" | "ready" | "stopping" | "stopped" | "failed";
+  /** Its process: a child's, or the compound's for a shared member. */
+  pid?: number;
+  /** Every URL among its outputs, by dotted path (`drives.lab.url`). */
+  endpoints: Record<string, string>;
+  /** This run's log file (own-process members). */
+  logFile?: string;
+  error?: string;
 }
 
 /** A verb receives the PARSED host (its runner's hostSchema output), so
@@ -98,6 +153,10 @@ export interface RunnerModule<O = unknown> {
   /** The arguments the runner accepts after `ph run <host> [verb]`
    * (`RunnerArgsSchema`). Absent: it accepts none, and any argument fails. */
   argsSchema?: unknown;
+  /** The runner owns the terminal (the Cli runner): it reads stdin itself,
+   * and in a compound it is the foreground member, whose exit ends the
+   * stack (`RunnerContext.foreground`). */
+  foreground?: boolean;
   /** What the verb would refuse at boot, given the parsed host and an
    * environment (`ph host check`). Starts nothing. */
   checkBoot?: (
@@ -131,6 +190,7 @@ const NON_VERB_EXPORTS = new Set([
   "verbs",
   "argsSchema",
   "kind",
+  "foreground",
   "checkBoot",
   "default",
 ]);
@@ -165,7 +225,7 @@ export async function resolveRunnerModule(
   } catch {
     throw new RunnerError(
       `Cannot resolve runner module "${specifier}" from ${projectRoot}.`,
-      "The runner must be a dependency of the project (install it, then retry).",
+      "The runner must be a dependency of the project, or of the package that supplies the host (install it, then retry).",
     );
   }
 
@@ -199,6 +259,14 @@ export async function resolveRunnerModule(
       `Runner "${specifier}" exports a \`checkBoot\` that is not a function.`,
     );
   }
+  if (
+    module.foreground !== undefined &&
+    typeof module.foreground !== "boolean"
+  ) {
+    throw new RunnerError(
+      `Runner "${specifier}" exports a \`foreground\` that is not a boolean.`,
+    );
+  }
   const verbs = module.verbs;
   if (
     verbs !== undefined &&
@@ -226,6 +294,23 @@ export async function resolveRunnerModule(
  * the declared host (tokens may remain in token-able fields; a `$map` is
  * the empty collection, see `emptyMaps`). */
 export const ONE_SHOT_VERBS: ReadonlySet<string> = new Set(["build"]);
+
+/** Why a one-shot verb (build) does not run on a host an installed package
+ * supplies (`ref`, as the project addresses it): the package ships its hosts
+ * built, and a build here would write into the installed package (a
+ * Connect's outDir) or build the project in its name. The package's own
+ * repository builds them, where they are project hosts. */
+export function packageBuildRefusal(
+  ref: string,
+  hostPackage: HostPackage,
+  verb: string,
+): RunnerIssue {
+  return {
+    path: "",
+    message: `${ref} is a host ${hostPackage.name} supplies, and a package's hosts are built by the package: "${verb}" does not run on it.`,
+    hint: `${hostPackage.name} ships them built; its own repository builds them, where they are project hosts. Build this project's own hosts by their bare names.`,
+  };
+}
 
 /** Verbs that work on a host's stores and start nothing (`migrate`,
  * `migrate-status`, `reset`). Their host is resolved as for `run`, so they

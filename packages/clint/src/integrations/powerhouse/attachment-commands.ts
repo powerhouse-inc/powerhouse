@@ -23,9 +23,17 @@ import {
   isAttachmentAlreadyExists,
 } from "./attachment.js";
 
+const documentIdSchema = z
+  .string()
+  .optional()
+  .describe(
+    "Document whose operations reference the attachment. A switchboard serves an attachment only through such a document, so a read there needs it.",
+  );
+
 export function createAttachmentCommands(): Command[] {
   const preprocess = defineCommand({
     id: "attachment-preprocess",
+    needs: "reactor",
     description:
       "Compute an attachment's content-addressed ref (attachment://v1:<sha256>) from a local file WITHOUT uploading. Embed the returned ref in a document action now, then send the bytes with attachment-upload for the same file after / in parallel with submitting the action.",
     inputSchema: z.object({
@@ -70,6 +78,7 @@ export function createAttachmentCommands(): Command[] {
 
   const upload = defineCommand({
     id: "attachment-upload",
+    needs: "reactor",
     description:
       "Upload a local file to the attachment store and return its content-addressed ref (attachment://v1:<sha256>). The ref is deterministic from the bytes and identical content dedups. Embed the ref in a document action; the action may be submitted before or after this upload.",
     inputSchema: z.object({
@@ -102,7 +111,7 @@ export function createAttachmentCommands(): Command[] {
       let result: AttachmentUploadResult;
       try {
         result = await client.reserve(pre.options, (handle) =>
-          handle.send(pre.stream()),
+          handle.send(pre.blob),
         );
       } catch (err) {
         // Dedup: client.reserve's instanceof catch can miss this across entry bundles, so recover via the deterministic ref.
@@ -125,19 +134,24 @@ export function createAttachmentCommands(): Command[] {
 
   const stat = defineCommand({
     id: "attachment-stat",
+    needs: "reactor",
     description:
-      "Look up an attachment by ref (attachment://v1:<sha256>) and report its status + metadata. status='pending' = reserved but not yet uploaded; 'available' = stored; 'evicted' = metadata known, bytes reclaimed.",
+      "Look up an attachment by ref (attachment://v1:<sha256>) and report its status + metadata. status='pending' = reserved but not yet uploaded; 'available' = stored; 'evicted' = metadata known, bytes reclaimed. On a switchboard, pass the documentId of a document whose operations reference the attachment.",
     inputSchema: z.object({
       ref: z
         .string()
         .describe("Attachment ref, e.g. attachment://v1:<sha256hex>."),
+      documentId: documentIdSchema,
     }),
     execute: async (input, context) => {
       const service = await getAttachmentService(context);
       if (!service) return { text: attachmentsUnavailableMessage() };
 
       try {
-        const h = await service.stat(asRef(input.ref));
+        const h = await service.stat(
+          asRef(input.ref),
+          ...readOptions(input.documentId),
+        );
         return {
           text:
             `ref: ${input.ref}\n` +
@@ -149,7 +163,9 @@ export function createAttachmentCommands(): Command[] {
         };
       } catch (err) {
         return {
-          text: `Not found or error for ${input.ref}: ${(err as Error).message}`,
+          text:
+            `Not found or error for ${input.ref}: ${(err as Error).message}` +
+            documentIdHint(input.documentId),
         };
       }
     },
@@ -157,8 +173,9 @@ export function createAttachmentCommands(): Command[] {
 
   const get = defineCommand({
     id: "attachment-get",
+    needs: "reactor",
     description:
-      "Download an attachment's bytes by ref (attachment://v1:<sha256>) to a local file. Errors if the attachment is still pending (bytes not yet uploaded).",
+      "Download an attachment's bytes by ref (attachment://v1:<sha256>) to a local file. Errors if the attachment is still pending (bytes not yet uploaded). On a switchboard, pass the documentId of a document whose operations reference the attachment.",
     inputSchema: z.object({
       ref: z
         .string()
@@ -168,6 +185,7 @@ export function createAttachmentCommands(): Command[] {
         .describe(
           "Path to write the bytes to (absolute, or relative to the workdir).",
         ),
+      documentId: documentIdSchema,
     }),
     execute: async (input, context) => {
       const service = await getAttachmentService(context);
@@ -175,7 +193,10 @@ export function createAttachmentCommands(): Command[] {
 
       const outPath = path.resolve(context.workdir, input.outPath);
       try {
-        const res = await service.get(asRef(input.ref));
+        const res = await service.get(
+          asRef(input.ref),
+          ...readOptions(input.documentId),
+        );
         const body = res.body as unknown as NodeWebReadableStream<Uint8Array>;
         await pipeline(Readable.fromWeb(body), createWriteStream(outPath));
         return {
@@ -187,11 +208,28 @@ export function createAttachmentCommands(): Command[] {
         };
       } catch (err) {
         return {
-          text: `Could not get ${input.ref}: ${(err as Error).message}`,
+          text:
+            `Could not get ${input.ref}: ${(err as Error).message}` +
+            documentIdHint(input.documentId),
         };
       }
     },
   });
 
   return [preprocess, upload, stat, get];
+}
+
+/** The read options for `documentId`; none without one, as before. */
+function readOptions(
+  documentId: string | undefined,
+): [] | [{ documentId: string }] {
+  return documentId === undefined ? [] : [{ documentId }];
+}
+
+/** Why a read without a document id fails on a switchboard. */
+function documentIdHint(documentId: string | undefined): string {
+  return documentId === undefined
+    ? "\nOn a switchboard an attachment is served only through a document " +
+        "that references it: pass documentId."
+    : "";
 }

@@ -73,7 +73,7 @@ You can also run Vetra Studio and Reactor together. In separate terminal windows
 ph reactor
 
 # Terminal 2: Start Vetra Studio (in a separate terminal)
-ph vetra --watch
+ph dev --watch
 ```
 
 This allows you to:

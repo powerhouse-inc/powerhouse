@@ -103,7 +103,7 @@ list per subcommand.
 
 #### Subcommands:
 
-- `document-model` (alias `doc`) — generate from a `.phd`/`.json` spec
+- `document-model` (alias `doc`) — generate a document model
 - `editor` — generate a document editor
 - `app` — generate a drive app
 - `processor` — generate a reactor processor
@@ -113,16 +113,17 @@ list per subcommand.
 
 Most subcommands share these options:
 
-- `-d, --document <path>`: Path to a document-model spec (`.phd` or `.json`)
+- `-n, --name <name>`: Name of the module to create
 - `--dir <dir>`: Existing module directory to re-generate
 - `-a, --all`: Re-generate every existing module of this type
-- `-x, --extract`: (document-model only) Write a `powerhouse/document-model` spec for each existing model into `specs/document-models/`
+
+Generating from a specification document is done in Vetra Studio (`ph vetra`).
 
 #### Examples:
 
 ```bash
-# Generate a document model from a spec file
-ph generate document-model --document path/to/model.phd
+# Create a code-first document model
+ph generate document-model --name "Todo List" --code-first
 
 # Re-generate all existing document models in the project
 ph generate document-model --all
@@ -299,7 +300,7 @@ module.exports = {
 
 ## Catch-up and telemetry output
 
-While a reactor catches up, `ph vetra` and `ph switchboard` show progress below the server's output. With processor timing on (see `PH_PROCESSOR_TIMING` in the deployment docs) they also list the busiest processors of the last minute, and one summary when catch-up ends. Without a terminal, the same comes as log lines:
+While a reactor catches up, `ph dev` and `ph switchboard` show progress below the server's output. With processor timing on (see `PH_PROCESSOR_TIMING` in the deployment docs) they also list the busiest processors of the last minute, and one summary when catch-up ends. Without a terminal, the same comes as log lines:
 
 ```
 catch-up: sektar (8 drives) 47% · vetra (10 drives) 0% · priority 4 dynamic

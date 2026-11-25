@@ -31,7 +31,7 @@ const driveKey = (drive: PHConnectDefaultDrive): string =>
  * Concatenate groups of `connect.drives.defaultDrives` in the order given,
  * de-duplicating by drive identity (URL for remote entries, id for local
  * ones). The first occurrence of a drive wins, so earlier groups keep their
- * position and metadata — e.g. the Vetra drive `ph vetra` starts stays first
+ * position and metadata — e.g. the Vetra drive `ph dev` starts stays first
  * even when the project's `powerhouse.config.json` lists the same drive.
  */
 export function mergeDefaultDrives(

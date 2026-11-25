@@ -20,8 +20,8 @@ let sentryClient: TelemetryClient | undefined = undefined;
 // values like `subcommand:my-package` polluting Sentry.
 const COMMANDS_WITH_SUBCOMMANDS = new Set([
   "connect",
-  "vetra",
   "host",
+  "identity",
   "model",
 ]);
 
@@ -73,7 +73,26 @@ async function main() {
     cliName: "ph-cli",
     release: getVersion(),
   });
-  let args = process.argv.slice(2);
+  let typed = process.argv.slice(2);
+  // `ph vetra` opens Vetra Studio: `ph run <studio host>`, once the project
+  // has the package (services/vetra-gateway.ts). Its help is the vetra
+  // command's.
+  if (
+    typed[0] === "vetra" &&
+    !typed.some((arg) => arg === "--help" || arg === "-h")
+  ) {
+    const { vetraGateway } = await import("./services/vetra-gateway.js");
+    const gateway = await vetraGateway(typed.slice(1));
+    // A new ph-cli ran it, after an install.
+    if ("exitCode" in gateway) process.exit(gateway.exitCode);
+    typed = gateway.args;
+  }
+  // `ph dev`, `ph connect` and `ph switchboard` run the hosts dev, connect
+  // and switchboard: refused here in a project without the host, and for the
+  // flags `ph run` lacks.
+  const { sugarError } = await import("./utils/sugar-checks.js");
+  const refused = await sugarError(typed, process.cwd());
+  if (refused !== undefined) throw new Error(refused);
   // Host sugar: `ph <host-name> [verb]` → `ph run <host-name> [verb]` when the
   // first arg names a host in this project's hosts/ folder. Built-in commands
   // always win.
@@ -81,25 +100,14 @@ async function main() {
     await import("./utils/run-sugar.js");
   const { phCliCommands } = await import("./commands/ph-cli-commands.js");
   const sugar = applyRunSugar(
-    args,
+    typed,
     new Set(Object.keys(phCliCommands)),
     process.cwd(),
   );
   if (sugar.warning) console.warn(sugar.warning);
-  // A runner's own arguments (`ph run vetra --switchboard-port 4001`).
-  args = forwardRunnerArgv(sugar.args);
+  // A runner's own arguments (`ph run dev --switchboard-port 4001`).
+  const args = forwardRunnerArgv(sugar.args);
   const command = args[0];
-  // 6.3: a classic command says what replaces it. Not for `ph run`.
-  if (
-    command === "vetra" ||
-    command === "connect" ||
-    command === "switchboard" ||
-    command === "reactor"
-  ) {
-    const { warnClassicInvocation } =
-      await import("./utils/classic-warnings.js");
-    await warnClassicInvocation(args, process.cwd());
-  }
   const subcommand =
     command &&
     COMMANDS_WITH_SUBCOMMANDS.has(command) &&
@@ -119,15 +127,7 @@ async function main() {
   const isTopLevelHelp = isHelp && args.length === 1;
   const showTopLevelHelp = hasNoArgs || isTopLevelHelp;
   const cli = showTopLevelHelp ? phCliHelp : phCli;
-  const restArgs = args.slice(1);
-  if (
-    command === "connect" &&
-    !["studio", "build", "preview", "config"].includes(args[1]) &&
-    !isHelp
-  ) {
-    const argsWithDefaultConnectSubCommand = ["connect", "studio", ...restArgs];
-    await run(cli, argsWithDefaultConnectSubCommand);
-  } else if (command === "model") {
+  if (command === "model") {
     await runModelCli(cli, args);
   } else {
     await run(cli, args);

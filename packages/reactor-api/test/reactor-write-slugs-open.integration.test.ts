@@ -57,7 +57,8 @@ describe("reactor subgraph writes resolve slugs under OPEN", () => {
       .buildModule();
     ctx = mutationContextFor(module);
     reactorDriveClient = new ReactorDriveClient({
-      reactor: module.client,
+      read: module.read,
+      write: module.write,
       readModel: {} as IDriveReadModel,
     });
     const subgraph = new ReactorSubgraph({
@@ -160,15 +161,11 @@ describe("reactor subgraph writes resolve slugs under OPEN", () => {
       { documentType, parentIdentifier: "reactor-drive-slug" },
       ctx,
     )) as { id: string };
-    const initial = await createDocumentWithInitialState(
-      module.client,
-      {
-        documentType,
-        parentIdOrSlug: "reactor-drive-slug",
-        initialState: {},
-      },
-      reactorDriveClient,
-    );
+    const initial = await createDocumentWithInitialState(module.client, {
+      documentType,
+      parentIdOrSlug: "reactor-drive-slug",
+      initialState: {},
+    });
 
     expect((await targetIds(driveId, "drive/child")).sort()).toEqual(
       [document.header.id, empty.id, initial.id].sort(),

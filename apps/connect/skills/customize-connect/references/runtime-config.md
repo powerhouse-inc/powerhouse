@@ -195,19 +195,21 @@ Both reactor hosts read it; the SharedWorker gets it in its construct message.
 A worker that refused retries the build on the next tab's connect, so the new
 value takes effect without closing other tabs.
 
-### Multi-reactor routing (`connect.instance.multiReactor`)
+### Multi-reactor routing (`connect.instance.reactorClient`)
 
-Experimental, optional, default `false`. When on, Connect reads and writes
-through a router over its own reactor and the Switchboard of the first remote
-default drive (`drives.defaultDrives[].url`), and its reactor gains a local sync
-channel.
+`reactorClient` selects the reactor client: `in-process` (the default),
+`worker`, `remote` or `router`. With `router`, Connect reads and writes through
+a router over its own reactor and the Switchboard of the first remote default
+drive (`drives.defaultDrives[].url`), and its reactor gains a local sync
+channel. A host file's `reactor.backends` sets it; `?reactorClient=` overrides
+it for a browser.
 
 ```jsonc
-"instance": { "multiReactor": true }
+"instance": { "reactorClient": "router" }
 ```
 
-It is part of the worker's version fingerprint, so like the enforcement flags
-it is set in this file only, with no query-param or localStorage override.
+Since 6.4 the `multiReactor` and `reactorWorker` booleans no longer select a
+client on their own: Connect warns in the console and runs in-process.
 
 ## Setting values — the precedence ladder
 
@@ -245,7 +247,7 @@ Two fields interact with the service worker and deserve a caveat:
 Two special-case writers also exist:
 
 - `ph install --registry <url>` writes the top-level `packageRegistryUrl` (overwrites when `--registry` is explicit, otherwise preserves existing).
-- `ph vetra` passes a programmatic `callerOverride` to `ph connect studio` so default drives don't have to be tipped on every invocation. It also sets `instance.reactorClient: "remote"`, so Studio reads and writes every drive on the local Switchboard (drives created in Studio land there too), unless the project sets `instance.multiReactor` or `instance.reactorClient`, or runs `ph vetra --remote-drive`. `ph migrate` drops the `connect.instance` block older scaffolds wrote.
+- `ph dev` passes a programmatic `callerOverride` to `ph connect studio` so default drives don't have to be tipped on every invocation. It also sets `instance.reactorClient: "remote"`, so Studio reads and writes every drive on the local Switchboard (drives created in Studio land there too), unless the project sets `instance.multiReactor` or `instance.reactorClient`, or runs `ph dev --remote-drive`. `ph migrate` drops the `connect.instance` block older scaffolds wrote.
 
 ### Notes on each method
 

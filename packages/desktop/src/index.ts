@@ -8,6 +8,7 @@
 export {
   appJsonSchema,
   appSlug,
+  findRemovedAppJsonKeys,
   loadAppJson,
   APP_JSON_FILE,
   DEFAULT_SHELL_CRATE_VERSION,
@@ -15,6 +16,7 @@ export {
   type AppJson,
   type AppJsonShellSource,
   type AppJsonUpdates,
+  type RemovedAppJsonKey,
 } from "./app-json.js";
 export {
   bundleStack,

@@ -216,34 +216,4 @@ export async function ensureDrive(
   return `http://localhost:${serverPort}/d/${drive.id || drive.slug}`;
 }
 
-/** @deprecated Use {@link ensureDrive}. */
-export function addDefaultDrive(
-  client: IReactorClient,
-  drive: DriveInput,
-  serverPort: number,
-  logger: DefaultDriveLogger = console,
-): Promise<string | undefined> {
-  return ensureDrive(
-    client,
-    { ...drive, documentType: driveDocumentType },
-    serverPort,
-    logger,
-  );
-}
-
-/** @deprecated Use {@link ensureDrive} with `documentType`. */
-export function addDefaultReactorDrive(
-  client: IReactorClient,
-  drive: DriveInput,
-  serverPort: number,
-  logger: DefaultDriveLogger = console,
-): Promise<string | undefined> {
-  return ensureDrive(
-    client,
-    { ...drive, documentType: REACTOR_DRIVE_DOCUMENT_TYPE },
-    serverPort,
-    logger,
-  );
-}
-
 export { isPostgresUrl } from "./postgres-url.mjs";

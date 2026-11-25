@@ -1,7 +1,7 @@
 // @ts-nocheck — NOTE(port): the ph-clint repo never typechecked its test suite
 // (jest ran transpile-only); this file carries pre-existing type drift. Runtime
 // assertions are unchanged. Tighten opportunistically when touching the file.
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -82,6 +82,101 @@ function collectPids(servicesDir: string): number[] {
 }
 
 describe("formatStatus", () => {
+  it("names the supervisor that holds the instance and how long it lives", () => {
+    expect(
+      formatStatus({
+        serviceId: "svc",
+        instanceId: "svc",
+        name: "My Svc",
+        status: "ready",
+        pid: 123,
+        supervisor: { pid: 77, handle: "1", lifetime: "supervisor" },
+      }),
+    ).toContain("supervisor pid 77, lives with the supervisor");
+  });
+
+  it("is one line, as before, when no supervisor holds it or the supervisor knows no more", () => {
+    const status = {
+      serviceId: "svc",
+      instanceId: "svc",
+      name: "My Svc",
+      status: "ready",
+      pid: 123,
+      endpoints: { port: "4000" },
+    } as const;
+    expect(formatStatus(status)).toBe("● My Svc [ready]  pid 123  port=4000");
+    expect(
+      formatStatus({
+        ...status,
+        supervisor: { pid: 77, handle: "1", lifetime: "caller" },
+      }),
+    ).toBe(
+      "● My Svc [ready]  pid 123  port=4000  supervisor pid 77, lives with the caller",
+    );
+  });
+
+  it("shows what the supervisor knows, in the words of `ph run supervisor ps`", () => {
+    const lines = formatStatus({
+      serviceId: "svc",
+      instanceId: "svc",
+      name: "My Svc",
+      status: "failed",
+      error: "The supervisor left it ended: it ended on its own (code 7).",
+      restartAttempt: 2,
+      supervisor: {
+        pid: 77,
+        handle: "1",
+        lifetime: "supervisor",
+        runnerVersion: "6.2.3",
+        missing: [
+          "forwarded commands: its runner (6.2.3) has no control channel",
+        ],
+        restart: {
+          maxRetries: 2,
+          delay: 250,
+          attempt: 2,
+          lastExit: { code: 7, signal: null, at: "2026-11-23T10:00:00.000Z" },
+          failed: "it ended on its own (code 7) after 2 restart(s) in a row",
+        },
+      },
+    }).split("\n");
+    expect(lines).toEqual([
+      "✗ My Svc [failed]  supervisor pid 77, lives with the supervisor  error: The supervisor left it ended: it ended on its own (code 7).  restart #2",
+      "     runner version: 6.2.3",
+      "     restarted by the supervisor: up to 2 time(s) in a row, 250 ms apart; attempt 2 of 2; last ended with code 7 at 2026-11-23T10:00:00.000Z",
+      "     failed: it ended on its own (code 7) after 2 restart(s) in a row",
+      "     - forwarded commands: its runner (6.2.3) has no control channel",
+    ]);
+  });
+
+  it("offers --lifetime on the start of a host service only", async () => {
+    const [hostStart] = createServiceCommands({
+      id: "web",
+      run: { host: "web" },
+    });
+    const [shellStart] = createServiceCommands({ id: "sh", command: "x" });
+    const keys = (c: { inputSchema: unknown }) =>
+      Object.keys((c.inputSchema as { shape: object }).shape);
+    expect(keys(hostStart!)).toContain("lifetime");
+    expect(keys(shellStart!)).not.toContain("lifetime");
+
+    const starts: unknown[] = [];
+    const services = {
+      start: async (_id: string, opts: unknown) => {
+        starts.push(opts);
+        return "web";
+      },
+      list: () => [
+        { serviceId: "web", instanceId: "web", name: "Web", status: "ready" },
+      ],
+    } as unknown as ServiceManager;
+    await hostStart!.execute({ lifetime: "supervisor" }, {
+      services,
+      workdir: process.cwd(),
+    } as unknown as CommandContext);
+    expect(starts).toMatchObject([{ lifetime: "supervisor" }]);
+  });
+
   it("shows ● icon for ready status", () => {
     const result = formatStatus({
       serviceId: "svc",
@@ -459,14 +554,17 @@ describe("createServiceCommands — with real services", () => {
       trackedPids.push(...collectPids(servicesDir));
     });
 
-    it("reports error for already running service", async () => {
+    it("a second start reports the running instance and starts nothing", async () => {
       await mgr.start("test-svc", { workdir: tmpDir });
-      trackedPids.push(...collectPids(servicesDir));
+      const pids = collectPids(servicesDir);
+      trackedPids.push(...pids);
 
       const cmds = createServiceCommands(readyDef);
       const startCmd = cmds.find((c) => c.id === "test-svc-start")!;
       const result = (await startCmd.execute({}, makeContext())) as any;
-      expect(result.text).toContain("already running");
+      expect(result.text).toContain("ready");
+      expect(result.text).not.toContain("✗");
+      expect(collectPids(servicesDir)).toEqual(pids);
     });
 
     it("extracts paramsSchema fields from input when starting", async () => {
@@ -729,16 +827,10 @@ describe("auto-injected service commands in CLI", () => {
   });
 
   afterEach(() => {
-    // Services now live in user-scope (~/.ph/{name}/services/)
-    const userSvcDir = path.join(os.homedir(), ".ph", "svc", "services");
+    // Service state is under the data folder: <workdir>/.ph/{name}/services
     const localSvcDir = path.join(tmpDir, ".ph", "svc", "services");
-    const pids = [
-      ...trackedPids,
-      ...collectPids(userSvcDir),
-      ...collectPids(localSvcDir),
-    ];
+    const pids = [...trackedPids, ...collectPids(localSvcDir)];
     for (const pid of pids) safeKill(pid);
-    fs.rmSync(userSvcDir, { recursive: true, force: true });
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -801,7 +893,123 @@ describe("auto-injected service commands in CLI", () => {
     expect(cap.output.join("")).toContain("idle");
   });
 
-  it("test-svc-start + test-svc-stop via run()", async () => {
+  describe("service state is under the data folder", () => {
+    let home: string;
+    let other: string;
+
+    const svcCli = () =>
+      defineCli({
+        name: "svc",
+        version: "1.0.0",
+        description: "test",
+        commands: [],
+        services: [svcDef],
+        interactive: { welcome: "Hello" },
+      });
+
+    const ps = async (workdir: string) => {
+      const cap = capture();
+      await svcCli().run(["node", "svc", "test-svc-ps"], {
+        ...cap.options,
+        workdir,
+      });
+      return cap;
+    };
+
+    beforeEach(() => {
+      home = makeTmpDir();
+      other = makeTmpDir();
+      // os.homedir() reads these: nothing here may reach the real one.
+      vi.stubEnv("USERPROFILE", home);
+      vi.stubEnv("HOME", home);
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      fs.rmSync(home, { recursive: true, force: true });
+      fs.rmSync(other, { recursive: true, force: true });
+    });
+
+    it("two project folders run the same Cli and neither lists the other's services", async () => {
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => (release = resolve));
+      let started!: () => void;
+      const up = new Promise<void>((resolve) => (started = resolve));
+      const output: string[] = [];
+      const session = svcCli().run(["node", "svc", "-i"], {
+        stdout: (msg) => output.push(msg),
+        stderr: () => {},
+        exit: () => {},
+        workdir: tmpDir,
+        interactiveInput: (async function* () {
+          yield "/test-svc-start";
+          started();
+          await held;
+          yield "/exit";
+        })(),
+      });
+      try {
+        await up;
+        const stateDir = path.join(tmpDir, ".ph", "svc", "services");
+        const pids = collectPids(stateDir);
+        trackedPids.push(...pids);
+        expect(pids).toHaveLength(1);
+        expect(output.join("")).toContain("ready");
+
+        // The other project folder: the same Cli, its own (empty) list.
+        const there = await ps(other);
+        expect(there.output.join("")).toContain("idle");
+        expect(collectPids(path.join(other, ".ph", "svc", "services"))).toEqual(
+          [],
+        );
+        // This one's is seen from its own folder.
+        const here = await ps(tmpDir);
+        expect(here.output.join("")).not.toContain("idle");
+        // Nothing was kept in the user's folder.
+        expect(fs.existsSync(path.join(home, ".ph"))).toBe(false);
+      } finally {
+        release();
+        await session;
+      }
+    });
+
+    it("reports state at the old location once, reads none of it and deletes none", async () => {
+      const legacyDir = path.join(home, ".ph", "svc", "services", "test-svc");
+      fs.mkdirSync(legacyDir, { recursive: true });
+      const legacyFile = path.join(legacyDir, "test-svc.json");
+      const legacyState = JSON.stringify({
+        serviceId: "test-svc",
+        instanceId: "test-svc",
+        name: "Test Service",
+        pid: process.pid,
+        status: "ready",
+        startedAt: new Date().toISOString(),
+        command: "node x",
+        workdir: tmpDir,
+      });
+      fs.writeFileSync(legacyFile, legacyState);
+
+      const first = await ps(tmpDir);
+      // Not read: the old state says ready, this project's list is empty.
+      expect(first.output.join("")).toContain("idle");
+      expect(first.errors.join("")).toContain(
+        "Service state of an earlier version is at",
+      );
+      expect(first.errors.join("")).toContain("Nothing was deleted or moved");
+
+      const second = await ps(tmpDir);
+      expect(second.errors.join("")).not.toContain("earlier version");
+
+      // Another project's state there is not this one's to report.
+      const there = await ps(other);
+      expect(there.errors.join("")).not.toContain("earlier version");
+
+      expect(fs.readFileSync(legacyFile, "utf-8")).toBe(legacyState);
+      expect(fs.readdirSync(legacyDir)).toEqual(["test-svc.json"]);
+    });
+  });
+
+  it("test-svc-start via run() is refused: the service would end with the command", async () => {
     const cli = defineCli({
       name: "svc",
       version: "1.0.0",
@@ -810,16 +1018,26 @@ describe("auto-injected service commands in CLI", () => {
       services: [svcDef],
     });
 
-    const cap = capture();
-    await cli.run(["node", "svc", "test-svc-start"], cap.options);
-    expect(cap.output.join("")).toContain("ready");
+    for (const command of ["test-svc-start", "test-svc-restart"]) {
+      const cap = capture();
+      await cli.run(["node", "svc", command], {
+        ...cap.options,
+        serveCommand: "ph run svc-host",
+      });
+      expect(cap.exitCode).toBe(1);
+      expect(cap.output.join("")).not.toContain("ready");
+      expect(cap.errors.join("")).toContain("test-svc was not started");
+      expect(cap.errors.join("")).toContain("`ph run svc-host`");
+    }
 
-    const svcDir = path.join(tmpDir, ".ph", "svc", "services");
-    trackedPids.push(...collectPids(svcDir));
-
+    // Nothing was started, and the other commands still answer.
     const cap2 = capture();
-    await cli.run(["node", "svc", "test-svc-stop"], cap2.options);
-    expect(cap2.output.join("")).not.toContain("✗");
+    await cli.run(["node", "svc", "test-svc-ps"], cap2.options);
+    expect(cap2.output.join("")).toContain("idle");
+
+    const cap3 = capture();
+    await cli.run(["node", "svc", "test-svc-stop"], cap3.options);
+    expect(cap3.output.join("")).toContain("test-svc is not running");
   });
 
   it("/test-svc-ps works in headless interactive mode", async () => {
@@ -856,14 +1074,24 @@ describe("auto-injected service commands in CLI", () => {
       description: "test",
       commands: [],
       services: [svcDef],
+      interactive: { welcome: "Hello" },
       events: {
         "service:ready": (data) => receivedEvents.push(data),
       },
     });
 
-    const cap = capture();
-    await cli.run(["node", "svc", "test-svc-start"], cap.options);
-    expect(cap.output.join("")).toContain("ready");
+    const output: string[] = [];
+    await cli.run(["node", "svc", "-i"], {
+      stdout: (msg) => output.push(msg),
+      stderr: () => {},
+      exit: () => {},
+      workdir: tmpDir,
+      interactiveInput: (async function* () {
+        yield "/test-svc-start";
+        yield "/exit";
+      })(),
+    });
+    expect(output.join("")).toContain("ready");
 
     const svcDir = path.join(tmpDir, ".ph", "svc", "services");
     trackedPids.push(...collectPids(svcDir));

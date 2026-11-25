@@ -325,6 +325,9 @@
                 "offlineCredentials": {
                   "type": "boolean"
                 },
+                "refuseUnseenOffline": {
+                  "type": "boolean"
+                },
                 "access": {
                   "type": "object",
                   "properties": {
@@ -608,6 +611,9 @@
                 "keypairPath": {
                   "type": "string"
                 },
+                "storagePath": {
+                  "type": "string"
+                },
                 "requireExisting": {
                   "type": "boolean"
                 },
@@ -875,9 +881,6 @@
             }
           },
           "additionalProperties": false
-        },
-        "workflows": {
-          "type": "boolean"
         },
         "renown": {
           "type": "object",

@@ -13,7 +13,15 @@ export default defineConfig([
   // The Node CLI context (ph run): loaders and run records use node:fs/url.
   {
     ...shared,
-    entry: ["src/index.ts", "src/runners/compound.ts"],
+    entry: [
+      "src/index.ts",
+      "src/runners/compound.ts",
+      "src/kill-tree.ts",
+      "src/control-channel.ts",
+      "src/instance.ts",
+      "src/supervisor.ts",
+      "src/supervisor-record.ts",
+    ],
     platform: "node",
   },
   // Browser-safe entries (reactor-monitor, Connect): scripts/assert-neutral.mjs

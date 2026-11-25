@@ -16,6 +16,26 @@ interface McpEndpoint {
   instanceId: string;
 }
 
+/** The bearer of a discovered endpoint's requests; undefined sends none. */
+export type McpBearer = (endpoint: {
+  url: string;
+  serviceId: string;
+}) => Promise<string | undefined>;
+
+/** `fetch` that adds the bearer `bearer` mints for `endpoint`, per request. */
+function fetchWithBearer(
+  bearer: McpBearer,
+  endpoint: { url: string; serviceId: string },
+) {
+  return async (url: string | URL, init?: RequestInit): Promise<Response> => {
+    const token = await bearer(endpoint);
+    if (!token) return fetch(url, init);
+    const headers = new Headers(init?.headers);
+    headers.set("authorization", `Bearer ${token}`);
+    return fetch(url, { ...init, headers });
+  };
+}
+
 /**
  * Discover MCP tools from running services that have `api-mcp` endpoints.
  *
@@ -28,11 +48,15 @@ interface McpEndpoint {
  *
  * @param MCPClient — Constructor from `@mastra/mcp`, must be provided by the consumer.
  *   Throws if MCP endpoints exist but no MCPClient is provided.
+ * @param bearer — The bearer each endpoint's requests carry: the agent's
+ *   session, so the endpoint's door knows who calls. Its writes are signed by
+ *   that endpoint's host. Omitted: requests go anonymous.
  */
 export async function discoverMcpTools(
   services: ServiceManager,
   log?: Logger,
   MCPClient?: any,
+  bearer?: McpBearer,
 ): Promise<Record<string, any>> {
   const instances = services.list();
 
@@ -111,6 +135,14 @@ export async function discoverMcpTools(
         servers: {
           [serverKey]: {
             url: new URL(ep.url),
+            ...(bearer
+              ? {
+                  fetch: fetchWithBearer(bearer, {
+                    url: ep.url,
+                    serviceId: ep.serviceId,
+                  }),
+                }
+              : {}),
           },
         },
       });
@@ -150,7 +182,7 @@ export async function discoverMcpTools(
       );
       // Evict so the next discovery reconnects fresh. The cached client's
       // session dies when the MCP server restarts inside a live service
-      // instance (e.g. `ph vetra --watch` reloading its switchboard), which
+      // instance (e.g. `ph dev --watch` reloading its switchboard), which
       // the instanceId staleness check above cannot see.
       try {
         await entry.client.disconnect();

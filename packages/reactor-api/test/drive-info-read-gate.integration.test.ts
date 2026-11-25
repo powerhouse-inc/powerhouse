@@ -97,6 +97,8 @@ describe("GET /d/:drive reads the drive as the caller", () => {
         close: vi.fn((cb?: () => void) => cb?.()),
         setMaxListeners: vi.fn(),
       } as unknown as WebSocketServer,
+      readClient: module.read,
+      writeClient: module.write,
       reactorClient: module.client,
       relationalDb: {} as IRelationalDb,
       analyticsStore: {} as IAnalyticsStore,

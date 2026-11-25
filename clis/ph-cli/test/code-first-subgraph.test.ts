@@ -1,8 +1,3 @@
-import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
-import {
-  extractSubgraphDocuments,
-  saveSpec,
-} from "@powerhousedao/vetra/codegen";
 import { parse } from "cmd-ts";
 import {
   mkdirSync,
@@ -32,10 +27,8 @@ const args = (
   overrides: Partial<GenerateSubgraphArgs>,
 ): GenerateSubgraphArgs => ({
   name: undefined,
-  document: undefined,
   dir: undefined,
   all: false,
-  extract: false,
   skipInstall: true,
   debug: undefined,
   ...overrides,
@@ -85,117 +78,77 @@ const snapshot = (dir: string, subgraph: string) =>
     ]),
   );
 
-async function subgraphSpec(name: string) {
-  const source = project();
-  const dirName = name.toLowerCase();
-  mkdirSync(join(source, "subgraphs", dirName), { recursive: true });
-  writeFileSync(
-    join(source, "subgraphs", dirName, "index.ts"),
-    `import { BaseSubgraph } from "@powerhousedao/reactor-api";\nexport class ${name}Subgraph extends BaseSubgraph {\n  name = "${dirName}";\n}\n`,
-  );
-  const [doc] = extractSubgraphDocuments(buildTsMorphProject(source));
-  return saveSpec(doc, source);
-}
+describe("ph generate subgraph --name", { timeout: 60_000 }, () => {
+  it("rejects --code-first as an unknown argument", async () => {
+    const result = await parse(generateSubgraphCmd, [
+      "--code-first",
+      "--name",
+      "foo",
+    ]);
+    expect(result._tag === "error" && result.error.errors).toEqual([
+      expect.objectContaining({
+        message: "Unknown arguments",
+        nodes: [expect.objectContaining({ raw: "--code-first" })],
+      }),
+    ]);
+  });
 
-describe(
-  "ph generate subgraph --name and --document",
-  { timeout: 60_000 },
-  () => {
-    it("rejects --code-first as an unknown argument", async () => {
-      const result = await parse(generateSubgraphCmd, [
-        "--code-first",
-        "--name",
-        "foo",
-      ]);
-      expect(result._tag === "error" && result.error.errors).toEqual([
-        expect.objectContaining({
-          message: "Unknown arguments",
-          nodes: [expect.objectContaining({ raw: "--code-first" })],
-        }),
-      ]);
+  it("--name scaffolds a Subgraph class, listed in the manifest under its kebab-case name", async () => {
+    const dir = project();
+    await startGenerateSubgraph(args({ name: "Stock Ledger" }), dir);
+    expect(files(dir, "stock-ledger")).toEqual(["index.ts", "schema.ts"]);
+    expect(read(dir, "subgraphs/stock-ledger/index.ts")).toContain(
+      'static override readonly subgraphName = "stock-ledger";',
+    );
+    expect(readJson(dir, "powerhouse.manifest.json")).toMatchObject({
+      subgraphs: [{ id: "stock-ledger", name: "stock-ledger" }],
     });
+    expect(warned).toEqual([]);
+  });
 
-    it("--name scaffolds a Subgraph class, listed in the manifest under its kebab-case name", async () => {
-      const dir = project();
-      await startGenerateSubgraph(args({ name: "Stock Ledger" }), dir);
-      expect(files(dir, "stock-ledger")).toEqual(["index.ts", "schema.ts"]);
-      expect(read(dir, "subgraphs/stock-ledger/index.ts")).toContain(
-        'static override readonly subgraphName = "stock-ledger";',
-      );
-      expect(readJson(dir, "powerhouse.manifest.json")).toMatchObject({
-        subgraphs: [{ id: "stock-ledger", name: "stock-ledger" }],
-      });
-      expect(warned).toEqual([]);
-    });
+  it("--name scaffolds a Subgraph class into an empty directory", async () => {
+    const dir = project();
+    mkdirSync(join(dir, "subgraphs/orders"), { recursive: true });
+    await startGenerateSubgraph(args({ name: "Orders" }), dir);
+    expect(files(dir, "orders")).toEqual(["index.ts", "schema.ts"]);
+    expect(read(dir, "subgraphs/orders/index.ts")).toMatch(
+      /class OrdersSubgraph extends Subgraph\b/,
+    );
+  });
 
-    it("--name scaffolds a Subgraph class into an empty directory", async () => {
-      const dir = project();
-      mkdirSync(join(dir, "subgraphs/orders"), { recursive: true });
-      await startGenerateSubgraph(args({ name: "Orders" }), dir);
-      expect(files(dir, "orders")).toEqual(["index.ts", "schema.ts"]);
-      expect(read(dir, "subgraphs/orders/index.ts")).toMatch(
-        /class OrdersSubgraph extends Subgraph\b/,
-      );
-    });
+  it("--name leaves an existing Subgraph class directory as it is, and gives it a deleted index.ts back", async () => {
+    const dir = project();
+    await startGenerateSubgraph(args({ name: "Orders" }), dir);
+    const before = snapshot(dir, "orders");
+    const manifest = read(dir, "package.json");
+    await startGenerateSubgraph(args({ name: "Orders" }), dir);
+    expect(snapshot(dir, "orders")).toEqual(before);
+    rmSync(join(dir, "subgraphs/orders/index.ts"));
+    await startGenerateSubgraph(args({ name: "Orders" }), dir);
+    expect(snapshot(dir, "orders")).toEqual(before);
+    expect(files(dir, "orders")).toEqual(["index.ts", "schema.ts"]);
+    expect(read(dir, "package.json")).toBe(manifest);
+  });
 
-    it("--name leaves an existing Subgraph class directory as it is, and gives it a deleted index.ts back", async () => {
+  it("--name scaffolds a Subgraph class, ignoring an obsolete definitionSources", async () => {
+    const dir = project(OBSOLETE_CODE_FIRST_MODE);
+    await startGenerateSubgraph(args({ name: "Orders" }), dir);
+    expect(files(dir, "orders")).toEqual(["index.ts", "schema.ts"]);
+  });
+
+  it.each(["resolvers.ts", "index.ts"])(
+    "with --name, an existing legacy subgraph gets its deleted %s back and keeps the rest",
+    async (deleted) => {
       const dir = project();
-      await startGenerateSubgraph(args({ name: "Orders" }), dir);
+      copyLegacySubgraph(dir, "orders");
       const before = snapshot(dir, "orders");
-      const manifest = read(dir, "package.json");
+      expect(files(dir, "orders")).toEqual(SCHEMA_FIRST_FILES);
+      rmSync(join(dir, "subgraphs/orders", deleted));
       await startGenerateSubgraph(args({ name: "Orders" }), dir);
       expect(snapshot(dir, "orders")).toEqual(before);
-      rmSync(join(dir, "subgraphs/orders/index.ts"));
-      await startGenerateSubgraph(args({ name: "Orders" }), dir);
-      expect(snapshot(dir, "orders")).toEqual(before);
-      expect(files(dir, "orders")).toEqual(["index.ts", "schema.ts"]);
-      expect(read(dir, "package.json")).toBe(manifest);
-    });
-
-    it.each([
-      { title: "", config: undefined },
-      {
-        title: ", ignoring an obsolete definitionSources",
-        config: OBSOLETE_CODE_FIRST_MODE,
-      },
-    ])(
-      "--document writes the four files of a legacy subgraph$title",
-      async ({ config }) => {
-        const spec = await subgraphSpec("Orders");
-        const dir = project(config);
-        const frozen = project();
-        copyLegacySubgraph(frozen, "orders");
-        await startGenerateSubgraph(args({ document: spec }), dir);
-        expect(files(dir, "orders")).toEqual(SCHEMA_FIRST_FILES);
-        expect(snapshot(dir, "orders")).toEqual(snapshot(frozen, "orders"));
-      },
-    );
-
-    it.each([
-      ["name", "resolvers.ts"],
-      ["name", "index.ts"],
-      ["document", "resolvers.ts"],
-      ["document", "index.ts"],
-    ] as const)(
-      "with --%s, an existing legacy subgraph gets its deleted %s back and keeps the rest",
-      async (target, deleted) => {
-        const dir = project();
-        copyLegacySubgraph(dir, "orders");
-        const before = snapshot(dir, "orders");
-        rmSync(join(dir, "subgraphs/orders", deleted));
-        await startGenerateSubgraph(
-          args(
-            target === "name"
-              ? { name: "Orders" }
-              : { document: await subgraphSpec("Orders") },
-          ),
-          dir,
-        );
-        expect(snapshot(dir, "orders")).toEqual(before);
-      },
-    );
-  },
-);
+    },
+  );
+});
 
 describe("ph generate subgraph regeneration", { timeout: 60_000 }, () => {
   it("--all regenerates both forms and warns on an unreadable Subgraph class directory", async () => {

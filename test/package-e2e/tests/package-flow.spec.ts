@@ -176,7 +176,10 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
   });
 
   await page.goto(CONNECT_URL);
-  await page.waitForLoadState("networkidle");
+  // Not networkidle: the built Connect runs the worker reactor, whose
+  // SharedWorker keeps the network busy (see vetra-e2e helpers/wait.ts).
+  // The element waits below carry the readiness.
+  await page.waitForLoadState("domcontentloaded");
 
   // What the page claims it can resolve, and whether the server agrees. A
   // shared-dependency entry the map advertises but the deploy does not carry
@@ -273,13 +276,13 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
 
   // Connect navigates into the remote drive once its initial sync lands.
   await expect(page).toHaveURL(/\/d\/[^/?]+/, { timeout: 30_000 });
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
 
   // The synced GraphQL-created doc surfaces as a clickable card.
   const docCard = page.getByText("Groceries", { exact: false }).first();
   await expect(docCard).toBeVisible({ timeout: 30_000 });
   await docCard.click();
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
 
   // Use our editor (fixtures/editor.tsx) to dispatch an ADD_TODO action.
   // The Connect reactor will sync it back to Switchboard.

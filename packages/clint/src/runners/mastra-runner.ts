@@ -410,15 +410,21 @@ export async function run(
 
 export const serve = run;
 
-/** `build` — skill + agent-profile compilation (ph-clint-dev's pipeline). */
+/**
+ * `build` — skill + agent-profile compilation (ph-clint-dev's pipeline).
+ * When the package also exports a `Cli` (`./cli`), its metadata joins the
+ * template context; without that export the build is path-driven only.
+ */
 export async function build(
   host: MastraHost,
   ctx: RunnerContext,
 ): Promise<void> {
   const config = host.config ?? {};
   const { buildSkills } = await import("../dev/build-skills.js");
+  const { loadOwnCli } = await import("./cli-runner.js");
   const result = await buildSkills({
     rootDir: ctx.projectRoot,
+    cli: await loadOwnCli(ctx.projectRoot),
     skillsDir: config.prompts?.skillsDir,
     agentsDir: config.prompts?.agentsDir,
     outDir: config.prompts?.outDir,

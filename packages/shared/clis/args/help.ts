@@ -2,9 +2,11 @@ import { command } from "cmd-ts";
 import type { phCliCommandNames } from "../command-names.js";
 import { accessTokenArgs } from "./access-token.js";
 import { debugArgs } from "./common.js";
-import { connectArgs } from "./connect.js";
+import { connectConfigArgs } from "./connect.js";
+import { credentialsListArgs } from "./credentials.js";
 import { generateArgs } from "./generate.js";
 import { hostCheckArgs } from "./host.js";
+import { identityPasswordArgs, logoutArgs, whoamiArgs } from "./identity.js";
 import { inspectArgs } from "./inspect.js";
 import { installArgs } from "./install.js";
 import { keyframesArgs } from "./keyframes.js";
@@ -16,9 +18,7 @@ import { modelCheckArgs } from "./model.js";
 import { publishArgs } from "./publish.js";
 import { registryLoginArgs } from "./registry.js";
 import { runArgs } from "./run.js";
-import { switchboardArgs } from "./switchboard.js";
 import { uninstallArgs } from "./uninstall.js";
-import { vetraArgs } from "./vetra.js";
 
 // Thin wrapper around `command()` that preserves the literal types of
 // `name` and `aliases` on the return value.
@@ -60,17 +60,25 @@ export const phCliHelpCommands = {
     description: "Generate powerhouse code",
     handler: () => {},
   }),
+  dev: helpCommand({
+    name: "dev",
+    args: debugArgs,
+    description:
+      "Run the project's dev host (hosts/dev) in dev mode: the same as `ph run dev`. A project with hosts/vetra and no hosts/dev runs that host",
+    handler: () => {},
+  }),
   vetra: helpCommand({
     name: "vetra",
-    args: vetraArgs,
+    args: debugArgs,
     description:
-      "Starts Vetra development environment with switchboard, reactor, and connect",
+      "Open Vetra Studio: `ph run @powerhousedao/vetra-cli/studio`, installing @powerhousedao/vetra-cli first when the project lacks it. The dev mode is `ph dev`",
     handler: () => {},
   }),
   connect: helpCommand({
     name: "connect",
-    args: connectArgs,
-    description: "Powerhouse Connect commands",
+    args: connectConfigArgs,
+    description:
+      "Run the project's connect host: `ph connect [studio|build|preview]` is `ph run connect dev|build|serve`. `ph connect config` reads and writes Connect's runtime configuration",
     handler: () => {},
   }),
   build: helpCommand({
@@ -116,7 +124,7 @@ export const phCliHelpCommands = {
     name: "mcp",
     args: mcpArgs,
     description:
-      "Serve the project's reactor-mcp tools over stdio, starting Vetra on the first tool call",
+      "Serve the project's reactor-mcp tools over stdio, starting the project's dev host on the first tool call",
     handler: () => {},
   }),
   keyframes: helpCommand({
@@ -141,21 +149,43 @@ export const phCliHelpCommands = {
   }),
   switchboard: helpCommand({
     name: "switchboard",
-    aliases: ["reactor"],
-    args: switchboardArgs,
-    description: "Starts local Switchboard",
+    args: debugArgs,
+    description:
+      "Run the project's switchboard host (hosts/switchboard): the same as `ph run switchboard`",
     handler: () => {},
   }),
   login: helpCommand({
     name: "login",
     args: loginArgs,
-    description: "Authenticate with Renown using your Ethereum wallet",
+    description:
+      "Log in with Renown using your Ethereum wallet, for every project of this user",
     handler: () => {},
   }),
   logout: helpCommand({
     name: "logout",
-    args: loginArgs,
-    description: "Deletes an existing session created with 'ph login'",
+    args: logoutArgs,
+    description:
+      "Withdraw the login at Renown and delete it; your pseudonym acts again",
+    handler: () => {},
+  }),
+  whoami: helpCommand({
+    name: "whoami",
+    args: whoamiArgs,
+    description: "Show who acts here: your Renown login, or your pseudonym",
+    handler: () => {},
+  }),
+  identity: helpCommand({
+    name: "identity",
+    args: identityPasswordArgs,
+    description:
+      "Manage your pseudonym: `ph identity password` sets, changes or removes its password",
+    handler: () => {},
+  }),
+  credentials: helpCommand({
+    name: "credentials",
+    args: credentialsListArgs,
+    description:
+      "List the credentials this store's host accepts, and withdraw them: `list`, `withdraw`",
     handler: () => {},
   }),
   install: helpCommand({

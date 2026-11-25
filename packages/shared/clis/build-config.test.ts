@@ -10,8 +10,12 @@ import {
   browserBuildConfig,
   buildBrowserBuildConfig,
   browserEntry,
+  buildCliBuildConfig,
   buildNodeBuildConfig,
   buildPieceBuildConfig,
+  CLI_ENTRY,
+  CLINT_EXTERNAL,
+  declaredPackages,
   findBundledSharedDeps,
   hostStubOf,
   IMAGE_EXTENSIONS,
@@ -154,10 +158,35 @@ describe("buildNodeBuildConfig", () => {
     expect(neverBundle).toContain("react");
   });
 
+  it("leaves ./cli to its own build, and clint and its subpaths to the host", () => {
+    const cfg = buildNodeBuildConfig();
+    expect(cfg.entry).not.toContain(CLI_ENTRY);
+    expect(browserEntry).not.toContain(CLI_ENTRY);
+    const neverBundle = cfg.deps!.neverBundle as (string | RegExp)[];
+    expect(neverBundle).toContain(CLINT_EXTERNAL);
+    for (const id of [
+      "@powerhousedao/clint",
+      "@powerhousedao/clint/powerhouse",
+      "@powerhousedao/clint/cli-runner",
+    ]) {
+      expect(CLINT_EXTERNAL.test(id), id).toBe(true);
+    }
+    expect(CLINT_EXTERNAL.test("@powerhousedao/clint-common")).toBe(false);
+    // The browser build has no ./cli entry, so nothing there names clint.
+    const browserNeverBundle = buildBrowserBuildConfig().deps!.neverBundle as (
+      | string
+      | RegExp
+    )[];
+    expect(browserNeverBundle).not.toContain(CLINT_EXTERNAL);
+  });
+
   it("sharedDeps: false omits the shared regexps but keeps the rest", () => {
     const cfg = buildNodeBuildConfig({ sharedDeps: false });
     const neverBundle = cfg.deps!.neverBundle as (string | RegExp)[];
-    expect(neverBundle.some((e) => e instanceof RegExp)).toBe(false);
+    // The one regexp left is the node build's own, clint's.
+    expect(neverBundle.filter((e) => e instanceof RegExp)).toEqual([
+      CLINT_EXTERNAL,
+    ]);
     expect(neverBundle).toContain("@powerhousedao/reactor-api");
   });
 
@@ -177,6 +206,98 @@ describe("buildNodeBuildConfig", () => {
     const plugins = buildNodeBuildConfig({ plugins: [mine] }).plugins as {
       name: string;
     }[][];
+    expect(plugins.flat().map((plugin) => plugin.name)).toEqual([
+      "ph:no-browser-code-on-hosts",
+      "mine",
+    ]);
+  });
+});
+
+describe("declaredPackages", () => {
+  it("lists what an install of the package installs, once and sorted", () => {
+    const pkg = {
+      dependencies: { zeta: "^1", "@scope/alpha": "^2" },
+      optionalDependencies: { beta: "^3", zeta: "^1" },
+      peerDependencies: { react: "^19" },
+      devDependencies: { vitest: "^4" },
+    };
+    expect(declaredPackages(pkg)).toEqual([
+      "@scope/alpha",
+      "beta",
+      "react",
+      "zeta",
+    ]);
+    expect(declaredPackages({})).toEqual([]);
+  });
+});
+
+// A Cli runs from the installed package, its dependencies beside it: what
+// the package declares stays external, and the rest is as in the node build.
+describe("buildCliBuildConfig", () => {
+  const cfg = buildCliBuildConfig({
+    entry: CLI_ENTRY,
+    outDir: "dist/node/cli",
+    declared: ["@mastra/core", "graphql.js"],
+  });
+  const neverBundle = cfg.deps!.neverBundle as (string | RegExp)[];
+  const external = (id: string) =>
+    neverBundle.some((e) => (typeof e === "string" ? e === id : e.test(id)));
+
+  it("builds the Cli alone into node/cli, as index.mjs", () => {
+    expect(cfg.entry).toEqual({ index: CLI_ENTRY });
+    expect(cfg.outDir).toBe("dist/node/cli");
+    expect(cfg.platform).toBe("node");
+    expect(cfg.clean).toBe(true);
+    expect(cfg.dts).toBe(false);
+    expect(cfg.sourcemap).toBe(true);
+  });
+
+  it("leaves each declared package external, root and subpaths", () => {
+    expect(external("@mastra/core")).toBe(true);
+    expect(external("@mastra/core/agent")).toBe(true);
+    expect(external("graphql.js")).toBe(true);
+    // Anchored and escaped: neither a longer name nor the dot as a wildcard.
+    expect(external("@mastra/core-utils")).toBe(false);
+    expect(external("graphqlXjs")).toBe(false);
+    expect(external("@mastra/memory")).toBe(false);
+  });
+
+  it("bundles everything else, as the node build does", () => {
+    expect(cfg.deps!.alwaysBundle).toEqual(["**"]);
+    for (const id of [
+      "@powerhousedao/clint/powerhouse",
+      "@powerhousedao/reactor-api",
+      "document-model",
+      "zod/v4",
+    ]) {
+      expect(external(id), id).toBe(true);
+    }
+    const node = buildNodeBuildConfig().deps!.neverBundle as unknown[];
+    expect(neverBundle.slice(0, node.length)).toEqual(node);
+    expect(neverBundle).toHaveLength(node.length + 2);
+  });
+
+  it("follows sharedDeps for the shared set only", () => {
+    const bundled = buildCliBuildConfig({
+      entry: CLI_ENTRY,
+      outDir: "dist/node/cli",
+      declared: ["@mastra/core"],
+      sharedDeps: false,
+    }).deps!.neverBundle as (string | RegExp)[];
+    const regexps = bundled.filter((e): e is RegExp => e instanceof RegExp);
+    expect(regexps.some((r) => r.test("document-model"))).toBe(false);
+    expect(regexps.some((r) => r.test("@mastra/core/agent"))).toBe(true);
+    expect(regexps).toContain(CLINT_EXTERNAL);
+  });
+
+  it("stubs the browser code a host never runs and keeps the plugins it's given", () => {
+    const mine = { name: "mine" };
+    const plugins = buildCliBuildConfig({
+      entry: CLI_ENTRY,
+      outDir: "dist/node/cli",
+      declared: [],
+      plugins: [mine],
+    }).plugins as { name: string }[][];
     expect(plugins.flat().map((plugin) => plugin.name)).toEqual([
       "ph:no-browser-code-on-hosts",
       "mine",

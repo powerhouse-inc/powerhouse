@@ -11,7 +11,7 @@ export interface HostsTemplates {
   readme: string;
   connectHost: string;
   switchboardHost: string;
-  vetraHost: string;
+  devHost: string;
   desktopHost: string;
   assistantHost: string;
   cliHost: string;
@@ -118,7 +118,7 @@ with \`{ $key: true }\` and \`{ $item: ["url"] }\` naming each element.
 every host file.
 
 Scaffolded hosts: \`connect\` (studio dev server), \`switchboard\` (API/reactor
-server), \`vetra\` (compound: both, dev mode — what \`ph vetra\` runs),
+server), \`dev\` (compound: both, dev mode — what \`ph dev\` runs),
 \`desktop\` (production switchboard + built Connect on the generic compound),
 \`assistant\` (headless agent API on the project switchboard) and \`cli\`
 (switchboard + Connect together, Connect as a remote client).
@@ -131,7 +131,7 @@ runs — one field, derived from the backend topology:
 | host | backends | reactorClient | reactor + storage |
 |---|---|---|---|
 | \`connect\` (standalone) | one \`worker\` | \`worker\` | the tab's own reactor in a SharedWorker (PGlite in-worker) |
-| \`cli\`, \`vetra\` → connect member | one \`remote\` | \`remote\` | NO local reactor — a pure client to the switchboard over GraphQL (no PGlite) |
+| \`cli\`, \`dev\` → connect member | one \`remote\` | \`remote\` | NO local reactor — a pure client to the switchboard over GraphQL (no PGlite) |
 | \`desktop\` → connect member | one \`worker\` + \`$map\` remote drives | \`worker\` | the tab's reactor PLUS SYNCHRONIZED remote drives (local replica, keeps PGlite) |
 
 The lesson the \`cli\` vs \`desktop\` split teaches: a **remote client** proxies
@@ -153,7 +153,7 @@ a host, \`ctx.clients\` in a subgraph resolver). The single client object
 for code that has not moved.
 
 The single project drive (\`powerhouse\`) is OWNED by the switchboard; standalone
-Connect has its own local copy; the \`cli\`/\`desktop\` compounds re-point Connect
+Connect has its own local copy; the \`dev\`/\`cli\`/\`desktop\` compounds re-point Connect
 at the switchboard's — every drive it serves, plugin-created ones (Workflows)
 included, by \`$map\` over its \`drives\` output.
 `;
@@ -163,8 +163,7 @@ included, by \`$map\` over its \`drives\` output.
 // runtime behavior lives in the runner module named below.
 import config from "../../powerhouse.config.json" with { type: "json" };
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "${projectName}-connect",
 
   // \`ph run connect\` (sugar: \`ph connect\` once hosts are active) imports
@@ -230,14 +229,13 @@ export default {
     },
     drives: [{ slug: "powerhouse", name: "${projectName}" }],
   },
-};
+});
 `;
 
   const switchboardHost = `// @ts-check
 import config from "../../powerhouse.config.json" with { type: "json" };
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "${projectName}-switchboard",
 
   runner: {
@@ -264,113 +262,71 @@ ${switchboardPluginLines}
     // the drive is OWNED in exactly one place.
     drives: [{ slug: "powerhouse", name: "${projectName}" }],
   },
-${switchboardConfig}};
+${switchboardConfig}});
 `;
 
-  const vetraHost = `// @ts-check
-// vetra is the GENERIC compound over the project's switchboard and connect
-// members, each composed with the Vetra Studio plugins — there is no
-// vetra-specific runner. Studio is verb-scoped: \`ph run vetra dev\` gets the
-// Vite package loader + studio UI + codegen reload; \`ph run vetra\` (run) is
-// the same stack headless. Members spread their sibling host's composition
-// (full inclusion) and add studio.
-// Requires @powerhousedao/vetra-studio in devDependencies (a versioned
-// scaffold dev dependency, same as host-core/clint).
-import config from "../../powerhouse.config.json" with { type: "json" };
-import switchboard from "../switchboard/host.js";
+  const devHost = `// @ts-check
+// \`ph dev\` (\`ph run dev\`) brings up the switchboard and Connect together in
+// dev mode, as one supervised stack (generic compound): the switchboard loads
+// the project's document models, processors and subgraphs from source, Connect
+// its editors and apps, and both reload on a change. The drive lives in the
+// switchboard; Connect is a remote client of it and keeps no store of its
+// own. \`ph run dev run\` is the same stack without the dev tooling.
 import connect from "../connect/host.js";
 
-/** @satisfies {PHHost} */
-export default {
-  name: "vetra",
+export default /** @satisfies {PHHost} */ ({
+  name: "dev",
 
   runner: {
     module: "@powerhousedao/host-core/runners/compound",
     defaultVerb: "dev",
   },
+  // No startOrder: the dev-connect member's output tokens start the
+  // switchboard first (\`ph run dev --explain outputs\` prints the order).
 
   children: {
-    "vetra-switchboard": {
-      host: "switchboard",
-      runner: {
-        plugins: [
-          ...switchboard.runner.plugins,
-          { module: "@powerhousedao/vetra-studio/switchboard", verbs: ["dev"] },
-        ],
-      },
-      // The switchboard host's own drives plus the studio drives, declared
-      // (projectHash keeps today's ids):
-      reactor: {
-        ...switchboard.reactor,
-        drives: [
-          ...(switchboard.reactor.drives ?? []),
-          { slug: "vetra", name: "Vetra", projectHash: true, preferredEditor: "vetra-drive-app" },
-          {
-            slug: "vetra-preview",
-            name: "Vetra Preview",
-            projectHash: true,
-            // Opens in the drive app powerhouse.config.json names
-            // (vetra.previewDrive.app), when it names one.
-            ...(config.vetra?.previewDrive?.app
-              ? { preferredEditor: config.vetra.previewDrive.app }
-              : {}),
-          },
-        ],
-      },
-    },
-    "vetra-studio": {
+    // Inherits the switchboard host wholesale, including its drive.
+    "dev-switchboard": { host: "switchboard" },
+
+    "dev-connect": {
       host: "connect",
       runner: {
-        port: config.vetra?.connectPort ?? 3001,
         plugins: [
-          ...connect.runner.plugins,
-          { module: "@powerhousedao/vetra-studio/connect", verbs: ["dev"] },${
-            workflows
-              ? `
-          // The browser half of workflows: loads Workflow Studio and attaches
-          // the Workflows drive the switchboard member serves (its output,
-          // so the compound starts that member first).
-          {
-            module: "@powerhousedao/connect/plugins/workflows",
-            config: {
-              drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
-            },
-          },`
-              : ""
-          }
+          ...connect.runner.plugins,${connectWorkflowsPlugin}
         ],
       },
-      // A first visit's cookie dialog would cover the local Studio, agents'
+      // A first visit's cookie dialog would cover the local Connect, agents'
       // browsers included: off, unless powerhouse.config.json sets it.
       config: {
         ...connect.config,
         app: { cookieBanner: false, ...connect.config.app },
       },
-      // Studio has no reactor of its own: it is a remote client of the
-      // switchboard member and opens on its Vetra drive. The drive's address
-      // is that member's output, so the compound starts it first.
+      // Every URL is the switchboard member's output (what it actually
+      // bound), so the compound starts it first.
       reactor: {
+        // the override is a full statement: keep the connect host's protocol
         protocol: connect.reactor.protocol,
         backends: {
+          // The switchboard, by the address of its powerhouse drive.
           sb: {
             kind: "remote",
             remote: {
-              url: { $output: { host: "switchboard", path: ["drives", "vetra", "url"] } },
+              url: { $output: { host: "switchboard", path: ["drives", "powerhouse", "url"] } },
             },
           },
         },
-        drives: [
-          {
-            slug: "vetra",
-            remote: {
-              url: { $output: { host: "switchboard", path: ["drives", "vetra", "url"] } },
-            },
+        // Every drive the switchboard member serves, its declared ones and
+        // the ones its plugins create, by the URL it reports (key-sorted).
+        drives: {
+          $map: {
+            over: { $output: { host: "switchboard", path: ["drives"] } },
+            to: { slug: { $key: true }, remote: { url: { $item: ["url"] } } },
           },
-        ],
+        },
       },
     },
   },
-};
+});
 `;
 
   const desktopHost = `// @ts-check
@@ -389,8 +345,7 @@ import config from "../../powerhouse.config.json" with { type: "json" };
 import switchboard from "../switchboard/host.js";
 import connect from "../connect/host.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "desktop",
 
   runner: {
@@ -482,7 +437,7 @@ export default {
       },
     },
   },
-};
+});
 `;
 
   const assistantHost = `// @ts-check
@@ -494,8 +449,7 @@ export default {
 // Requires @powerhousedao/clint in devDependencies (the scaffold includes it).
 import config from "../../powerhouse.config.json" with { type: "json" };
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "${projectName}-assistant",
 
   runner: {
@@ -509,7 +463,7 @@ export default {
   },
 
   // A reactor host — hosting "remote": the runner attaches a reactor CLIENT
-  // to a RUNNING switchboard (start it first: \`ph run switchboard\`, vetra,
+  // to a RUNNING switchboard (start it first: \`ph run switchboard\`, \`ph dev\`,
   // or a compound that members it; an unreachable remote fails the attach
   // loudly, never auto-starts).
   reactor: {
@@ -535,7 +489,7 @@ export default {
     // apiKey: { $env: "OPENROUTER_API_KEY" },
     prompts: { skillsDir: "agents", outDir: "dist/skills" },
   },
-};
+});
 `;
 
   const cliHost = `// @ts-check
@@ -549,8 +503,7 @@ export default {
 // store.) Standalone \`ph run connect\` is untouched — still a local reactor.
 import connect from "../connect/host.js";
 
-/** @satisfies {PHHost} */
-export default {
+export default /** @satisfies {PHHost} */ ({
   name: "cli",
 
   // run → each member starts at "run": switchboard = server, Connect = studio
@@ -604,7 +557,7 @@ export default {
       },
     },
   },
-};
+});
 `;
 
   const agentsReadme = `# agents/
@@ -653,7 +606,7 @@ export {};
     readme,
     connectHost,
     switchboardHost,
-    vetraHost,
+    devHost,
     desktopHost,
     assistantHost,
     cliHost,

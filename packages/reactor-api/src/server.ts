@@ -65,10 +65,15 @@ import {
 } from "./services/authorized-attachment.service.js";
 import { createCanonicalDocumentIdResolver } from "./services/canonical-document-id.js";
 import {
+  createCredentialVerifier,
+  type CredentialVerifier as HostCredentialVerifier,
+  type SwitchboardRequestFn,
+} from "@renown/sdk/node";
+import {
   assertOwnerClaimBind,
-  FileCredentialKeep,
   OwnerClaim,
 } from "./services/host-auth-state.js";
+import { mountCredentialRoutes } from "./http/credential-routes.js";
 import {
   createAuthFetchMiddleware,
   type AuthFetchMiddleware,
@@ -120,7 +125,6 @@ import {
   createVetraAccessGate,
   type AccessGate,
 } from "./services/access-gate.js";
-import { createRenownCredentialVerifier } from "./services/renown-credential-verifier.js";
 import type {
   AuthorizationConfig,
   IAuthorizationService,
@@ -142,7 +146,6 @@ import { createGetParentIdsFn } from "./services/get-parent-ids.js";
 import { createMcpRequestAuthorizer } from "./services/mcp-request-authorizer.js";
 import { buildSyncServingGate } from "./services/sync-serving-gate.js";
 import {
-  assertCredentialVerifierForSource,
   resolveRenownConfig,
   type RenownConfig,
   type ResolvedRenownConfig,
@@ -217,11 +220,15 @@ type Options = {
     /** The first verified caller becomes the admin of a host with none. A
      *  configured admin list wins. Only for a host bound to loopback. */
     ownerClaim?: boolean;
-    /** Keep verified credentials in `stateDir`, and accept one whose proof
-     *  verifies while Renown does not answer. Off, a Renown outage refuses
-     *  every bearer. */
+    /** No longer read: Renown's answers are always kept, and a credential
+     *  this host has no answer for is accepted on its signature while Renown
+     *  cannot be reached (see `refuseUnseenOffline`). */
     offlineCredentials?: boolean;
-    /** Where `ownerClaim` and `offlineCredentials` keep their files. */
+    /** Renown unreachable: refuse a credential this host has no record of and
+     *  no answer for, instead of accepting it on its signature. */
+    refuseUnseenOffline?: boolean;
+    /** The store's `.ph` folder: credential records (`credentials/`), Renown's
+     *  answers and the owner claim. Default: the working folder's. */
     stateDir?: string;
     /** `ACCESS=licensed`: admit only admins and holders of a live licence,
      *  as Vetra's gate answers. See {@link assertAccessConfig}. */
@@ -230,8 +237,10 @@ type Options = {
   /** Renown coordinates the host already resolved, used verbatim instead of
    * resolving the config file's `auth.renown` again (which would warn twice). */
   renown?: ResolvedRenownConfig;
-  /** Credential check replacing the built-in remote Renown one; required when
-   * the resolved source is "self" (see assertCredentialVerifierForSource). */
+  /** Renown in this process: the host serves the renown read model. Awaited
+   * per credential check, so it may be bound after boot. */
+  inProcessRenown?: () => Promise<SwitchboardRequestFn | undefined>;
+  /** Credential check replacing the built-in one (records, then Renown). */
   verifyCredential?: CredentialVerifier;
   https?:
     | {
@@ -831,18 +840,22 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   const configuredRenown: RenownConfig | undefined = fileAuth?.renown;
 
   /**
-   * Whether the auth middleware reads the bearer and populates `ctx.user`,
-   * independently of the authorization policy.
-   *
-   * Defaults to `authEnabled`, so a deployment that never sets it behaves
-   * exactly as it did: auth on means the token is read AND the policy is
-   * `ADMIN_ONLY`; auth off means neither. Setting it explicitly is what
-   * separates the two — a server can then know who is calling while the policy
-   * stays `OPEN`, which is the combination custom subgraphs need and the one
-   * `AUTH_ENABLED` alone cannot express.
+   * A bearer is always read: a present one is verified and names the caller,
+   * a bad one is refused, whatever the policy. Without one the caller stays
+   * anonymous; refusing that is the authenticated-caller floor's.
+   * `resolveIdentity` is no longer read.
    */
-  const resolveCallerIdentity =
-    licensed || (optionAuth.resolveIdentity ?? authEnabled);
+  const resolveCallerIdentity = true;
+  if (optionAuth.resolveIdentity === false) {
+    logger.warn(
+      "RESOLVE_CALLER_IDENTITY=false is no longer read: a bearer is always verified when one is sent.",
+    );
+  }
+  if (optionAuth.offlineCredentials === true) {
+    logger.warn(
+      "auth.offlineCredentials is no longer read: Renown's answers are always kept, and an unseen credential is accepted on its signature while Renown cannot be reached unless REFUSE_UNSEEN_CREDENTIALS_OFFLINE is set. Remove the setting.",
+    );
+  }
 
   /**
    * Whether the require-authenticated-caller middleware is active: anonymous
@@ -956,114 +969,145 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     );
   });
 
-  /* Built whenever the bearer is read — which is not the same as the policy
-     enforcing anything. `resolveCallerIdentity` defaults to `authEnabled`, so
-     this is the same condition it always was unless a deployment opts in. */
-  let authFetchMiddleware: AuthFetchMiddleware | undefined;
-  let requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
-  let authService: AuthService | undefined;
+  /* Every host reads a bearer when one is sent (D8): verified, it names the
+     caller; bad, it is refused. That is not the policy enforcing anything. */
   if (optionAuth.ownerClaim) assertOwnerClaimBind(options.server?.host);
-  if (resolveCallerIdentity || authEnabled) {
-    logger.info(
-      "Setting up Auth middleware (policy enforcement: @enabled, caller identity: @resolve)",
-      authEnabled,
-      resolveCallerIdentity,
-    );
-    const renown =
-      options.renown ?? resolveRenownConfig(configuredRenown, {}, logger);
-    assertCredentialVerifierForSource(
-      renown.source,
-      options.verifyCredential !== undefined,
-    );
-    if (options.verifyCredential) {
-      logger.info("Renown credentials will be verified by the host's verifier");
-    } else {
-      logger.info(
-        "Renown credentials will be verified against @url",
-        renown.switchboardUrl ?? renown.url ?? "the default Renown instance",
-      );
-    }
-    let accessGate: AccessGate | undefined;
-    if (licensed && optionAuth.access?.gateUrl && optionAuth.access.gateToken) {
-      accessGate = createVetraAccessGate({
-        url: optionAuth.access.gateUrl,
-        token: optionAuth.access.gateToken,
-        appId: optionAuth.access.appId,
-        graceMs: optionAuth.access.graceMs,
-        logger: logger.child(["access-gate"]),
-      });
-      logger.info(
-        "ACCESS=licensed: non-admin callers are checked with Vetra (@url)",
-        optionAuth.access.gateUrl,
-      );
-    }
-    authService = new AuthService({
-      enabled: authEnabled,
-      ...(accessGate ? { accessGate } : {}),
-      resolveIdentity: resolveCallerIdentity,
-      admins,
-      skipCredentialVerification,
-      credentialVerificationCacheTtlMs:
-        optionAuth.credentialCacheTtlMs ??
-        (renown.source === "self" ? 0 : undefined),
-      verifyCredential:
-        options.verifyCredential ??
-        (await createRenownCredentialVerifier({
-          renownUrl: renown.url,
-          switchboardUrl: renown.switchboardUrl,
-          keptOnly: renown.source === "kept",
-          ...(optionAuth.offlineCredentials
-            ? {
-                keep: new FileCredentialKeep(
-                  path.join(authStateDir(optionAuth), ".credentials.json"),
-                ),
-              }
-            : {}),
-        })),
-      ...(optionAuth.ownerClaim
-        ? {
-            onVerified: claimOwner(
-              new OwnerClaim(
-                path.join(authStateDir(optionAuth), ".owner.json"),
-                admins,
-              ),
-            ),
-          }
+  logger.info(
+    "Setting up Auth middleware (policy enforcement: @enabled, caller identity: @resolve)",
+    authEnabled,
+    resolveCallerIdentity,
+  );
+  const renown =
+    options.renown ?? resolveRenownConfig(configuredRenown, {}, logger);
+  const stateDir = authStateDir(optionAuth);
+  // The verifier of every host: the store's records, then Renown.
+  let credentialVerifier: HostCredentialVerifier | undefined;
+  let verifyCredential = options.verifyCredential;
+  if (!verifyCredential) {
+    const verifier = createCredentialVerifier({
+      dataDir: path.dirname(stateDir),
+      renownUrl: renown.url,
+      switchboardUrl: renown.switchboardUrl,
+      ...(options.inProcessRenown
+        ? { inProcessRenown: options.inProcessRenown }
         : {}),
+      refuseUnseenOffline: optionAuth.refuseUnseenOffline ?? false,
+      ...(optionAuth.credentialCacheTtlMs !== undefined
+        ? { answerTtlMs: optionAuth.credentialCacheTtlMs }
+        : {}),
+      onError: (error) =>
+        logger.warn("Credential check: @error", String(error)),
     });
-    authFetchMiddleware = createAuthFetchMiddleware(authService);
-    if (requireAuthenticatedCaller) {
-      requireAuthFetchMiddleware = createRequireAuthFetchMiddleware(
-        requireAuthenticatedCallerExemptPaths,
+    credentialVerifier = verifier;
+    verifyCredential = (params) =>
+      verifier.check(
+        {
+          address: params.address,
+          chainId: params.chainId,
+          networkId: params.networkId ?? "eip155",
+          sessionDid: params.appId,
+        },
+        params.credential,
       );
-      // The exempt paths are named in the log, not merely counted: the one
-      // question an operator asks about this floor is what is still open, and
-      // the answer should be in the boot output rather than in a manifest they
-      // have to go and find.
-      logger.info(
-        requireAuthenticatedCallerExemptPaths.length > 0
-          ? `Require-authenticated-caller middleware enabled: anonymous callers are rejected with a 401 before any subgraph, except on ${requireAuthenticatedCallerExemptPaths.join(", ")}`
-          : "Require-authenticated-caller middleware enabled: anonymous callers are rejected with a 401 before any subgraph",
-      );
-    } else {
-      // Auth is on in some form, so say plainly what it is not doing. The
-      // policy gates the reactor's own document reads; it does not gate a
-      // package-provided subgraph, which authorizes nothing on its own. This
-      // has always been true over HTTP, and WebSocket admission now matches it
-      // rather than refusing tokenless connections on AUTH_ENABLED alone --
-      // so a subscription reaches the same surface a query already did.
-      logger.warn(
-        "Anonymous callers are admitted on every transport, including WebSocket " +
-          "subscriptions: REQUIRE_AUTHENTICATED_CALLER is not set. The " +
-          "authorization policy gates the reactor's own documents, but a " +
-          "package-provided subgraph authorizes nothing on its own. Set " +
-          "REQUIRE_AUTHENTICATED_CALLER=true to refuse anonymous callers before " +
-          "any subgraph sees them.",
-      );
-    }
+  }
+  if (credentialVerifier) {
+    logger.info(
+      "Credentials are checked against the records in @dir, then Renown at @url",
+      path.join(stateDir, "credentials"),
+      renown.switchboardUrl ?? renown.url ?? "the default Renown instance",
+    );
+  } else {
+    logger.info("Renown credentials will be verified by the host's verifier");
+  }
+  let accessGate: AccessGate | undefined;
+  if (licensed && optionAuth.access?.gateUrl && optionAuth.access.gateToken) {
+    accessGate = createVetraAccessGate({
+      url: optionAuth.access.gateUrl,
+      token: optionAuth.access.gateToken,
+      appId: optionAuth.access.appId,
+      graceMs: optionAuth.access.graceMs,
+      logger: logger.child(["access-gate"]),
+    });
+    logger.info(
+      "ACCESS=licensed: non-admin callers are checked with Vetra (@url)",
+      optionAuth.access.gateUrl,
+    );
+  }
+  const authService = new AuthService({
+    enabled: authEnabled,
+    ...(accessGate ? { accessGate } : {}),
+    resolveIdentity: resolveCallerIdentity,
+    admins,
+    skipCredentialVerification,
+    // The built-in verifier caches Renown's answers itself; a record's
+    // removal must count at the next request.
+    credentialVerificationCacheTtlMs: credentialVerifier
+      ? 0
+      : optionAuth.credentialCacheTtlMs,
+    verifyCredential,
+    ...(optionAuth.ownerClaim
+      ? {
+          onVerified: claimOwner(
+            new OwnerClaim(path.join(stateDir, ".owner.json"), admins),
+          ),
+        }
+      : {}),
+  });
+  if (credentialVerifier) {
+    const verifier = credentialVerifier;
+    // A removed record closes the sockets it admitted; a package's
+    // invalidation drops Renown's answer.
+    verifier.onWithdrawn((claim) =>
+      authService.invalidateCredential(
+        claim.address,
+        claim.chainId,
+        claim.sessionDid,
+      ),
+    );
+    authService.onCredentialInvalidated(({ address, chainId, appDid }) =>
+      verifier.forget(address, chainId, appDid),
+    );
+  }
+  const authFetchMiddleware = createAuthFetchMiddleware(authService);
+  let requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
+  if (requireAuthenticatedCaller) {
+    requireAuthFetchMiddleware = createRequireAuthFetchMiddleware(
+      requireAuthenticatedCallerExemptPaths,
+    );
+    // The exempt paths are named in the log, not merely counted: the one
+    // question an operator asks about this floor is what is still open, and
+    // the answer should be in the boot output rather than in a manifest they
+    // have to go and find.
+    logger.info(
+      requireAuthenticatedCallerExemptPaths.length > 0
+        ? `Require-authenticated-caller middleware enabled: anonymous callers are rejected with a 401 before any subgraph, except on ${requireAuthenticatedCallerExemptPaths.join(", ")}`
+        : "Require-authenticated-caller middleware enabled: anonymous callers are rejected with a 401 before any subgraph",
+    );
+  } else if (authEnabled) {
+    // Auth is on, so say plainly what it is not doing. The policy gates the
+    // reactor's own document reads; it does not gate a package-provided
+    // subgraph, which authorizes nothing on its own. This has always been
+    // true over HTTP, and WebSocket admission now matches it rather than
+    // refusing tokenless connections on AUTH_ENABLED alone -- so a
+    // subscription reaches the same surface a query already did.
+    logger.warn(
+      "Anonymous callers are admitted on every transport, including WebSocket " +
+        "subscriptions: REQUIRE_AUTHENTICATED_CALLER is not set. The " +
+        "authorization policy gates the reactor's own documents, but a " +
+        "package-provided subgraph authorizes nothing on its own. Set " +
+        "REQUIRE_AUTHENTICATED_CALLER=true to refuse anonymous callers before " +
+        "any subgraph sees them.",
+    );
   }
 
   const dbClosers: Array<() => Promise<void>> = [];
+  if (credentialVerifier) {
+    const verifier = credentialVerifier;
+    dbClosers.push(() => {
+      verifier.close();
+      return Promise.resolve();
+    });
+  }
 
   // Initialize database and analytics store
   const {
@@ -1179,6 +1223,25 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       path.posix.join("/", settings.basePath, WEBHOOK_SEGMENT),
     ),
   );
+  // Enrolment by a signed request, for a caller with no file access here.
+  if (credentialVerifier) {
+    mountCredentialRoutes(
+      httpRoutes.hostScope(
+        "credentials",
+        path.posix.join("/", settings.basePath, "credentials"),
+      ),
+      {
+        dataDir: path.dirname(stateDir),
+        hostDid: () => options.hostSigner?.app?.key,
+        onWithdrawn: (binding) =>
+          authService.invalidateCredential(
+            binding.address,
+            binding.chainId,
+            binding.sessionDid,
+          ),
+      },
+    );
+  }
 
   return {
     listenPort,

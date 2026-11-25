@@ -3,13 +3,6 @@ import {
   buildTsMorphProject,
   getEditorMetadata,
 } from "@powerhousedao/codegen/utils";
-import {
-  extractEditorDocuments,
-  generateEditorFromDocument,
-  getDocument,
-  saveSpec,
-} from "@powerhousedao/vetra/codegen";
-import type { DocumentEditorDocument } from "@powerhousedao/vetra/document-models/document-editor";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { GenerateEditorArgs } from "../types.js";
@@ -22,22 +15,11 @@ export async function startGenerateEditor(
   args: GenerateEditorArgs,
   projectDir: string,
 ) {
-  const { name, documentType, document, dir, all, extract, debug } = args;
+  const { name, documentType, dir, all, debug } = args;
   if (debug) {
     console.log({ args });
   }
   const project = buildTsMorphProject(projectDir);
-  if (extract) {
-    const docs = extractEditorDocuments(project);
-    if (docs.length === 0) {
-      console.log("No document editors found in editors/.");
-    }
-    for (const doc of docs) {
-      const path = await saveSpec(doc, projectDir);
-      console.log(`Wrote ${path}`);
-    }
-    return;
-  }
   const report: string[] = [];
   if (all) {
     const { editors, unreadableDirs } =
@@ -55,9 +37,6 @@ export async function startGenerateEditor(
         `Skipped editors/${dirName}: expected its module.ts to export ${MODULE_FILE_EXPECTATION}. Kept the manifest's editors.`,
       );
     }
-  } else if (document) {
-    const doc = (await getDocument(document)) as DocumentEditorDocument;
-    await generateEditorFromDocument(doc, project);
   } else if (name) {
     if (!documentType) {
       throw new Error(
@@ -108,9 +87,7 @@ export async function startGenerateEditor(
       `Regenerated editor "${editorName}" in editors/${editorDirName}`,
     );
   } else {
-    console.log(
-      "Please specify one of `name`, `document`, `dir`, `all`, or `extract`.",
-    );
+    console.log("Please specify one of `name`, `dir`, or `all`.");
     return;
   }
   await project.save();

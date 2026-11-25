@@ -8,10 +8,14 @@
     "port": 3001
   },
   "reactor": {
-    "port": 4002,
-    "storage": "memory"
+    "port": 4002
   },
-  "packages": [],
+  "packages": [
+    {
+      "packageName": "@powerhousedao/vetra",
+      "provider": "local"
+    }
+  ],
   "packageRegistryUrl": "http://localhost:8080",
   "connect": {
     "branding": {

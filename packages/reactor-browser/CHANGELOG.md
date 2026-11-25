@@ -1,3 +1,130 @@
+## 6.4.0-next.6 (2026-11-25)
+
+### 🩹 Fixes
+
+- **reactor-browser:** a drive info request answers a refused credential as the clients do ([cbe7b7a79d](https://github.com/powerhouse-inc/powerhouse/commit/cbe7b7a79d))
+- **reactor-browser:** leave a create under a parent the switchboard lacks to createDocument ([451e8a1dce](https://github.com/powerhouse-inc/powerhouse/commit/451e8a1dce))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.4.0-next.5 (2026-11-25)
+
+### 🚀 Features
+
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **reactor-browser:** sign the tab in by link or as its browser's pseudonym ([a3c374db24](https://github.com/powerhouse-inc/powerhouse/commit/a3c374db24))
+- **ph-cli:** ph mcp signs an mcp client's writes as the client's own session ([56e89cb281](https://github.com/powerhouse-inc/powerhouse/commit/56e89cb281))
+- **reactor-browser:** with a signer, the GraphQL client signs a create itself ([d839206388](https://github.com/powerhouse-inc/powerhouse/commit/d839206388))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
+## 6.4.0-next.3 (2026-11-23)
+
+### 🚀 Features
+
+- ⚠️  **switchboard,connect:** no built-in vetra package ([1e9b9ba2c6](https://github.com/powerhouse-inc/powerhouse/commit/1e9b9ba2c6))
+- ⚠️  **ph-cli:** generate stubs only, no dependency on the vetra package ([329d9de807](https://github.com/powerhouse-inc/powerhouse/commit/329d9de807))
+
+### ⚠️  Breaking Changes
+
+- **switchboard,connect:** no built-in vetra package  ([1e9b9ba2c6](https://github.com/powerhouse-inc/powerhouse/commit/1e9b9ba2c6))
+  switchboard dev mode and Connect studio mode no longer
+  load @powerhousedao/vetra by themselves.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+- **ph-cli:** generate stubs only, no dependency on the vetra package  ([329d9de807](https://github.com/powerhouse-inc/powerhouse/commit/329d9de807))
+  ph generate --document and --extract are removed.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
+## 6.4.0-next.2 (2026-11-23)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.4.0-next.1 (2026-11-22)
+
+### 🚀 Features
+
+- **vetra:** move the ideate and build spec documents from vetra-cli ([bfc530d0f3](https://github.com/powerhouse-inc/powerhouse/commit/bfc530d0f3))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
+## 6.4.0-next.0 (2026-11-22)
+
+### 🚀 Features
+
+- **reactor-browser:** relationship writes and rename on the GraphQL client ([173a5b2ca2](https://github.com/powerhouse-inc/powerhouse/commit/173a5b2ca2))
+- **codegen,ph-cli,shared:** a package with a cli declares clint as a versioned peer ([40936957cb](https://github.com/powerhouse-inc/powerhouse/commit/40936957cb))
+- **ph-cli,shared:** the cli of a package is its own build, with declared packages external ([8504275af5](https://github.com/powerhouse-inc/powerhouse/commit/8504275af5))
+- **clint-common:** port the chat-session package from ph-clint dev.113 ([d21119c6a9](https://github.com/powerhouse-inc/powerhouse/commit/d21119c6a9))
+- **clint:** add the ./cli package export and the cli runner ([64bb9f10c9](https://github.com/powerhouse-inc/powerhouse/commit/64bb9f10c9))
+- ⚠️  **reactor-browser:** remove the settings modal variant ([232605c0c5](https://github.com/powerhouse-inc/powerhouse/commit/232605c0c5))
+- ⚠️  **reactor-api,reactor-browser:** remove the drive-url re-export files ([5ff0ab47b9](https://github.com/powerhouse-inc/powerhouse/commit/5ff0ab47b9))
+- ⚠️  **reactor-browser:** remove dead browser-side API ([f8c0f6afea](https://github.com/powerhouse-inc/powerhouse/commit/f8c0f6afea))
+- **ph-cli:** ph run connect build takes --base and --packages-registry ([894d5a7f31](https://github.com/powerhouse-inc/powerhouse/commit/894d5a7f31))
+- ⚠️  **ph-cli:** a project without hosts is an error ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+
+### 🩹 Fixes
+
+- **host-core,ph-run:** linux failures in the next/6.4 checks ([0fdc5a4797](https://github.com/powerhouse-inc/powerhouse/commit/0fdc5a4797))
+
+### ⚠️  Breaking Changes
+
+- **reactor-browser:** remove the settings modal variant  ([232605c0c5](https://github.com/powerhouse-inc/powerhouse/commit/232605c0c5))
+  PHModal no longer has `{ type: "settings" }`, and showPHModal does not
+  open the settings page. Open it through the navigation: `openTarget({ settings: true })`
+  or `useLinkProps({ settings: true })`.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-api,reactor-browser:** remove the drive-url re-export files  ([5ff0ab47b9](https://github.com/powerhouse-inc/powerhouse/commit/5ff0ab47b9))
+  driveIdFromUrl, parseDriveUrl and ParsedDriveUrl are no longer
+  exported from @powerhousedao/reactor-api and @powerhousedao/reactor-browser.
+  Import them from @powerhousedao/reactor.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-browser:** remove dead browser-side API  ([f8c0f6afea](https://github.com/powerhouse-inc/powerhouse/commit/f8c0f6afea))
+  the names below are gone from @powerhousedao/reactor-browser and
+  @powerhousedao/design-system.
+  PHGlobalConfig loses the 37 fields nothing read, with their useX, setX and addXEventHandler:
+  version, requiresHardRefresh, versionCheckInterval, cliVersion, fileUploadOperationsChunkSize,
+  gaTrackingId, isDocumentModelSelectionSettingsEnabled, the public, cloud and local drive
+  flags (isXDrivesEnabled, isAddXDrivesEnabled, isDeleteXDrivesEnabled), analyticsDatabaseName,
+  isEditorDebugModeEnabled, isEditorReadModeEnabled, enabledEditors, drivesPreserveStrategy,
+  isAnalyticsEnabled, isAnalyticsDatabaseWorkerEnabled, isDiffAnalyticsEnabled,
+  isDriveAnalyticsEnabled, isAnalyticsExternalProcessorsEnabled, isRelationalProcessorsEnabled,
+  isExternalRelationalProcessorsEnabled, isExternalProcessorsEnabled, isExternalPackagesEnabled,
+  renownNetworkId, renownChainId, renownAdapters, sentryRelease, sentryDsn, sentryEnv and
+  isSentryTracingEnabled. The types PHAnalyticsGlobalConfig, PHRelationalProcessorsGlobalConfig,
+  PHProcessorsGlobalConfig and PHSentryGlobalConfig are empty and go with them.
+  RevisionHistory takes only the scoped props: globalOperations, localOperations,
+  RevisionHistoryLegacyProps and RevisionHistoryScopedProps are removed. useDocumentOperations
+  keeps only the (documentId, scope, options) form; DocumentOperationsState is removed.
+  Deprecated exports removed: addSetSelectedDriveOnPopStateEventHandler,
+  addSetSelectedNodeOnPopStateEventHandler, makeDriveUrlComponent, extractNodeIdFromPath,
+  extractDriveIdFromPath, createUrlWithPreservedParams, addRevisionHistoryVisibleEventHandler,
+  initConnectCrypto and the IReactorProcessorHostModule alias. setSelectedDriveId,
+  setSelectedNodeId, addSelectedDriveIdEventHandler, addSelectedNodeIdEventHandler,
+  syncSelectionFromPath and addSyncSelectionOnPopStateEventHandler stay as internals and are no
+  longer exported.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **ph-cli:** a project without hosts is an error  ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+  the classic commands need a hosts/ folder; run ph migrate.
+  Co-Authored-By: Claude <noreply@anthropic.com>
 ## 6.3.0-dev.11 (2026-11-24)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

@@ -5,7 +5,12 @@
     "outDir": "./.tsbuild"
   },
   "include": ["**/*"],
-  "exclude": ["dist", "node_modules", "test/fixtures/*/dist"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "test/fixtures/*/dist",
+    "test/fixtures/cli-package"
+  ],
   "references": [
     {
       "path": "../../apps/switchboard"
@@ -41,6 +46,9 @@
       "path": "../../packages/reactor-api"
     },
     {
+      "path": "../../packages/reactor-browser"
+    },
+    {
       "path": "../../packages/reactor-mcp"
     },
     {
@@ -48,9 +56,6 @@
     },
     {
       "path": "../../packages/shared"
-    },
-    {
-      "path": "../../packages/vetra"
     },
     {
       "path": "../ph-run"

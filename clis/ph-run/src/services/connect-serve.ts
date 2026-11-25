@@ -19,10 +19,11 @@ import {
   isSwitchboardProxyPath,
 } from "@powerhousedao/shared/connect/origin-placeholder";
 import { existsSync, readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
 import sirv from "sirv";
-import type { ConnectPreviewArgs } from "./classic-args.js";
+import type { ConnectPreviewArgs } from "./service-args.js";
 
 /**
  * Runtime shaping for a served (built) Connect, desktop shape: the compound
@@ -293,6 +294,80 @@ export function serveOverrideStep(
     }
     next();
   };
+}
+
+const SERVED_FILE_TYPES: Record<string, string> = {
+  ".json": "application/json; charset=utf-8",
+  ".txt": "text/plain; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".svg": "image/svg+xml",
+};
+
+/**
+ * `runner.serveFiles`: each path, under the base, answers with its file as
+ * it reads at that request, since another process may rewrite it between
+ * two. Never cached (`no-store`). A missing file is a 404 whatever the
+ * request accepts, never the app's index.html, so a client tells "not there
+ * yet" from a page. A request path matches exactly as sent; anything else
+ * goes on to the next step. `files` holds absolute paths.
+ */
+export function servedFilesStep(
+  files: Readonly<Record<string, string>>,
+  base = "/",
+): ConnectMiddleware {
+  const served = new Map(Object.entries(files));
+  return (req, res, next) => {
+    const pathname = (req.url ?? "/").split("?")[0];
+    if (base !== "/" && !pathname.startsWith(base)) {
+      next();
+      return;
+    }
+    const file = served.get(stripBase(pathname, base));
+    if (file === undefined) {
+      next();
+      return;
+    }
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      res.writeHead(405, { allow: "GET, HEAD", "cache-control": "no-store" });
+      res.end();
+      return;
+    }
+    const head = req.method === "HEAD";
+    readFile(file).then(
+      (body) => {
+        res.writeHead(200, {
+          "content-type":
+            SERVED_FILE_TYPES[path.extname(file).toLowerCase()] ??
+            "application/octet-stream",
+          "content-length": body.length,
+          "cache-control": "no-store",
+        });
+        res.end(head ? undefined : body);
+      },
+      () => {
+        res.writeHead(404, {
+          "content-type": "text/plain; charset=utf-8",
+          "cache-control": "no-store",
+        });
+        res.end(head ? undefined : "Not found.");
+      },
+    );
+  };
+}
+
+/** `runner.serveFiles` with each file read against `dirname`. */
+export function resolveServedFiles(
+  files: Readonly<Record<string, string>>,
+  dirname: string,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(files).map(([urlPath, file]) => [
+      urlPath,
+      path.resolve(dirname, file),
+    ]),
+  );
 }
 
 /** Extensions whose files have `.gz` siblings. */

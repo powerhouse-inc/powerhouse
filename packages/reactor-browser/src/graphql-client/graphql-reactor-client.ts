@@ -12,6 +12,7 @@ import type {
   ExecutionJobPlan,
   IDriveNodeSource,
   IDriveReadClient,
+  IReactorWriteClient,
   JobInfo,
   JobResultSummary,
   JobStatus,
@@ -37,6 +38,8 @@ import type {
 import {
   actions,
   actionSigningTarget,
+  createVersionsOf,
+  creationActions,
   headNewDocument,
   normalizeDocumentModelVersion,
   capabilitiesOf,
@@ -115,6 +118,10 @@ import {
 } from "./operations.js";
 import { prepareSignedActions, signStampedAction } from "./signing.js";
 import { resolveDocumentModelModule } from "./static-package-manager.js";
+import {
+  addRelationshipAction,
+  removeRelationshipAction,
+} from "./system-actions.js";
 import {
   describeGraphQLDocument,
   SubgraphSdkRegistry,
@@ -221,9 +228,15 @@ export type GraphQLReactorClientOptions = {
    * unsigned when nobody is. Set it where there is no Renown to read: tests,
    * scripts, and integration suites that must sign deterministically. A
    * function is called per push, and pushes unsigned when it returns
-   * `undefined`.
+   * `undefined`; it may resolve the signer asynchronously (one that must
+   * first ask whom it signs for).
+   *
+   * With a signer, `create` builds and signs the document's creation itself
+   * and submits it through `executeBatch`, so no action of it is signed by
+   * the Switchboard. A create under a drive, and `deleteDocument`, still run
+   * the Switchboard's own mutations, which build and sign those actions there.
    */
-  signer?: ISigner | (() => ISigner | undefined);
+  signer?: ISigner | (() => ISigner | undefined | Promise<ISigner | undefined>);
 
   /**
    * Names the drive a call belongs to when the client cannot prove it itself,
@@ -293,6 +306,19 @@ export interface GraphQLReactorReadClient extends IReactorBrowserReadClient {
 }
 
 /**
+ * The write half of {@link GraphQLReactorClient}: the hooks' writes plus
+ * `rename` and the relationship writes, each a client-signed action over
+ * `executeAsync`.
+ */
+export interface GraphQLReactorWriteClient
+  extends
+    IReactorBrowserWriteClient,
+    Pick<
+      IReactorWriteClient,
+      "rename" | "addRelationship" | "removeRelationship"
+    > {}
+
+/**
  * A light implementation of {@link IReactorBrowserClient} that talks plain
  * GraphQL to a Switchboard, with no reactor in the bundle.
  *
@@ -311,7 +337,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private readonly tokenProvider: BearerTokenProvider;
   private readonly subscriptionsUrl: string | undefined;
   private readonly documentModels: () => readonly DocumentModelModule<any>[];
-  private readonly resolveSigner: () => ISigner | undefined;
+  private readonly resolveSigner: () => Promise<ISigner | undefined>;
   private readonly driveIdFor: GraphQLReactorClientOptions["driveIdFor"];
   private readonly undoRedoChains = new Map<string, Promise<unknown>>();
   private stopRealtime: (() => void) | undefined;
@@ -338,11 +364,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * The write half. `execute` submits through `executeAsync` and hands back a
    * handle whose `written` and `readable` resolve from `jobStatus`, woken by
    * the `jobChanges` subscription when realtime is on, and whose `document()`
-   * runs the `document` query bounded by the receipt's token. `create` and
-   * `deleteDocument` have no asynchronous mutation: they run the synchronous
-   * ones and hand back a settled handle.
+   * runs the `document` query bounded by the receipt's token. `rename`,
+   * `addRelationship` and `removeRelationship` are `execute`s of the action
+   * the in-process client would sign. `create` and `deleteDocument` have no
+   * asynchronous mutation: they run the synchronous ones and hand back a
+   * settled handle.
    */
-  readonly write: IReactorBrowserWriteClient;
+  readonly write: GraphQLReactorWriteClient;
 
   constructor(options: GraphQLReactorClientOptions) {
     this.tokenProvider = options.tokenProvider ?? ambientRenownTokenProvider;
@@ -356,12 +384,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       this.documentModels = () => copied;
     }
     const signer = options.signer;
-    this.resolveSigner =
+    const resolve =
       typeof signer === "function"
         ? signer
         : signer
           ? () => signer
           : ambientRenownSigner;
+    this.resolveSigner = async () => resolve();
     this.driveIdFor = options.driveIdFor;
     this.subscriptionsUrl =
       options.realtime === false
@@ -372,7 +401,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     // The middleware wraps the generated SDK methods AND `RunDocument`, so the
     // hand-authored mutation is authenticated by the same code path.
     const middleware = withWrongBackendErrors(
-      makeAuthMiddleware(this.tokenProvider),
+      makeAuthMiddleware(this.tokenProvider, { url: options.url }),
     );
     const fetch =
       options.requestTimeoutMs === undefined
@@ -407,6 +436,49 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         this.submitCreate(document, parentIdentifier, signal),
       deleteDocument: (identifier, propagate, signal) =>
         this.submitDeleteDocument(identifier, propagate, signal),
+      rename: (documentIdentifier, name, branch = "main", signal) =>
+        this.submitExecute(
+          documentIdentifier,
+          branch,
+          [actions.setName(name)],
+          signal,
+        ),
+      addRelationship: (
+        sourceIdentifier,
+        targetIdentifier,
+        relationshipType,
+        metadata,
+        branch = "main",
+        signal,
+      ) =>
+        this.submitRelationship(
+          sourceIdentifier,
+          targetIdentifier,
+          branch,
+          (sourceId, targetId) =>
+            addRelationshipAction(
+              sourceId,
+              targetId,
+              relationshipType,
+              metadata,
+            ),
+          signal,
+        ),
+      removeRelationship: (
+        sourceIdentifier,
+        targetIdentifier,
+        relationshipType,
+        branch = "main",
+        signal,
+      ) =>
+        this.submitRelationship(
+          sourceIdentifier,
+          targetIdentifier,
+          branch,
+          (sourceId, targetId) =>
+            removeRelationshipAction(sourceId, targetId, relationshipType),
+          signal,
+        ),
     };
   }
 
@@ -818,11 +890,42 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     );
   }
 
+  /**
+   * Creates `document`, under `parentIdentifier` when given.
+   *
+   * With a signer the creation is built and signed here, as the in-process
+   * client builds it, and submitted through `executeBatch`; the Switchboard
+   * signs none of it. A create under a drive still runs the Switchboard's
+   * `createDocument`, which files the document in the drive and signs that
+   * itself, as do a create under a parent it does not find and a create
+   * without a signer.
+   */
   async create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    const signer = await this.resolveSigner();
+    if (signer) {
+      const parent =
+        parentIdentifier === undefined
+          ? undefined
+          : await this.parentOf(parentIdentifier, signal);
+      // A parent the Switchboard does not hold is left to its
+      // `createDocument`, which refuses it: a 421 for a drive served elsewhere.
+      if (
+        parentIdentifier === undefined ||
+        (parent && !isDriveType(parent.documentType))
+      ) {
+        return this.createSigned<TDocument>(
+          document,
+          parentIdentifier,
+          parent?.id,
+          signer,
+          signal,
+        );
+      }
+    }
     // A new top-level drive is pinned to the backend its own id routes to;
     // under a parent it goes where the parent is, which only the hook knows.
     const result = await this.sdk.CreateDocument(
@@ -846,6 +949,124 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       documents: [created],
     });
     return created;
+  }
+
+  /**
+   * The signed creation of `document`: its CREATE_DOCUMENT and
+   * UPGRADE_DOCUMENT, then the parent's ADD_RELATIONSHIP, one batch, as the
+   * in-process client's `buildCreateJobs` makes it. The slug is checked as the
+   * Switchboard's `createDocument` checks it.
+   */
+  private async createSigned<TDocument extends PHDocument>(
+    document: PHDocument,
+    parentIdentifier: string | undefined,
+    parentId: string | undefined,
+    signer: ISigner,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const documentId = document.header.id;
+    const branch = document.header.branch || "main";
+    await this.assertSlugAvailable(document.header.slug, documentId, signal);
+    const protocolVersions = await createVersionsOf(
+      document,
+      (options) => this.getCreateProtocolVersions(options, signal),
+      parentIdentifier,
+    );
+    const jobs: ExecutionJobPlan[] = [
+      {
+        key: "create",
+        documentId,
+        scope: "document",
+        branch,
+        actions: creationActions(document, protocolVersions),
+        dependsOn: [],
+      },
+    ];
+    if (parentId) {
+      jobs.push({
+        key: "parent",
+        documentId: parentId,
+        scope: "document",
+        branch: "main",
+        actions: [addRelationshipAction(parentId, documentId, "child")],
+        dependsOn: ["create"],
+      });
+    }
+    const { jobs: settled } = await this.executeBatchAs(
+      { jobs },
+      signer,
+      signal,
+      // A new top-level drive is pinned to the backend its own id routes to.
+      isDrive(document) && parentIdentifier === undefined
+        ? documentId
+        : undefined,
+    );
+    return this.get<TDocument>(
+      documentId,
+      { branch },
+      signal,
+      settled.create?.consistencyToken,
+    );
+  }
+
+  /**
+   * The id and type of the document a create names as its parent, or
+   * `undefined` when the Switchboard does not find it.
+   */
+  private async parentOf(
+    identifier: string,
+    signal: AbortSignal | undefined,
+  ): Promise<{ id: string; documentType: string } | undefined> {
+    let parent: { id: string; documentType: string } | undefined;
+    try {
+      const result = await this.sdk.GetDocument(
+        {
+          idOrSlug: identifier,
+          view: { branch: "main", scopes: ["document"] },
+        },
+        undefined,
+        signal,
+      );
+      parent = result.document?.document;
+    } catch (error) {
+      if (answersNotFound(error)) return undefined;
+      throw error;
+    }
+    return parent && { id: parent.id, documentType: parent.documentType };
+  }
+
+  /** Refuses a slug another document holds, as `createDocument` does. */
+  private async assertSlugAvailable(
+    slug: string | undefined,
+    documentId: string,
+    signal: AbortSignal | undefined,
+  ): Promise<void> {
+    if (!slug || slug === documentId) return;
+    // Asked first, so a free slug costs no NOT_FOUND on the Switchboard.
+    let served: boolean | undefined;
+    try {
+      served = await this.isServed(slug, { branch: "main" }, signal);
+    } catch (error) {
+      if (!(error instanceof GraphQLOperationNotSupportedError)) throw error;
+    }
+    if (served === false) return;
+    let holder: string | undefined;
+    try {
+      const result = await this.sdk.GetDocument(
+        { idOrSlug: slug, view: { branch: "main", scopes: ["document"] } },
+        undefined,
+        signal,
+      );
+      holder = result.document?.document.id;
+    } catch (error) {
+      if (answersNotFound(error)) return;
+      throw error;
+    }
+    if (holder && holder !== documentId) {
+      throw new Error(
+        `The slug "${slug}" is taken by document ${holder}; choose another.`,
+      );
+    }
   }
 
   /**
@@ -876,7 +1097,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       actions,
       document,
       this.documentModels(),
-      this.resolveSigner(),
+      await this.resolveSigner(),
       signal,
     );
 
@@ -1129,7 +1350,16 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     request: BatchExecutionRequest,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    const signer = this.resolveSigner();
+    return this.executeBatchAs(request, await this.resolveSigner(), signal);
+  }
+
+  /** {@link executeBatch} signed by `signer`; `proven` names its drive. */
+  private async executeBatchAs(
+    request: BatchExecutionRequest,
+    signer: ISigner | undefined,
+    signal?: AbortSignal,
+    proven?: string,
+  ): Promise<BatchExecutionResult> {
     const jobInputs = await Promise.all(
       request.jobs.map(async (job, index) => {
         const documentId = await this.batchWriteTarget(
@@ -1156,10 +1386,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
     const result = await this.batchSdk.ExecuteBatch(
       { jobs: jobInputs },
-      this.driveIdHeaders({
-        method: "executeBatch",
-        jobs: jobInputs.map((job) => ({ documentId: job.documentIdOrSlug })),
-      }),
+      this.driveIdHeaders(
+        {
+          method: "executeBatch",
+          jobs: jobInputs.map((job) => ({ documentId: job.documentIdOrSlug })),
+        },
+        proven,
+      ),
       signal,
     );
 
@@ -1272,6 +1505,72 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       [actions.setPreferredEditor(preferredEditor)],
       signal,
     );
+  }
+
+  /**
+   * Renames a document with a client-signed `SET_NAME`, as the in-process
+   * client does: the write half's `rename`, read back once readable.
+   */
+  async rename(
+    documentIdentifier: string,
+    name: string,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    const handle = await this.write.rename(
+      documentIdentifier,
+      name,
+      branch,
+      signal,
+    );
+    return handle.document();
+  }
+
+  /**
+   * Adds a relationship with a client-signed `ADD_RELATIONSHIP` on the
+   * source, as the in-process client does: the write half's
+   * `addRelationship`, resolving with the source once readable. The
+   * Switchboard's own `addRelationship` mutation is not used: it signs with
+   * the Switchboard's key.
+   */
+  async addRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    metadata?: Record<string, unknown>,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    const handle = await this.write.addRelationship(
+      sourceIdentifier,
+      targetIdentifier,
+      relationshipType,
+      metadata,
+      branch,
+      signal,
+    );
+    return handle.document();
+  }
+
+  /**
+   * Removes a relationship with a client-signed `REMOVE_RELATIONSHIP` on the
+   * source; see {@link addRelationship}.
+   */
+  async removeRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    const handle = await this.write.removeRelationship(
+      sourceIdentifier,
+      targetIdentifier,
+      relationshipType,
+      branch,
+      signal,
+    );
+    return handle.document();
   }
 
   /** The `Drive-Id` header for a call: the client's own proof, else the hook's. */
@@ -1651,11 +1950,83 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     signal?: AbortSignal,
   ): Promise<GraphQLJobWriteHandle> {
     const document = await this.get(documentIdentifier, { branch }, signal);
+    return this.submitOnDocument(
+      documentIdentifier,
+      document,
+      branch,
+      actions,
+      signal,
+    );
+  }
+
+  /**
+   * The write half's relationship writes: the source is read for the id the
+   * action names and is signed for, and the target is resolved by
+   * {@link relationshipTargetId}, as the in-process write client resolves
+   * both before it signs.
+   */
+  private async submitRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    branch: string,
+    build: (sourceId: string, targetId: string) => Action,
+    signal?: AbortSignal,
+  ): Promise<GraphQLJobWriteHandle> {
+    const source = await this.get(sourceIdentifier, { branch }, signal);
+    const targetId = await this.relationshipTargetId(
+      targetIdentifier,
+      branch,
+      signal,
+    );
+    return this.submitOnDocument(
+      source.header.id,
+      source,
+      branch,
+      [build(source.header.id, targetId)],
+      signal,
+    );
+  }
+
+  /**
+   * The id a relationship's target names: a slug becomes its document's id,
+   * and an identifier the Switchboard answers NOT_FOUND for is taken as
+   * given, so a document still in flight names itself, as on the in-process
+   * write side. Only the `document` scope is read.
+   */
+  private async relationshipTargetId(
+    identifier: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+  ): Promise<string> {
+    let result: GetDocumentQuery;
+    try {
+      result = await this.sdk.GetDocument(
+        { idOrSlug: identifier, view: { branch, scopes: ["document"] } },
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      if (answersNotFound(error)) {
+        return identifier;
+      }
+      throw error;
+    }
+    return result.document?.document.id ?? identifier;
+  }
+
+  /** Signs `actions` against `document` and submits them through `executeAsync`. */
+  private async submitOnDocument(
+    documentIdentifier: string,
+    document: PHDocument,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<GraphQLJobWriteHandle> {
     const preparedActions = await prepareActionsForPush(
       actions,
       document,
       this.documentModels(),
-      this.resolveSigner(),
+      await this.resolveSigner(),
       signal,
     );
     const result = await this.sdk.MutateDocumentAsync(
@@ -2167,6 +2538,20 @@ function refusesConsistencyArgument(error: unknown): boolean {
   });
 }
 
+/** Whether the Switchboard refused a read because the document does not exist. */
+function answersNotFound(error: unknown): boolean {
+  const errors = (error as { response?: { errors?: unknown } } | null)?.response
+    ?.errors;
+  if (!Array.isArray(errors)) {
+    return false;
+  }
+  return errors.some(
+    (entry) =>
+      (entry as { extensions?: { code?: unknown } } | null)?.extensions
+        ?.code === "NOT_FOUND",
+  );
+}
+
 /** {@link GraphQLReactorClient.nodeSource}, as a function. */
 export function createGraphQLDriveNodeSource(
   client: GraphQLReactorClient,
@@ -2494,9 +2879,11 @@ function driveIdHeaders(driveId: string): Record<string, string> | undefined {
 }
 
 function isDrive(document: PHDocument): boolean {
-  return (DRIVE_DOCUMENT_TYPES as readonly string[]).includes(
-    document.header.documentType,
-  );
+  return isDriveType(document.header.documentType);
+}
+
+function isDriveType(documentType: string): boolean {
+  return (DRIVE_DOCUMENT_TYPES as readonly string[]).includes(documentType);
 }
 
 /**
@@ -2576,14 +2963,24 @@ function isActionSigned(action: Action): boolean {
   return Boolean(signer?.app?.key && signer.signatures.at(-1)?.[1]);
 }
 
-/** Resolves the signer of the logged-in user, if there is one. */
-/** The logged-in Renown user's signer, read per call; none when nobody is. */
-export function ambientRenownSigner(): ISigner | undefined {
+/**
+ * The logged-in Renown user's signer, read per call; none when nobody is.
+ * Nobody logged in, the signer is asked to sign someone in first (hosted
+ * Connect's browser pseudonym).
+ */
+export async function ambientRenownSigner(): Promise<ISigner | undefined> {
   if (typeof window === "undefined") {
     return undefined;
   }
   const renown = getPHStore()?.renown;
-  return renown?.user ? renown.signer : undefined;
+  if (!renown) return undefined;
+  const signer = renown.signer as ISigner & {
+    ensureUser?: () => Promise<void>;
+  };
+  if (!renown.user && signer.ensureUser) {
+    await signer.ensureUser().catch(() => undefined);
+  }
+  return renown.user ? renown.signer : undefined;
 }
 
 /**

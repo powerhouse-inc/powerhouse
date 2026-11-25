@@ -1,10 +1,11 @@
+import { loginPaths } from "@renown/sdk/identity";
 import { generateAccessToken, RenownBuilder } from "@renown/sdk/node";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-/** The `.ph` directory holding a `ph login` session. */
+/** The directory holding a `ph login` session: the home folder's. */
 export function renownDir(): string {
-  return path.resolve(process.env.REGISTRY_E2E_RENOWN_DIR ?? ".ph");
+  return path.resolve(process.env.REGISTRY_E2E_RENOWN_DIR ?? loginPaths().dir);
 }
 
 export function hasRenownLogin(): boolean {

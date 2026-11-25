@@ -26,15 +26,6 @@ export function getPathWithoutBase(path: string) {
   return rest === "" || rest.startsWith("/") ? rest : path;
 }
 
-/** Makes a URL component for a drive.
- * @deprecated Open drives through the store's `navigation`; it builds the path. */
-export function makeDriveUrlComponent(
-  drive: DocumentDriveDocument | undefined,
-) {
-  if (!drive) return "";
-  return `/d/${slug(drive.header.slug)}`;
-}
-
 /** A drive's URL component: its slug, else its id, prefixed with the slugged
  * name as `<name>-<id>` when the id is opaque (a UUID or derived id). */
 export function makeDriveSlug(drive: DocumentDriveDocument): string {
@@ -132,13 +123,6 @@ export function extractNodeIdFromSlug(nodeSlug: string | undefined) {
   return findUuid(nodeSlug) ?? findDerivedId(nodeSlug);
 }
 
-/** @deprecated Route loaders resolve the node; use `extractNodeIdFromSlug`. */
-export function extractNodeIdFromPath(path: string) {
-  const nodeSlug = extractNodeSlugFromPath(path);
-  const nodeId = extractNodeIdFromSlug(nodeSlug);
-  return nodeId;
-}
-
 /** Extracts the drive slug from a path.
  * Used for extracting drive ids from drive slugs in the URL.
  * Expects the path to be in the format `/d/<drive-slug>`.
@@ -151,18 +135,4 @@ export function extractDriveSlugFromPath(path: string) {
 
 export function extractDriveIdFromSlug(driveSlug: string | undefined) {
   return findUuid(driveSlug) ?? findDerivedId(driveSlug);
-}
-
-/** @deprecated Route loaders resolve the drive; use `extractDriveIdFromSlug`. */
-export function extractDriveIdFromPath(path: string) {
-  const driveSlug = extractDriveSlugFromPath(path);
-  const driveId = extractDriveIdFromSlug(driveSlug);
-  return driveId;
-}
-
-/** Creates a URL string with the given pathname, keeping the query string.
- * @deprecated The store's `navigation` keeps global params across navigations. */
-export function createUrlWithPreservedParams(pathname: string): string {
-  const search = window.location.search;
-  return search ? `${pathname}${search}` : pathname;
 }

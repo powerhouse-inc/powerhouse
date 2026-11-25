@@ -28,7 +28,7 @@ Let's start with a **quick overview** of the steps for building a Drive-app. We 
 
 When using **Vetra Studio**, Drive-app generation is automatic. Simply create a **Drive-app specification document** in your Vetra Studio Drive:
 
-1. Open Vetra Studio (`ph vetra --watch`)
+1. Open Vetra Studio (`ph dev --watch`)
 2. In your Vetra Studio Drive, click **"Add new specification"** in the Apps section
 3. Name your Drive-app (e.g., `todo-list-drive-explorer`)
 4. Vetra automatically generates the Drive-app template code
@@ -85,7 +85,7 @@ If not, you can follow the shortened guide below to prepare your project for thi
 
 - Initialize a new project with `ph init` and give it a project name.
 
-- Start by running Vetra Studio locally with `ph vetra --watch`
+- Start by running Vetra Studio locally with `ph dev --watch`
 
 - Follow the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/DefineToDoListDocumentModel) to create your TodoList document model specification.
 - Drop the downloaded file in the Vetra Studio drive. You'll find it under document models. Vetra should now automatically generate the necessary code for your project
@@ -131,7 +131,7 @@ You can also start by running Connect locally with `ph connect` instead of Vetra
 
 ### 1. Generate a Drive-app:
 
-With Vetra Studio running (`ph vetra --watch`), create a Drive-app specification:
+With Vetra Studio running (`ph dev --watch`), create a Drive-app specification:
 
 1. In your Vetra Studio Drive, click **"Add new specification"** in the Apps section
 2. Name your Drive-app `todo-list-drive-explorer`
@@ -554,7 +554,7 @@ return showRevisionHistory ? (
 
 ### 3. Run the application:
 
-- With the code for our Drive-app in place, it's time to see it in action. If you've been running Vetra Studio with `ph vetra --watch`, your Drive-app is already available. Otherwise, run Connect:
+- With the code for our Drive-app in place, it's time to see it in action. If you've been running Vetra Studio with `ph dev --watch`, your Drive-app is already available. Otherwise, run Connect:
 
 ```bash
 ph connect

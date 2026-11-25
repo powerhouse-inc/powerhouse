@@ -123,7 +123,7 @@ clis/ph-cli/src/
   ├ utils/connect-config-validation.ts  validateConnectPatch (Ajv)
   ├ services/connect-config.ts    `ph connect config` handler
   ├ services/connect-studio.ts    `ph connect studio` (accepts callerOverride)
-  ├ services/vetra.ts             `ph vetra` (constructs callerOverride)
+  ├ services/vetra.ts             `ph dev` (constructs callerOverride)
   ├ commands/install.ts           `ph install` (writes packageRegistryUrl)
   └ utils.ts                      updateConfigFile
 

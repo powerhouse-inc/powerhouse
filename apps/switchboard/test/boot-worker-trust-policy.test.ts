@@ -11,8 +11,6 @@ vi.mock("../src/renown.js", async (importOriginal) => ({
   initRenown: vi.fn().mockRejectedValue(new Error("Renown is unreachable")),
 }));
 
-const TRUST_FAILURE =
-  /REACTOR_WORKERS[\s\S]*REACTOR_AUTH_ENFORCEMENT[\s\S]*RENOWN_SOURCE/;
 const ENV_KEYS = [
   "PH_REACTOR_DATABASE_URL",
   "RENOWN_SOURCE",
@@ -20,7 +18,7 @@ const ENV_KEYS = [
   "REACTOR_AUTH_ENFORCEMENT",
 ] as const;
 
-function stubLogger(): ILogger {
+function stubLogger(): ILogger & { warn: ReturnType<typeof vi.fn> } {
   const logger = {
     verbose: vi.fn(),
     debug: vi.fn(),
@@ -30,7 +28,7 @@ function stubLogger(): ILogger {
     child: vi.fn(),
   };
   logger.child.mockReturnValue(logger);
-  return logger as unknown as ILogger;
+  return logger as unknown as ILogger & { warn: ReturnType<typeof vi.fn> };
 }
 
 describe("booting with pooled workers under authEnforcement", () => {
@@ -56,36 +54,30 @@ describe("booting with pooled workers under authEnforcement", () => {
     await rm(tempRoot, { recursive: true, force: true });
   });
 
-  function boot(numWorkers: number) {
-    return bootSwitchboard(
-      {
-        server: { port: 0 },
-        storage: { readModel: { url: join(tempRoot, "read-model") } },
-        features: { workflows: false, mcp: false },
-        packages: { disableLocal: true },
-        workers: { executor: { count: numWorkers } },
-      },
-      { logger: stubLogger() },
-    );
-  }
-
-  it("fails with a self Renown source", async () => {
-    process.env.RENOWN_SOURCE = "self";
-
-    await expect(boot(2)).rejects.toThrow(TRUST_FAILURE);
-  });
-
-  // Postgres is the next requirement a pooled boot has; reaching it passes the check.
-  it("passes the check with a remote Renown source", async () => {
-    process.env.RENOWN_SOURCE = "remote";
-
-    await expect(boot(2)).rejects.toThrow(/requires a Postgres/);
-  });
-
-  // No loaded package serves the renown read model here; reaching that check passes this one.
-  it("passes the check without workers", async () => {
-    process.env.RENOWN_SOURCE = "self";
-
-    await expect(boot(0)).rejects.toThrow(/no loaded package serves/);
-  }, 60_000);
+  // Workers ask Renown at its URL, so no credential source keeps them out:
+  // Postgres is the next requirement a pooled boot has.
+  it.each(["self", "kept", "remote"])(
+    "passes the trust check with RENOWN_SOURCE=%s, which it says it ignores",
+    async (source) => {
+      process.env.RENOWN_SOURCE = source;
+      const logger = stubLogger();
+      await expect(
+        bootSwitchboard(
+          {
+            server: { port: 0 },
+            storage: { readModel: { url: join(tempRoot, "read-model") } },
+            features: { workflows: false, mcp: false },
+            packages: { disableLocal: true },
+            workers: { executor: { count: 2 } },
+          },
+          { logger },
+        ),
+      ).rejects.toThrow(/requires a Postgres/);
+      expect(
+        logger.warn.mock.calls.some(([message]) =>
+          String(message).includes("RENOWN_SOURCE"),
+        ),
+      ).toBe(true);
+    },
+  );
 });

@@ -16,7 +16,7 @@ import { cpForce, rmForce } from "../utils.js";
 /**
  * Regression test for the Vetra studio upgrade bug:
  *
- * 1. `ph vetra --watch` in a fresh project; create a document model (v1).
+ * 1. `ph dev --watch` in a fresh project; create a document model (v1).
  * 2. Create a document with v1 in the preview drive.
  * 3. Add a required field to the state schema and accept the release prompt;
  *    codegen writes the v2 folder plus upgrades/v2.ts and the manifest.

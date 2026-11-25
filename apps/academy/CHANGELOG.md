@@ -1,3 +1,146 @@
+## 6.4.0-next.6 (2026-11-25)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.4.0-next.5 (2026-11-25)
+
+### 🚀 Features
+
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **ph-cli:** ph mcp signs an mcp client's writes as the client's own session ([56e89cb281](https://github.com/powerhouse-inc/powerhouse/commit/56e89cb281))
+- **ph-cli:** list and withdraw a store's credential records ([bdb8ec7a01](https://github.com/powerhouse-inc/powerhouse/commit/bdb8ec7a01))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+- **ph-cli:** log in for every project, add whoami and identity password ([3d01864eec](https://github.com/powerhouse-inc/powerhouse/commit/3d01864eec))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
+## 6.4.0-next.3 (2026-11-23)
+
+### 🚀 Features
+
+- ⚠️  **codegen,ph-cli:** scaffold a neutral dev host, nothing of vetra ([82e68e2330](https://github.com/powerhouse-inc/powerhouse/commit/82e68e2330))
+- ⚠️  **switchboard,connect:** no built-in vetra package ([1e9b9ba2c6](https://github.com/powerhouse-inc/powerhouse/commit/1e9b9ba2c6))
+- ⚠️  **ph-cli:** generate stubs only, no dependency on the vetra package ([329d9de807](https://github.com/powerhouse-inc/powerhouse/commit/329d9de807))
+
+### ⚠️  Breaking Changes
+
+- **codegen,ph-cli:** scaffold a neutral dev host, nothing of vetra  ([82e68e2330](https://github.com/powerhouse-inc/powerhouse/commit/82e68e2330))
+  new projects have hosts/dev in place of hosts/vetra, and
+  the dev Connect port comes from the connect host, not vetra.connectPort.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+- **switchboard,connect:** no built-in vetra package  ([1e9b9ba2c6](https://github.com/powerhouse-inc/powerhouse/commit/1e9b9ba2c6))
+  switchboard dev mode and Connect studio mode no longer
+  load @powerhousedao/vetra by themselves.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+- **ph-cli:** generate stubs only, no dependency on the vetra package  ([329d9de807](https://github.com/powerhouse-inc/powerhouse/commit/329d9de807))
+  ph generate --document and --extract are removed.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
+## 6.4.0-next.2 (2026-11-23)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 6.4.0-next.1 (2026-11-22)
+
+### 🚀 Features
+
+- ⚠️  **ph-cli,ph-cmd,shared:** ph dev runs the dev mode, ph vetra opens vetra studio ([cafcbdb713](https://github.com/powerhouse-inc/powerhouse/commit/cafcbdb713))
+- **vetra:** move the ideate and build spec documents from vetra-cli ([bfc530d0f3](https://github.com/powerhouse-inc/powerhouse/commit/bfc530d0f3))
+
+### ⚠️  Breaking Changes
+
+- **ph-cli,ph-cmd,shared:** ph dev runs the dev mode, ph vetra opens vetra studio  ([cafcbdb713](https://github.com/powerhouse-inc/powerhouse/commit/cafcbdb713))
+  `ph vetra` no longer starts the project's vetra host. Use
+  `ph dev` (or `ph run vetra`) for the dev mode.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_016fHjTMdimGetqa3JnGXsnE
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
+## 6.4.0-next.0 (2026-11-22)
+
+### 🚀 Features
+
+- **host-core,ph-run:** refuse build on a host a package supplies ([310c48efd2](https://github.com/powerhouse-inc/powerhouse/commit/310c48efd2))
+- **ph-run,ph-cli:** connect runner.serveFiles serves named files next to the build ([5733f02f35](https://github.com/powerhouse-inc/powerhouse/commit/5733f02f35))
+- **switchboard:** identity.storagePath names the renown user file ([877a9a33d4](https://github.com/powerhouse-inc/powerhouse/commit/877a9a33d4))
+- **host-core,ph-run:** a package switchboard finds its packages.list names from the package ([571a2efe28](https://github.com/powerhouse-inc/powerhouse/commit/571a2efe28))
+- **host-core,ph-run,ph-cli:** a ${package} built-in for hosts a package supplies ([d7c83fcac8](https://github.com/powerhouse-inc/powerhouse/commit/d7c83fcac8))
+- **codegen,ph-cli,shared:** a package with a cli declares clint as a versioned peer ([40936957cb](https://github.com/powerhouse-inc/powerhouse/commit/40936957cb))
+- **ph-cli,shared:** the cli of a package is its own build, with declared packages external ([8504275af5](https://github.com/powerhouse-inc/powerhouse/commit/8504275af5))
+- **host-core:** an installed package supplies hosts, addressed as <package>/<host> ([677b136c62](https://github.com/powerhouse-inc/powerhouse/commit/677b136c62))
+- **clint-common:** port the chat-session package from ph-clint dev.113 ([d21119c6a9](https://github.com/powerhouse-inc/powerhouse/commit/d21119c6a9))
+- **clint:** add the ./cli package export and the cli runner ([64bb9f10c9](https://github.com/powerhouse-inc/powerhouse/commit/64bb9f10c9))
+- ⚠️  **reactor-browser:** remove the settings modal variant ([232605c0c5](https://github.com/powerhouse-inc/powerhouse/commit/232605c0c5))
+- ⚠️  **reactor-attachments:** remove PreprocessResult.data and stream ([afe219c5a6](https://github.com/powerhouse-inc/powerhouse/commit/afe219c5a6))
+- ⚠️  **desktop:** remove the deprecated app.json loading keys ([a2ffd6e90a](https://github.com/powerhouse-inc/powerhouse/commit/a2ffd6e90a))
+- ⚠️  **renown:** remove the ConnectCrypto aliases and the browser initRenown ([8cf109ee31](https://github.com/powerhouse-inc/powerhouse/commit/8cf109ee31))
+- ⚠️  **config:** superseded powerhouse.config.json keys are errors ([5db0117db3](https://github.com/powerhouse-inc/powerhouse/commit/5db0117db3))
+- **ph-cli:** ph run connect build takes --base and --packages-registry ([894d5a7f31](https://github.com/powerhouse-inc/powerhouse/commit/894d5a7f31))
+- ⚠️  **connect:** Connect boots from its composition only ([a15fbed435](https://github.com/powerhouse-inc/powerhouse/commit/a15fbed435))
+- ⚠️  **ph-cli:** a project without hosts is an error ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+
+### 🩹 Fixes
+
+- **host-core,ph-run:** linux failures in the next/6.4 checks ([0fdc5a4797](https://github.com/powerhouse-inc/powerhouse/commit/0fdc5a4797))
+- **codegen:** scaffold hosts use the form of satisfies that type-checks ([bd34ba1ad9](https://github.com/powerhouse-inc/powerhouse/commit/bd34ba1ad9))
+
+### ⚠️  Breaking Changes
+
+- **reactor-browser:** remove the settings modal variant  ([232605c0c5](https://github.com/powerhouse-inc/powerhouse/commit/232605c0c5))
+  PHModal no longer has `{ type: "settings" }`, and showPHModal does not
+  open the settings page. Open it through the navigation: `openTarget({ settings: true })`
+  or `useLinkProps({ settings: true })`.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **reactor-attachments:** remove PreprocessResult.data and stream  ([afe219c5a6](https://github.com/powerhouse-inc/powerhouse/commit/afe219c5a6))
+  PreprocessResult no longer has `data` or `stream()`. Read `blob` and
+  pass it to `send()`, which accepts a Blob.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **desktop:** remove the deprecated app.json loading keys  ([a2ffd6e90a](https://github.com/powerhouse-inc/powerhouse/commit/a2ffd6e90a))
+  hosts/desktop/app.json no longer takes splash, splashDark, loading.art or
+  loading.artDark, and ph run desktop refuses a file that sets one. Replace splash with a
+  background layer ({ src, position: { bottom: "calc(50% + 32px)" }, width: "min(720px, 80vw)",
+  maxHeight: "65vh" }), loading.art with a background layer at { bottom: 0, right: 0 } (or
+  background: "<image>"), and splashDark and loading.artDark with dark in that layer's src
+  ({ light, dark }). ph migrate does not rewrite app.json.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **renown:** remove the ConnectCrypto aliases and the browser initRenown  ([8cf109ee31](https://github.com/powerhouse-inc/powerhouse/commit/8cf109ee31))
+  `@renown/sdk` no longer exports `ConnectCrypto` (use
+  `RenownCrypto`), `IConnectCrypto` (use `IRenownCrypto`) or the browser
+  `initRenown(appName, options)` (use `new RenownBuilder(appName, options).build()`).
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **config:** superseded powerhouse.config.json keys are errors  ([5db0117db3](https://github.com/powerhouse-inc/powerhouse/commit/5db0117db3))
+  ph run refuses a project whose powerhouse.config.json sets studio.host,
+  studio.https, studio.openBrowser, reactor.https, reactor.storage or switchboard.database.url.
+  Run ph migrate, or move the value to the host file and remove the key.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **connect:** Connect boots from its composition only  ([a15fbed435](https://github.com/powerhouse-inc/powerhouse/commit/a15fbed435))
+  Connect always runs its plugin composition. The pluginRunner
+  flag no longer switches it off. connect.instance.reactorWorker, .multiReactor
+  and ?reactorWorker no longer select the reactor client; declare
+  reactor.backends in the host file or set connect.instance.reactorClient.
+  getActivePluginModules no longer returns null and loadConnectPluginUi needs a
+  composition.
+  Co-Authored-By: Claude <noreply@anthropic.com>
+- **ph-cli:** a project without hosts is an error  ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
+  the classic commands need a hosts/ folder; run ph migrate.
+  Co-Authored-By: Claude <noreply@anthropic.com>
 ## 6.3.0-dev.11 (2026-11-24)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.

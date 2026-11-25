@@ -3,13 +3,7 @@ import {
   buildTsMorphProject,
   documentModelsDirOf,
 } from "@powerhousedao/codegen/utils";
-import {
-  extractDocumentModelDocuments,
-  getDocument,
-  saveSpec,
-} from "@powerhousedao/vetra/codegen";
 import { handleMutuallyExclusiveOptions } from "@powerhousedao/shared/clis";
-import type { DocumentModelDocument } from "@powerhousedao/shared/document-model";
 import { existsSync } from "node:fs";
 import { join, relative } from "node:path";
 import type { GenerateDocumentModelArgs } from "../types.js";
@@ -29,7 +23,7 @@ export async function startGenerateDocumentModel(
   args: GenerateDocumentModelArgs,
   projectDir: string,
 ) {
-  const { document, dir, all, extract, name, debug } = args;
+  const { dir, all, name, debug } = args;
   if (debug) {
     console.log({ args });
   }
@@ -38,10 +32,8 @@ export async function startGenerateDocumentModel(
     handleMutuallyExclusiveOptions(
       {
         "--name": name,
-        "--document": document,
         "--dir": dir,
         "--all": all || undefined,
-        "--extract": extract || undefined,
       },
       "generation mode",
     );
@@ -51,14 +43,6 @@ export async function startGenerateDocumentModel(
       projectDir,
       project,
     );
-    return;
-  }
-  if (extract) {
-    const docs = extractDocumentModelDocuments(project);
-    for (const doc of docs) {
-      const path = await saveSpec(doc, projectDir);
-      console.log(`Wrote ${path}`);
-    }
     return;
   }
   if (all) {
@@ -85,15 +69,8 @@ export async function startGenerateDocumentModel(
     }
     await warnSubgraphTypeConflicts(projectDir);
     return;
-  } else if (document) {
-    if (document.endsWith(".phd")) {
-      const doc = (await getDocument(document)) as DocumentModelDocument;
-      await modelGeneration.generateDocumentModel(doc.state.global, project);
-    } else {
-      const state = await loadDocumentModel(document);
-      await modelGeneration.generateDocumentModel(state, project);
-    }
-  } else if (dir) {
+  }
+  if (dir) {
     const modelsDir = modelsDirOf(projectDir);
     const dirName = resolveModuleDirName(
       projectDir,
@@ -113,12 +90,6 @@ export async function startGenerateDocumentModel(
     );
     await warnSubgraphTypeConflicts(projectDir);
     return;
-  } else {
-    console.log(
-      "Please specify one of `name`, `document`, `dir`, `all`, or `extract`.",
-    );
-    return;
   }
-  await project.save();
-  await warnSubgraphTypeConflicts(projectDir);
+  console.log("Please specify one of `name`, `dir`, or `all`.");
 }

@@ -34,7 +34,7 @@ ph init my-project --remote-drive https://vetra.example.com/d/abc123
 
 - Create a GitHub repository
 - Commit and push your code
-- Run `ph vetra` to configure the GitHub URL in the remote drive
+- Run `ph dev` to configure the GitHub URL in the remote drive
 
 ---
 
@@ -59,11 +59,11 @@ ph checkout --remote-drive https://vetra.example.com/d/abc123
 
 **Requirements:**
 
-- The remote drive must have a GitHub URL configured (done during `ph vetra` after init)
+- The remote drive must have a GitHub URL configured (done during `ph dev` after init)
 
 ---
 
-### `ph vetra`
+### `ph dev`
 
 **Purpose:** Start the Vetra development environment with Switchboard and Connect Studio.
 
@@ -86,16 +86,16 @@ ph checkout --remote-drive https://vetra.example.com/d/abc123
 
 ```bash
 # Basic usage (uses config from powerhouse.config.json)
-ph vetra
+ph dev
 
 # With watch mode for development
-ph vetra --watch
+ph dev --watch
 
 # Override remote drive URL
-ph vetra --remote-drive https://vetra.example.com/d/abc123
+ph dev --remote-drive https://vetra.example.com/d/abc123
 
 # Disable Connect Studio
-ph vetra --disable-connect
+ph dev --disable-connect
 ```
 
 **Key options:**
@@ -125,11 +125,11 @@ git remote add origin https://github.com/user/my-project.git
 git push -u origin main
 
 # 3. Start Vetra and configure GitHub URL
-ph vetra
+ph dev
 # (Select option to use detected GitHub URL when prompted)
 
 # 4. Start developing with watch mode
-ph vetra --watch
+ph dev --watch
 ```
 
 ### Joining an Existing Project (Collaborator)
@@ -142,7 +142,7 @@ ph checkout --remote-drive https://vetra.example.com/d/abc123
 cd project-name
 
 # 3. Start Vetra environment with watch mode
-ph vetra --watch
+ph dev --watch
 
 # You're now synced with the remote drive
 ```
@@ -153,14 +153,14 @@ ph vetra --watch
 
 **Remote Drive vs Local Drive:**
 
-- Without remote drive: `ph vetra` creates a local drive on your machine only
-- With remote drive: `ph vetra` connects to a shared drive that syncs across team members
+- Without remote drive: `ph dev` creates a local drive on your machine only
+- With remote drive: `ph dev` connects to a shared drive that syncs across team members
 
 **When to use each command:**
 
 - Use `ph init --remote-drive` when starting a NEW project (no GitHub URL configured in drive yet)
 - Use `ph checkout --remote-drive` when joining an EXISTING project (GitHub URL already configured)
-- Use `ph vetra --watch` to start development after either init or checkout
+- Use `ph dev --watch` to start development after either init or checkout
 
 **Preview Drive (`--watch` mode):**
 

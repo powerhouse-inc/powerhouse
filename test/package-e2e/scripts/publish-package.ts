@@ -113,12 +113,21 @@ async function main(): Promise<void> {
   // the local registry without depending on the fake HOME.
   writeNpmrc(PROJECT_DIR, token);
 
-  // 3. Generate the document model from the zip spec.
-  // The fixture zip embeds reducer code in each operation, so codegen writes
+  // 3. Generate the document model from its spec in document-models/todo.
+  // The fixture spec embeds reducer code in each operation, so codegen writes
   // complete reducer implementations — no manual swap needed for the model.
-  const zipDest = path.join(PROJECT_DIR, "todo.json");
-  fs.copyFileSync(path.join(FIXTURES, "todo.json"), zipDest);
-  run(`${PH_CLI} generate doc --document ./todo.json`, PROJECT_DIR);
+  // Written as `ph generate` keeps a spec, the model's global state: the
+  // fixture is a whole document, which the spec scan refuses with a ZodError.
+  const modelDir = path.join(PROJECT_DIR, "document-models/todo");
+  fs.mkdirSync(modelDir, { recursive: true });
+  const fixture = JSON.parse(
+    fs.readFileSync(path.join(FIXTURES, "todo.json"), "utf8"),
+  ) as { state: { global: unknown } };
+  fs.writeFileSync(
+    path.join(modelDir, "todo.json"),
+    JSON.stringify(fixture.state.global, null, 2),
+  );
+  run(`${PH_CLI} generate doc --dir todo`, PROJECT_DIR);
 
   // 4. Generate the editor (boilerplate only) and swap in the fixture UI
   // that actually dispatches addTodo / updateTodo / removeTodo actions —

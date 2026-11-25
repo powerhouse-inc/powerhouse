@@ -7,6 +7,7 @@ export default defineConfig({
     "src/cli.ts",
     "src/tools/index.ts",
     "src/admin-tools.ts",
+    "src/remote.ts",
   ],
   outDir: "dist",
   platform: "node",

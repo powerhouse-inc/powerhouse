@@ -83,7 +83,7 @@ function fakePackageManager(initial: DocumentModelLib[]): IPackageManager & {
 /**
  * Reproduces the Vetra studio "release v2" flow at the registry level.
  *
- * In `ph vetra --watch` (main-thread reactor, the default), the studio entry
+ * In `ph dev --watch` (main-thread reactor, the default), the studio entry
  * hot-swaps the local package via updateLocalPackage on vite HMR — no page
  * reload. setVetraPackageManager's subscription then re-registers the
  * package's modules into the live reactor registry. When the regenerated

@@ -1,7 +1,7 @@
 import type { SwitchboardConfigInput } from "@powerhousedao/switchboard/config";
 import { describe, expect, it } from "vitest";
 import { memberSwitchboardConfig } from "../src/runners/member-config.js";
-import { classicSwitchboardArgs } from "../src/services/classic-args.js";
+import { switchboardServiceArgs } from "../src/services/service-args.js";
 import { switchboardConfigOf } from "../src/services/switchboard.js";
 
 // Precedence: an explicit flag, then the member's config.switchboard, then defaults.
@@ -10,11 +10,10 @@ const memberConfig = (switchboard: SwitchboardConfigInput) =>
   memberSwitchboardConfig(
     { config: { switchboard } },
     { shell: {}, dotenv: {} },
-    { pluginHost: false },
   );
 
 async function configFor(argv: string[], switchboard: SwitchboardConfigInput) {
-  const args = await classicSwitchboardArgs(argv);
+  const args = await switchboardServiceArgs(argv);
   return switchboardConfigOf(args, undefined, await memberConfig(switchboard))
     .config;
 }
@@ -47,25 +46,18 @@ describe("switchboard config precedence", () => {
     ).toMatchObject({ disableLocal: true });
   });
 
-  it("puts a defaulted https under the member's own server.https", async () => {
-    const withDefault = (switchboard: SwitchboardConfigInput) =>
+  it("leaves https to the member's own server.https without the flag", async () => {
+    const member = (switchboard: SwitchboardConfigInput) =>
       memberSwitchboardConfig(
         { config: { switchboard } },
         { shell: {}, dotenv: {} },
-        { pluginHost: false, defaults: { server: { https: false } } },
       );
-    const args = { ...(await classicSwitchboardArgs([])), https: undefined };
+    const args = { ...(await switchboardServiceArgs([])), https: undefined };
     const own = switchboardConfigOf(
       args,
       undefined,
-      await withDefault({ server: { https: true } }),
+      await member({ server: { https: true } }),
     ).config;
     expect(own.server?.https).toBe(true);
-    const fallback = switchboardConfigOf(
-      args,
-      undefined,
-      await withDefault({}),
-    ).config;
-    expect(fallback.server?.https).toBe(false);
   });
 });

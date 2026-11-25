@@ -6,7 +6,7 @@
 import type {} from "@powerhousedao/ph-cli/runners/connect";
 import type {} from "@powerhousedao/ph-cli/runners/switchboard";
 import type {} from "@powerhousedao/clint/mastra-runner";
-import type {} from "@powerhousedao/clint/clint-runner";
+import type {} from "@powerhousedao/clint/cli-runner";
 import type {} from "@powerhousedao/desktop/runner";
 import type {} from "@powerhousedao/switchboard/plugins/mcp";
 import type {} from "@powerhousedao/switchboard/plugins/attachments";

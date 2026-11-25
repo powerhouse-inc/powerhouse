@@ -13,10 +13,6 @@ import {
   type SwitchboardConfigInput,
 } from "@powerhousedao/switchboard/config";
 import {
-  DEPRECATIONS_REMOVED_IN,
-  MIGRATION_GUIDE_URL,
-} from "@powerhousedao/shared/clis/deprecations";
-import {
   envNamesBeforeProjectEnv,
   isDotenvDisabled,
 } from "@powerhousedao/shared/clis/project-env";
@@ -87,7 +83,6 @@ function blockEnvNames(reactor: ReactorConfig | undefined): string[] {
   return [
     ...Object.keys(protocolEnv(reactor?.protocol)),
     ...(block.packages?.dynamic ? ["DYNAMIC_MODEL_LOADING"] : []),
-    ...(block.features ? ["PH_WORKFLOWS_ENABLED"] : []),
   ];
 }
 
@@ -105,7 +100,6 @@ export const memberSwitchboardConfigSchema = switchboardConfigLayerSchema([
   "packages.dynamic",
   "drive",
   "remoteDrives",
-  "features.pluginHost",
   "processorConfig",
 ]);
 
@@ -114,53 +108,15 @@ export interface SwitchboardMember {
   config?: { switchboard?: SwitchboardConfigInput };
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    Object.getPrototypeOf(value) === Object.prototype
-  );
-}
-
-/** The dotted keys both layers set. */
-export function overlappingKeys(
-  a: Record<string, unknown>,
-  b: Record<string, unknown>,
-  path = "",
-): string[] {
-  return Object.entries(b).flatMap(([key, value]) => {
-    const other = a[key];
-    if (value === undefined || other === undefined) return [];
-    const at = path ? `${path}.${key}` : key;
-    return isPlainObject(value) && isPlainObject(other)
-      ? overlappingKeys(other, value, at)
-      : [at];
-  });
-}
-
-/** Each `config.switchboard` key the reactor block already sets. */
-export function reactorBlockConflicts(member: SwitchboardMember): string[] {
-  const own = member.config?.switchboard;
-  if (!own) return [];
-  return overlappingKeys(
-    reactorBlockToSwitchboardConfig(member.reactor) as Record<string, unknown>,
-    own as Record<string, unknown>,
-  ).map(
-    (key) =>
-      `config.switchboard.${key} is also set by the reactor block; set it in one place.`,
-  );
-}
-
 /**
- * The deprecation notice for a block whose `readModel.url` still names the
- * reactor store too: nothing else names the store, as it did when
- * readModel.url rode `dbPath`.
+ * A block whose `readModel.url` is the only store anything names. Before 6.4
+ * that url held the reactor store too; now the host has to name its store.
  */
-export function readModelAsReactorStore(
+export function readModelOnlyStore(
   reactor: ReactorConfig | undefined,
   env: Env,
-  hostFileLabel: string,
-): { url: string; warning: string } | undefined {
+  hostFileLabel?: string,
+): string | undefined {
   const storage = reactorBlockToSwitchboardConfig(reactor).storage;
   const url = storage?.readModel?.url;
   if (
@@ -171,13 +127,11 @@ export function readModelAsReactorStore(
   ) {
     return undefined;
   }
-  return {
-    url,
-    warning:
-      `${hostFileLabel}: reactor readModel.url (${url}) also holds the reactor store, because no storage names one. ` +
-      `This is deprecated and stops working in ${DEPRECATIONS_REMOVED_IN}: set the backend's storage explicitly (the same Postgres url, or a path dataDir). ` +
-      `See ${MIGRATION_GUIDE_URL}`,
-  };
+  return (
+    `${hostFileLabel ? `${hostFileLabel}: ` : ""}reactor readModel.url (${url}) is the only store this host names. ` +
+    "Before 6.4 it held the reactor store too; it no longer does. " +
+    "Set the backend's storage explicitly (the same Postgres url, or a path dataDir)."
+  );
 }
 
 /**
@@ -187,27 +141,27 @@ export function readModelAsReactorStore(
  * block's own vars are dropped). The block keeps the precedence it had as
  * set-if-absent env and `dbPath`: only a shell PH_REACTOR_DATABASE_URL
  * overrides its store, and no env var overrides its read model. Writes nothing.
+ * Throws for a block whose `readModel.url` is its only store.
  */
 export async function memberSwitchboardConfig(
   member: SwitchboardMember,
   env: MemberEnv,
   options: {
-    /** The host declares `runner.plugins`. Without them the env decides:
-     * unset boots the server's default composition. */
-    pluginHost: boolean;
     logger?: ILogger;
-    /** Under everything else: values no flag or host file set. */
-    defaults?: SwitchboardConfigInput;
-  },
+    /** Names the host file in an error, e.g. `hosts/switchboard/host.js`. */
+    hostFile?: string;
+  } = {},
 ): Promise<SwitchboardConfigInput> {
+  const noStore = readModelOnlyStore(
+    member.reactor,
+    env.shell,
+    options.hostFile,
+  );
+  if (noStore) throw new Error(noStore);
   // Lazy: the env mapping loads reactor-api, which the runner module must not.
   const { switchboardConfigFromEnv } =
     await import("@powerhousedao/switchboard/config/env");
   const block = reactorBlockToSwitchboardConfig(member.reactor);
-  const legacy = readModelAsReactorStore(member.reactor, env.shell, "");
-  if (legacy) {
-    block.storage = { ...block.storage, reactor: { url: legacy.url } };
-  }
   // One env, as the server read it: the .env under the block's own vars,
   // the shell over both.
   const dotenvValues: Record<string, string | undefined> = { ...env.dotenv };
@@ -224,14 +178,10 @@ export async function memberSwitchboardConfig(
     delete storage.reactor;
   }
   if (block.storage?.readModel) delete storage.readModel;
-  return mergeSwitchboardConfig(
-    options.defaults ?? {},
-    block,
-    member.config?.switchboard ?? {},
-    { ...fromEnv, storage },
-    // A declared composition turns the plugin host on, whatever the env says.
-    options.pluginHost ? { features: { pluginHost: true } } : {},
-  );
+  return mergeSwitchboardConfig(block, member.config?.switchboard ?? {}, {
+    ...fromEnv,
+    storage,
+  });
 }
 
 /** A Postgres store no url names: the server would use a folder instead. */
@@ -260,7 +210,7 @@ export function prepareMemberStorage(
   if (storage?.kind !== "path" || !storage.dataDir) return;
   // `ph run` resolves `$env` and the `${userData}` sugar before the verb;
   // an unresolved one here would mkdir a literal "${userData}" folder.
-  if (/\$\{(userData|projectRoot)\}/.test(storage.dataDir)) {
+  if (/\$\{(userData|projectRoot|package)\}/.test(storage.dataDir)) {
     throw new Error(
       `${hostFileLabel}: storage.dataDir "${storage.dataDir}" was not resolved; resolve the host (resolveHostOutputs) before starting it.`,
     );

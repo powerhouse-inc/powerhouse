@@ -9,6 +9,8 @@ export interface StartInkReplOptions {
   workdir?: string;
   /** Called after Ink mounts, before user input is accepted. The `append` function adds a system message to the Repl's display. */
   onStart?: (append: (msg: string) => void) => Promise<void>;
+  /** Closes the REPL when it aborts, as the user's exit would. */
+  signal?: AbortSignal;
 }
 
 /**
@@ -39,5 +41,12 @@ export async function startInkRepl(
     />,
     { exitOnCtrlC: false, kittyKeyboard: { mode: "auto" } },
   );
-  await app.waitUntilExit();
+  const close = () => app.unmount();
+  opts?.signal?.addEventListener("abort", close, { once: true });
+  if (opts?.signal?.aborted) close();
+  try {
+    await app.waitUntilExit();
+  } finally {
+    opts?.signal?.removeEventListener("abort", close);
+  }
 }

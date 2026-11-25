@@ -1,5 +1,9 @@
 import type { RouteUser } from "@powerhousedao/shared/processors";
-import { verifyAuthBearerToken } from "@renown/sdk";
+import {
+  carriedCredentialOf,
+  verifyAuthBearerToken,
+  type PowerhouseVerifiableCredential,
+} from "@renown/sdk";
 import type { AccessGate } from "./access-gate.js";
 
 type VerifiedCredential =
@@ -7,13 +11,21 @@ type VerifiedCredential =
     ? T
     : never;
 
+/** A verifier's answer: `true`/`false`, or a verdict naming how or why. */
+export type CredentialCheckResult =
+  | { ok: true; via?: RouteUser["via"]; label?: string }
+  | { ok: false; reason?: string };
+
 // Confirms an authenticated signer's credential is still valid. Injected so
 // AuthService stays agnostic to how/where credentials are verified.
 export type CredentialVerifier = (params: {
   address: string;
   chainId: number;
   appId: string;
-}) => Promise<boolean>;
+  networkId?: string;
+  /** The credential the bearer carries, when it carries one. */
+  credential?: PowerhouseVerifiableCredential;
+}) => Promise<boolean | CredentialCheckResult>;
 
 export interface AuthConfig {
   /**
@@ -58,7 +70,7 @@ const DEFAULT_CREDENTIAL_CACHE_TTL_MS = 60_000;
 const CREDENTIAL_CACHE_MAX_ENTRIES = 1_000;
 
 interface CredentialCacheEntry {
-  exists: Promise<boolean>;
+  result: Promise<CredentialCheckResult>;
   expiresAt: number;
   address: string;
   chainId: number;
@@ -127,6 +139,11 @@ export class AuthService implements ICredentialInvalidator {
   private readonly credentialCache = new Map<string, CredentialCacheEntry>();
   private readonly invalidationListeners =
     new Set<CredentialInvalidationListener>();
+  // The credential a connection's bearer carried, for its rechecks.
+  private readonly carried = new WeakMap<
+    User,
+    PowerhouseVerifiableCredential
+  >();
 
   constructor(config: AuthConfig) {
     this.config = config;
@@ -206,14 +223,13 @@ export class AuthService implements ICredentialInvalidator {
         });
       }
       if (!this.config.skipCredentialVerification) {
-        const credentialExists = await this.verifyCredentialExists(
-          user.address,
-          user.chainId,
-          verified.issuer,
-        );
-        if (!credentialExists) {
+        const check = await this.checkCredential(user, verified);
+        if (!check.ok) {
           return new Response(
-            JSON.stringify({ error: "Credentials no longer valid" }),
+            JSON.stringify({
+              error: "Credentials no longer valid",
+              ...(check.reason ? { reason: check.reason } : {}),
+            }),
             { status: 401 },
           );
         }
@@ -273,13 +289,11 @@ export class AuthService implements ICredentialInvalidator {
     }
 
     if (!this.config.skipCredentialVerification) {
-      const credentialExists = await this.verifyCredentialExists(
-        user.address,
-        user.chainId,
-        verified.issuer,
-      );
-      if (!credentialExists) {
-        throw new Error("Credentials no longer valid");
+      const check = await this.checkCredential(user, verified);
+      if (!check.ok) {
+        throw new Error(
+          `Credentials no longer valid${check.reason ? ` (${check.reason})` : ""}`,
+        );
       }
     }
 
@@ -344,12 +358,37 @@ export class AuthService implements ICredentialInvalidator {
   async isCredentialValid(user: User): Promise<boolean> {
     const credentialHolds =
       this.config.skipCredentialVerification ||
-      (await this.verifyCredentialExists(
-        user.address,
-        user.chainId,
-        user.appKey,
-      ));
+      (
+        await this.verifyCredentialExists(
+          user.address,
+          user.chainId,
+          user.appKey,
+          user.networkId,
+          this.carried.get(user),
+        )
+      ).ok;
     return credentialHolds && (await this.admitted(user));
+  }
+
+  /** The credential check of a verified bearer; marks `user` with its verdict. */
+  private async checkCredential(
+    user: User,
+    verified: VerifiedCredential,
+  ): Promise<CredentialCheckResult> {
+    const carried = carriedCredentialOf(verified);
+    const check = await this.verifyCredentialExists(
+      user.address,
+      user.chainId,
+      verified.issuer,
+      user.networkId,
+      carried,
+    );
+    if (check.ok) {
+      if (check.label !== undefined) user.label = check.label;
+      if (check.via !== undefined) user.via = check.via;
+      if (carried) this.carried.set(user, carried);
+    }
+    return check;
   }
 
   /** ACCESS=licensed: admins pass; everyone else needs the gate's yes (or its grace). */
@@ -414,38 +453,46 @@ export class AuthService implements ICredentialInvalidator {
     address: string,
     chainId: number,
     appId: string,
-  ): Promise<boolean> {
+    networkId?: string,
+    credential?: PowerhouseVerifiableCredential,
+  ): Promise<CredentialCheckResult> {
     const ttlMs =
       this.config.credentialVerificationCacheTtlMs ??
       DEFAULT_CREDENTIAL_CACHE_TTL_MS;
+    const ask = () =>
+      this.fetchCredentialExists({
+        address,
+        chainId,
+        appId,
+        ...(networkId !== undefined ? { networkId } : {}),
+        ...(credential ? { credential } : {}),
+      });
     if (ttlMs <= 0) {
-      return this.fetchCredentialExists(address, chainId, appId);
+      return ask();
     }
 
     const key = `${address.toLowerCase()}:${chainId}:${appId}`;
     const now = Date.now();
     const cached = this.credentialCache.get(key);
     if (cached && cached.expiresAt > now) {
-      return cached.exists;
+      return cached.result;
     }
 
     this.pruneCredentialCache(now);
     const entry: CredentialCacheEntry = {
-      exists: this.fetchCredentialExists(address, chainId, appId).then(
-        (exists) => {
-          if (!exists && this.credentialCache.get(key) === entry) {
-            this.credentialCache.delete(key);
-          }
-          return exists;
-        },
-      ),
+      result: ask().then((result) => {
+        if (!result.ok && this.credentialCache.get(key) === entry) {
+          this.credentialCache.delete(key);
+        }
+        return result;
+      }),
       expiresAt: now + ttlMs,
       address: address.toLowerCase(),
       chainId,
       appId,
     };
     this.credentialCache.set(key, entry);
-    return entry.exists;
+    return entry.result;
   }
 
   /**
@@ -475,15 +522,14 @@ export class AuthService implements ICredentialInvalidator {
   // Confirm the signer's credential is still valid via the injected verifier.
   // Reached only when verification is on, so a missing verifier is misconfig.
   private async fetchCredentialExists(
-    address: string,
-    chainId: number,
-    appId: string,
-  ): Promise<boolean> {
+    params: Parameters<CredentialVerifier>[0],
+  ): Promise<CredentialCheckResult> {
     if (!this.config.verifyCredential) {
       throw new Error(
         "AuthService: credential verification is enabled but no verifyCredential was provided",
       );
     }
-    return this.config.verifyCredential({ address, chainId, appId });
+    const result = await this.config.verifyCredential(params);
+    return typeof result === "boolean" ? { ok: result } : result;
   }
 }

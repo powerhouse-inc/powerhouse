@@ -38,23 +38,22 @@ function toError(reason: unknown): Error {
 }
 
 /**
- * Legacy result of `useDocumentOperations(documentId)`.
- * @deprecated Call `useDocumentOperations(documentId, scope, options)` and read `operations`. Removed in the next major.
+ * Operation history of one scope of a document, read from the document cache
+ * and kept in step with it: a change event for the document drops the cached
+ * pages and the hook loads the first page again.
+ *
+ * Pages arrive oldest first. A view that wants the whole history calls
+ * `fetchNextPage` while `hasNextPage` is true.
+ *
+ * An empty first page is a final result; there is no retry. When the active
+ * document cache does not serve operations, the result is empty and not
+ * loading.
+ *
+ * @param documentId - The document id, or null/undefined to skip fetching
+ * @param scope - The operation scope, for example "global" or "local"
+ * @param options - Page size and whether fetching is enabled
  */
-export type DocumentOperationsState = {
-  globalOperations: Operation[];
-  localOperations: Operation[];
-  isLoading: boolean;
-  error: Error | undefined;
-  refetch: () => void;
-};
-
-const EMPTY_OPERATIONS: Operation[] = [];
-
-// Operation history of one scope of a document, read from the document
-// cache and kept in step with it: a change event for the document drops the
-// cached pages and the hook loads the first page again.
-function useScopeOperations(
+export function useDocumentOperations(
   documentId: string | null | undefined,
   scope: string,
   options: UseDocumentOperationsOptions = {},
@@ -116,96 +115,4 @@ function useScopeOperations(
     fetchNextPage,
     refetch,
   };
-}
-
-/** Keeps paging `result` to completion while `enabled` is true. */
-function useLoadAllPages(result: DocumentOperationsResult, enabled: boolean) {
-  useEffect(() => {
-    if (!enabled || !result.hasNextPage || result.isLoading) return;
-    // Deferred: the cache's fetch and the render it triggers are both
-    // synchronous, so calling fetchNextPage here directly would chain
-    // fetch -> render -> effect -> fetch into one uninterrupted task;
-    // setTimeout(0) yields between pages so the UI stays responsive.
-    const handle = window.setTimeout(result.fetchNextPage, 0);
-    return () => window.clearTimeout(handle);
-  }, [enabled, result.hasNextPage, result.isLoading, result.fetchNextPage]);
-}
-
-/** @deprecated Pass a scope: `useDocumentOperations(documentId, "global")`. The legacy form fetches the whole global and local history eagerly. Removed in the next major. */
-export function useDocumentOperations(
-  documentId: string | null | undefined,
-): DocumentOperationsState;
-/**
- * Operation history of a document, read from the document cache and kept in
- * step with it: a change event for the document drops the cached pages and
- * the hook loads the first page again.
- *
- * Pages arrive oldest first. A view that wants the whole history calls
- * `fetchNextPage` while `hasNextPage` is true.
- *
- * An empty first page is a final result; there is no retry. When the active
- * document cache does not serve operations, the result is empty and not
- * loading.
- *
- * @param documentId - The document id, or null/undefined to skip fetching
- * @param scope - The operation scope, for example "global" or "local"
- * @param options - Page size and whether fetching is enabled
- */
-export function useDocumentOperations(
-  documentId: string | null | undefined,
-  scope: string,
-  options?: UseDocumentOperationsOptions,
-): DocumentOperationsResult;
-export function useDocumentOperations(
-  documentId: string | null | undefined,
-  scope?: string,
-  options: UseDocumentOperationsOptions = {},
-): DocumentOperationsResult | DocumentOperationsState {
-  const legacy = scope === undefined;
-  const primary = useScopeOperations(
-    documentId,
-    legacy ? "global" : scope,
-    legacy ? {} : options,
-  );
-  const local = useScopeOperations(documentId, "local", { enabled: legacy });
-  useLoadAllPages(primary, legacy);
-  useLoadAllPages(local, legacy);
-  const globalOperations = useMemo(
-    () => (legacy ? [...primary.operations] : EMPTY_OPERATIONS),
-    [legacy, primary.operations],
-  );
-  const localOperations = useMemo(
-    () => (legacy ? [...local.operations] : EMPTY_OPERATIONS),
-    [legacy, local.operations],
-  );
-  const refetch = useCallback(() => {
-    primary.refetch();
-    local.refetch();
-  }, [primary.refetch, local.refetch]);
-  const error = primary.error ?? local.error;
-  const legacyResult = useMemo<DocumentOperationsState>(
-    () => ({
-      globalOperations,
-      localOperations,
-      isLoading:
-        !error &&
-        (primary.isLoading ||
-          local.isLoading ||
-          primary.hasNextPage ||
-          local.hasNextPage),
-      error,
-      refetch,
-    }),
-    [
-      globalOperations,
-      localOperations,
-      error,
-      primary.isLoading,
-      local.isLoading,
-      primary.hasNextPage,
-      local.hasNextPage,
-      refetch,
-    ],
-  );
-  return legacy ? legacyResult : primary;
 }

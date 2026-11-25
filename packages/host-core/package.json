@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/host-core",
-  "version": "6.3.0-dev.11",
+  "version": "6.4.0-next.6",
   "publishConfig": {
     "access": "public"
   },
@@ -28,6 +28,36 @@
       "types": "./dist/runners/compound.d.mts",
       "import": "./dist/runners/compound.mjs",
       "default": "./dist/runners/compound.mjs"
+    },
+    "./kill-tree": {
+      "source": "./src/kill-tree.ts",
+      "types": "./dist/kill-tree.d.mts",
+      "import": "./dist/kill-tree.mjs",
+      "default": "./dist/kill-tree.mjs"
+    },
+    "./control-channel": {
+      "source": "./src/control-channel.ts",
+      "types": "./dist/control-channel.d.mts",
+      "import": "./dist/control-channel.mjs",
+      "default": "./dist/control-channel.mjs"
+    },
+    "./instance": {
+      "source": "./src/instance.ts",
+      "types": "./dist/instance.d.mts",
+      "import": "./dist/instance.mjs",
+      "default": "./dist/instance.mjs"
+    },
+    "./supervisor": {
+      "source": "./src/supervisor.ts",
+      "types": "./dist/supervisor.d.mts",
+      "import": "./dist/supervisor.mjs",
+      "default": "./dist/supervisor.mjs"
+    },
+    "./supervisor-record": {
+      "source": "./src/supervisor-record.ts",
+      "types": "./dist/supervisor-record.d.mts",
+      "import": "./dist/supervisor-record.mjs",
+      "default": "./dist/supervisor-record.mjs"
     },
     "./plugins": {
       "source": "./src/plugins.ts",

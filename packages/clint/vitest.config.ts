@@ -1,9 +1,15 @@
+import os from "node:os";
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
     globals: true,
     environment: "node",
+    // Never the user's own supervisor: a host service would start under it.
+    env: {
+      PH_SUPERVISOR_HOME: path.join(os.tmpdir(), "ph-clint-test-no-supervisor"),
+    },
     include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
     // NOTE(port): several ported suites (TUI raw-mode, service children) leave
     // handles open that keep a worker THREAD alive after all tests pass — the

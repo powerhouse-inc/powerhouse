@@ -69,7 +69,7 @@ describe("protocolEnv", () => {
 });
 
 describe("reactorBlockToSwitchboardConfig", () => {
-  it("maps protocol, storage, readModel, dynamic packages, workflows", () => {
+  it("maps protocol, storage, readModel, dynamic packages", () => {
     const reactor: ReactorConfig = {
       backends: {
         main: {
@@ -79,7 +79,6 @@ describe("reactorBlockToSwitchboardConfig", () => {
           packages: { dynamic: true },
         },
       },
-      workflows: true,
       protocol: fullProtocol,
     };
     expect(reactorBlockToSwitchboardConfig(reactor)).toEqual({
@@ -89,7 +88,6 @@ describe("reactorBlockToSwitchboardConfig", () => {
       },
       protocol: fullProtocol,
       packages: { dynamic: true },
-      features: { workflows: true },
     });
   });
 
@@ -122,10 +120,9 @@ describe("reactorBlockToSwitchboardConfig", () => {
 });
 
 describe("projectReactorToConnect", () => {
-  it("maps protocol → connect.reactor, worker kind, workflows", () => {
+  it("maps protocol → connect.reactor, worker kind", () => {
     const { connect } = projectReactorToConnect({
       backends: { local: { kind: "worker" } },
-      workflows: true,
       protocol: fullProtocol,
     });
     expect(connect.reactor).toEqual(fullProtocol);
@@ -133,7 +130,6 @@ describe("projectReactorToConnect", () => {
       reactorWorker: true,
       reactorClient: "worker",
     });
-    expect(connect.app).toEqual({ workflowsEnabled: true });
   });
 
   it("reactorWorker false for in-process", () => {

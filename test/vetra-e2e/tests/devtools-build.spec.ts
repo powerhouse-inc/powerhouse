@@ -3,6 +3,7 @@
 // developer does, with `ph-cli generate`, and removes it when it ends.
 import { execFile } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { promisify } from "node:util";
 import {
@@ -37,7 +38,8 @@ const EDITOR = { id: "dt-build-note-editor", name: "Dt Build Note Editor" };
 const APP = { id: "dt-build-app", name: "Dt Build App" };
 const EDITORS_BARREL = "editors/editors.ts";
 
-/** What `ph-cli generate document-model --document` reads. */
+/** The spec `ph-cli generate document-model --dir` regenerates the model from,
+ * kept as `<folder>/<dir>.json`. */
 const MODEL_SPECIFICATION = {
   id: MODEL.type,
   name: MODEL.name,
@@ -97,9 +99,19 @@ const read = (file: string) => fs.readFileSync(at(file), "utf8");
 
 const run = promisify(execFile);
 
+// The project's ph-cli, run with node: Windows spawns no `pnpm` without a shell.
+const PH_CLI = path.join(
+  path.dirname(
+    createRequire(at("package.json")).resolve(
+      "@powerhousedao/ph-cli/package.json",
+    ),
+  ),
+  "dist/cli.mjs",
+);
+
 /** Runs `ph-cli generate` in this project. */
 async function generate(...args: string[]): Promise<void> {
-  await run("pnpm", ["exec", "ph-cli", "generate", ...args], {
+  await run(process.execPath, [PH_CLI, "generate", ...args], {
     cwd: PROJECT,
     timeout: 3 * 60_000,
   });
@@ -178,7 +190,7 @@ test("a kind the project has no code for says how to generate one", async ({
 
 test("a generated document model shows with its state and operations", async ({
   page,
-}, testInfo) => {
+}) => {
   const { emptyKind, model, modelModule, operation, operationLink } =
     build(page);
   // The URL names the model before its code exists.
@@ -188,9 +200,15 @@ test("a generated document model shows with its state and operations", async ({
   ).toBeVisible({ timeout: SHOWN_TIMEOUT });
   await expect(model(MODEL.type)).toHaveCount(0);
 
-  const specification = testInfo.outputPath("dt-build-note.json");
-  fs.writeFileSync(specification, JSON.stringify(MODEL_SPECIFICATION));
-  await generate("document-model", "--document", specification);
+  // The spec where `ph generate` keeps it; the model's folder is new, so the
+  // spec's end restores the project without it.
+  const dir = path.basename(MODEL.folder);
+  fs.mkdirSync(at(MODEL.folder), { recursive: true });
+  fs.writeFileSync(
+    at(`${MODEL.folder}/${dir}.json`),
+    JSON.stringify(MODEL_SPECIFICATION),
+  );
+  await generate("document-model", "--dir", dir);
 
   await expect(model(MODEL.type)).toBeVisible({ timeout: SHOWN_TIMEOUT });
   await expect(page.getByTestId("ph-model-name")).toHaveText(MODEL.name);

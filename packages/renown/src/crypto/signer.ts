@@ -23,6 +23,13 @@ export class InvalidSignatureError extends Error {
 export class RenownCryptoSigner implements ISigner {
   readonly app: AppActionSigner;
 
+  /**
+   * Asked before a signature while nobody is signed in: it may sign someone
+   * in (hosted Connect's browser pseudonym), and `user` is read after it.
+   * A failure leaves the signature anonymous.
+   */
+  ensureUser?: () => Promise<void>;
+
   constructor(
     private readonly crypto: IRenownCrypto,
     private readonly appName: string,
@@ -110,6 +117,7 @@ export class RenownCryptoSigner implements ISigner {
     if (abortSignal?.aborted) {
       throw new Error("Signing aborted");
     }
+    await this.#ensureUser();
 
     const signature = await signActionV2({
       action,
@@ -124,6 +132,15 @@ export class RenownCryptoSigner implements ISigner {
     }
 
     return signature;
+  }
+
+  async #ensureUser(): Promise<void> {
+    if (this.user || !this.ensureUser) return;
+    try {
+      await this.ensureUser();
+    } catch (error) {
+      console.warn("Signing anonymously: nobody could be signed in", error);
+    }
   }
 
   private async hashAction(action: Action): Promise<string> {

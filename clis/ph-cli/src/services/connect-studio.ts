@@ -1,10 +1,19 @@
 import { getConnectBaseViteConfig } from "@powerhousedao/builder-tools";
+import {
+  resolveServedFiles,
+  servedFilesStep,
+} from "@powerhousedao/ph-run/connect-serve";
+import {
+  localSignInStep,
+  type LocalSignInOptions,
+  type LocalSignInStep,
+} from "@powerhousedao/ph-run/local-sign-in";
 import type { PluginEntryData } from "@powerhousedao/host-core";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { readFileSync, watch } from "node:fs";
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import type { InlineConfig, Logger, ViteDevServer } from "vite";
+import type { InlineConfig, Logger, Plugin, ViteDevServer } from "vite";
 import { createServer, mergeConfig } from "vite";
 import type { ConnectStudioArgs } from "../types.js";
 import { buildStudioConnectOverride } from "../utils/cli-connect-override.js";
@@ -22,6 +31,12 @@ export type ConnectStudioOptions = {
   reloadOnConfigChange?: boolean;
   /** The switchboard origin whose paths this server proxies (runner.proxy). */
   proxy?: string;
+  /** Files served by name, read against the working directory at each
+   * request (runner.serveFiles), as the servers of a build serve them. */
+  serveFiles?: Readonly<Record<string, string>>;
+  /** Runs before a config change replaces the server, for a caller whose
+   * override follows the config too. When it rejects, the server stays. */
+  beforeRestart?: () => Promise<void>;
   /** Runs each restart's server start, for a caller that started the first
    * one inside a wrapper of its own. */
   restartWith?: (start: () => Promise<ViteDevServer>) => Promise<ViteDevServer>;
@@ -29,11 +44,20 @@ export type ConnectStudioOptions = {
    * watcher and whichever server is current. The first server's own `close`
    * stops neither once a config change has replaced it. */
   exposeStop?: (stop: () => Promise<void>) => void;
+  /** Sign-in by link: the loopback endpoint every server of this Studio
+   * serves (F3d). One for all of them, so a code taken stays taken. */
+  localSignIn?: Omit<LocalSignInOptions, "port" | "base">;
   /** Makes this a dev server with its dev-server plugins: the default ones
    * and `entries`, a host's `runner.devPlugins`, written at `where`. Without
    * it, none load. */
   devPlugins?: { entries: readonly PluginEntryData[]; where: string };
 };
+
+/** Where a dev server listens. */
+function portOf(server: ViteDevServer | undefined): number | undefined {
+  const address = server?.httpServer?.address();
+  return typeof address === "object" && address ? address.port : undefined;
+}
 
 function readConfig(file: string): unknown {
   try {
@@ -56,8 +80,11 @@ export async function runConnectStudio(
     cacheDir,
     reloadOnConfigChange,
     proxy,
+    serveFiles,
+    beforeRestart,
     restartWith,
     exposeStop,
+    localSignIn,
     devPlugins,
   }: ConnectStudioOptions = {},
 ): Promise<ViteDevServer> {
@@ -67,6 +94,38 @@ export async function runConnectStudio(
 
   const dirname = process.cwd();
   const configFile = join(dirname, CONFIG_FILE);
+  // Ahead of vite's own middlewares (its SPA fallback among them), under the
+  // base vite serves at.
+  const servedFiles: Plugin | undefined = serveFiles && {
+    name: "ph:serve-files",
+    configureServer(server) {
+      server.middlewares.use(
+        servedFilesStep(
+          resolveServedFiles(serveFiles, dirname),
+          server.config.base,
+        ),
+      );
+    },
+  };
+  // Ahead of vite's CORS: it answers this computer's pages only. Made with
+  // the first server and kept by the next ones.
+  const current: { server?: ViteDevServer; step?: LocalSignInStep } = {};
+  const signInPlugin: Plugin | undefined = localSignIn && {
+    name: "ph:local-sign-in",
+    configureServer(server) {
+      current.server = server;
+      current.step ??= localSignInStep({
+        ...localSignIn,
+        base: server.config.base,
+        port: () => portOf(current.server),
+      });
+      server.middlewares.use(current.step);
+    },
+  };
+  const plugins = [
+    ...(signInPlugin ? [signInPlugin] : []),
+    ...(servedFiles ? [servedFiles] : []),
+  ];
 
   // Resolved once: every restart serves the same plugin instances, so what a
   // plugin gave an open tab, such as a token, stays good.
@@ -100,7 +159,7 @@ export async function runConnectStudio(
         ...(proxy ? { proxy: switchboardProxy(proxy) } : {}),
       },
       customLogger,
-      plugins: devServerPlugins,
+      plugins: [...plugins, ...devServerPlugins],
     };
     const server = await createServer(mergeConfig(baseConfig, devServerConfig));
     await server.listen();
@@ -112,7 +171,10 @@ export async function runConnectStudio(
   const first = await start(true);
   if (printUrls) first.printUrls();
   if (!reloadOnConfigChange) {
-    exposeStop?.(() => first.close());
+    exposeStop?.(() => {
+      current.step?.dispose();
+      return first.close();
+    });
     return first;
   }
 
@@ -129,6 +191,7 @@ export async function runConnectStudio(
       `[connect] ${CONFIG_FILE} changed; restarting Studio with it.`,
       { timestamp: true },
     );
+    await beforeRestart?.();
     await server.close();
     server = await (restartWith
       ? restartWith(() => start(false))
@@ -153,6 +216,7 @@ export async function runConnectStudio(
     stopped = true;
     clearTimeout(timer);
     watcher.close();
+    current.step?.dispose();
     // A restart under way ends first: it leaves the server to close.
     await restarts;
     await server.close();

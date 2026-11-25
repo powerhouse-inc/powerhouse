@@ -1,6 +1,7 @@
 export {
   setupMcpServer,
   type McpAuthorizationResult,
+  type McpGrant,
   type McpRequestAuthorizer,
   type SetupMcpServerOptions,
 } from "./mcp-routes.js";

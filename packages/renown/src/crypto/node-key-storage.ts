@@ -1,10 +1,8 @@
 import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
+  warnNotOwnerOnly,
+  writeOwnerOnlyFile,
+} from "@powerhousedao/shared/clis/owner-only";
+import { existsSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { ILogger } from "../utils.js";
 import type { JsonWebKeyPairStorage, JwkKeyPair } from "./types.js";
@@ -109,7 +107,9 @@ export class NodeKeyStorage implements JsonWebKeyPairStorage {
 
   #saveToFile(keyPair: JwkKeyPair): void {
     const data = { keyPair };
-    writeFileSync(this.#filePath, JSON.stringify(data, null, 2), "utf-8");
+    if (!writeOwnerOnlyFile(this.#filePath, JSON.stringify(data, null, 2))) {
+      warnNotOwnerOnly(this.#filePath);
+    }
     this.#logger?.debug(`Saved keypair to ${this.#filePath}`);
   }
 

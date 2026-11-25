@@ -27,8 +27,8 @@ import {
  * node adapters in ./node.ts); `$env` reads the environment map of the
  * resolving process; `$map` renders its `to` template once per element of
  * its `over` (arrays in order, records key-sorted; `$item`/`$key` read the
- * element being rendered); the `"${userData}"`/`"${projectRoot}"` string
- * sugar is substituted on the way. An `$output`/`$item` that reads a field
+ * element being rendered); the `"${userData}"`/`"${projectRoot}"`/
+ * `"${package}"` string sugar is substituted on the way. An `$output`/`$item` that reads a field
  * absent from the data but optional in the producer's schema (codegen's
  * `OutputToken<T | undefined>`) omits its enclosing property, like an unset
  * optional `$env`. Pure and browser-safe.
@@ -55,8 +55,8 @@ export interface ResolveSources {
   outputs?: OutputSource;
   /** The resolving process's environment (`$env`). */
   env?: Readonly<Record<string, string | undefined>>;
-  /** `userData`/`projectRoot`: always resolvable `$env` names and string
-   * sugar. */
+  /** `userData`/`projectRoot`/`package`: always resolvable `$env` names and
+   * string sugar. */
   builtins?: BuiltinEnv;
   /** The host file named in errors (`hosts/connect/host.js`). */
   where?: string;

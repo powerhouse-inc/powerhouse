@@ -707,7 +707,7 @@ describe("GraphQLManager", () => {
       expect(httpAdapter.mount).toHaveBeenCalledWith(
         "/graphql/stream",
         expect.any(Function),
-        { exact: true },
+        { prefix: true },
       );
     });
 
@@ -719,7 +719,7 @@ describe("GraphQLManager", () => {
       expect(httpAdapter.mount).toHaveBeenCalledWith(
         "/api/v1/graphql/stream",
         expect.any(Function),
-        { exact: true },
+        { prefix: true },
       );
     });
 

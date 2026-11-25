@@ -84,19 +84,10 @@ export interface DeprecatedFlag {
 
 /**
  * Environment variables that still switch something the next release removes.
- * `MCP_ENABLED` and `PH_WORKFLOWS_ENABLED` are not here: they stay.
+ * `MCP_ENABLED` and `PH_WORKFLOWS_ENABLED` are not here: they stay. None at
+ * the moment: `FEATURE_PLUGIN_HOST_ENABLED` moved to `retired-flags.ts`.
  */
-export const deprecatedFlags: readonly DeprecatedFlag[] = [
-  {
-    name: "FEATURE_PLUGIN_HOST_ENABLED",
-    when: "false",
-    message:
-      "It keeps Switchboard on the classic boot path, which " +
-      `${DEPRECATIONS_REMOVED_IN} removes: the plugin host is then the only path. ` +
-      "Remove the variable: Switchboard then starts the same subsystems through the plugin host. " +
-      "To choose them yourself, list the plugins under `runner.plugins` in hosts/switchboard/host.js.",
-  },
-];
+export const deprecatedFlags: readonly DeprecatedFlag[] = [];
 
 /** The deprecated variables that `env` still sets in the way their entry names. */
 export function findDeprecatedFlags(
@@ -130,16 +121,18 @@ export function checkDeprecatedFlags(
 
 /**
  * powerhouse.config.json keys the host files supersede, with their new home.
- * `ph run` ignores them; the classic commands read them until
- * DEPRECATIONS_REMOVED_IN.
+ * Since DEPRECATIONS_REMOVED_IN nothing reads them and `ph run` refuses a
+ * project that still sets one; `ph migrate` moves the ones it can. `null`: no
+ * host setting replaces the key.
  *
  * Keys the scaffolded host files reference (studio.port, reactor.port,
  * vetra.connectPort, assistant.port and the whole connect.* block) stay in a
  * migrated project and are not in this table.
  */
-export const supersededConfigKeys: Readonly<Record<string, string>> = {
+export const supersededConfigKeys: Readonly<Record<string, string | null>> = {
   "studio.host": "runner.host in hosts/connect/host.js",
-  "studio.https": "runner.https in hosts/connect/host.js",
+  // The connect runner has no https option: a Connect host serves http.
+  "studio.https": null,
   "studio.openBrowser": "runner.openBrowser in hosts/connect/host.js",
   "reactor.https":
     "config.switchboard.server.https in hosts/switchboard/host.js",
@@ -152,7 +145,7 @@ export const supersededConfigKeys: Readonly<Record<string, string>> = {
 /**
  * Connect chrome keys the classic Connect reads from the top level of
  * powerhouse.config.json. Under hosts the generic plugin's config in
- * hosts/connect/host.js carries them, so only the classic path warns.
+ * hosts/connect/host.js carries them, so only a host without plugins warns.
  */
 export const connectChromeConfigKeys: readonly string[] = [
   "connect.drives.allowAddDrive",
@@ -176,4 +169,25 @@ export function presentConfigKeys(
   keys: readonly string[],
 ): string[] {
   return keys.filter((key) => lookup(config, key) !== undefined);
+}
+
+/**
+ * The error for a project whose powerhouse.config.json still sets `keys` of
+ * the superseded table: one line per key with where its value lives now, then
+ * `ph migrate` and the migration page.
+ */
+export function supersededConfigKeysError(keys: readonly string[]): string {
+  const lines = keys.map((key) => {
+    const home = supersededConfigKeys[key];
+    return (
+      `powerhouse.config.json "${key}" was removed in ${DEPRECATIONS_REMOVED_IN}. ` +
+      (home
+        ? `Set ${home} and remove the key.`
+        : "No host setting replaces it: remove the key.")
+    );
+  });
+  return [
+    ...lines,
+    `\`ph migrate\` moves the keys it can and says what to do with the rest. See ${MIGRATION_GUIDE_URL}`,
+  ].join("\n");
 }

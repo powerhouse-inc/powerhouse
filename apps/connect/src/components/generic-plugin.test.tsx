@@ -16,6 +16,7 @@ import {
   resetConnectPluginUi,
 } from "@powerhousedao/connect-core/plugins";
 import { primeRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
+import { defaultConnectComposition } from "@powerhousedao/host-core/plugins";
 import type { PHStore } from "@powerhousedao/reactor-browser";
 import {
   addPHEventHandlers,
@@ -41,8 +42,11 @@ let store: PHStore;
 let unbind: (() => void) | undefined;
 let routeTree: typeof RouteTreeModule.routeTree;
 
+// What Connect boots from when the config it is served has no composition.
+const DEFAULT_COMPOSITION = defaultConnectComposition(DEFAULT_CONNECT_CONFIG);
+
 // The served config, as `ph run connect` projects a composition into it.
-function serve(composition?: { module: string }[]) {
+function serve(composition: { module: string }[] = DEFAULT_COMPOSITION) {
   primeRuntimeConfig({
     connect: { ...DEFAULT_CONNECT_CONFIG, composition },
   } as never);
@@ -79,7 +83,10 @@ afterEach(() => {
 });
 
 // Connect's router as the app builds it, with the served composition's plugins' UI.
-async function mount(path: string, composition?: { module: string }[]) {
+async function mount(
+  path: string,
+  composition: { module: string }[] = DEFAULT_COMPOSITION,
+) {
   serve(composition);
   await loadConnectPluginUi(composition);
   const history = createMemoryHistory({ initialEntries: [path] });
@@ -130,7 +137,7 @@ describe("Connect with and without the generic plugin", () => {
     ).toEqual([]);
   });
 
-  it("is classic Connect when the composition has the generic plugin", async () => {
+  it("is Connect's chrome when the composition has the generic plugin", async () => {
     await mount("/", [{ module: GENERIC_PLUGIN }]);
     await vi.waitFor(() =>
       expect(document.getElementById("sidebar")).toBeTruthy(),
@@ -139,7 +146,7 @@ describe("Connect with and without the generic plugin", () => {
     expect(screen.queryByRole("table", { name: "Drives" })).toBeNull();
   });
 
-  it("is classic Connect without a declared composition", async () => {
+  it("is Connect's chrome for the default composition", async () => {
     await mount("/");
     await vi.waitFor(() =>
       expect(document.getElementById("sidebar")).toBeTruthy(),

@@ -42,6 +42,12 @@ const EXTRA_BUILD_DEPS: Record<string, string[]> = {
     "@powerhousedao/ph-cli",
     "@powerhousedao/connect",
   ],
+  // The cli-runner tests run a Cli through ph-run's dist with clint-common's
+  // chat-session build; clint-common depends on clint.
+  "@powerhousedao/clint": [
+    "@powerhousedao/ph-run",
+    "@powerhousedao/clint-common",
+  ],
 };
 
 // Read from the script so a package added there lands in a shard automatically.

@@ -1,5 +1,5 @@
 import { generateSubgraph } from "@powerhousedao/codegen";
-import { findSubgraphNameConflict } from "../../../../codegen/subgraph-type-lint.js";
+import { findSubgraphNameConflict } from "../../subgraph-type-lint.js";
 import type {
   SubgraphModulePHState,
   SubgraphModuleState,

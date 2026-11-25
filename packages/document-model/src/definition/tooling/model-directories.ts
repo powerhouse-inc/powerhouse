@@ -63,7 +63,7 @@ export function packageSpecifier(
 
 function statOrUndefined(
   path: string,
-  stat: typeof statSync | typeof lstatSync = statSync,
+  stat: typeof statSync = statSync,
 ): Stats | undefined {
   return stat(path, { throwIfNoEntry: false });
 }

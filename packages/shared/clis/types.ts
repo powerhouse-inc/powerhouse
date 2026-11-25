@@ -2,14 +2,8 @@ import type { ArgParser } from "cmd-ts/dist/cjs/argparser.js";
 import type { z } from "zod";
 import type * as C from "../connect/connect-config-schema.js";
 import type { getPackageManagerCommand } from "./args/common.js";
-import type {
-  DRIVES_PRESERVE_STRATEGIES,
-  LOG_LEVELS,
-  SERVICE_ACTIONS,
-} from "./constants.js";
+import type { DRIVES_PRESERVE_STRATEGIES, LOG_LEVELS } from "./constants.js";
 
-export type ServiceActions = typeof SERVICE_ACTIONS;
-export type ServiceAction = ServiceActions[number];
 export type DrivePreserveStrategies = typeof DRIVES_PRESERVE_STRATEGIES;
 export type DrivePreserveStrategy = DrivePreserveStrategies[number];
 export type LogLevels = typeof LOG_LEVELS;
@@ -103,8 +97,7 @@ export type PHConnectOpenPanel = z.infer<typeof C.connectOpenPanelSchema>;
  *                  with NO local reactor and NO PGlite download.
  *  - `router`:     the tab's reactor (local) PLUS remote backends, routed.
  * Derived from the host's reactor backends (see reactorClientMode); when
- * unset, Connect falls back to the legacy `reactorWorker`/`multiReactor`
- * booleans.
+ * unset, Connect runs `in-process`.
  */
 export type PHReactorClientMode = z.infer<
   typeof C.connectReactorClientModeSchema
@@ -190,18 +183,6 @@ export type PowerhouseConfig = {
   watch?: boolean;
   reactor?: {
     port?: number;
-    https?:
-      | undefined
-      | boolean
-      | {
-          keyPath: string;
-          certPath: string;
-        };
-    storage?: {
-      type: "filesystem" | "memory" | "postgres" | "browser";
-      filesystemPath?: string;
-      postgresUrl?: string;
-    };
     keyframes?: {
       default?: PHKeyframeRule;
       types?: Record<string, PHKeyframeRule>;
@@ -213,25 +194,18 @@ export type PowerhouseConfig = {
     renown?: PHReactorRenown;
   };
   switchboard?: {
-    database?: {
-      url?: string;
-    };
     port?: number;
   };
   studio?: {
     port?: number;
-    host?: string;
-    https: boolean;
-    openBrowser?: boolean;
   };
   packages?: PowerhousePackage[];
   vetra?: {
-    driveId?: string;
     driveUrl?: string;
     connectPort?: number;
-    /** The Vetra Preview drive `ph vetra` creates in watch mode. */
+    /** The Vetra Preview drive `ph dev` creates in watch mode. */
     previewDrive?: {
-      /** The id of the drive app the drive opens in, set each time `ph vetra` starts. */
+      /** The id of the drive app the drive opens in, set each time `ph dev` starts. */
       app?: string;
     };
   };

@@ -1,18 +1,11 @@
 import { debugArgs } from "@powerhousedao/shared/clis/args";
 import { command, flag, option, optional, string } from "cmd-ts";
-import { File, ModuleDir } from "../utils/fs-args.js";
+import { ModuleDir } from "../utils/fs-args.js";
 export const generateDocumentModelCmd = command({
   name: "document-model",
   aliases: ["doc"],
   description: "Generate a document model",
   args: {
-    document: option({
-      type: optional(File),
-      long: "document",
-      short: "d",
-      description:
-        "Path to a document model spec (.phd or .json) to generate a legacy document model from",
-    }),
     dir: option({
       type: optional(ModuleDir),
       long: "dir",
@@ -24,12 +17,6 @@ export const generateDocumentModelCmd = command({
       short: "a",
       description:
         "Re-generate all existing document models in the current project",
-    }),
-    extract: flag({
-      long: "extract",
-      short: "x",
-      description:
-        "Write a powerhouse/document-model spec for each existing document model into specs/document-models/",
     }),
     name: option({
       type: optional(string),

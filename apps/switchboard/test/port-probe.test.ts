@@ -42,4 +42,18 @@ describe("isPortAvailable", () => {
     }
     await expect(isPortAvailable(port)).resolves.toBe(true);
   });
+
+  it("sees a listener on the host the server binds", async () => {
+    const busy = net.createServer();
+    await new Promise<void>((resolve) =>
+      busy.listen({ port: 0, host: "127.0.0.1" }, resolve),
+    );
+    const { port } = busy.address() as net.AddressInfo;
+    try {
+      await expect(isPortAvailable(port, "127.0.0.1")).resolves.toBe(false);
+    } finally {
+      await new Promise((resolve) => busy.close(resolve));
+    }
+    await expect(isPortAvailable(port, "127.0.0.1")).resolves.toBe(true);
+  });
 });

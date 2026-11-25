@@ -12,7 +12,7 @@ Developer guide for running a local Verdaccio registry and manually starting Con
 - [4. Configure powerhouse.config.json](#4-configure-powerhouseconfigjson)
 - [5. Start Connect with the Registry](#5-start-connect-with-the-registry)
 - [6. Start Switchboard with the Registry](#6-start-switchboard-with-the-registry)
-- [7. Start ph vetra with the Registry](#7-start-ph-vetra-with-the-registry)
+- [7. Start ph dev with the Registry](#7-start-ph-dev-with-the-registry)
 - [8. Using ph connect preview with the Registry](#8-using-ph-connect-preview-with-the-registry)
 - [9. Verifying the Setup](#9-verifying-the-setup)
 - [10. Environment Variables Reference](#10-environment-variables-reference)
@@ -256,17 +256,17 @@ DYNAMIC_MODEL_LOADING=true pnpm dev
 
 This queries the registry's `/packages/by-document-type?type=X` endpoint to find and load the right package automatically.
 
-## 7. Start ph vetra with the Registry
+## 7. Start ph dev with the Registry
 
-`ph vetra` starts both Switchboard and Connect Studio. Both read from the same `powerhouse.config.json`.
+`ph dev` starts both Switchboard and Connect Studio. Both read from the same `powerhouse.config.json`.
 
 1. Make sure the local registry is running (see [section 1](#1-start-the-local-registry))
 2. Ensure `powerhouse.config.json` has `packageRegistryUrl` set (see [section 4](#4-configure-powerhouseconfigjson))
-3. Run vetra from your project directory:
+3. Run the dev mode from your project directory:
 
 ```bash
 cd your-project
-ph vetra
+ph dev
 ```
 
 Default ports: Connect on 3001, Switchboard on 4001 (configurable via `studio.port` and `reactor.port` in config, or `--connect-port` / `--switchboard-port` flags).

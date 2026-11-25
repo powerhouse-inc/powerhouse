@@ -3,26 +3,17 @@ import type {
   ActionSigner,
   ActionSigningTarget,
   ISigner,
-  PHDocument,
-  Reducer,
-  ReducerOptions,
-  SignalDispatch,
   Signature,
   SigningParameters,
 } from "@powerhousedao/shared/document-model";
 import {
-  ab2hex,
-  actionSigner,
   baseCreateDocument,
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
-  buildSignedAction,
   generateId,
   hashDocumentStateForScope,
-  hex2ab,
   sign,
   verify,
-  verifyOperationSignature,
 } from "@powerhousedao/shared/document-model";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
@@ -166,212 +157,6 @@ describe("Crypto utils", () => {
         "\x19Signed Operation:\n7217040672000xtestSa/gjYf8KKaEfUhOuPk9wDzLSns=qA97yBec1rrOyf2eVsYdWwFPOso=",
       ),
     );
-  });
-
-  it("should build signed operation", async () => {
-    const algorithm = {
-      name: "ECDSA",
-      namedCurve: "P-256",
-      hash: "SHA-256",
-    };
-
-    const keyPair = await crypto.subtle.generateKey(algorithm, true, [
-      "sign",
-      "verify",
-    ]);
-    const publicKeyRaw = await crypto.subtle.exportKey(
-      "raw",
-      keyPair.publicKey,
-    );
-    const publicKey = `0x${ab2hex(publicKeyRaw)}`;
-
-    const document = baseCreateDocument<CountPHState>(
-      createCountDocumentState,
-      createCountState(),
-    );
-    document.header.id = "1";
-
-    const action = increment();
-    const reducer = ((
-      document: PHDocument<CountPHState>,
-      action: Action,
-      _dispatch?: SignalDispatch,
-      _options?: ReducerOptions,
-    ) => {
-      const documentWithOp = countReducer(document, action);
-
-      // overwrite last operation id
-      documentWithOp.operations.global!.at(-1)!.id = "123";
-
-      return documentWithOp;
-    }) as Reducer<CountPHState>;
-
-    const operation = await buildSignedAction(
-      action,
-      reducer,
-      document,
-      actionSigner(
-        { address: "0x123", chainId: 1, networkId: "1" },
-        { name: "test", key: publicKey },
-      ),
-      async (data) =>
-        new Uint8Array(
-          await crypto.subtle.sign(
-            algorithm,
-            keyPair.privateKey,
-            data.buffer as ArrayBuffer,
-          ),
-        ),
-    );
-    expect(operation.action?.context?.signer).toStrictEqual({
-      app: {
-        key: publicKey,
-        name: "test",
-      },
-      signatures: [
-        [
-          "1704067200",
-          publicKey,
-          "Sa/gjYf8KKaEfUhOuPk9wDzLSns=",
-          "",
-          expect.stringMatching(/0x[a-f0-9]{128}/),
-        ],
-      ],
-      user: {
-        address: "0x123",
-        chainId: 1,
-        networkId: "1",
-      },
-    });
-  });
-
-  it("should verify signed operation", async () => {
-    const algorithm = {
-      name: "ECDSA",
-      namedCurve: "P-256",
-      hash: "SHA-256",
-    };
-
-    const keyPair = await crypto.subtle.generateKey(algorithm, true, [
-      "sign",
-      "verify",
-    ]);
-    const publicKeyRaw = await crypto.subtle.exportKey(
-      "raw",
-      keyPair.publicKey,
-    );
-    const publicKey = `0x${ab2hex(publicKeyRaw)}`;
-
-    const document = baseCreateDocument<CountPHState>(
-      createCountDocumentState,
-      createCountState(),
-    );
-
-    const operation = await buildSignedAction(
-      { ...increment() /*, id: "123"*/ },
-      countReducer as Reducer<CountPHState>,
-      document,
-      actionSigner(
-        { address: "0x123", chainId: 1, networkId: "1" },
-        { name: "test", key: publicKey },
-      ),
-      async (data) =>
-        new Uint8Array(
-          await crypto.subtle.sign(
-            algorithm,
-            keyPair.privateKey,
-            data.buffer as ArrayBuffer,
-          ),
-        ),
-    );
-    const signer = operation.action.context!.signer!;
-    const verified = await verifyOperationSignature(
-      signer.signatures.at(0)!,
-      signer,
-      async (publicKey, signature, data) => {
-        const importedKey = await crypto.subtle.importKey(
-          "raw",
-          hex2ab(publicKey),
-          algorithm,
-          true,
-          ["verify"],
-        );
-        return crypto.subtle.verify(
-          algorithm,
-          importedKey,
-          new Uint8Array(signature),
-          new Uint8Array(data),
-        );
-      },
-    );
-
-    expect(verified).toBe(true);
-  });
-
-  it("should reject tampered operation signature", async () => {
-    const algorithm = {
-      name: "ECDSA",
-      namedCurve: "P-256",
-      hash: "SHA-256",
-    };
-
-    const keyPair = await crypto.subtle.generateKey(algorithm, true, [
-      "sign",
-      "verify",
-    ]);
-    const publicKeyRaw = await crypto.subtle.exportKey(
-      "raw",
-      keyPair.publicKey,
-    );
-    const publicKey = `0x${ab2hex(publicKeyRaw)}`;
-
-    const document = baseCreateDocument<CountPHState>(
-      createCountDocumentState,
-      createCountState(),
-    );
-    document.header.id = "1";
-
-    const operation = await buildSignedAction(
-      { ...increment() /*, id: "123"*/ },
-      countReducer as Reducer<CountPHState>,
-      document,
-      actionSigner(
-        { address: "0x123", chainId: 1, networkId: "1" },
-        { name: "test", key: publicKey },
-      ),
-      async (data) =>
-        new Uint8Array(
-          await crypto.subtle.sign(
-            algorithm,
-            keyPair.privateKey,
-            data.buffer as ArrayBuffer,
-          ),
-        ),
-    );
-    const signer = operation.action.context!.signer!;
-    const signature = signer.signatures.at(0)!;
-
-    signature[4] = "FAKE SIGNATURE";
-    const verified = await verifyOperationSignature(
-      signature,
-      signer,
-      async (publicKey, signature, data) => {
-        const importedKey = await crypto.subtle.importKey(
-          "raw",
-          hex2ab(publicKey),
-          algorithm,
-          true,
-          ["verify"],
-        );
-        return crypto.subtle.verify(
-          algorithm,
-          importedKey,
-          new Uint8Array(signature),
-          new Uint8Array(data),
-        );
-      },
-    );
-    expect(verified).toBe(false);
   });
 
   it("should sign and verify id", async () => {

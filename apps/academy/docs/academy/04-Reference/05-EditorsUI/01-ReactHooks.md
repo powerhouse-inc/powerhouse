@@ -1204,7 +1204,6 @@ type PHModal =
   | { type: "upgradeDrive"; driveId: string }
   | { type: "deleteDrive"; driveId: string }
   | { type: "driveSettings"; driveId: string }
-  | { type: "settings" }
   | { type: "clearStorage" }
   | { type: "debugSettings" }
   | { type: "disclaimer" }

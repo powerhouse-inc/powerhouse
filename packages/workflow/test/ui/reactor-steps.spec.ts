@@ -121,6 +121,40 @@ async function signIn(app: Page, address: string) {
   }, address);
 }
 
+// Renown with nobody signed in. A hosted tab signs in as its browser's
+// pseudonym at its first signature, so this stands for a tab before that, or
+// one a local server leaves to its sign-in link.
+async function signOut(app: Page) {
+  // After a reload, once the boot has set Renown, so it doesn't replace this.
+  await app.waitForFunction(() =>
+    Boolean((window as unknown as { ph?: { renown?: object } }).ph?.renown),
+  );
+  await app.evaluate(() => {
+    const w = window as unknown as {
+      ph?: { renown?: object };
+    };
+    const real = (w.ph?.renown ?? {}) as Record<string | symbol, unknown>;
+    const signedOut = new Proxy(real, {
+      get(target, key) {
+        // "initial" without a user: nothing restored, so no stored user stands in.
+        if (key === "status") return "initial";
+        if (key === "user") return undefined;
+        if (key === "getBearerToken") return () => Promise.resolve(undefined);
+        if (key === "on" && typeof target.on !== "function") {
+          return () => () => undefined;
+        }
+        const value = target[key];
+        return typeof value === "function"
+          ? (value as (...a: unknown[]) => unknown).bind(target)
+          : value;
+      },
+    });
+    window.dispatchEvent(
+      new CustomEvent("ph:setRenown", { detail: { renown: signedOut } }),
+    );
+  });
+}
+
 const USER = "0x00000000000000000000000000000000000a11ce";
 
 const HOST = {
@@ -303,6 +337,7 @@ test.describe("Reactor steps", () => {
       }),
     });
     await app.reload();
+    await signOut(app);
     await canvasNode(app, STEP).click();
     await expect(
       app.getByRole("note", { name: "Sign in required" }),
@@ -315,6 +350,8 @@ test.describe("Reactor steps", () => {
       app.getByText("Sign in to load options").first(),
     ).toBeVisible();
     await shot(app, "reactor-step-sign-in");
+    // The worker's next test gets the tab's own Renown back.
+    await app.reload();
   });
 
   test("the Switchboard is granted on documents from the connection", async ({
@@ -445,8 +482,10 @@ test.describe("Reactor steps", () => {
     await expect(live).toHaveAttribute("title", /Create invoice/);
     await shot(app, "reactor-step-run-error");
     await app.getByRole("tab", { name: /Setup/ }).click();
-    // Connect's anonymous publish is unsigned.
-    await expect(app.getByLabel("Runs as")).toContainText("Published unsigned");
+    // Nobody logged in, Connect's publish is signed by the browser's pseudonym.
+    await expect(app.getByLabel("Runs as")).toHaveText(
+      /^Runs as 0x[0-9a-f]{4}…[0-9a-f]{4} \(last publisher\)$/i,
+    );
     // The header fits a narrower window.
     await app.setViewportSize({ width: 1100, height: 800 });
     // Whole, not cut off: the workflow name gives way instead.

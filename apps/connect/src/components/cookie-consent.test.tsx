@@ -5,6 +5,7 @@ import {
   registerConnectPlugins,
 } from "@powerhousedao/connect-core/plugins";
 import { primeRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
+import { defaultConnectComposition } from "@powerhousedao/host-core/plugins";
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,8 +16,11 @@ import { PluginRoots } from "./plugin-roots.js";
 const OPENPANEL = "@powerhousedao/connect/plugins/openpanel";
 const SENTRY = "@powerhousedao/connect/plugins/sentry";
 
+// What Connect boots from when the config it is served has no composition.
+const DEFAULT_COMPOSITION = defaultConnectComposition(DEFAULT_CONNECT_CONFIG);
+
 // The served composition and its plugins' UI, as the app loads them at boot.
-async function serve(composition?: { module: string }[], cookieBanner = true) {
+async function serve(composition: { module: string }[], cookieBanner = true) {
   primeRuntimeConfig({
     connect: {
       ...DEFAULT_CONNECT_CONFIG,
@@ -52,8 +56,8 @@ describe("the cookie banner", { timeout: 20_000 }, () => {
     expect(await banner()).toBeTruthy();
   });
 
-  it("shows in classic Connect, with no composition", async () => {
-    await serve(undefined);
+  it("shows for the default composition", async () => {
+    await serve(DEFAULT_COMPOSITION);
     render(<PluginRoots />);
     expect(await banner()).toBeTruthy();
   });
@@ -72,9 +76,9 @@ describe("the cookie banner", { timeout: 20_000 }, () => {
     expect(localStorage.getItem(ACCEPTED_COOKIES_KEY_STORAGE)).toBeNull();
   });
 
-  // `ph vetra` turns it off for the local Studio.
+  // `ph dev` turns it off for the local Studio.
   it("never shows when the config turns it off", async () => {
-    await serve(undefined, false);
+    await serve(DEFAULT_COMPOSITION, false);
     const { container } = render(<PluginRoots />);
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(container.innerHTML).toBe("");

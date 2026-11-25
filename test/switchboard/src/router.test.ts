@@ -166,6 +166,7 @@ async function startOwnSwitchboard(
     cwd: dir,
     env: { ...process.env, PH_SWITCHBOARD_PORT: String(port) },
     stdio: "ignore",
+    windowsHide: true,
   });
   await vi.waitFor(
     async () => {

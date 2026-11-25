@@ -1,7 +1,6 @@
 import { parseCatchUpPriority } from "@powerhousedao/reactor";
 import {
   reactorApiConfigFromEnv,
-  resolveCredentialCacheTtlMs,
   resolveRenownConfig,
 } from "@powerhousedao/reactor-api";
 import {
@@ -26,7 +25,6 @@ import { EnvVarProvider } from "@openfeature/env-var-provider";
 import { OpenFeature } from "@openfeature/server-sdk";
 import { binSwitchboardConfig } from "../src/config/bin.js";
 import { inspectionThrottleFromEnv } from "../src/inspection-throttle.mjs";
-import { pluginHostFromEnv } from "../src/plugin-host.mjs";
 import { resolvePrivacy } from "../src/privacy.mjs";
 import { resolveProjectionWorkerOptions } from "../src/projection-worker.mjs";
 import { resolveReactorFeatureFlags } from "../src/reactor-feature-flags.mjs";
@@ -136,7 +134,6 @@ const KEYS = [
   "MCP_ENABLED",
   "PH_WORKFLOWS_ENABLED",
   "DOCUMENT_MODEL_SUBGRAPHS_ENABLED",
-  "FEATURE_PLUGIN_HOST_ENABLED",
   "PH_PRIVACY_ENABLED",
   "PH_PRIVACY_DEPLOYMENT_SECRET",
   "PH_PRIVACY_INTERVAL_MS",
@@ -176,7 +173,6 @@ const ROWS: Record<string, Env> = {
     DYNAMIC_MODEL_LOADING: "true",
     PH_REGISTRY_URL: "http://localhost:8080",
     PH_REGISTRY_PACKAGES: "@acme/a, @acme/b",
-    FEATURE_PLUGIN_HOST_ENABLED: "1",
     PH_CATCH_UP_PRIORITY: "3",
   },
   "Postgres with workers": {
@@ -329,12 +325,6 @@ describe("switchboardConfigFromEnv matches today's env reads", () => {
       await expect(
         featureFlags.getBooleanValue("DOCUMENT_MODEL_SUBGRAPHS_ENABLED", true),
       ).resolves.toBe(config.features.documentModelSubgraphs);
-      // Unset stays unset: it selects the default composition, not the flag.
-      expect(config.features.pluginHost).toBe(
-        row.FEATURE_PLUGIN_HOST_ENABLED === undefined
-          ? undefined
-          : pluginHostFromEnv(row),
-      );
     });
 
     it("protocol", () => {
@@ -442,18 +432,11 @@ describe("switchboardConfigFromEnv matches today's env reads", () => {
       const { auth } = mapped(row);
       const today = resolveRenownConfig(undefined, row, silent);
       expect({
-        source: auth.renown.source ?? "remote",
         url: auth.renown.url,
         switchboardUrl: auth.renown.switchboardUrl,
       }).toEqual(today);
-      expect(
-        auth.credentialCacheTtlMs ?? (today.source === "self" ? 0 : undefined),
-      ).toBe(
-        resolveCredentialCacheTtlMs(
-          row.CREDENTIAL_VERIFICATION_CACHE_TTL_MS,
-          today.source,
-          silent,
-        ),
+      expect(auth.credentialCacheTtlMs).toBe(
+        reactorApiConfigFromEnv(row, silent).auth?.credentialCacheTtlMs,
       );
     });
   });
@@ -787,14 +770,15 @@ describe("switchboardConfigFromEnv warnings", () => {
     expect(String(warn.mock.calls[0]?.[0])).toContain(name);
   });
 
-  it("an invalid RENOWN_SOURCE warns and still overrides the config file, as remote", () => {
+  // Not read any more: carried only so the boot warns of it, once.
+  it("carries any RENOWN_SOURCE as a known value, without warning here", () => {
     const warn = vi.fn();
     const layer = switchboardConfigFromEnv(
       { RENOWN_SOURCE: "both" },
       { logger: { warn } as unknown as ILogger },
     );
     expect(layer.auth?.renown).toEqual({ source: "remote" });
-    expect(warn).toHaveBeenCalledOnce();
+    expect(warn).not.toHaveBeenCalled();
   });
 });
 

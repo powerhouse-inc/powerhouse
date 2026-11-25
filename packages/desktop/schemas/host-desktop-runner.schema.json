@@ -144,7 +144,8 @@
         "properties": {
           "host": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "pattern": "^(?:(?:@[A-Za-z0-9~-][A-Za-z0-9._~-]*\\/)?[A-Za-z0-9~-][A-Za-z0-9._~-]*\\/)?[A-Za-z0-9][A-Za-z0-9._-]*$"
           },
           "runner": {
             "type": "object",
@@ -452,9 +453,6 @@
                 },
                 "additionalProperties": false
               },
-              "workflows": {
-                "type": "boolean"
-              },
               "renown": {
                 "type": "object",
                 "properties": {
@@ -556,6 +554,10 @@
               }
             },
             "additionalProperties": false
+          },
+          "process": {
+            "type": "string",
+            "enum": ["own", "shared"]
           }
         },
         "required": ["host"],

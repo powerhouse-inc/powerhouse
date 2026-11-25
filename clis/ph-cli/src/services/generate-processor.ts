@@ -8,13 +8,6 @@ import {
   buildTsMorphProject,
   getProcessorMetadata,
 } from "@powerhousedao/codegen/utils";
-import {
-  extractProcessorDocuments,
-  generateProcessorFromDocument,
-  getDocument,
-  saveSpec,
-} from "@powerhousedao/vetra/codegen";
-import type { ProcessorModuleDocument } from "@powerhousedao/vetra/document-models/processor-module";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { GenerateProcessorArgs } from "../types.js";
@@ -30,27 +23,14 @@ export async function startGenerateProcessor(
     type: processorType,
     apps: processorApps,
     documentTypes,
-    document,
     dir,
     all,
-    extract,
     debug,
   } = args;
   if (debug) {
     console.log({ args });
   }
   const project = buildTsMorphProject(projectDir);
-  if (extract) {
-    const docs = extractProcessorDocuments(project);
-    if (docs.length === 0) {
-      console.log("No processors found in processors/.");
-    }
-    for (const doc of docs) {
-      const path = await saveSpec(doc, projectDir);
-      console.log(`Wrote ${path}`);
-    }
-    return;
-  }
   const report: string[] = [];
   if (all) {
     const processors = await generateAllProcessors(project);
@@ -60,9 +40,6 @@ export async function startGenerateProcessor(
     for (const { processorName } of processors) {
       report.push(`Regenerated processor in processors/${processorName}`);
     }
-  } else if (document) {
-    const doc = (await getDocument(document)) as ProcessorModuleDocument;
-    await generateProcessorFromDocument(doc, project);
   } else if (processorName) {
     await generateProcessor(
       {
@@ -94,9 +71,7 @@ export async function startGenerateProcessor(
     await generateProcessor(processorArgs, project);
     report.push(`Regenerated processor in processors/${processorDirName}`);
   } else {
-    console.log(
-      "Please specify one of `name`, `document`, `dir`, `all`, or `extract`.",
-    );
+    console.log("Please specify one of `name`, `dir`, or `all`.");
     return;
   }
   await project.save();

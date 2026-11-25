@@ -1,0 +1,784 @@
+{
+  "id": "powerhouse/feature",
+  "name": "Feature",
+  "author": {
+    "name": "Claude",
+    "website": "https://powerhouse.inc"
+  },
+  "extension": "ftr",
+  "description": "The Feature document is used by product builders in Vetra Studio to capture a single proposed change to the product as a testable bet: by building this, specified segments are expected to experience specified outcome changes, for stated reasons. It holds the premise / expected-effect / reasoning triad, outcome targets (cached references to Problem Sheet outcomes with optional projected importance and satisfaction deltas), the segments it serves (cached references to Audience Sheet segments), optional role and job-step references, coarse confidence/effort/impact estimates, evidence tagged by source, and a lifecycle status. Features decompose recursively via a parent-feature reference and link to a Work Breakdown Structure; both are cached snippets. Named lifecycle transitions carry the state-machine invariants.\n\nFeatures are the unit of work in Ideation once Brand, Problem, and Audience are settled. The four scopes (micro-MVP, market-MVP, incremental, maintenance) adjust how the studio treats the bet, not the schema. Cross-document references are stored as refreshable snippets so the document stays self-contained.",
+  "specifications": [
+    {
+      "state": {
+        "local": {
+          "schema": "",
+          "examples": [],
+          "initialValue": ""
+        },
+        "global": {
+          "schema": "type FeatureState {\n  name: String\n  summary: String\n  scope: FeatureScope!\n  premise: String\n  expectedEffect: String\n  reasoning: String\n  targets: [OutcomeTarget!]!\n  segments: [SegmentRef!]!\n  role: RoleRef\n  relatedStep: JobStepRef\n  confidence: Confidence\n  effort: Effort\n  impact: Impact\n  targetRelease: String\n  evidence: [Evidence!]!\n  notes: String\n  status: FeatureStatus!\n  promotion: PromotionEvent\n  parentFeature: FeatureRef\n  wbs: WbsRef\n  agentFeedback: AgentFeedback!\n}\n\ntype OutcomeTarget {\n  id: OID!\n  outcome: OutcomeRef!\n  expectedImportanceChange: Int\n  expectedSatisfactionChange: Int\n  notes: String\n}\n\ntype OutcomeRef {\n  documentId: PHID!\n  objectId: OID!\n  statement: String\n  scope: String\n}\n\ntype SegmentRef {\n  id: OID!\n  documentId: PHID!\n  objectId: OID!\n  name: String\n  description: String\n}\n\ntype RoleRef {\n  documentId: PHID!\n  objectId: OID!\n  name: String\n  kind: String\n}\n\ntype JobStepRef {\n  documentId: PHID!\n  objectId: OID!\n  name: String\n  category: String\n}\n\ntype FeatureRef {\n  documentId: PHID!\n  name: String\n  status: String\n}\n\ntype WbsRef {\n  documentId: PHID!\n  name: String\n  status: String\n}\n\ntype PromotionEvent {\n  promotedAt: DateTime!\n  promotedBy: String\n  rationale: String\n}\n\ntype Evidence {\n  id: OID!\n  source: EvidenceSource!\n  recordedAt: DateTime\n  content: String!\n}\n\nenum EvidenceSource {\n  BUILDER\n  AI_SIMULATION\n  USER_RESEARCH\n}\n\nenum FeatureScope {\n  MICRO_MVP\n  MARKET_MVP\n  INCREMENTAL\n  MAINTENANCE\n}\n\nenum FeatureStatus {\n  PROPOSED\n  EVALUATING\n  COMMITTED\n  IN_SPEC\n  ARCHIVED\n  PARKED\n}\n\nenum Confidence {\n  LOW\n  MEDIUM\n  HIGH\n}\n\nenum Effort {\n  SMALL\n  MEDIUM\n  LARGE\n}\n\nenum Impact {\n  LOW\n  MEDIUM\n  HIGH\n}\n\ntype AgentFeedback {\n  readyForFeedback: Boolean!\n  suggestions: [Suggestion!]!\n}\n\ntype Suggestion {\n  id: OID!\n  createdAt: DateTime!\n  agent: String!\n  content: String!\n  resolution: SuggestionResolution\n}\n\ntype SuggestionResolution {\n  resolvedAt: DateTime!\n  decision: SuggestionDecision!\n  comment: String\n  changeApplied: Boolean!\n}\n\nenum SuggestionDecision {\n  ACCEPTED\n  DISMISSED\n}",
+          "examples": [],
+          "initialValue": "{\n  \"name\": null,\n  \"summary\": null,\n  \"scope\": \"MICRO_MVP\",\n  \"premise\": null,\n  \"expectedEffect\": null,\n  \"reasoning\": null,\n  \"targets\": [],\n  \"segments\": [],\n  \"role\": null,\n  \"relatedStep\": null,\n  \"confidence\": null,\n  \"effort\": null,\n  \"impact\": null,\n  \"targetRelease\": null,\n  \"evidence\": [],\n  \"notes\": null,\n  \"status\": \"PROPOSED\",\n  \"promotion\": null,\n  \"parentFeature\": null,\n  \"wbs\": null,\n  \"agentFeedback\": {\n    \"readyForFeedback\": false,\n    \"suggestions\": []\n  }\n}"
+        }
+      },
+      "modules": [
+        {
+          "id": "mod-definition",
+          "name": "definition",
+          "description": "Set the bet fields (name, summary, scope, premise, expected effect, reasoning, notes, target release) and coarse estimates.",
+          "operations": [
+            {
+              "id": "op-set-feature-name",
+              "name": "SET_FEATURE_NAME",
+              "description": "Set the feature name.",
+              "schema": "input SetFeatureNameInput {\n  name: String!\n}",
+              "template": "Set the feature name.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-clear-feature-name",
+              "name": "CLEAR_FEATURE_NAME",
+              "description": "Clear the feature name.",
+              "schema": "input ClearFeatureNameInput {\n  _: Boolean\n}",
+              "template": "Clear the feature name.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-set-summary",
+              "name": "SET_SUMMARY",
+              "description": "Set the one-line summary.",
+              "schema": "input SetSummaryInput {\n  summary: String!\n}",
+              "template": "Set the one-line summary.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-clear-summary",
+              "name": "CLEAR_SUMMARY",
+              "description": "Clear the summary.",
+              "schema": "input ClearSummaryInput {\n  _: Boolean\n}",
+              "template": "Clear the summary.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-set-scope",
+              "name": "SET_SCOPE",
+              "description": "Set the feature scope.",
+              "schema": "input SetScopeInput {\n  scope: FeatureScope!\n}",
+              "template": "Set the feature scope.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-set-premise",
+              "name": "SET_PREMISE",
+              "description": "Set the premise (what the feature does for the customer).",
+              "schema": "input SetPremiseInput {\n  premise: String!\n}",
+              "template": "Set the premise (what the feature does for the customer).",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-clear-premise",
+              "name": "CLEAR_PREMISE",
+              "description": "Clear the premise.",
+              "schema": "input ClearPremiseInput {\n  _: Boolean\n}",
+              "template": "Clear the premise.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-set-expected-effect",
+              "name": "SET_EXPECTED_EFFECT",
+              "description": "Set the expected effect (what changes if the feature ships).",
+              "schema": "input SetExpectedEffectInput {\n  expectedEffect: String!\n}",
+              "template": "Set the expected effect (what changes if the feature ships).",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-clear-expected-effect",
+              "name": "CLEAR_EXPECTED_EFFECT",
+              "description": "Clear the expected effect.",
+              "schema": "input ClearExpectedEffectInput {\n  _: Boolean\n}",
+              "template": "Clear the expected effect.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-set-reasoning",
+              "name": "SET_REASONING",
+              "description": "Set the causal reasoning being tested.",
+              "schema": "input SetReasoningInput {\n  reasoning: String!\n}",
+              "template": "Set the causal reasoning being tested.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-clear-reasoning",
+              "name": "CLEAR_REASONING",
+              "description": "Clear the reasoning.",
+              "schema": "input ClearReasoningInput {\n  _: Boolean\n}",
+              "template": "Clear the reasoning.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-set-notes",
+              "name": "SET_NOTES",
+              "description": "Set free-form notes.",
+              "schema": "input SetNotesInput {\n  notes: String!\n}",
+              "template": "Set free-form notes.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-clear-notes",
+              "name": "CLEAR_NOTES",
+              "description": "Clear the notes.",
+              "schema": "input ClearNotesInput {\n  _: Boolean\n}",
+              "template": "Clear the notes.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-set-target-release",
+              "name": "SET_TARGET_RELEASE",
+              "description": "Set the free-form target release tag.",
+              "schema": "input SetTargetReleaseInput {\n  targetRelease: String!\n}",
+              "template": "Set the free-form target release tag.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-clear-target-release",
+              "name": "CLEAR_TARGET_RELEASE",
+              "description": "Clear the target release tag.",
+              "schema": "input ClearTargetReleaseInput {\n  _: Boolean\n}",
+              "template": "Clear the target release tag.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-set-confidence",
+              "name": "SET_CONFIDENCE",
+              "description": "Set the confidence estimate.",
+              "schema": "input SetConfidenceInput {\n  confidence: Confidence!\n}",
+              "template": "Set the confidence estimate.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-set-effort",
+              "name": "SET_EFFORT",
+              "description": "Set the effort estimate.",
+              "schema": "input SetEffortInput {\n  effort: Effort!\n}",
+              "template": "Set the effort estimate.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-set-impact",
+              "name": "SET_IMPACT",
+              "description": "Set the impact estimate.",
+              "schema": "input SetImpactInput {\n  impact: Impact!\n}",
+              "template": "Set the impact estimate.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-clear-estimates",
+              "name": "CLEAR_ESTIMATES",
+              "description": "Clear the confidence, effort, and impact estimates.",
+              "schema": "input ClearEstimatesInput {\n  _: Boolean\n}",
+              "template": "Clear the confidence, effort, and impact estimates.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        },
+        {
+          "id": "mod-targets",
+          "name": "targets",
+          "description": "Manage outcome targets with cached Problem-Sheet outcome snippets.",
+          "operations": [
+            {
+              "id": "op-add-outcome-target",
+              "name": "ADD_OUTCOME_TARGET",
+              "description": "Add an outcome target with a cached Problem-Sheet outcome snippet.",
+              "schema": "input AddOutcomeTargetInput {\n  id: OID!\n  outcomeDocumentId: PHID!\n  outcomeObjectId: OID!\n  outcomeStatement: String\n  outcomeScope: String\n  expectedImportanceChange: Int\n  expectedSatisfactionChange: Int\n  notes: String\n  insertBefore: OID\n}",
+              "template": "Add an outcome target with a cached Problem-Sheet outcome snippet.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "err-duplicate-outcome-target-id",
+                  "name": "DuplicateOutcomeTargetIdError",
+                  "code": "DUPLICATE_OUTCOME_TARGET_ID",
+                  "description": "An outcome target with this id already exists.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-update-outcome-target",
+              "name": "UPDATE_OUTCOME_TARGET",
+              "description": "Update an outcome target's projected deltas or notes.",
+              "schema": "input UpdateOutcomeTargetInput {\n  id: OID!\n  expectedImportanceChange: Int\n  expectedSatisfactionChange: Int\n  notes: String\n}",
+              "template": "Update an outcome target's projected deltas or notes.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "err-outcome-target-not-found",
+                  "name": "OutcomeTargetNotFoundError",
+                  "code": "OUTCOME_TARGET_NOT_FOUND",
+                  "description": "No outcome target with the given id was found.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-update-outcome-target-snippet",
+              "name": "UPDATE_OUTCOME_TARGET_SNIPPET",
+              "description": "Refresh the cached outcome statement/scope of an outcome target.",
+              "schema": "input UpdateOutcomeTargetSnippetInput {\n  id: OID!\n  statement: String\n  scope: String\n}",
+              "template": "Refresh the cached outcome statement/scope of an outcome target.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-remove-outcome-target",
+              "name": "REMOVE_OUTCOME_TARGET",
+              "description": "Remove an outcome target.",
+              "schema": "input RemoveOutcomeTargetInput {\n  id: OID!\n}",
+              "template": "Remove an outcome target.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-reorder-outcome-targets",
+              "name": "REORDER_OUTCOME_TARGETS",
+              "description": "Reorder outcome targets by moving the given ids before an anchor (or to the end when null).",
+              "schema": "input ReorderOutcomeTargetsInput {\n  ids: [OID!]!\n  insertBefore: OID\n}",
+              "template": "Reorder outcome targets by moving the given ids before an anchor (or to the end when null).",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        },
+        {
+          "id": "mod-segment-refs",
+          "name": "segment_refs",
+          "description": "Manage cached references to Audience-Sheet segments served by this feature.",
+          "operations": [
+            {
+              "id": "op-add-segment-ref",
+              "name": "ADD_SEGMENT_REF",
+              "description": "Add a cached reference to an Audience-Sheet segment served by this feature.",
+              "schema": "input AddSegmentRefInput {\n  id: OID!\n  documentId: PHID!\n  objectId: OID!\n  name: String\n  description: String\n  insertBefore: OID\n}",
+              "template": "Add a cached reference to an Audience-Sheet segment served by this feature.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "err-duplicate-segment-ref-id",
+                  "name": "DuplicateSegmentRefIdError",
+                  "code": "DUPLICATE_SEGMENT_REF_ID",
+                  "description": "A segment reference with this id already exists.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-update-segment-ref-snippet",
+              "name": "UPDATE_SEGMENT_REF_SNIPPET",
+              "description": "Refresh the cached name/description of a segment reference.",
+              "schema": "input UpdateSegmentRefSnippetInput {\n  id: OID!\n  name: String\n  description: String\n}",
+              "template": "Refresh the cached name/description of a segment reference.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "err-segment-ref-not-found",
+                  "name": "SegmentRefNotFoundError",
+                  "code": "SEGMENT_REF_NOT_FOUND",
+                  "description": "No segment reference with the given id was found.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-remove-segment-ref",
+              "name": "REMOVE_SEGMENT_REF",
+              "description": "Remove a segment reference.",
+              "schema": "input RemoveSegmentRefInput {\n  id: OID!\n}",
+              "template": "Remove a segment reference.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-reorder-segment-refs",
+              "name": "REORDER_SEGMENT_REFS",
+              "description": "Reorder segment references.",
+              "schema": "input ReorderSegmentRefsInput {\n  ids: [OID!]!\n  insertBefore: OID\n}",
+              "template": "Reorder segment references.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        },
+        {
+          "id": "mod-references",
+          "name": "references",
+          "description": "Set/clear singular cached references: role, related job step, parent feature, and WBS.",
+          "operations": [
+            {
+              "id": "op-set-role",
+              "name": "SET_ROLE",
+              "description": "Set the cached Problem-Sheet role reference.",
+              "schema": "input SetRoleInput {\n  documentId: PHID!\n  objectId: OID!\n  name: String\n  kind: String\n}",
+              "template": "Set the cached Problem-Sheet role reference.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-update-role-snippet",
+              "name": "UPDATE_ROLE_SNIPPET",
+              "description": "Refresh the cached role name/kind.",
+              "schema": "input UpdateRoleSnippetInput {\n  name: String\n  kind: String\n}",
+              "template": "Refresh the cached role name/kind.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "err-role-not-set",
+                  "name": "RoleNotSetError",
+                  "code": "ROLE_NOT_SET",
+                  "description": "No role reference is set to refresh.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-clear-role",
+              "name": "CLEAR_ROLE",
+              "description": "Clear the role reference.",
+              "schema": "input ClearRoleInput {\n  _: Boolean\n}",
+              "template": "Clear the role reference.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-set-related-step",
+              "name": "SET_RELATED_STEP",
+              "description": "Set the cached Problem-Sheet job-step reference.",
+              "schema": "input SetRelatedStepInput {\n  documentId: PHID!\n  objectId: OID!\n  name: String\n  category: String\n}",
+              "template": "Set the cached Problem-Sheet job-step reference.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-update-related-step-snippet",
+              "name": "UPDATE_RELATED_STEP_SNIPPET",
+              "description": "Refresh the cached job-step name/category.",
+              "schema": "input UpdateRelatedStepSnippetInput {\n  name: String\n  category: String\n}",
+              "template": "Refresh the cached job-step name/category.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "err-related-step-not-set",
+                  "name": "RelatedStepNotSetError",
+                  "code": "RELATED_STEP_NOT_SET",
+                  "description": "No related-step reference is set to refresh.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-clear-related-step",
+              "name": "CLEAR_RELATED_STEP",
+              "description": "Clear the related-step reference.",
+              "schema": "input ClearRelatedStepInput {\n  _: Boolean\n}",
+              "template": "Clear the related-step reference.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-set-parent-feature",
+              "name": "SET_PARENT_FEATURE",
+              "description": "Set the cached parent-feature reference.",
+              "schema": "input SetParentFeatureInput {\n  documentId: PHID!\n  name: String\n  status: String\n}",
+              "template": "Set the cached parent-feature reference.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-update-parent-feature-snippet",
+              "name": "UPDATE_PARENT_FEATURE_SNIPPET",
+              "description": "Refresh the cached parent-feature name/status.",
+              "schema": "input UpdateParentFeatureSnippetInput {\n  name: String\n  status: String\n}",
+              "template": "Refresh the cached parent-feature name/status.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "err-parent-feature-not-set",
+                  "name": "ParentFeatureNotSetError",
+                  "code": "PARENT_FEATURE_NOT_SET",
+                  "description": "No parent-feature reference is set to refresh.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-clear-parent-feature",
+              "name": "CLEAR_PARENT_FEATURE",
+              "description": "Clear the parent-feature reference.",
+              "schema": "input ClearParentFeatureInput {\n  _: Boolean\n}",
+              "template": "Clear the parent-feature reference.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-set-wbs",
+              "name": "SET_WBS",
+              "description": "Set the cached WBS reference.",
+              "schema": "input SetWbsInput {\n  documentId: PHID!\n  name: String\n  status: String\n}",
+              "template": "Set the cached WBS reference.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-update-wbs-snippet",
+              "name": "UPDATE_WBS_SNIPPET",
+              "description": "Refresh the cached WBS name/status.",
+              "schema": "input UpdateWbsSnippetInput {\n  name: String\n  status: String\n}",
+              "template": "Refresh the cached WBS name/status.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "err-wbs-not-set",
+                  "name": "WbsNotSetError",
+                  "code": "WBS_NOT_SET",
+                  "description": "No WBS reference is set to refresh.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-clear-wbs",
+              "name": "CLEAR_WBS",
+              "description": "Clear the WBS reference.",
+              "schema": "input ClearWbsInput {\n  _: Boolean\n}",
+              "template": "Clear the WBS reference.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        },
+        {
+          "id": "mod-lifecycle",
+          "name": "lifecycle",
+          "description": "Named status transitions and the promotion-to-spec event.",
+          "operations": [
+            {
+              "id": "op-start-evaluation",
+              "name": "START_EVALUATION",
+              "description": "Move from PROPOSED to EVALUATING.",
+              "schema": "input StartEvaluationInput {\n  _: Boolean\n}",
+              "template": "Move from PROPOSED to EVALUATING.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "err-invalid-status-transition",
+                  "name": "InvalidStatusTransitionError",
+                  "code": "INVALID_STATUS_TRANSITION",
+                  "description": "The requested transition is not allowed from the current status.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-commit-feature",
+              "name": "COMMIT_FEATURE",
+              "description": "Move from PROPOSED or EVALUATING to COMMITTED.",
+              "schema": "input CommitFeatureInput {\n  _: Boolean\n}",
+              "template": "Move from PROPOSED or EVALUATING to COMMITTED.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-promote-to-spec",
+              "name": "PROMOTE_TO_SPEC",
+              "description": "Promote a COMMITTED feature to IN_SPEC, recording the promotion event.",
+              "schema": "input PromoteToSpecInput {\n  promotedAt: DateTime!\n  promotedBy: String\n  rationale: String\n}",
+              "template": "Promote a COMMITTED feature to IN_SPEC, recording the promotion event.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-archive-feature",
+              "name": "ARCHIVE_FEATURE",
+              "description": "Archive the feature, optionally recording a reason in notes.",
+              "schema": "input ArchiveFeatureInput {\n  reason: String\n}",
+              "template": "Archive the feature, optionally recording a reason in notes.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-park-feature",
+              "name": "PARK_FEATURE",
+              "description": "Park the feature for a later cycle, optionally recording a reason in notes.",
+              "schema": "input ParkFeatureInput {\n  reason: String\n}",
+              "template": "Park the feature for a later cycle, optionally recording a reason in notes.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-reopen-feature",
+              "name": "REOPEN_FEATURE",
+              "description": "Reopen an ARCHIVED or PARKED feature back to PROPOSED.",
+              "schema": "input ReopenFeatureInput {\n  _: Boolean\n}",
+              "template": "Reopen an ARCHIVED or PARKED feature back to PROPOSED.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-clear-promotion",
+              "name": "CLEAR_PROMOTION",
+              "description": "Clear the promotion event.",
+              "schema": "input ClearPromotionInput {\n  _: Boolean\n}",
+              "template": "Clear the promotion event.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        },
+        {
+          "id": "mod-evidence",
+          "name": "evidence",
+          "description": "Manage source-tagged evidence supporting the bet.",
+          "operations": [
+            {
+              "id": "op-add-evidence",
+              "name": "ADD_EVIDENCE",
+              "description": "Add a piece of source-tagged evidence.",
+              "schema": "input AddEvidenceInput {\n  id: OID!\n  source: EvidenceSource!\n  content: String!\n  recordedAt: DateTime\n  insertBefore: OID\n}",
+              "template": "Add a piece of source-tagged evidence.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "err-duplicate-evidence-id",
+                  "name": "DuplicateEvidenceIdError",
+                  "code": "DUPLICATE_EVIDENCE_ID",
+                  "description": "An evidence entry with this id already exists.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-update-evidence",
+              "name": "UPDATE_EVIDENCE",
+              "description": "Update a piece of evidence.",
+              "schema": "input UpdateEvidenceInput {\n  id: OID!\n  source: EvidenceSource\n  content: String\n  recordedAt: DateTime\n}",
+              "template": "Update a piece of evidence.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "err-evidence-not-found",
+                  "name": "EvidenceNotFoundError",
+                  "code": "EVIDENCE_NOT_FOUND",
+                  "description": "No evidence entry with the given id was found.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-remove-evidence",
+              "name": "REMOVE_EVIDENCE",
+              "description": "Remove a piece of evidence.",
+              "schema": "input RemoveEvidenceInput {\n  id: OID!\n}",
+              "template": "Remove a piece of evidence.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        },
+        {
+          "id": "mod-agent-feedback",
+          "name": "agent_feedback",
+          "description": "Builder readiness signal and the agent suggestion workflow.",
+          "operations": [
+            {
+              "id": "op-set-ready-for-feedback",
+              "name": "SET_READY_FOR_FEEDBACK",
+              "description": "Set whether the document is open to agent feedback.",
+              "schema": "input SetReadyForFeedbackInput {\n  ready: Boolean!\n}",
+              "template": "Set whether the document is open to agent feedback.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-add-suggestion",
+              "name": "ADD_SUGGESTION",
+              "description": "Add an agent suggestion.",
+              "schema": "input AddSuggestionInput {\n  id: OID!\n  createdAt: DateTime!\n  agent: String!\n  content: String!\n}",
+              "template": "Add an agent suggestion.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "err-duplicate-suggestion-id",
+                  "name": "DuplicateSuggestionIdError",
+                  "code": "DUPLICATE_SUGGESTION_ID",
+                  "description": "A suggestion with this id already exists.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-resolve-suggestion",
+              "name": "RESOLVE_SUGGESTION",
+              "description": "Resolve a suggestion (accept or dismiss), optionally with a comment.",
+              "schema": "input ResolveSuggestionInput {\n  id: OID!\n  resolvedAt: DateTime!\n  decision: SuggestionDecision!\n  comment: String\n  changeApplied: Boolean!\n}",
+              "template": "Resolve a suggestion (accept or dismiss), optionally with a comment.",
+              "reducer": "",
+              "errors": [
+                {
+                  "id": "err-suggestion-not-found",
+                  "name": "SuggestionNotFoundError",
+                  "code": "SUGGESTION_NOT_FOUND",
+                  "description": "No suggestion with the given id was found.",
+                  "template": ""
+                },
+                {
+                  "id": "err-suggestion-already-resolved",
+                  "name": "SuggestionAlreadyResolvedError",
+                  "code": "SUGGESTION_ALREADY_RESOLVED",
+                  "description": "The suggestion has already been resolved.",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-remove-suggestion",
+              "name": "REMOVE_SUGGESTION",
+              "description": "Remove a suggestion.",
+              "schema": "input RemoveSuggestionInput {\n  id: OID!\n}",
+              "template": "Remove a suggestion.",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        }
+      ],
+      "version": 1,
+      "changeLog": []
+    }
+  ]
+}

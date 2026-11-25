@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
@@ -739,6 +740,45 @@ export class PingSubgraph extends BaseSubgraph {
       rmSync(root, { recursive: true, force: true });
     }
   }, 60_000);
+});
+
+describe("ph migrate --subgraphs in a git work tree", () => {
+  it("leaves a build copy git ignores as it is, and reads every file outside a work tree", async () => {
+    const reader = (schema: string) =>
+      `import { schema } from "${schema}";\n\nexport const sdl = schema;\n`;
+    // A build's staged copy of the subgraph, inside its directory.
+    const copy = "subgraphs/stats/dist-stack/sdl.ts";
+    const root = writeProject({
+      ...STATS,
+      "subgraphs/stats/sdl.ts": reader("./schema.js"),
+      [copy]: reader("../schema.js"),
+      ".gitignore": "node_modules/\ndist-stack/\n",
+    });
+    try {
+      const outside = await runMigrate(root, { subgraphs: true, dryRun: true });
+      expect(outside.output).toContain(`+++ b/${copy}`);
+
+      // Nothing is added: untracked files git does not ignore still count.
+      expect(spawnSync("git", ["init", "--quiet"], { cwd: root }).status).toBe(
+        0,
+      );
+      const preview = await runMigrate(root, { subgraphs: true, dryRun: true });
+      expect(preview.code, preview.output).toBe(0);
+      expect(preview.output).toContain("+++ b/subgraphs/stats/sdl.ts");
+      expect(preview.output).not.toContain(copy);
+
+      const { code, output } = await runMigrate(root, { subgraphs: true });
+      expect(code, output).toBe(0);
+      expect(readFileSync(join(root, "subgraphs/stats/sdl.ts"), "utf8")).toBe(
+        reader("./schema-sdl.js"),
+      );
+      expect(readFileSync(join(root, copy), "utf8")).toBe(
+        reader("../schema.js"),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 120_000);
 });
 
 /** A subgraph whose resolvers disagree with its schema, in a project with its own tsc. */

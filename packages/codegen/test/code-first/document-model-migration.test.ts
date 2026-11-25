@@ -964,6 +964,18 @@ describe("migrateDocumentModel", () => {
     );
   }, 120_000);
 
+  it("moves JavaScript custom code a reducer loads, with a call inside a class", async () => {
+    await implementLedger(dir);
+    const marks =
+      'export class Marks {\n  add(mark) {\n    console.log("marking");\n    return mark;\n  }\n}\n\nglobalThis.marks = new Marks();\n';
+    write(`${model(2)}/src/marks.mjs`, marks);
+    write(`${model(2)}/src/utils.ts`, 'import "./marks.mjs";\n');
+    const reducer = `${model(2)}/src/reducers/entries.ts`;
+    write(reducer, `import "../marks.mjs";\n${read(dir, reducer)}`);
+    apply(await migrate());
+    expect(read(dir, `${model(2)}/marks.mjs`)).toBe(marks);
+  }, 120_000);
+
   it("converts custom utils that load setup code an upgrade transition loads too", async () => {
     await implementLedger(dir);
     write(
@@ -1128,6 +1140,17 @@ describe("migrateDocumentModel", () => {
       "scripts/query.ts",
       'export const load = () =>\n  import("../document-models/ledger/v2/gen/index.js?fresh=1");\n',
     );
+    // A call inside a class body of a JavaScript file, outside the model and
+    // in its src/, which the migration moves.
+    const tool = (from: string) =>
+      `import { addEntry } from "${from}";\n\nexport class Tool {\n  add() {\n    console.log("adding");\n    return addEntry({ id: "e1", amount: 1 });\n  }\n}\n`;
+    write(
+      "scripts/tool.mjs",
+      tool("../document-models/ledger/v2/gen/index.js"),
+    );
+    const labeller =
+      'import { label } from "./label.mjs";\n\nexport class Labeller {\n  print() {\n    console.log("printing");\n    return label;\n  }\n}\n';
+    write(`${model(2)}/src/labeller.mjs`, labeller);
     write(`${model(2)}/definition.ts`, "export const kept = true;\n");
     expectRefusal(await migrate(), {
       file: `${model(2)}/definition.ts`,
@@ -1157,6 +1180,10 @@ describe("migrateDocumentModel", () => {
     expect(read(dir, "scripts/consumer.mjs")).toBe(
       'export { addEntry } from "../document-models/ledger/compat/v2/index.js";\n',
     );
+    expect(read(dir, "scripts/tool.mjs")).toBe(
+      tool("../document-models/ledger/compat/v2/index.js"),
+    );
+    expect(read(dir, `${model(2)}/labeller.mjs`)).toBe(labeller);
     // Written without an extension, so rewritten without one.
     expect(read(dir, "scripts/slash.ts")).toBe(
       'export { addEntry } from "../document-models/ledger/compat/v2/index";\n',
@@ -1236,6 +1263,8 @@ describe("migrateDocumentModel", () => {
     const aliased = (target: string) =>
       `import { vi as v } from "vitest";\n\nv.mock("${target}", async () => ({\n  ...(await v.importActual("${target}")),\n  addEntry: () => null,\n}));\n`;
     write("editors/ledger/aliased.test.ts", aliased("document-models/ledger"));
+    // The same mock in a JavaScript test.
+    write("editors/ledger/aliased.test.mjs", aliased("document-models/ledger"));
     const refused = {
       "editors/ledger/family.test.ts":
         'import { vi } from "vitest";\n\nvi.mock("document-models/ledger", async (original) => ({\n  ...(await original<object>()),\n  addEntry: () => null,\n  Ledger: {},\n}));\n',
@@ -1506,6 +1535,9 @@ describe("migrateDocumentModel", () => {
       vitestActual("../../document-models/ledger/compat/v2/index.js"),
     );
     expect(read(dir, "editors/ledger/aliased.test.ts")).toBe(
+      aliased("../../document-models/ledger/compat/v2/index.js"),
+    );
+    expect(read(dir, "editors/ledger/aliased.test.mjs")).toBe(
       aliased("../../document-models/ledger/compat/v2/index.js"),
     );
   }, 240_000);

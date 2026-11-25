@@ -1,4 +1,5 @@
 import {
+  LEGACY_DEV_HOST,
   POWERHOUSE_CONFIG_FILE,
   projectFiles,
 } from "@powerhousedao/shared/clis";
@@ -9,7 +10,7 @@ import { isPlainObject } from "remeda";
 
 /**
  * The switchboard plugins a project without hosts/ runs today, as the classic
- * `ph switchboard` and `ph vetra` mount them, in the order of
+ * `ph switchboard` and `ph dev` mount them, in the order of
  * `builtinSwitchboardPlugins`:
  *
  * - mcp: on by default; only MCP_ENABLED=false turns it off.
@@ -75,12 +76,13 @@ export function getsHostsFolder(projectDir: string): boolean {
 }
 
 /** Whether the project has the host `name` once migrate has run: its own, or
- * one of the hosts addHostsFolder adds. */
+ * one of the hosts addHostsFolder adds, which never include hosts/vetra. */
 export function hasHostAfterMigration(
   projectDir: string,
   name: string,
 ): boolean {
-  return getsHostsFolder(projectDir) || hostNames(projectDir).includes(name);
+  if (hostNames(projectDir).includes(name)) return true;
+  return name !== LEGACY_DEV_HOST && getsHostsFolder(projectDir);
 }
 
 /**

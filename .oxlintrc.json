@@ -539,7 +539,8 @@
               "custom-class",
               "hover-bg-transparent",
               "skeleton-loader",
-              "home-screen"
+              "home-screen",
+              "^(text|via)-vetra-primary$"
             ]
           }
         ],
@@ -777,6 +778,17 @@
         "react-hooks-extra/immutability": "off",
         "react-hooks-extra/set-state-in-effect": "off",
         "react-hooks-extra/refs": "off"
+      }
+    },
+    {
+      "files": ["packages/clint-common/**"],
+      "rules": {
+        "typescript/require-await": "warn",
+        "typescript/no-redundant-type-constituents": "warn",
+        "react-hooks-extra/purity": "off",
+        "react-hooks-extra/refs": "off",
+        "react-hooks-extra/set-state-in-effect": "off",
+        "react-hooks-extra/static-components": "off"
       }
     },
     {
@@ -1596,6 +1608,7 @@
     "apps/switchboard-lb/test/integration/*.js",
     "packages/reactor/bench/test/integration/*.js",
     "clis/ph-cli/src/commands/migrations/templates",
+    "clis/ph-cli/test/fixtures/cli-package/",
     "packages/builder-tools/connect-utils/service-worker/**",
     "**/playwright-report/",
     "test/package-e2e/.registry-storage/",

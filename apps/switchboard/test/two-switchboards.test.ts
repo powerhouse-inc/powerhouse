@@ -117,9 +117,9 @@ describe("two switchboards in one process", () => {
     expect(messages(a.logger)).toContain(flagsOn);
     expect(messages(b.logger)).not.toContain(flagsOn);
 
-    // AUTH_ENABLED in process.env reaches neither.
+    // Both read bearers; AUTH_ENABLED in process.env enables neither.
     expect(authSetup(a.logger)).toEqual([false, true]);
-    expect(authSetup(b.logger)).toBeUndefined();
+    expect(authSetup(b.logger)).toEqual([false, true]);
 
     const onA = await a.handle.reactor.createEmpty("powerhouse/document-model");
     const onB = await b.handle.reactor.createEmpty("powerhouse/document-model");

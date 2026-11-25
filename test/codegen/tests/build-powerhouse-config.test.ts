@@ -17,7 +17,7 @@ function isPlainObject(v: unknown): v is Plain {
  * Walks two objects in lockstep, asserting every leaf in `expected` is also
  * present in `actual` with the same value. Used to verify the scaffolded
  * config carries every DEFAULT_CONNECT_CONFIG field — the "every leaf
- * populated" invariant that `ph vetra` and similar dev consumers depend on.
+ * populated" invariant that `ph dev` and similar dev consumers depend on.
  */
 function assertContainsLeaves(
   actual: unknown,
@@ -64,7 +64,7 @@ describe("buildPowerhouseConfigTemplate", () => {
     const parsed = JSON.parse(out) as Plain;
     expect(parsed.connect).toBeDefined();
     // Every leaf in DEFAULT_CONNECT_CONFIG must be present at the same path
-    // and with the same value inside `connect`. `ph vetra` and similar dev
+    // and with the same value inside `connect`. `ph dev` and similar dev
     // consumers read the source file directly (no dist merge), so a missing
     // leaf surfaces as `undefined` at the consumer.
     const {
@@ -75,7 +75,7 @@ describe("buildPowerhouseConfigTemplate", () => {
     assertContainsLeaves(parsed.connect, { ...scaffolded, app });
   });
 
-  test("leaves connect.instance out, so ph vetra picks Studio's reactor client", async () => {
+  test("leaves connect.instance out, so ph dev picks Studio's reactor client", async () => {
     const out = await buildPowerhouseConfigTemplate({ name: NAME });
     const parsed = JSON.parse(out) as { connect: Plain };
     expect(parsed.connect).not.toHaveProperty("instance");
@@ -94,7 +94,7 @@ describe("buildPowerhouseConfigTemplate", () => {
     expect(connectConfigSchema.safeParse(parsed.connect).success).toBe(true);
   });
 
-  test("leaves connect.app.cookieBanner out, so ph vetra's Studio has no banner", async () => {
+  test("leaves connect.app.cookieBanner out, so ph dev's Studio has no banner", async () => {
     const out = await buildPowerhouseConfigTemplate({ name: NAME });
     const parsed = JSON.parse(out) as { connect: { app: Plain } };
     expect(parsed.connect.app).not.toHaveProperty("cookieBanner");
@@ -142,27 +142,19 @@ describe("buildPowerhouseConfigTemplate", () => {
     expect(a.reactor.port).not.toBe(b.reactor.port);
   });
 
-  test("always emits `vetra` carrying the assigned connect port", async () => {
+  test("emits no `vetra` key", async () => {
     const out = await buildPowerhouseConfigTemplate({ name: NAME });
     const parsed = JSON.parse(out) as Plain;
-    // The block is no longer remote-drive-only: it is where `ph vetra`'s
-    // Connect port lives, so every scaffolded project has one.
-    expect(parsed.vetra).toEqual({
-      connectPort: deriveProjectPorts(NAME).vetraConnectPort,
-    });
+    expect(parsed).not.toHaveProperty("vetra");
   });
 
-  test("emits drive coordinates alongside the port when remoteDrive is provided", async () => {
+  test("emits the drive url, and nothing beside it, when remoteDrive is provided", async () => {
     const remoteDrive = "https://reactor.example.com/d/vetra-abc123";
     const out = await buildPowerhouseConfigTemplate({
       name: NAME,
       remoteDrive,
     });
     const parsed = JSON.parse(out) as Plain;
-    expect(parsed.vetra).toEqual({
-      connectPort: deriveProjectPorts(NAME).vetraConnectPort,
-      driveId: "vetra-abc123",
-      driveUrl: remoteDrive,
-    });
+    expect(parsed.vetra).toEqual({ driveUrl: remoteDrive });
   });
 });

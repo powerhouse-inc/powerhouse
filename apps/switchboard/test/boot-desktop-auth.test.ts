@@ -1,6 +1,6 @@
 // A switchboard shaped like the desktop host's: sign-in enforced, the first
 // person the owner, bound to loopback, and working with Renown unreachable once
-// that person has signed in (ADR 0008 §11).
+// that person has signed in: Renown's last answer is kept (ADR 0008 §11, D8).
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
@@ -135,8 +135,7 @@ describe(
         requireAuthenticatedCaller: true,
         resolveIdentity: true,
         ownerClaim: true,
-        offlineCredentials: true,
-        renown: { source: "remote", url: renownUrl },
+        renown: { url: renownUrl },
       },
     });
 
@@ -185,8 +184,7 @@ describe(
       visitor = await newKey();
       renown = await fakeRenown(
         new Map([
-          // Past its date: it is the proof that counts while Renown is away.
-          [person.did, await credentialFor(PERSON, person.did, -1)],
+          [person.did, await credentialFor(PERSON, person.did)],
           [visitor.did, await credentialFor(VISITOR, visitor.did)],
         ]),
       );

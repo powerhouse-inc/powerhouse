@@ -217,10 +217,6 @@ export const SETTINGS_ELSEWHERE: [Pattern, string][] = [
     "The switchboard won't start with remote drives in its own settings. Declare drives in the reactor settings instead.",
   ],
   [
-    ["features", "pluginHost"],
-    "The switchboard won't start with the plugin host in its own settings. Plugins turn it on.",
-  ],
-  [
     ["processorConfig", "**"],
     "The switchboard won't start with processor settings in its own settings.",
   ],
@@ -233,10 +229,6 @@ const DENIED_FAMILIES: [Pattern, string][] = [
   ],
   [["runner", "plugins", "**"], CODE_REASONS.plugins],
   [["reactor", "backends", "*", "packages", "**"], CODE_REASONS.packages],
-  [
-    ["reactor", "workflows", "**"],
-    "The monitor can't turn workflows on or off, because that loads code.",
-  ],
   [["reactor", "drives", "**"], CODE_REASONS.drives],
   [["config", "switchboard", "packages", "**"], CODE_REASONS.packages],
   ...SETTINGS_ELSEWHERE.map(([pattern, reason]): [Pattern, string] => [

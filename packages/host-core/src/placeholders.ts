@@ -8,7 +8,7 @@ import { substituteBuiltinEnv } from "./env-substitution.js";
  * resolves it at start. `${userData}` is a PROJECT-SHAPED root: its `.ph`
  * subtree carries the same names the classic commands use under
  * `<project>/.ph` (see `resolvePhDir`). In the CLI it IS the project root, so
- * `ph run desktop` in a project shares the one `.ph` tree `ph vetra` uses;
+ * `ph run desktop` in a project shares the one `.ph` tree `ph dev` uses;
  * a shell (Tauri) points it at the OS profile via PH_USER_DATA_DIR, and the
  * whole `.ph` tree — stores, identity, run records — follows.
  */

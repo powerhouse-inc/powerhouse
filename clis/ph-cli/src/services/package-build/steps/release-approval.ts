@@ -60,6 +60,7 @@ export const releaseStartStep: StandardBuildStep = {
 const OPTIONAL_EXPORTS: Readonly<Record<string, string>> = {
   "./scalars": "scalars/index.ts",
   "./pieces": "pieces/index.ts",
+  "./cli": "cli/index.ts",
 };
 
 const unbuiltExports = (projectRoot: string, findings: BuildFindings) =>

@@ -2,7 +2,7 @@
 
 - [ ] Recreate document-model specification
 - [ ] Test Claude usage and fix any issues
-- [ ] Integrate with `ph vetra`
+- [ ] Integrate with `ph dev`
 - [ ] Rename `reactor-mcp` to `reactor-ai` and restructure package
 - [ ] Integrate tools with AI SDK
 - [ ] Implement chat agent with access to reactor tools
@@ -25,7 +25,7 @@
   - Fix schema validation errors
   - Ensure tool descriptions are clear and actionable
 
-- [ ] **Integrate with `ph vetra`**
+- [ ] **Integrate with `ph dev`**
   - Research vetra integration patterns
   - Add vetra as dependency if needed
   - Implement vetra-compatible interfaces

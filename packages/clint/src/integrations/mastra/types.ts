@@ -13,6 +13,15 @@ export interface GetToolsOptions {
    */
   MCPClient?: any;
   /**
+   * The bearer each discovered MCP endpoint's requests carry, minted per
+   * request: the agent's session, so the endpoint's door knows who calls.
+   * The endpoint's host signs the writes. Omitted: requests go anonymous.
+   */
+  mcpBearer?: (endpoint: {
+    url: string;
+    serviceId: string;
+  }) => Promise<string | undefined>;
+  /**
    * Glob-style patterns matched against the final tool names (CLI + MCP).
    *
    * Pattern syntax: `*` matches any run of characters, `?` matches one char,

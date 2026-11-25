@@ -272,10 +272,6 @@ Returns whether revision history is visible.
 
 Sets revision history visibility.
 
-### `addRevisionHistoryVisibleEventHandler`
-
-Adds event handler for revision history visibility.
-
 ### `showRevisionHistory`
 
 Shows the revision history.
@@ -307,14 +303,6 @@ Returns the selected document of a specific type, throws an error if the found d
 ### `useSelectedDriveId`
 
 Returns the selected drive id.
-
-### `setSelectedDriveId`
-
-Sets the selected drive id.
-
-### `addSelectedDriveIdEventHandler`
-
-Adds an event handler for the selected drive id.
 
 ### `useSelectedDrive`
 
