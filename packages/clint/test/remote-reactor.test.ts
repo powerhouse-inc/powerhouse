@@ -22,6 +22,7 @@ import { setName } from "@powerhousedao/shared/document-model";
 import {
   attachRemoteReactor,
   deriveGraphqlEndpoint,
+  withBaseModels,
 } from "../src/integrations/powerhouse/remote-reactor.js";
 import { LocalSigner } from "./fixtures/local-signer.js";
 import { ensureDrive } from "../src/integrations/powerhouse/drive.js";
@@ -300,6 +301,23 @@ describe("attachRemoteReactor", () => {
     expect(attachment.endpoint).toBe(`http://127.0.0.1:${port}/graphql`);
     expect(attachment.client).toBeDefined();
     expect(attachment.remoteInfo).toEqual({ name: "fake-switchboard" });
+  });
+
+  it("gives the client the drive and document-model models besides the Cli's", async () => {
+    const listed = await withBaseModels([]);
+    expect(listed.map((module) => module.documentModel.global.id)).toEqual([
+      "powerhouse/document-model",
+      "powerhouse/document-drive",
+    ]);
+    const own = listed[1];
+    const merged = await withBaseModels([own]);
+    expect(merged[0]).toBe(own);
+    expect(
+      merged.filter(
+        (module) =>
+          module.documentModel.global.id === "powerhouse/document-drive",
+      ),
+    ).toHaveLength(1);
   });
 
   it("fails the attach LOUDLY with the start hint when nothing listens", async () => {

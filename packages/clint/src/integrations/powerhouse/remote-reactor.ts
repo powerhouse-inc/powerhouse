@@ -130,6 +130,30 @@ async function readRemoteInfo(
   }
 }
 
+/**
+ * The Cli's models plus the ones every switchboard holds (document models,
+ * drives): a signed write to a drive needs the drive's model to compute the
+ * state it signs against. A model the Cli lists wins over a base one of the
+ * same type and version.
+ */
+export async function withBaseModels(
+  models: readonly DocumentModelModule<any>[],
+): Promise<DocumentModelModule<any>[]> {
+  const [{ driveDocumentModelModule }, { documentModelDocumentModelModule }] =
+    await Promise.all([
+      import("@powerhousedao/shared/document-drive"),
+      import("document-model"),
+    ]);
+  const key = (module: DocumentModelModule<any>) =>
+    `${module.documentModel.global.id}@${module.version ?? 1}`;
+  const listed = new Set(models.map(key));
+  const base = [
+    documentModelDocumentModelModule,
+    driveDocumentModelModule,
+  ] as unknown as DocumentModelModule<any>[];
+  return [...models, ...base.filter((module) => !listed.has(key(module)))];
+}
+
 export async function attachRemoteReactor(
   options: AttachRemoteReactorOptions,
 ): Promise<RemoteReactorAttachment> {
@@ -148,7 +172,7 @@ export async function attachRemoteReactor(
     await import("@powerhousedao/reactor-browser/graphql-client");
   const clientOptions: GraphQLReactorClientOptions = {
     url: endpoint,
-    documentModels: options.documentModels,
+    documentModels: await withBaseModels(options.documentModels),
     ...(tokenProvider ? { tokenProvider } : {}),
     ...(options.signer ? { signer: options.signer } : {}),
   };
