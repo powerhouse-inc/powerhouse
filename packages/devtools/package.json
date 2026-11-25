@@ -14,7 +14,7 @@
   },
   "files": [
     "dist",
-    "!dist/mount.js.map"
+    "!dist/*.js.map"
   ],
   "sideEffects": [
     "./dist/client-*.js"
@@ -58,6 +58,7 @@
   },
   "devDependencies": {
     "@base-ui/react": "1.9.0",
+    "@dagrejs/dagre": "3.1.3",
     "@powerhousedao/connect-core": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
@@ -68,10 +69,12 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "@xyflow/react": "12.11.6",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
     "happy-dom": "^20.8.9",
+    "html-to-image": "1.11.13",
     "lucide-react": "^1.16.0",
     "react": "catalog:",
     "react-dom": "catalog:",

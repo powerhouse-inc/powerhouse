@@ -10,6 +10,11 @@ import { Code, EmptyState, Mono, Section, Tag } from "../../kit.js";
 import { cn } from "../../lib/cn.js";
 import { plural } from "../../lib/plural.js";
 import { Row, Rows } from "../ui.js";
+import {
+  SchemaDiagramView,
+  SchemaViewSwitch,
+  useSchemaView,
+} from "./schema-view.js";
 
 type Scope = "global" | "local";
 
@@ -83,14 +88,17 @@ function StateTab({
 }
 
 function StateSection({
+  model,
   version,
   item,
   onSelect,
 }: {
+  model: ProjectDocumentModelDetail;
   version: ProjectDocumentModelVersion;
   item: string | undefined;
   onSelect: (item: string) => void;
 }) {
+  const [view, setView] = useSchemaView();
   const linked: Scope | undefined =
     item === stateItem("local")
       ? "local"
@@ -111,12 +119,18 @@ function StateSection({
     setScope(next);
     onSelect(stateItem(next));
   };
+  const diagram = view === "diagram" && Boolean(state?.schema);
   return (
     <div ref={section}>
       <Section
         data-testid="ph-model-state"
         data-scope={scope}
         title="State"
+        aside={
+          state?.schema ? (
+            <SchemaViewSwitch value={view} onChange={setView} />
+          ) : undefined
+        }
         tabs={
           <div
             role="tablist"
@@ -139,17 +153,28 @@ function StateSection({
         {state ? (
           <div
             role="tabpanel"
-            className="grid gap-x-6 gap-y-3 @3xl/main:grid-cols-2"
+            className={cn(
+              "grid gap-x-6 gap-y-3",
+              !diagram && "@3xl/main:grid-cols-2",
+            )}
           >
             <div className="min-w-0">
               <Label>Schema</Label>
-              <div data-testid="ph-state-schema">
-                {state.schema ? (
-                  <Code lang="graphql">{state.schema}</Code>
-                ) : (
-                  <None>No schema.</None>
-                )}
-              </div>
+              {diagram ? (
+                <SchemaDiagramView
+                  schema={state.schema}
+                  label={`${model.name} ${scope} state`}
+                  onShowSdl={() => setView("sdl")}
+                />
+              ) : (
+                <div data-testid="ph-state-schema">
+                  {state.schema ? (
+                    <Code lang="graphql">{state.schema}</Code>
+                  ) : (
+                    <None>No schema.</None>
+                  )}
+                </div>
+              )}
             </div>
             <div className="min-w-0">
               <Label>Initial state</Label>
@@ -528,7 +553,12 @@ export function ModelSections({
       data-testid="ph-model-sections"
       className="flex min-w-0 flex-col gap-6"
     >
-      <StateSection version={version} item={item} onSelect={onSelect} />
+      <StateSection
+        model={model}
+        version={version}
+        item={item}
+        onSelect={onSelect}
+      />
       {version.modules.length === 0 ? (
         <Section data-testid="ph-model-no-modules" title="Modules">
           <None>This version declares no modules, so no operations.</None>
