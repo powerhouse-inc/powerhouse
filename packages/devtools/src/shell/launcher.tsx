@@ -27,7 +27,7 @@ import {
   type Anchor,
 } from "./launcher-drag.js";
 import { defaultPanel } from "./location.js";
-import { BoltMark } from "./mark.js";
+import { PowerhouseMark } from "./mark.js";
 import { usePageLinks } from "./page-link.js";
 import type { Badge, PanelDef, Registry } from "./registry.js";
 import { toggleShortcutLabel } from "./shortcuts.js";
@@ -212,7 +212,7 @@ function MarkButton({ side, onOpen }: { side: Side; onOpen: () => void }) {
             aria-label={down ? `Open DevTools. ${down}` : "Open DevTools"}
             className={barButton}
           >
-            <BoltMark className={cn(down && "opacity-40 grayscale")} />
+            <PowerhouseMark className={cn(down && "opacity-40 grayscale")} />
             {down && (
               <span
                 aria-hidden

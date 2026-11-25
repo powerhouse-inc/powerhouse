@@ -29,7 +29,7 @@ import {
 import { ScrollArea } from "../ui/scroll-area.js";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip.js";
 import { panelById, tabOf } from "./location.js";
-import { BoltMark } from "./mark.js";
+import { PowerhouseMark } from "./mark.js";
 import { usePageLinks } from "./page-link.js";
 import type { Badge, PanelDef } from "./registry.js";
 import { paletteShortcutLabel, toggleShortcutLabel } from "./shortcuts.js";
@@ -378,7 +378,7 @@ export function DevtoolsFrame({ mode }: { mode: FrameMode }) {
     >
       {mode !== "standalone" && (
         <header className="flex h-10 shrink-0 items-center gap-1.5 border-b px-2">
-          <BoltMark />
+          <PowerhouseMark />
           {/* From this width the title fits beside the longest page name. */}
           <div className="hidden shrink-0 @min-[25rem]/frame:block">
             <DevtoolsTitle />
