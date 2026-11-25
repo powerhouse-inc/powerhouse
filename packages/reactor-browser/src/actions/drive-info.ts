@@ -1,6 +1,8 @@
 import { DriveRequestError } from "@powerhousedao/reactor";
+import { switchboardOfDrive } from "@powerhousedao/shared/host-tokens";
 import {
   ambientRenownTokenProvider,
+  answerCredentialRefusal,
   type BearerTokenProvider,
 } from "../graphql-client/auth.js";
 
@@ -35,6 +37,10 @@ export type DriveInfo = {
  * provider already answers `undefined` when logged out, and an open
  * switchboard serves that anonymously exactly as before.
  *
+ * A credential the switchboard refuses goes to the app's refusal handler, as
+ * the GraphQL clients' does (a browser pseudonym the switchboard has not seen
+ * is enrolled there), and the request goes once more as it says.
+ *
  * A failure throws `DriveRequestError` carrying the status, so
  * `isDriveAuthError` can tell a refusal from an unreachable host and the
  * caller can prompt for a login instead of reporting a network fault.
@@ -43,11 +49,18 @@ export async function fetchDriveInfo(
   url: string,
   tokenProvider: BearerTokenProvider = ambientRenownTokenProvider,
 ): Promise<DriveInfo> {
+  const send = (token: string | undefined) =>
+    fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
   const token = await tokenProvider();
 
-  const response = await fetch(url, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  let response = await send(token);
+  if (token && response.status === 401) {
+    const handled = await answerRefusal(response, url);
+    if (handled === "anonymous") response = await send(undefined);
+    if (handled === "again") response = await send(await tokenProvider());
+  }
 
   if (!response.ok) {
     throw new DriveRequestError(
@@ -57,4 +70,17 @@ export async function fetchDriveInfo(
   }
 
   return (await response.json()) as DriveInfo;
+}
+
+/** The refusal handler's answer to a 401 that names its reason. */
+async function answerRefusal(response: Response, url: string) {
+  const body = (await response.json().catch(() => undefined)) as
+    | { reason?: unknown }
+    | undefined;
+  return typeof body?.reason === "string"
+    ? answerCredentialRefusal({
+        reason: body.reason,
+        url: switchboardOfDrive(url)?.graphql,
+      })
+    : undefined;
 }

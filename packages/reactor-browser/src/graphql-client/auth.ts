@@ -63,6 +63,15 @@ export function setCredentialRefusalHandler(
   refusalHandler = handler;
 }
 
+/** The app's answer to `refusal`, as {@link makeAuthMiddleware} asks it. */
+export async function answerCredentialRefusal(
+  refusal: CredentialRefusal,
+): Promise<"anonymous" | "again" | undefined> {
+  return refusalHandler
+    ? refusalHandler(refusal).catch(() => undefined)
+    : undefined;
+}
+
 /** The reason a 401 names, from graphql-request's error or a response body. */
 export function credentialRefusalOf(error: unknown): string | undefined {
   const response = (
@@ -105,12 +114,9 @@ export function makeAuthMiddleware(
       return await action({ authorization: `Bearer ${token}` });
     } catch (error) {
       const reason = credentialRefusalOf(error);
-      const handled =
-        reason && refusalHandler
-          ? await refusalHandler({ reason, url: options.url }).catch(
-              () => undefined,
-            )
-          : undefined;
+      const handled = reason
+        ? await answerCredentialRefusal({ reason, url: options.url })
+        : undefined;
       if (handled === "anonymous") return action();
       if (handled === "again") {
         const fresh = await tokenProvider();

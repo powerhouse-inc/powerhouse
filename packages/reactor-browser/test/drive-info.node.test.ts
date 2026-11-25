@@ -2,6 +2,7 @@
 import { DriveRequestError, isDriveAuthError } from "@powerhousedao/reactor";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchDriveInfo } from "../src/actions/drive-info.js";
+import { setCredentialRefusalHandler } from "../src/graphql-client/auth.js";
 import type { PHGlobal } from "../src/types/global.js";
 
 /**
@@ -138,6 +139,69 @@ describe("fetchDriveInfo", () => {
     expect((error as DriveRequestError).statusCode).toBe(401);
     // The point of the typed error: this is what raises the login modal.
     expect(isDriveAuthError(error)).toBe(true);
+  });
+
+  describe("a credential the switchboard refuses", () => {
+    function refused(reason?: string) {
+      return Promise.resolve({
+        ok: false,
+        status: 401,
+        json: () =>
+          Promise.resolve({
+            error: "Credentials no longer valid",
+            ...(reason ? { reason } : {}),
+          }),
+      });
+    }
+
+    afterEach(() => setCredentialRefusalHandler(undefined));
+
+    it("is enrolled at that switchboard as the handler says, and the request goes again", async () => {
+      signedIn("tok-1");
+      getBearerToken.mockResolvedValueOnce("tok-1").mockResolvedValue("tok-2");
+      const handler = vi.fn().mockResolvedValue("again");
+      setCredentialRefusalHandler(handler);
+      fetchMock.mockReturnValueOnce(refused("not-registered"));
+      fetchMock.mockReturnValue(ok());
+
+      await expect(
+        fetchDriveInfo("http://switchboard.test/d/my-drive"),
+      ).resolves.toEqual(driveInfoBody);
+
+      expect(handler).toHaveBeenCalledWith({
+        reason: "not-registered",
+        url: "http://switchboard.test/graphql",
+      });
+      expect(fetchMock.mock.calls[1]?.[1]).toEqual({
+        headers: { Authorization: "Bearer tok-2" },
+      });
+    });
+
+    it("goes again anonymously when the handler drops it", async () => {
+      signedIn("tok-1");
+      setCredentialRefusalHandler(() => Promise.resolve("anonymous"));
+      fetchMock.mockReturnValueOnce(refused("expired"));
+      fetchMock.mockReturnValue(ok());
+
+      await fetchDriveInfo("http://switchboard.test/d/my-drive");
+
+      expect(fetchMock.mock.calls[1]?.[1]).toEqual({ headers: {} });
+    });
+
+    it("throws the 401 when the refusal names no reason", async () => {
+      signedIn("tok-1");
+      const handler = vi.fn();
+      setCredentialRefusalHandler(handler);
+      fetchMock.mockReturnValue(refused());
+
+      const error = await fetchDriveInfo(
+        "http://switchboard.test/d/my-drive",
+      ).catch((e: unknown) => e);
+
+      expect(isDriveAuthError(error)).toBe(true);
+      expect(handler).not.toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("does not read a 404 as an auth error", async () => {
