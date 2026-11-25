@@ -1,9 +1,11 @@
 import { FileQuestion, RotateCw, Unplug } from "lucide-react";
 import type { DevtoolsApiFailureCode } from "../api-client.js";
-import { EmptyState, Mono } from "../kit.js";
+import { EmptyState } from "../components/empty-state.js";
+import { Mono } from "../components/text.js";
 import { Button } from "../ui/button.js";
+import type { DataAttributes } from "../lib/data-attributes.js";
 
-export function ReloadButton() {
+function ReloadButton() {
   return (
     <Button
       variant="outline"
@@ -26,7 +28,7 @@ export function ApiUnavailable({
 }: {
   code: DevtoolsApiFailureCode;
   message: string;
-} & { [k: `data-${string}`]: string | undefined }) {
+} & DataAttributes) {
   const reason = <span data-slot="api-message">{message}</span>;
   if (code === "bad_token") {
     return (

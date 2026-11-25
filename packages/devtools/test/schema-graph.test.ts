@@ -3,7 +3,7 @@ import {
   SCHEMA_GRAPH_LIMITS,
   schemaGraph,
   type SchemaGraph,
-} from "../src/build/models/schema-graph.js";
+} from "../src/panels/models/schema/schema-graph.js";
 
 function graph(sdl: string): SchemaGraph {
   const result = schemaGraph(sdl);

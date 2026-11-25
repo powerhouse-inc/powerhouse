@@ -14,8 +14,8 @@ import type {
   ProjectSnapshot,
   ProjectSubgraph,
 } from "../src/api.js";
-import { BUILD_GROUP, BUILD_PANELS } from "../src/build/pages/index.js";
-import { ProjectProvider } from "../src/build/project/provider.js";
+import { BUILD_GROUP, BUILD_PANELS } from "../src/panels/build-panels.js";
+import { ProjectProvider } from "../src/project/provider.js";
 import type { DevtoolsApp } from "../src/props.js";
 import type { Registry } from "../src/shell/registry.js";
 import { DevtoolsStandalone } from "../src/shell/root.js";

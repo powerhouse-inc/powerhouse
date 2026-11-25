@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
+import { TabCount, TabList } from "../components/tabs.js";
 import { cn } from "../lib/cn.js";
 import { Button, buttonVariants } from "../ui/button.js";
 import {
@@ -220,14 +221,10 @@ export function PanelSwitcher() {
   );
 }
 
-function TabCount({ useCount }: { useCount: () => number }) {
+function PanelTabCount({ useCount }: { useCount: () => number }) {
   const count = useCount();
   if (!count) return null;
-  return (
-    <span className="ml-1.5 text-[11px] text-destructive tabular-nums">
-      {count}
-    </span>
-  );
+  return <TabCount tone="error">{count}</TabCount>;
 }
 
 function TabStrip() {
@@ -235,27 +232,17 @@ function TabStrip() {
   const panel = panelById(registry, location.panel);
   if (panel.tabs.length < 2) return null;
   return (
-    <ScrollArea orientation="horizontal" className="shrink-0 border-b">
-      <div role="tablist" className="flex gap-4 px-3">
-        {panel.tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={t.id === location.tab}
-            data-tab={t.id}
-            onClick={() => setTab(t.id)}
-            className={cn(
-              "h-8 shrink-0 border-b border-transparent text-[13px] text-muted-foreground hover:text-foreground",
-              t.id === location.tab && "border-primary text-foreground",
-            )}
-          >
-            {t.title}
-            {t.useCount && <TabCount useCount={t.useCount} />}
-          </button>
-        ))}
-      </div>
-    </ScrollArea>
+    <TabList
+      label={panel.title}
+      tabs={panel.tabs.map((t) => ({
+        id: t.id,
+        label: t.title,
+        aside: t.useCount && <PanelTabCount useCount={t.useCount} />,
+      }))}
+      selected={location.tab}
+      onSelect={setTab}
+      className="px-3"
+    />
   );
 }
 

@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SchemaDiagramView } from "../src/build/models/schema-view.js";
+import { SchemaDiagramView } from "../src/panels/models/schema/schema-view.js";
 
-vi.mock("../src/build/models/schema-diagram.js", () => ({
+vi.mock("../src/panels/models/schema/schema-diagram.js", () => ({
   SchemaDiagram: () => {
     throw new Error("The layout failed.");
   },
