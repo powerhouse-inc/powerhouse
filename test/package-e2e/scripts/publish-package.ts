@@ -116,11 +116,16 @@ async function main(): Promise<void> {
   // 3. Generate the document model from its spec in document-models/todo.
   // The fixture spec embeds reducer code in each operation, so codegen writes
   // complete reducer implementations — no manual swap needed for the model.
+  // Written as `ph generate` keeps a spec, the model's global state: the
+  // fixture is a whole document, which the spec scan refuses with a ZodError.
   const modelDir = path.join(PROJECT_DIR, "document-models/todo");
   fs.mkdirSync(modelDir, { recursive: true });
-  fs.copyFileSync(
-    path.join(FIXTURES, "todo.json"),
+  const fixture = JSON.parse(
+    fs.readFileSync(path.join(FIXTURES, "todo.json"), "utf8"),
+  ) as { state: { global: unknown } };
+  fs.writeFileSync(
     path.join(modelDir, "todo.json"),
+    JSON.stringify(fixture.state.global, null, 2),
   );
   run(`${PH_CLI} generate doc --dir todo`, PROJECT_DIR);
 
