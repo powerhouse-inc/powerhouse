@@ -22,18 +22,20 @@ const run = (exe: string, args: string[]) =>
     stdio: ["ignore", "pipe", "ignore"],
   });
 
-let sid: string | undefined;
-/** The SID of the user this process runs as (Windows). */
-function userSid(): string {
-  if (sid === undefined) {
-    const found = /"(S-[\d-]+)"\s*$/.exec(
+let user: { name: string; sid: string } | undefined;
+/** The account this process runs as (Windows): its name and SID. */
+function currentUser() {
+  if (user === undefined) {
+    const found = /^"(.+)","(S-[\d-]+)"\s*$/.exec(
       run("whoami.exe", ["/user", "/fo", "csv", "/nh"]).trim(),
-    )?.[1];
+    );
     if (!found) throw new Error("whoami named no SID.");
-    sid = found;
+    user = { name: found[1], sid: found[2] };
   }
-  return sid;
+  return user;
 }
+const userSid = () => currentUser().sid;
+const userName = () => currentUser().name;
 
 /**
  * Makes an existing file the user's alone. Returns false when that could
@@ -47,6 +49,16 @@ export function restrictFileToOwner(file: string): boolean {
   }
   try {
     run("icacls.exe", [file, "/inheritance:r", "/grant:r", `*${userSid()}:F`]);
+    // A new file can also hold explicit entries, from the creating process's
+    // default access list (SYSTEM and Administrators on an elevated runner).
+    const user = userName().toLowerCase();
+    const others = fileAccessList(file)
+      .map((entry) => /^(.+?):\(/.exec(entry)?.[1])
+      .filter(
+        (name): name is string =>
+          name !== undefined && name.toLowerCase() !== user,
+      );
+    if (others.length > 0) run("icacls.exe", [file, "/remove:g", ...others]);
     return true;
   } catch {
     return false;

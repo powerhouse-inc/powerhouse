@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -5,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createOwnerOnlyFile,
   fileAccessList,
+  restrictFileToOwner,
   writeOwnerOnlyFile,
 } from "./owner-only.js";
 
@@ -31,6 +33,24 @@ describe("owner-only files", () => {
     expectOwnerOnly(file);
     expect(fs.readdirSync(dir)).toEqual(["secret.json"]);
   });
+
+  it.runIf(process.platform === "win32")(
+    "removes explicit entries a new file was given, as on an elevated runner",
+    () => {
+      const file = path.join(dir, "key.json");
+      fs.writeFileSync(file, "secret");
+      const icacls = path.join(
+        process.env.SystemRoot ?? "C:\\Windows",
+        "System32",
+        "icacls.exe",
+      );
+      // SYSTEM and Administrators, as a runner's default access list adds them.
+      execFileSync(icacls, [file, "/grant", "*S-1-5-18:F", "*S-1-5-32-544:F"]);
+      expect(fileAccessList(file).length).toBeGreaterThan(1);
+      expect(restrictFileToOwner(file)).toBe(true);
+      expectOwnerOnly(file);
+    },
+  );
 
   it("creates a file once: a second writer keeps the first one's text", () => {
     const file = path.join(dir, "key.json");
