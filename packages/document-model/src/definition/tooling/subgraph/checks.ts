@@ -67,7 +67,7 @@ const namesCheck: SubgraphCheck = {
           source: subgraph.source,
           definition: { kind: "subgraph", key: subgraph.name },
           path: ["name"],
-          message: `Two code-first subgraphs are named ${subgraph.name}; a host serves only one of them.`,
+          message: `Two subgraphs are named ${subgraph.name}; a host serves only one of them.`,
           expected: "one subgraph per name",
           received: subgraph.name,
           repair: "Give each subgraph class its own subgraphName.",
@@ -103,8 +103,8 @@ const typeConflictsCheck: SubgraphCheck = {
               definition: { kind: "subgraph", key: subgraph.name },
               path: claimPath(subgraph, claim),
               message: isRootFieldClaim(claim)
-                ? `Code-first subgraphs ${earlier.subgraph.name} and ${subgraph.name} both serve root field ${claim}.`
-                : `Code-first subgraphs ${earlier.subgraph.name} and ${subgraph.name} define type ${claim} differently.`,
+                ? `Subgraphs ${earlier.subgraph.name} and ${subgraph.name} both serve root field ${claim}.`
+                : `Subgraphs ${earlier.subgraph.name} and ${subgraph.name} define type ${claim} differently.`,
               expected: isRootFieldClaim(claim)
                 ? "each root field served by one subgraph"
                 : "one definition per type name",
@@ -188,7 +188,7 @@ const documentModelTypesCheck: SubgraphCheck = {
             source: subgraph.source,
             definition: { kind: "subgraph", key: subgraph.name },
             path: ["types", index],
-            message: `Code-first subgraph ${subgraph.name} declares type ${type.name}, which document model ${owner.documentType} generates; a host refuses the subgraph.`,
+            message: `Subgraph ${subgraph.name} declares type ${type.name}, which document model ${owner.documentType} generates; a host refuses the subgraph.`,
             expected: "a type name no document model of the package generates",
             received: type.name,
             repair: `Rename the subgraph's ${type.name}.`,
@@ -221,7 +221,7 @@ const packageScalarsCheck: SubgraphCheck = {
                 source: subgraph.source,
                 definition: { kind: "subgraph", key: subgraph.name },
                 path: ["scalars", index],
-                message: `Code-first subgraph ${subgraph.name} uses package scalar ${scalar.name}, which scalars/index.ts does not export; a host cannot register it.`,
+                message: `Subgraph ${subgraph.name} uses package scalar ${scalar.name}, which scalars/index.ts does not export; a host cannot register it.`,
                 expected:
                   exported.length === 0
                     ? "a scalars/index.ts export of the scalar"
@@ -262,7 +262,7 @@ const hostAdmissionCheck: SubgraphCheck = {
                 source: subgraph.source,
                 definition,
                 path: [],
-                message: `Code-first subgraph ${subgraph.name} has the name of ${NAME_HOLDER[conflict.nameHeldBy]}; a host refuses the subgraph.`,
+                message: `Subgraph ${subgraph.name} has the name of ${NAME_HOLDER[conflict.nameHeldBy]}; a host refuses the subgraph.`,
                 expected:
                   "a subgraph name no built-in or document-model subgraph uses",
                 received: subgraph.name,
@@ -277,7 +277,7 @@ const hostAdmissionCheck: SubgraphCheck = {
               source: subgraph.source,
               definition,
               path: claimPath(subgraph, claim),
-              message: `Code-first subgraph ${subgraph.name} declares ${claim}, which the host's ${owner} subgraph owns; a host leaves the subgraph out.`,
+              message: `Subgraph ${subgraph.name} declares ${claim}, which the host's ${owner} subgraph owns; a host leaves the subgraph out.`,
               expected: `a name the host's ${owner} subgraph does not own`,
               received: claim,
               repair: `Rename ${claim} in the subgraph's schema.`,

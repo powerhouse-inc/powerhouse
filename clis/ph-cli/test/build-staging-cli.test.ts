@@ -458,7 +458,7 @@ describe("a build that loaded the package's own modules", () => {
     expect(result.signal).toBe(null);
     expect(result.status).toBe(0);
     expect(result.stdout).toContain(
-      "✔ ok: 1 definition (./document-models: 2 code-first entries, 0 stored models)",
+      "✔ ok: 1 definition (./document-models: 2 model entries, 0 stored models)",
     );
   }, 120_000);
 });

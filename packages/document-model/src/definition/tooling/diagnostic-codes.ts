@@ -36,7 +36,7 @@ export const toolingDiagnostics = defineDiagnosticCatalog(
       severity: "warning",
       phase: "package",
       meaning:
-        "A model directory holds generated schema-first code without its stored specification",
+        "A model directory holds the generated code of a legacy document model without its stored specification",
     },
     "PH-PKG-DEFINITION-UNINSPECTABLE": {
       severity: "error",
