@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { modelFocus, parseModelFocus } from "../src/build/project/focus.js";
+import { modelFocus, parseModelFocus } from "../src/project/focus.js";
 
 const TYPES = ["acme/invoice", "acme/invoice-line", "acme/customer"];
 const parse = (id: string, types = TYPES) =>

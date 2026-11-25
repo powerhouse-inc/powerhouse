@@ -8,7 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { projectFilePath } from "../src/build/project/open-in-editor.js";
+import { projectFilePath } from "../src/project/open-in-editor.js";
 import { resolveHost, type DevtoolsApp } from "../src/props.js";
 import {
   BILLING,

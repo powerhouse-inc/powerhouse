@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   schemaGraph,
   type SchemaGraph,
-} from "../src/build/models/schema-graph.js";
-import { laidOut, matches, styled } from "../src/build/models/schema-layout.js";
+} from "../src/panels/models/schema/schema-graph.js";
+import {
+  laidOut,
+  matches,
+  styled,
+} from "../src/panels/models/schema/schema-layout.js";
 
 function graph(sdl: string): SchemaGraph {
   const result = schemaGraph(sdl);

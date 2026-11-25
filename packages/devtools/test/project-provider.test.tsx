@@ -11,7 +11,7 @@ import {
   useProjectModules,
   type ProjectResource,
   type ProjectView,
-} from "../src/build/project/provider.js";
+} from "../src/project/provider.js";
 import { REQUEST_TIMEOUT_MS } from "../src/api-client.js";
 import type { ProjectDocumentModelDetail, ProjectEditor } from "../src/api.js";
 import {

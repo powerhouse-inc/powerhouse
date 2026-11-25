@@ -219,6 +219,22 @@ describe("the dock", () => {
     ).toBe("false");
   });
 
+  it("moves between tabs with the arrow keys, Home and End", () => {
+    open("beta");
+    renderDock();
+    const tab = (name: string) => screen.getByRole("tab", { name });
+    expect(tab("Second").getAttribute("tabindex")).toBe("0");
+    expect(tab("First").getAttribute("tabindex")).toBe("-1");
+
+    fireEvent.keyDown(tab("Second"), { key: "ArrowRight" });
+    expect(savedView().tab).toBe("first");
+    expect(document.activeElement).toBe(tab("First"));
+
+    fireEvent.keyDown(tab("First"), { key: "End" });
+    expect(savedView().tab).toBe("second");
+    expect(document.activeElement).toBe(tab("Second"));
+  });
+
   it("shows no tab bar for a page with one tab", () => {
     open("alpha");
     renderDock();
