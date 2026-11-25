@@ -345,7 +345,7 @@ describe("schema-first behavior next to code-first code", () => {
 });
 
 describe("powerhouse.config.json and ph generate subgraph --name", () => {
-  it("is never read: --name scaffolds schema first and --code-first code first", async () => {
+  it("is never read: the default scaffolds schema first and codeFirst code first", async () => {
     const dir = await createPackage();
     dirs.push(dir);
     await inProject(dir, (project) => generateSubgraph("foo", project));

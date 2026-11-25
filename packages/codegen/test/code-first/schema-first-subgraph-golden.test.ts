@@ -54,7 +54,8 @@ async function inProject<T>(
   return result;
 }
 
-// What `ph generate subgraph --name <name>` runs after its name check.
+// Codegen's default: what `ph generate subgraph --document` and Vetra Studio
+// run for a new subgraph.
 async function cliGenerateName(dir: string, name: string) {
   await inProject(dir, (project) => generateSubgraph(name, project));
   return syncFeatureDependencies(detectFeatures(dir), dir, () => undefined);

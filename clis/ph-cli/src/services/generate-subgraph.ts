@@ -37,22 +37,12 @@ async function assertSubgraphNameFree(projectDir: string, name: string) {
   if (conflict) throw new Error(conflict);
 }
 
-/** The notice for `--code-first` on an existing schema-first subgraph, which
- * is then left unchanged. */
-function codeFirstOnSchemaFirst(
-  args: GenerateSubgraphArgs,
-  projectDir: string,
-  name: string,
-): string | undefined {
-  if (!args.codeFirst) return undefined;
-  const subgraphsDir = join(projectDir, "subgraphs");
-  const dirName = kebabCase(name);
-  if (
-    !existsSync(join(subgraphsDir, dirName, "index.ts")) ||
-    subgraphDirStyle(subgraphsDir, dirName) !== "schema-first"
-  )
-    return undefined;
-  return `subgraphs/${dirName} is schema-first; --code-first only applies to new subgraphs. To convert it, run ph migrate --subgraph ${dirName}.`;
+/** Codegen reads a directory's form from its index.ts. When that file is
+ * gone, lib.ts or resolvers.ts still marks a legacy subgraph: only the legacy
+ * subgraph generator writes them. */
+function holdsLegacySubgraphFiles(projectDir: string, name: string) {
+  const dir = join(projectDir, "subgraphs", kebabCase(name));
+  return ["lib.ts", "resolvers.ts"].some((file) => existsSync(join(dir, file)));
 }
 
 export async function startGenerateSubgraph(
@@ -92,27 +82,13 @@ export async function startGenerateSubgraph(
     }
   } else if (document) {
     const doc = (await getDocument(document)) as SubgraphModuleDocument;
-    const notice = codeFirstOnSchemaFirst(
-      args,
-      projectDir,
-      doc.state.global.name,
-    );
-    if (notice) {
-      console.log(notice);
-      return;
-    }
     await assertSubgraphNameFree(projectDir, doc.state.global.name);
-    await generateSubgraphFromDocument(doc, project, {
-      codeFirst: args.codeFirst,
-    });
+    await generateSubgraphFromDocument(doc, project);
   } else if (name) {
-    const notice = codeFirstOnSchemaFirst(args, projectDir, name);
-    if (notice) {
-      console.log(notice);
-      return;
-    }
     await assertSubgraphNameFree(projectDir, name);
-    await generateSubgraph(name, project, { codeFirst: args.codeFirst });
+    await generateSubgraph(name, project, {
+      codeFirst: !holdsLegacySubgraphFiles(projectDir, name),
+    });
   } else if (dir) {
     const dirName = resolveModuleDirName(
       projectDir,

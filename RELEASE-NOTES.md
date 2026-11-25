@@ -1,5 +1,19 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — `ph generate subgraph --name` writes a `Subgraph` class, and `--code-first` is gone
+
+### ✨ `--name` creates a document model or a subgraph
+
+`ph generate document-model --name <name>` creates a document model declared with `defineDocumentModel`, with its editor. `ph generate subgraph --name <name>` creates a class that extends `Subgraph`, in `index.ts` and `schema.ts` under `subgraphs/<kebab-case name>/`. Neither command needs a flag.
+
+⚠️ **Changed from 6.2.3:** for a new subgraph, `ph generate subgraph --name` wrote a legacy subgraph: a class that extends `BaseSubgraph`, in `index.ts`, `lib.ts`, `resolvers.ts` and `schema.ts`. It now writes the `Subgraph` class. The manifest lists that class under its kebab-case name. `--name "Stock Ledger"` gives `"id": "stock-ledger", "name": "stock-ledger"`, where the legacy subgraph was listed with `"name": "Stock Ledger"`. A subgraph that already exists keeps its form, and `ph generate subgraph --document` still writes a legacy subgraph. The spec-driven modes (`--document`, `--dir`, `--all`, `--extract`, `ph generate all`) and Vetra Studio do not change.
+
+⚠️ **Breaking (unreleased flag):** `--code-first` is removed from both commands. It was only on the 6.3 dev channel. `--name` alone now creates what `--code-first --name` created.
+
+✅ **What to try:** in a project made by `ph init`, run `ph generate document-model --name Invoice` and `ph generate subgraph --name Search`, then `ph build`.
+
+---
+
 ## 🚀 **Unreleased** — undo v3: new documents undo by retraction
 
 ### ✨ Highlights

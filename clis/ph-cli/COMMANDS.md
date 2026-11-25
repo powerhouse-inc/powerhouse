@@ -135,7 +135,7 @@ show help<br><br>
 Generate a document model
 ### options
 #### Document <br>
-Path to a document model spec (.phd or .json) to generate from<br><br>
+Path to a document model spec (.phd or .json) to generate a legacy document model from<br><br>
 **usage:** `--document, -d <file>`<br>
 
 #### Dir <br>
@@ -143,7 +143,7 @@ Name of the directory of an existing document model to re-generate (my-document-
 **usage:** `--dir <dir>`<br>
 
 #### Name <br>
-Experimental. Create a code-first document model with this name, with its editor<br><br>
+Create a document model with this name, with its editor<br><br>
 **usage:** `--name, -n <str>`<br>
 
 
@@ -155,10 +155,6 @@ Re-generate all existing document models in the current project<br><br>
 #### Extract <br>
 Write a powerhouse/document-model spec for each existing document model into specs/document-models/<br><br>
 **usage:** `--extract, -x`<br>
-
-#### Code First <br>
-Experimental. With --name, create the model code-first. Existing models of both styles are discovered without it; ph migrate --document-model converts a schema-first one<br><br>
-**usage:** `--code-first`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>
@@ -303,11 +299,11 @@ show help<br><br>
 Generate a subgraph
 ### options
 #### Name <br>
-The name of the subgraph to generate<br><br>
+Create a subgraph with this name. A subgraph directory that already exists keeps its form<br><br>
 **usage:** `--name, -n <str>`<br>
 
 #### Document <br>
-Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen<br><br>
+Path to a powerhouse/subgraph spec file (.phd or .json) to generate a legacy subgraph from. A subgraph directory that already exists keeps its form<br><br>
 **usage:** `--document, -d <file>`<br>
 
 #### Dir <br>
@@ -323,10 +319,6 @@ Re-generate all existing subgraphs in the current project<br><br>
 #### Extract <br>
 Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/<br><br>
 **usage:** `--extract, -x`<br>
-
-#### Code First <br>
-Experimental. With --name or --document, create a new subgraph code-first. Existing subgraphs keep their own style; ph migrate --subgraph converts one<br><br>
-**usage:** `--code-first`<br>
 
 #### Skip Install <br>
 Don't install the dependencies the command adds to package.json<br><br>
@@ -1325,7 +1317,7 @@ With --subgraphs or --subgraph: leave the resolver calls tsc rejects without a c
 **usage:** `--strict-resolvers`<br>
 
 #### Document Models <br>
-Convert every schema-first document model into a code-first one, keeping each version's definition and reducers. The model gets the layout ph generate document-model --code-first writes: index.ts, upgrades/index.ts, and per version definition.ts, index.ts and modules/; the custom code of src/ moves into the version's directory. The generated code, src/ and <name>.json are removed. The names the generated code exported stay available from compat/v<N>/index.ts, imports of removed files are rewritten to it, and the document-models barrels are regenerated. A model that cannot keep the same definition is left as it is, with the reason. Upgrades no dependencies.<br><br>
+Convert every schema-first document model into a code-first one, keeping each version's definition and reducers. The model gets the layout ph generate document-model --name writes: index.ts, upgrades/index.ts, and per version definition.ts, index.ts and modules/; the custom code of src/ moves into the version's directory. The generated code, src/ and <name>.json are removed. The names the generated code exported stay available from compat/v<N>/index.ts, imports of removed files are rewritten to it, and the document-models barrels are regenerated. A model that cannot keep the same definition is left as it is, with the reason. Upgrades no dependencies.<br><br>
 **usage:** `--document-models`<br>
 
 #### Rename Conflicting Types <br>
