@@ -18,7 +18,8 @@ try {
 } catch {
   // keep selfPath
 }
-const requirers = [createRequire(selfPath), createRequire(selfReal)];
+const requireSelf = createRequire(selfPath);
+const requirers = [requireSelf, createRequire(selfReal)];
 
 export function resolveFromCodegen(name: string): string {
   let lastErr: unknown;
@@ -30,4 +31,13 @@ export function resolveFromCodegen(name: string): string {
     }
   }
   throw lastErr;
+}
+
+/* A graphql-codegen plugin, for its `pluginLoader`. Node's own require, not
+ * `import()`: a module runner that loads this package (the dev switchboard's
+ * Vite loader) would load the plugin's CommonJS itself and lose its exports. */
+export function loadCodegenPlugin(name: string): Promise<unknown> {
+  return new Promise((resolve) => {
+    resolve(requireSelf(resolveFromCodegen(name)));
+  });
 }
