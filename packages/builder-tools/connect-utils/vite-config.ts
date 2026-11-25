@@ -587,9 +587,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // and CDN editors share one instance (build uses reactSelfHostPlugin).
       devReactImportmapPlugin(options.dirname, mountedRoutesDir),
       // Dev-only: serve the reactor SharedWorker bundle (built lazily) at the
-      // stable URL the tab probes; production builds emit it via
-      // prebuildReactorWorker in `ph connect build`.
-      reactorWorkerDevPlugin(options.dirname),
+      // stable URL the tab probes, and the local packages' model bundles;
+      // production builds emit both in `ph connect build`.
+      reactorWorkerDevPlugin(options.dirname, {
+        packages: phConfig.packages,
+      }),
       // The project's routes beside Connect's; ahead of react().
       ...routes.plugins,
       ...plugins,
