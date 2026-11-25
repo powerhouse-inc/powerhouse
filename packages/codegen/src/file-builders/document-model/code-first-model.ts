@@ -30,7 +30,6 @@ import { createOrUpdateManifest } from "../manifest.js";
 import { writeDocumentModelAggregates } from "./aggregates.js";
 import { loadDocumentModelInventory } from "./document-model-inventory.js";
 
-/** @experimental */
 export type GenerateCodeFirstDocumentModelArgs = {
   readonly name: string;
 
@@ -38,7 +37,6 @@ export type GenerateCodeFirstDocumentModelArgs = {
   readonly author: { readonly name: string; readonly website: string | null };
 };
 
-/** @experimental */
 export type CodeFirstGenerationResult = {
   readonly written: readonly string[];
 };

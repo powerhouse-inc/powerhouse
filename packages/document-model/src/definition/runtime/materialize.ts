@@ -46,8 +46,8 @@ import type {
   DocumentModelVersionDefinition,
 } from "../model/types.js";
 import type {
-  CodeFirstDocumentModelModule,
   DocumentModelFamily,
+  MaterializedDocumentModelModule,
 } from "./types.js";
 
 function cloneJson<T>(value: T): T {
@@ -283,7 +283,7 @@ function materializeVersion(
   versions: readonly CompiledDocumentModelVersion[],
   behaviors: ReadonlyMap<CompiledDocumentModelVersion, RuntimeBehavior>,
   upgradeManifest: UpgradeManifest<readonly number[]>,
-): CodeFirstDocumentModelModule {
+): MaterializedDocumentModelModule {
   const known = versions.filter(
     (candidate) => candidate.config.version <= version.config.version,
   );
@@ -406,7 +406,7 @@ function refuseDefinition(value: unknown): never {
 }
 
 /**
- * @experimental Builds the `DocumentModelModule` a host serves from a
+ * Builds the `DocumentModelModule` a host serves from a
  * compiled version, or one module per version from a family. A single
  * version is materialized as a one-version family.
  */
@@ -415,7 +415,7 @@ export function materialize<
   TActions extends Actions,
 >(
   definition: DocumentModelVersionDefinition<number, TState, TActions>,
-): CodeFirstDocumentModelModule<TState, TActions>;
+): MaterializedDocumentModelModule<TState, TActions>;
 export function materialize<
   const TVersions extends readonly DocumentModelVersionDefinition[],
 >(
@@ -423,7 +423,7 @@ export function materialize<
 ): DocumentModelFamily<TVersions>;
 export function materialize(
   definition: DocumentModelVersionDefinition | DocumentModelFamilyDefinition,
-): CodeFirstDocumentModelModule | DocumentModelFamily {
+): MaterializedDocumentModelModule | DocumentModelFamily {
   const version = compiledVersionOf(definition);
   if (version !== undefined) {
     const { id, version: number } = version.config;

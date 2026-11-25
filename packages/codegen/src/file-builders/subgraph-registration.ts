@@ -9,7 +9,7 @@ import {
 } from "utils";
 import { createOrUpdateManifest } from "./manifest.js";
 
-/** @experimental Lists the subgraph in `subgraphs/index.ts` and the manifest. Both styles
+/** Lists the subgraph in `subgraphs/index.ts` and the manifest. Both styles
  * register here, so one barrel exports schema-first and code-first classes. */
 export async function registerSubgraph(args: {
   project: Project;

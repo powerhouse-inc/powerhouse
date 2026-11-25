@@ -47,7 +47,7 @@ export async function generateFromFile(filePath: string, project: Project) {
   await modelGeneration.generateDocumentModel(state, project);
 }
 
-/** @experimental `codeFirst` writes a new subgraph code first; without it,
+/** `codeFirst` writes a new subgraph code first; without it,
  * a new subgraph is schema first. */
 export type GenerateSubgraphOptions = {
   readonly codeFirst?: boolean;

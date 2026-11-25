@@ -710,7 +710,7 @@ function versionModules(
 }
 
 /**
- * @experimental Declares a document model version from `ph` descriptors.
+ * Declares a document model version from `ph` descriptors.
  * The context's `module()` declares operations and `version()` compiles them
  * into a token for `materialize` or `defineDocumentModelFamily`.
  */

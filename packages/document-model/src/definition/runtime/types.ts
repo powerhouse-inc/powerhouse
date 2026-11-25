@@ -9,11 +9,11 @@ import type {
 import type { DocumentModelVersionDefinition } from "../model/types.js";
 
 /**
- * @experimental An ordinary `DocumentModelModule` with typed actions and the
+ * An ordinary `DocumentModelModule` with typed actions and the
  * stored definition it was compiled to. Hosts use `reducer`, `actions`,
  * `utils`, and `documentModel` as they use a generated module's.
  */
-export type CodeFirstDocumentModelModule<
+export type MaterializedDocumentModelModule<
   TState extends PHBaseState = PHBaseState,
   TActions extends Actions = Actions,
 > = Omit<DocumentModelModule<TState>, "actions" | "version"> & {
@@ -22,9 +22,15 @@ export type CodeFirstDocumentModelModule<
   readonly definition: DocumentModelDefinition;
 };
 
+/** @deprecated Use {@link MaterializedDocumentModelModule}. */
+export type CodeFirstDocumentModelModule<
+  TState extends PHBaseState = PHBaseState,
+  TActions extends Actions = Actions,
+> = MaterializedDocumentModelModule<TState, TActions>;
+
 type ModuleOfVersion<T> =
   T extends DocumentModelVersionDefinition<any, infer TState, infer TActions>
-    ? CodeFirstDocumentModelModule<TState, TActions>
+    ? MaterializedDocumentModelModule<TState, TActions>
     : never;
 
 type VersionNumbered<TMember, TVersion extends number> =
@@ -34,7 +40,7 @@ type VersionNumbered<TMember, TVersion extends number> =
       : never
     : never;
 
-/** @experimental One module per version, and the family's upgrade manifest. */
+/** One module per version, and the family's upgrade manifest. */
 export type DocumentModelFamily<
   TVersions extends readonly DocumentModelVersionDefinition[] =
     readonly DocumentModelVersionDefinition[],
@@ -48,30 +54,30 @@ export type DocumentModelFamily<
   ): ModuleOfVersion<VersionNumbered<TVersions[number], TVersion>>;
 };
 
-/** @experimental The global state of a materialized module. */
+/** The global state of a materialized module. */
 export type GlobalStateOf<T> =
-  T extends CodeFirstDocumentModelModule<infer TState, any>
+  T extends MaterializedDocumentModelModule<infer TState, any>
     ? TState extends { global: infer TGlobal }
       ? TGlobal
       : never
     : never;
 
-/** @experimental The local state of a materialized module. */
+/** The local state of a materialized module. */
 export type LocalStateOf<T> =
-  T extends CodeFirstDocumentModelModule<infer TState, any>
+  T extends MaterializedDocumentModelModule<infer TState, any>
     ? TState extends { local: infer TLocal }
       ? TLocal
       : never
     : never;
 
-/** @experimental The document type of a materialized module. */
+/** The document type of a materialized module. */
 export type DocumentOf<T> =
-  T extends CodeFirstDocumentModelModule<infer TState, any>
+  T extends MaterializedDocumentModelModule<infer TState, any>
     ? PHDocument<TState>
     : never;
 
-/** @experimental Any action a materialized module's creators return. */
+/** Any action a materialized module's creators return. */
 export type ActionOf<T> =
-  T extends CodeFirstDocumentModelModule<any, infer TActions>
+  T extends MaterializedDocumentModelModule<any, infer TActions>
     ? ReturnType<TActions[keyof TActions]>
     : never;

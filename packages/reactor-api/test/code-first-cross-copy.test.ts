@@ -100,7 +100,7 @@ describe("a code-first class from another copy of reactor-api", () => {
     await expect(
       host.manager.registerSubgraphInstance(instance, "graphql"),
     ).rejects.toMatchObject({
-      name: "CodeFirstSubgraphError",
+      name: "SubgraphError",
       message:
         "Refusing FromCopyB after construction: `typeDefs` differs from what the Subgraph constructor assigned from getSchema. A `Subgraph` class declares its schema in getSchema only; remove the field initializer, field declaration or assignment that sets `typeDefs`.",
     });

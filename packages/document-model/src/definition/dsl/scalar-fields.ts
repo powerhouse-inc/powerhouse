@@ -121,8 +121,8 @@ type HostScalarFactories = {
 };
 
 /**
- * @experimental Field-use factories for the catalog scalars only the reactor
- * host declares, such as `hostScalars.JSONObject()`. A code-first subgraph
+ * Field-use factories for the catalog scalars only the reactor
+ * host declares, such as `hostScalars.JSONObject()`. A `Subgraph` class
  * may use them; a document model may not.
  */
 export const hostScalarFactories = Object.freeze(

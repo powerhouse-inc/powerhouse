@@ -48,7 +48,7 @@ type LocalScopeEntry<TLocal extends StateRootDescriptor | null> = [
   : { readonly local: LocalScopeDeclaration<TLocal> };
 
 /**
- * @experimental A model without local state can omit `scopes.local`, which
+ * A model without local state can omit `scopes.local`, which
  * means `local: { schema: null, initialValue: {} }`.
  */
 export type DocumentModelConfig<
@@ -77,7 +77,7 @@ type LocalStateOfDescriptor<TLocal extends StateRootDescriptor | null> =
     ? Mutable<SourceOf<TLocal>>
     : Record<string, never>;
 
-/** @experimental The document state a model's descriptors describe. */
+/** The document state a model's descriptors describe. */
 export type ModelState<
   TGlobal extends StateRootDescriptor,
   TLocal extends StateRootDescriptor | null,
@@ -136,7 +136,7 @@ type ModelOperationConfig<
 // token would repeat them in each consumer's emitted declarations.
 declare const operationTokenBrand: unique symbol;
 
-/** @experimental An operation declared by a scope builder. */
+/** An operation declared by a scope builder. */
 export interface ModelOperationToken<
   TInput extends InputDescriptor = InputDescriptor,
   TScope extends "global" | "local" = "global" | "local",
@@ -175,7 +175,6 @@ type CreatorParameters<T> = keyof InputOfOperation<T> extends never
   ? [input?: InputOfOperation<T>]
   : [input: InputOfOperation<T>];
 
-/** @experimental */
 export type ActionsForOperationTokens<
   TOperations extends Readonly<Record<string, ModelOperationToken>>,
 > = {
@@ -186,7 +185,7 @@ export type ActionsForOperationTokens<
 
 declare const moduleTokenBrand: unique symbol;
 
-/** @experimental A module declared by `context.module`. */
+/** A module declared by `context.module`. */
 export interface ModelModuleToken<
   TState extends PHBaseState = PHBaseState,
   TActions extends Actions = Actions,
@@ -221,7 +220,7 @@ type ActionsOfModules<
 declare const versionTokenBrand: unique symbol;
 
 /**
- * @experimental A compiled model version. `materialize` turns it into a
+ * A compiled model version. `materialize` turns it into a
  * document model module; `defineDocumentModelFamily` composes several.
  */
 export interface DocumentModelVersionDefinition<
@@ -243,7 +242,7 @@ type DocumentModelVersionConfig<TModules extends readonly ModelModuleToken[]> =
     readonly modules: TModules;
   };
 
-/** @experimental The context `defineDocumentModel` returns. */
+/** The context `defineDocumentModel` returns. */
 export interface DocumentModelContext<
   TGlobal extends StateRootDescriptor,
   TLocal extends StateRootDescriptor | null,
@@ -290,7 +289,7 @@ export interface DocumentModelContext<
 declare const familyTokenBrand: unique symbol;
 
 /**
- * @experimental The checked versions of one document type and their upgrade
+ * The checked versions of one document type and their upgrade
  * manifest. `materialize` turns it into one module per version.
  */
 export interface DocumentModelFamilyDefinition<

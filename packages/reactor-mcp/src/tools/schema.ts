@@ -107,7 +107,6 @@ export function modelOperations(module: DocumentModelModule): ModelOperation[] {
   );
 }
 
-/** @experimental */
 export type ResolvedOperation = {
   readonly operation: ModelOperation;
   readonly base: boolean;
@@ -117,7 +116,7 @@ export type ResolvedOperation = {
 const MODEL_SHADOWS_BASE = new Set(["NOOP"]);
 
 /**
- * @experimental The operation an action type names: a base action the base
+ * The operation an action type names: a base action the base
  * reducer reduces itself, else the model's own (by stored name, then by action
  * type), else the base NOOP.
  */

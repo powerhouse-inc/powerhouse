@@ -300,7 +300,7 @@ export function copyUpgradeManifest(
 }
 
 /**
- * @experimental Composes the versions of one document type with the upgrade
+ * Composes the versions of one document type with the upgrade
  * manifest that moves a document between them. `materialize` turns the
  * result into one module per version.
  */

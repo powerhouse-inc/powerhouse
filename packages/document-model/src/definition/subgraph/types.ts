@@ -19,7 +19,7 @@ type MaybePromise<T> = T | Promise<T>;
 type NoArgs = Readonly<Record<never, AnyFieldDescriptor>>;
 
 /**
- * @experimental What a resolver receives. `subgraph` is the instance the
+ * What a resolver receives. `subgraph` is the instance the
  * host serves, so a resolver reaches its services and helpers through it.
  */
 export type SubgraphResolverCall<TParent, TArgs, TSubgraph, TRequest, TInfo> = {
@@ -30,7 +30,7 @@ export type SubgraphResolverCall<TParent, TArgs, TSubgraph, TRequest, TInfo> = {
   readonly subgraph: TSubgraph;
 };
 
-/** @experimental What a `resolveType` function receives. */
+/** What a `resolveType` function receives. */
 export type SubgraphResolveTypeCall<TValue, TSubgraph, TRequest, TInfo> = {
   readonly value: TValue;
   readonly request: TRequest;
@@ -39,7 +39,7 @@ export type SubgraphResolveTypeCall<TValue, TSubgraph, TRequest, TInfo> = {
 };
 
 /**
- * @experimental The arguments a resolver receives: the resolved input form,
+ * The arguments a resolver receives: the resolved input form,
  * with defaults applied, as a reducer receives an operation input.
  */
 export type SubgraphArgsOf<TArgs extends ObjectFields> = SourceOf<
@@ -71,7 +71,7 @@ type Resolver<
 ) => MaybePromise<TResult>;
 
 /**
- * @experimental An entry of a code-first subgraph: a root field, a computed
+ * An entry of a `Subgraph` class: a root field, a computed
  * field, an abstract type's `resolveType`, or a type no field reaches. Only
  * the entry builders create one, and it is frozen.
  */
@@ -98,7 +98,7 @@ export type SubgraphEntry<
 };
 
 /**
- * @experimental The entry builders, bound to a subgraph, request and info
+ * The entry builders, bound to a subgraph, request and info
  * type. A missing `resolve`, `subscribe` or `resolveType` is reported by
  * `compileSubgraph`, not thrown here.
  */

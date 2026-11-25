@@ -4,7 +4,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 
 /**
- * @experimental The static member that marks a code-first subgraph class.
+ * The static member that marks a `Subgraph` class.
  * `Symbol.for` makes it the same key in every copy of the package; the
  * protocol's `version` says which contract the class speaks.
  */
@@ -13,7 +13,7 @@ export const SUBGRAPH_PROTOCOL: unique symbol = Symbol.for(
 );
 
 /**
- * @experimental A code-first class's description. `name` is absent on a
+ * A `Subgraph` class's description. `name` is absent on a
  * base class that declares no `subgraphName`.
  */
 export type SubgraphDescription = {
@@ -23,7 +23,7 @@ export type SubgraphDescription = {
 };
 
 /**
- * @experimental The contract a code-first subgraph class exposes under
+ * The contract a `Subgraph` class exposes under
  * `SUBGRAPH_PROTOCOL`. Both methods run in the copy that defined the class.
  */
 export type SubgraphProtocol = {

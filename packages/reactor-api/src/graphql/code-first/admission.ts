@@ -1,6 +1,6 @@
 import { readSubgraphProtocol } from "document-model";
 import { reasonOf } from "./compile.js";
-import { CodeFirstSubgraphError } from "./errors.js";
+import { SubgraphError } from "./errors.js";
 
 /**
  * When the host checks a subgraph: its class before construction, its
@@ -12,7 +12,7 @@ const SUPPORTED_PROTOCOL_VERSION = 1;
 
 /**
  * Refuses a code-first subgraph that the host must not serve, by throwing a
- * `CodeFirstSubgraphError`. `target` is the class at registration and the
+ * `SubgraphError`. `target` is the class at registration and the
  * instance after it. A schema-first class, its instances and plain objects
  * return at once.
  *
@@ -32,7 +32,7 @@ export function codeFirstCheck(target: unknown, phase: CodeFirstPhase): void {
       read.version === SUPPORTED_PROTOCOL_VERSION
         ? `a malformed subgraph protocol version ${SUPPORTED_PROTOCOL_VERSION}`
         : `subgraph protocol version ${String(read.version)}`;
-    throw new CodeFirstSubgraphError(
+    throw new SubgraphError(
       `Refusing ${String(label)}: it speaks ${spoken}, but this host supports version ${SUPPORTED_PROTOCOL_VERSION}`,
     );
   }
@@ -43,13 +43,13 @@ export function codeFirstCheck(target: unknown, phase: CodeFirstPhase): void {
         ? `${String(label)} has no static subgraphName`
         : reasonOf(diagnostics);
     if (reason !== "") {
-      throw new CodeFirstSubgraphError(`Refusing ${String(label)}: ${reason}`);
+      throw new SubgraphError(`Refusing ${String(label)}: ${reason}`);
     }
     return;
   }
   const result = read.protocol.validate(target);
   if (!result.ok) {
-    throw new CodeFirstSubgraphError(
+    throw new SubgraphError(
       `Refusing ${String(label)} after ${phase === "setup" ? "onSetup" : "construction"}: ${result.message}`,
     );
   }

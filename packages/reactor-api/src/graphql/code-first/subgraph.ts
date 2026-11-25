@@ -4,19 +4,19 @@ import { BaseSubgraph } from "../base-subgraph.js";
 import type { SubgraphArgs } from "../types.js";
 import { bindResolvers } from "./bind.js";
 import { compileSubgraphClass } from "./compile.js";
-import { CodeFirstSubgraphError } from "./errors.js";
+import { SubgraphError } from "./errors.js";
 import { recordAssigned, subgraphProtocol } from "./protocol.js";
 import type { SchemaBuilder, SubgraphSchemaEntry } from "./schema-builder.js";
 
 /**
- * @experimental A subgraph whose schema and resolvers come from typed
+ * A subgraph whose schema and resolvers come from typed
  * entries. A subclass declares `static subgraphName` (lowercase kebab-case)
  * and `static getSchema(schema)`; the constructor assigns `name`,
  * `typeDefs`, `resolvers` and `hasSubscriptions` from them, and the host
  * refuses an instance that changes any of the four.
  *
- * A subclass without `subgraphName` is a base for other code-first
- * subgraphs and cannot be constructed.
+ * A subclass without `subgraphName` is a base for other `Subgraph`
+ * classes and cannot be constructed.
  *
  * @example
  * ```ts
@@ -61,7 +61,7 @@ export class Subgraph extends BaseSubgraph {
     super(args);
     const compilation = compileSubgraphClass(new.target);
     if (compilation.kind === "failed") {
-      throw new CodeFirstSubgraphError(
+      throw new SubgraphError(
         `${new.target.name} cannot be constructed: ${compilation.reason}`,
       );
     }
