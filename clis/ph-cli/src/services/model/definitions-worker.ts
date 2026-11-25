@@ -1,7 +1,7 @@
 import type { DefinitionCheckReport } from "@powerhousedao/shared/document-model";
 import type { ReleaseCheck } from "../release/evidence.js";
 import { definitionChecks } from "./check.js";
-import { readProjectDefinitions } from "./project.js";
+import { readProjectDefinitions } from "@powerhousedao/codegen/utils";
 
 /**
  * What the definitions worker reports for each profile. `ph build` forks the

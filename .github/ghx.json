@@ -68,6 +68,9 @@
     "desktop": {
       "paths": ["packages/desktop/**"]
     },
+    "devtools": {
+      "paths": ["packages/devtools/**"]
+    },
     "document-model": {
       "paths": ["packages/document-model/**"]
     },

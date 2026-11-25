@@ -470,3 +470,9 @@ export {
   toOriginPlaceholder,
   withOriginPlaceholders,
 } from "@powerhousedao/shared/connect/origin-placeholder";
+export type {
+  ConnectDevHooks,
+  ConnectDevPlugin,
+  ConnectDevRun,
+  ConnectDevServerContext,
+} from "./connect-dev.js";

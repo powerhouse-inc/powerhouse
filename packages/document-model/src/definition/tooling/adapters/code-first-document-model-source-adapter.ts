@@ -131,7 +131,7 @@ function artifact(
     invalid(
       collector,
       [...path, "version"],
-      "A code-first module declares its registry version as a positive safe integer.",
+      "A document model module declares its registry version as a positive safe integer.",
       "a positive safe integer",
       typeof version === "number" ? String(version) : describeReceived(version),
     );

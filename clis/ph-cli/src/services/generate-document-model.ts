@@ -23,19 +23,9 @@ export async function startGenerateDocumentModel(
   args: GenerateDocumentModelArgs,
   projectDir: string,
 ) {
-  const { dir, all, name, codeFirst, debug } = args;
+  const { dir, all, name, debug } = args;
   if (debug) {
     console.log({ args });
-  }
-  if (name !== undefined && !codeFirst) {
-    throw new Error(
-      "--name creates a code-first document model. Pass --code-first.",
-    );
-  }
-  if (codeFirst && name === undefined) {
-    throw new Error(
-      "--code-first only chooses how --name creates a model. Existing models of both styles are discovered without it; drop --code-first. To convert a schema-first model, run ph migrate --document-model <dir>.",
-    );
   }
   const project = buildTsMorphProject(projectDir);
   if (name !== undefined) {
@@ -70,11 +60,11 @@ export async function startGenerateDocumentModel(
       console.log(`Regenerated document model "${name}"`);
     }
     for (const { name } of codeFirstDocumentModels) {
-      console.log(`Updated the exports of code-first document model "${name}"`);
+      console.log(`Updated the exports of document model "${name}"`);
     }
     for (const dirName of unreadableDirs) {
       console.warn(
-        `Skipped ${modelsDirOf(projectDir)}/${dirName}: it has no readable ${dirName}.json, and no index.ts in it exports a code-first model. Kept the manifest's document models.`,
+        `Skipped ${modelsDirOf(projectDir)}/${dirName}: it has no readable ${dirName}.json, and no index.ts in it exports a document model with a definition. Kept the manifest's document models.`,
       );
     }
     await warnSubgraphTypeConflicts(projectDir);

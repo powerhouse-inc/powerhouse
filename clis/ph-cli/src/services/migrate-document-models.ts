@@ -22,7 +22,7 @@ import { statSync } from "node:fs";
 import { basename, relative, resolve } from "node:path";
 import { outdatedDependency } from "./installed-version.js";
 import { unifiedDiff } from "./migrate-subgraphs.js";
-import { readProjectDefinitions } from "./model/project.js";
+import { readProjectDefinitions } from "@powerhousedao/codegen/utils";
 import { projectModuleReferences } from "./project-module-references.js";
 import {
   assertChangesWritable,

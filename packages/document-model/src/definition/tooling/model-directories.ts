@@ -63,7 +63,7 @@ export function packageSpecifier(
 
 function statOrUndefined(
   path: string,
-  stat: typeof statSync | typeof lstatSync = statSync,
+  stat: typeof statSync = statSync,
 ): Stats | undefined {
   return stat(path, { throwIfNoEntry: false });
 }
@@ -206,7 +206,7 @@ function classify(
         code: "PH-PKG-STORED-SPEC-MISSING",
         source: { specifier: packageSpecifier(packageRoot, path) },
         path: [],
-        message: `This directory holds generated schema-first code but no ${name}.json, so the model it generated cannot be checked or regenerated.`,
+        message: `This directory holds the generated code of a legacy document model but no ${name}.json, so the model it generated cannot be checked or regenerated.`,
         expected: packageSpecifier(packageRoot, specification),
         received: "generated code only",
         repair: `Restore ${name}.json from version control or export it again from the document model editor.`,

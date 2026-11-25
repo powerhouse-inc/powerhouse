@@ -122,7 +122,7 @@ export function schemaFirstSdlConflicts(input: {
           source: schemaFirstSubgraph.source,
           definition: { kind: "subgraph", key: named.subgraph.name },
           path: [],
-          message: `The schema-first subgraph in ${schemaFirstSubgraph.unit} and a code-first subgraph are both named ${named.subgraph.name}; a host serves one of them.`,
+          message: `The legacy subgraph in ${schemaFirstSubgraph.unit} and a \`Subgraph\` class are both named ${named.subgraph.name}; a host serves one of them.`,
           expected: "one subgraph per name",
           received: named.subgraph.name,
           repair: "Rename one of the subgraphs.",
@@ -130,7 +130,7 @@ export function schemaFirstSdlConflicts(input: {
             {
               source: named.subgraph.source,
               path: [],
-              message: "The code-first subgraph with this name.",
+              message: "The `Subgraph` class with this name.",
             },
           ],
         }),
@@ -143,7 +143,7 @@ export function schemaFirstSdlConflicts(input: {
           code: "PH-SG-SCHEMA-FIRST-UNCHECKED",
           source: schemaFirstSubgraph.source,
           path: [],
-          message: `The schema-first subgraph in ${schemaFirstSubgraph.unit} was not checked against the code-first subgraphs: ${read.reason}.`,
+          message: `The legacy subgraph in ${schemaFirstSubgraph.unit} was not checked against the \`Subgraph\` classes: ${read.reason}.`,
           expected:
             "SDL in a schema.graphql file or a gql template without interpolation",
           received: read.reason,
@@ -161,7 +161,7 @@ export function schemaFirstSdlConflicts(input: {
             source: subgraph.source,
             definition: { kind: "subgraph", key: subgraph.name },
             path: [],
-            message: `Code-first subgraph ${subgraph.name} and the schema-first subgraph in ${schemaFirstSubgraph.unit} both claim ${describeClaim(claim)}; the host serves the claim from one of them only.`,
+            message: `The \`Subgraph\` class ${subgraph.name} and the legacy subgraph in ${schemaFirstSubgraph.unit} both claim ${describeClaim(claim)}; the host serves the claim from one of them only.`,
             expected: isRootFieldClaim(claim)
               ? "each root field served by one subgraph"
               : "one definition per type name",
@@ -173,7 +173,7 @@ export function schemaFirstSdlConflicts(input: {
               {
                 source: schemaFirstSubgraph.source,
                 path: [],
-                message: `The schema-first subgraph claims ${claim} here.`,
+                message: `The legacy subgraph claims ${claim} here.`,
               },
             ],
           }),

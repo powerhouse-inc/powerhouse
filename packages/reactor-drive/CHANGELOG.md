@@ -68,6 +68,17 @@ This was a version bump only for @powerhousedao/reactor-drive to align it with o
 - **ph-cli:** a project without hosts is an error  ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
   the classic commands need a hosts/ folder; run ph migrate.
   Co-Authored-By: Claude <noreply@anthropic.com>
+## 6.3.0-dev.11 (2026-11-24)
+
+This was a version bump only for @powerhousedao/reactor-drive to align it with other projects, there were no code changes.
+
+## 6.3.0-dev.10 (2026-11-23)
+
+### 🚀 Features
+
+- **ph-cmd,ph-cli,shared:** next release tag ([ec65d6e6f4](https://github.com/powerhouse-inc/powerhouse/commit/ec65d6e6f4))
+- **releases:** next channel from version_prefix ([1f9a926b5a](https://github.com/powerhouse-inc/powerhouse/commit/1f9a926b5a))
+- **releases:** next-version function for branch releases ([83ffbebba7](https://github.com/powerhouse-inc/powerhouse/commit/83ffbebba7))
 
 ### ❤️ Thank You
 

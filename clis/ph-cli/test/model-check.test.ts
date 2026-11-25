@@ -162,7 +162,7 @@ describe("ph model check on a healthy project", () => {
               source: { specifier: "./document-models/extra/model.ts" },
               path: [],
               message:
-                "This path under the document models directory could not be read, so the scan cannot tell whether it declares a code-first model that no model entry exports.",
+                "This path under the document models directory could not be read, so the scan cannot tell whether it declares a model that no model entry exports.",
               expected: "a readable file or directory",
               repair:
                 "Fix the permissions of the path, or move it out of the document models directory.",
@@ -214,7 +214,7 @@ describe("ph model check on a healthy project", () => {
     expect(result.code).toBe(0);
     expect(result.stdout).toBe(
       [
-        "ok: 2 definitions (./document-models: 1 code-first entry, 1 stored model)",
+        "ok: 2 definitions (./document-models: 1 model entry, 1 stored model)",
         "  document-model example/ledger v1 ./document-models/ledger/index.ts#/Ledger",
         "  document-model example/wallet v1 ./document-models/wallet/wallet.json",
         "0 errors, 0 warnings",
@@ -242,7 +242,7 @@ describe("ph model check on a healthy project", () => {
     });
     expect((await check(root, false)).stdout).toBe(
       [
-        "skipped: 0 definitions (./document-models: 0 code-first entries, 0 stored models)",
+        "skipped: 0 definitions (./document-models: 0 model entries, 0 stored models)",
         "The models directory holds no document model, so nothing was checked.",
         "0 errors, 0 warnings",
         "",
@@ -458,7 +458,7 @@ const BROKEN = [
         source: { specifier: `./document-models/extra/${file}` },
         path: [],
       },
-      line: `PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/extra/${file} (root): ./document-models/extra/ declares a code-first document model that no model entry module exports`,
+      line: `PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/extra/${file} (root): ./document-models/extra/ declares a document model that no model entry module exports`,
     }),
   ),
   {
@@ -479,7 +479,7 @@ const BROKEN = [
       source: { specifier: "./document-models/extra/model.ts" },
       path: [],
     },
-    line: "PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/extra/model.ts (root): ./document-models/extra/ declares a code-first document model that an entry module imports but does not export, so the package leaves it out. Expected: an entry module that exports the model ./document-models/extra/model.ts declares Received: imported, not exported",
+    line: "PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/extra/model.ts (root): ./document-models/extra/ declares a document model that an entry module imports but does not export, so the package leaves it out. Expected: an entry module that exports the model ./document-models/extra/model.ts declares Received: imported, not exported",
   },
   {
     name: "a code-first model in a directory that also stores a specification",
@@ -498,7 +498,7 @@ const BROKEN = [
       source: { specifier: "./document-models/ledger/index.ts" },
       path: [],
     },
-    line: "PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/ledger/index.ts (root): ./document-models/ledger/ stores a schema-first specification",
+    line: "PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/ledger/index.ts (root): ./document-models/ledger/ stores a legacy document model's specification",
   },
   {
     name: "a misspelled catalog scalar factory",

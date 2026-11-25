@@ -3,6 +3,7 @@ import { type DocumentNode, parse, print } from "graphql";
 import {
   type ProjectDefinitions,
   readSubgraphDefinitions,
+  schemaFirstSource,
   subgraphCheckInput,
   type SubgraphCheckInput,
   type SubgraphDefinitions,
@@ -10,10 +11,9 @@ import {
   type SubgraphImportFailure,
   type SubgraphInventoryEntry,
 } from "document-model/tooling";
+import type { ProjectModules } from "@powerhousedao/codegen/utils";
 import { statSync } from "node:fs";
 import { join } from "node:path";
-import type { ProjectModules } from "./project.js";
-import { schemaFirstSource } from "./schema-first/sdl-sources.js";
 import { scanSubgraphs, SUBGRAPHS_ENTRY } from "./subgraph-gate.js";
 
 const SCALARS_ENTRY = "./scalars/index.ts";

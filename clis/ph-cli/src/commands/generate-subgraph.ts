@@ -11,7 +11,8 @@ export const generateSubgraphCmd = command({
       type: optional(string),
       long: "name",
       short: "n",
-      description: "The name of the subgraph to generate",
+      description:
+        "Create a subgraph with this name. A subgraph directory that already exists keeps its form",
     }),
     dir: option({
       type: optional(ModuleDir),
@@ -23,12 +24,6 @@ export const generateSubgraphCmd = command({
       long: "all",
       short: "a",
       description: "Re-generate all existing subgraphs in the current project",
-    }),
-    /** @experimental */
-    codeFirst: flag({
-      long: "code-first",
-      description:
-        "Experimental. With --name, create a new subgraph code-first. Existing subgraphs keep their own style; ph migrate --subgraph converts one",
     }),
     ...skipInstallArgs,
     ...debugArgs,

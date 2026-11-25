@@ -73,6 +73,7 @@ import {
   createConnectRouter,
   disposeConnectAppRouter,
   ModalDialog,
+  registerConnectPage,
   registerConnectRoutes,
   holdConnectRoutes,
   registerPackageRoutes,
@@ -648,6 +649,21 @@ describe("ConnectCoreApp", () => {
         .getByRole("link", { name: "Appearance" })
         .getAttribute("href"),
     ).toBe("/app/settings/appearance");
+  });
+
+  it("serves a page a tool registers, outside the app's layout", async () => {
+    unregister = registerConnectPage({
+      path: "/__tool/panel",
+      component: () => <main data-testid="tool-page">tool</main>,
+    });
+    window.history.replaceState(null, "", "/app/__tool/panel");
+    render(
+      <ConnectCoreApp store={store} routeTree={routeTree} basepath="/app" />,
+    );
+    await vi.waitFor(() =>
+      expect(screen.getByTestId("tool-page")).toBeTruthy(),
+    );
+    expect(screen.queryByRole("navigation")).toBeNull();
   });
 
   it("adds a package's file routes below the routes with their parents' ids", async () => {

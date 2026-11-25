@@ -25,7 +25,7 @@ export const checkDiagnostics = defineDiagnosticCatalog(
       severity: "error",
       phase: "package",
       meaning:
-        "A code-first document model under the document models directory is exported by no model entry module, so the package leaves it out",
+        "A document model under the document models directory is exported by no model entry module, so the package leaves it out",
     },
   },
   toolingDiagnostics,

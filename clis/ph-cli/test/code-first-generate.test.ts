@@ -1,5 +1,5 @@
 import { parse } from "cmd-ts";
-import { existsSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { generateDocumentModelCmd } from "../src/commands/generate-document-model.js";
@@ -21,7 +21,6 @@ const modelArgs = (
   dir: undefined,
   all: false,
   name: undefined,
-  codeFirst: false,
   debug: undefined,
   ...overrides,
 });
@@ -46,51 +45,43 @@ async function project(config: object = {}) {
 }
 
 describe("ph generate document-model", () => {
-  it("reads the --code-first flag and --name", async () => {
+  it("reads --name", async () => {
     const given = await parse(generateDocumentModelCmd, [
-      "--code-first",
       "--name",
       "todo list",
     ]);
     const absent = await parse(generateDocumentModelCmd, []);
     expect(given._tag === "ok" && given.value).toMatchObject({
-      codeFirst: true,
       name: "todo list",
     });
     expect(absent._tag === "ok" && absent.value).toMatchObject({
-      codeFirst: false,
       name: undefined,
     });
   });
-});
 
-describe("--code-first", () => {
-  it("only chooses how --name creates a model, and refuses to run alone", async () => {
-    const dir = await project();
-    const before = readdirSync(dir, { recursive: true });
-    await expect(
-      startGenerateDocumentModel(
-        modelArgs({ codeFirst: true, all: true }),
-        dir,
-      ),
-    ).rejects.toThrow(
-      "--code-first only chooses how --name creates a model. Existing models of both styles are discovered without it; drop --code-first. To convert a schema-first model, run ph migrate --document-model <dir>.",
-    );
-    expect(readdirSync(dir, { recursive: true })).toEqual(before);
+  it("rejects --code-first as an unknown argument", async () => {
+    const result = await parse(generateDocumentModelCmd, [
+      "--code-first",
+      "--name",
+      "todo list",
+    ]);
+    expect(result._tag === "error" && result.error.errors).toEqual([
+      expect.objectContaining({
+        message: "Unknown arguments",
+        nodes: [expect.objectContaining({ raw: "--code-first" })],
+      }),
+    ]);
   });
 });
 
-describe("--code-first --name", () => {
+describe("--name", () => {
   let dir: string;
   let output: string[];
 
   beforeAll(async () => {
     dir = await project();
     output = await printed(() =>
-      startGenerateDocumentModel(
-        modelArgs({ codeFirst: true, name: " todo list " }),
-        dir,
-      ),
+      startGenerateDocumentModel(modelArgs({ name: " todo list " }), dir),
     );
   }, 120_000);
 
@@ -141,12 +132,12 @@ describe("--code-first --name", () => {
     expect(files.map((path) => read(dir, path))).toEqual(before);
   }, 120_000);
 
-  it("reports the code-first model and editor when each kind regenerates", async () => {
+  it("reports the model and editor when each kind regenerates", async () => {
     expect(
       await printed(() =>
         startGenerateDocumentModel(modelArgs({ all: true }), dir),
       ),
-    ).toEqual(['Updated the exports of code-first document model "Todo List"']);
+    ).toEqual(['Updated the exports of document model "Todo List"']);
     expect(await printed(() => startGenerateEditor(editorArgs, dir))).toEqual([
       'Regenerated editor "Todo List Editor" in editors/todo-list-editor',
     ]);
@@ -155,10 +146,7 @@ describe("--code-first --name", () => {
   it("refuses the same --name again, before writing", async () => {
     const config = read(dir, "powerhouse.config.json");
     await expect(
-      startGenerateDocumentModel(
-        modelArgs({ codeFirst: true, name: "todo list" }),
-        dir,
-      ),
+      startGenerateDocumentModel(modelArgs({ name: "todo list" }), dir),
     ).rejects.toThrow("editors/todo-list-editor already exists");
     expect(read(dir, "powerhouse.config.json")).toBe(config);
   });
@@ -171,25 +159,14 @@ describe("a package without models", () => {
     dir = await project();
   });
 
-  it("refuses --name without code-first and writes nothing", async () => {
+  it("refuses --name with another generation mode and writes nothing", async () => {
     await expect(
-      startGenerateDocumentModel(modelArgs({ name: "todo" }), dir),
-    ).rejects.toThrow(
-      "--name creates a code-first document model. Pass --code-first.",
-    );
-    expect(readJson(dir, "powerhouse.config.json")).toEqual({});
-    expect(existsSync(join(dir, "document-models", "todo"))).toBe(false);
-  });
-
-  it("refuses --name with another generation mode", async () => {
-    await expect(
-      startGenerateDocumentModel(
-        modelArgs({ codeFirst: true, name: "todo", all: true }),
-        dir,
-      ),
+      startGenerateDocumentModel(modelArgs({ name: "todo", all: true }), dir),
     ).rejects.toThrow(
       "Cannot specify multiple generation mode options. You provided: --name, --all",
     );
+    expect(readJson(dir, "powerhouse.config.json")).toEqual({});
+    expect(existsSync(join(dir, "document-models", "todo"))).toBe(false);
   });
 
   it("prints the usage line without loading any model", async () => {

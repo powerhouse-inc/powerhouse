@@ -1,0 +1,96 @@
+{
+  "name": "@powerhousedao/devtools",
+  "version": "6.4.0-next.3",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "DevTools for Powerhouse projects: a dev-server plugin with its loopback API and the dock it mounts on the page",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/devtools"
+  },
+  "files": [
+    "dist",
+    "!dist/*.js.map"
+  ],
+  "sideEffects": [
+    "./dist/client-*.js"
+  ],
+  "exports": {
+    "./connect": {
+      "source": "./src/connect/index.ts",
+      "types": "./dist/connect.d.mts",
+      "import": "./dist/connect.mjs",
+      "default": "./dist/connect.mjs"
+    },
+    "./mount": {
+      "source": "./src/mount.tsx",
+      "types": "./dist/mount.d.ts",
+      "import": "./dist/mount.js",
+      "default": "./dist/mount.js"
+    },
+    "./server": {
+      "source": "./src/server/index.ts",
+      "types": "./dist/server.d.mts",
+      "import": "./dist/server.mjs",
+      "default": "./dist/server.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "cd ../.. && oxlint packages/devtools",
+    "build": "pnpm run build:css && tsdown",
+    "build:css": "tailwindcss -i standalone.css -o .cache/standalone.css --minify",
+    "test": "vitest --run"
+  },
+  "dependencies": {
+    "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/host-core": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "change-case": "catalog:",
+    "document-model": "workspace:*",
+    "graphql": "catalog:",
+    "ts-morph": "catalog:"
+  },
+  "devDependencies": {
+    "@base-ui/react": "1.9.0",
+    "@dagrejs/dagre": "3.1.3",
+    "@powerhousedao/connect-core": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@tailwindcss/cli": "catalog:",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.0.1",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "@xyflow/react": "12.11.6",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.0.4",
+    "happy-dom": "^20.8.9",
+    "html-to-image": "1.11.13",
+    "lucide-react": "^1.16.0",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tailwind-merge": "catalog:",
+    "tailwindcss": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "vite": ">=6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  }
+}

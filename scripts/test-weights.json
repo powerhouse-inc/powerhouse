@@ -10,6 +10,7 @@
   "@powerhousedao/connect-core": 39.6,
   "@powerhousedao/design-system": 63.1,
   "@powerhousedao/desktop": 2.5,
+  "@powerhousedao/devtools": 9,
   "@powerhousedao/e2e-utils": 0.5,
   "@powerhousedao/host-core": 7.4,
   "@powerhousedao/load-test-connect": 1,

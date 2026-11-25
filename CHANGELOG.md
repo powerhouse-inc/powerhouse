@@ -306,6 +306,22 @@
 - **ph-cli:** a project without hosts is an error  ([33b90cff3d](https://github.com/powerhouse-inc/powerhouse/commit/33b90cff3d))
   the classic commands need a hosts/ folder; run ph migrate.
   Co-Authored-By: Claude <noreply@anthropic.com>
+## 6.3.0-dev.11 (2026-11-24)
+
+This was a version bump only, there were no code changes.
+
+## 6.3.0-dev.10 (2026-11-23)
+
+### 🚀 Features
+
+- **ph-cmd:** next self-update stream ([f6b3f8871a](https://github.com/powerhouse-inc/powerhouse/commit/f6b3f8871a))
+- **ph-cmd,ph-cli,shared:** next release tag ([ec65d6e6f4](https://github.com/powerhouse-inc/powerhouse/commit/ec65d6e6f4))
+- **releases:** next-version function for branch releases ([83ffbebba7](https://github.com/powerhouse-inc/powerhouse/commit/83ffbebba7))
+- **releases:** next channel from version_prefix ([1f9a926b5a](https://github.com/powerhouse-inc/powerhouse/commit/1f9a926b5a))
+
+### 🩹 Fixes
+
+- **ph-cmd:** config package updates stay on their pre-release line ([fb379fb41c](https://github.com/powerhouse-inc/powerhouse/commit/fb379fb41c))
 
 ### ❤️ Thank You
 

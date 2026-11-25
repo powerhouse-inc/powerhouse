@@ -44,8 +44,8 @@ function staticImports(entry: string): {
   };
 }
 
+// The definition loader is `readProjectDefinitions` of codegen's utils.
 const DEFINITION_MODULES = [
-  join("services", "model", "project.ts"),
   join("services", "model", "render.ts"),
   join("services", "release", "evidence.ts"),
 ];

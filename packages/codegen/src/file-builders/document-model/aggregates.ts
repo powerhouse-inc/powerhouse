@@ -534,7 +534,7 @@ function addCodeFirstEntries(
     const name = model.aggregateExportName;
     if (taken.has(name)) {
       throw new Error(
-        `document-models/index.ts already exports ${name}, so the code-first model ${model.documentType} needs another name.`,
+        `document-models/index.ts already exports ${name}, so the model ${model.documentType} needs another name.`,
       );
     }
     taken.add(name);

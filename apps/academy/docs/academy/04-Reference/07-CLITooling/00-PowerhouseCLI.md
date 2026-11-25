@@ -407,15 +407,13 @@ Generate a document model
 ### Options
 **Dir** - Name of the directory of an existing document model to re-generate (my-document-model or document-models/my-document-model) - Usage: `--dir <dir>`
 
-**Name** - Experimental. Create a code-first document model with this name, with its editor - Usage: `--name, -n <str>`
+**Name** - Create a document model with this name, with its editor - Usage: `--name, -n <str>`
 
 
 
 
 ### Flags
 **All** - Re-generate all existing document models in the current project - Usage: `--all, -a`
-
-**Code First** - Experimental. With --name, create the model code-first. Existing models of both styles are discovered without it; ph migrate --document-model converts a schema-first one - Usage: `--code-first`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -509,7 +507,7 @@ Generate a subgraph
 
 
 ### Options
-**Name** - The name of the subgraph to generate - Usage: `--name, -n <str>`
+**Name** - Create a subgraph with this name. A subgraph directory that already exists keeps its form - Usage: `--name, -n <str>`
 
 **Dir** - Name of the directory of an existing subgraph to re-generate (my-subgraph or subgraphs/my-subgraph) - Usage: `--dir <dir>`
 
@@ -518,8 +516,6 @@ Generate a subgraph
 
 ### Flags
 **All** - Re-generate all existing subgraphs in the current project - Usage: `--all, -a`
-
-**Code First** - Experimental. With --name, create a new subgraph code-first. Existing subgraphs keep their own style; ph migrate --subgraph converts one - Usage: `--code-first`
 
 **Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
 
@@ -1062,7 +1058,7 @@ Run migrations
 
 **Strict Resolvers** - With --subgraphs or --subgraph: leave the resolver calls tsc rejects without a cast, so the project does not compile until each resolver's types agree with the schema. They are listed either way. - Usage: `--strict-resolvers`
 
-**Document Models** - Convert every schema-first document model into a code-first one, keeping each version's definition and reducers. The model gets the layout ph generate document-model --code-first writes: index.ts, upgrades/index.ts, and per version definition.ts, index.ts and modules/; the custom code of src/ moves into the version's directory. The generated code, src/ and &lt;name&gt;.json are removed. The names the generated code exported stay available from compat/v&lt;N&gt;/index.ts, imports of removed files are rewritten to it, and the document-models barrels are regenerated. A model that cannot keep the same definition is left as it is, with the reason. Upgrades no dependencies. - Usage: `--document-models`
+**Document Models** - Convert every schema-first document model into a code-first one, keeping each version's definition and reducers. The model gets the layout ph generate document-model --name writes: index.ts, upgrades/index.ts, and per version definition.ts, index.ts and modules/; the custom code of src/ moves into the version's directory. The generated code, src/ and &lt;name&gt;.json are removed. The names the generated code exported stay available from compat/v&lt;N&gt;/index.ts, imports of removed files are rewritten to it, and the document-models barrels are regenerated. A model that cannot keep the same definition is left as it is, with the reason. Upgrades no dependencies. - Usage: `--document-models`
 
 **Rename Conflicting Types** - With --document-models or --document-model: rename a model type that has the name of a scalar, such as Address, by prefixing the model's name (InvoiceAddress), instead of refusing the model. The GraphQL type name changes; the TypeScript name the model's compat exports keeps the old name. - Usage: `--rename-conflicting-types`
 
@@ -1075,11 +1071,11 @@ Run migrations
 
 ## Model Check
 Check this package's document models through one set of checks:
-every model directory in documentModelsDir, whether it stores a schema-first
-&lt;name&gt;.json or exports a code-first model from its index.ts. Writes nothing.
+every model directory in documentModelsDir, whether it stores the &lt;name&gt;.json of
+a legacy document model or exports a model from its index.ts. Writes nothing.
 
-`tsc` cannot run these checks: a code-first model compiles when its module is
-evaluated.
+`tsc` cannot run these checks: a document model with a definition compiles when
+its module is evaluated.
 
 --release (experimental) runs the checks `ph build --release` runs: these,
 the release checks, and host validation, which validates every model and the

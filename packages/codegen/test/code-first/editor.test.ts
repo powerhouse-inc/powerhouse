@@ -190,7 +190,7 @@ export const TodoEditor: documentModelTypes.EditorModule<
     await expect(
       generateEditor({ ...todoEditor, documentTypes: ["acme/missing"] }),
     ).rejects.toThrow(
-      "No code-first or schema-first document model in this package declares document type acme/missing.\nCode-first models declare: acme/todo-list.\nPass --document-type with a document type a model declares.",
+      "No document model in this package declares document type acme/missing.\nDocument models with a definition declare: acme/todo-list.\nPass --document-type with a document type a model declares.",
     );
   });
 
@@ -210,7 +210,7 @@ export const TodoEditor: documentModelTypes.EditorModule<
     await expect(
       inProject(dir, (project) => generation().generateAllEditors(project)),
     ).rejects.toThrow(
-      "editors/todo-editor/module.ts edits document type acme/todo-list, which no code-first or schema-first document model in this package declares.\nCode-first models declare: acme/renamed-list.\nIf the model's document type changed, set documentTypes in editors/todo-editor/module.ts to the new type, then generate the editor again.",
+      "editors/todo-editor/module.ts edits document type acme/todo-list, which no document model in this package declares.\nDocument models with a definition declare: acme/renamed-list.\nIf the model's document type changed, set documentTypes in editors/todo-editor/module.ts to the new type, then generate the editor again.",
     );
 
     const module = join(dir, "editors/todo-editor/module.ts");

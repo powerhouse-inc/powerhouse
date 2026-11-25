@@ -193,7 +193,7 @@ describe(
       expect(text.code).toBe(0);
       expect(text.stdout).toBe(
         [
-          "ok: 1 definition (./document-models: 0 code-first entries, 0 stored models)",
+          "ok: 1 definition (./document-models: 0 model entries, 0 stored models)",
           "  subgraph items ./subgraphs/index.ts#/ItemsSubgraph/ItemsSubgraph",
           "0 errors, 0 warnings",
           "",
@@ -258,6 +258,11 @@ describe(
           },
           received: "Item",
         },
+      ]);
+      expect(report.diagnostics.map(({ message }) => message)).toEqual([
+        "The legacy subgraph in ./subgraphs/dynamic/ was not checked against the `Subgraph` classes: its gql template interpolates values.",
+        "The `Subgraph` class items and the legacy subgraph in ./subgraphs/sdl/ both claim root field Query.items; the host serves the claim from one of them only.",
+        "The `Subgraph` class items and the legacy subgraph in ./subgraphs/sdl/ both claim type Item; the host serves the claim from one of them only.",
       ]);
     });
 
@@ -472,11 +477,11 @@ describe(
       expect(text.stdout).toContain(
         [
           "subgraphs: 2",
-          "  items code-first ./subgraphs/index.ts#/ItemsSubgraph/ItemsSubgraph",
+          "  items ./subgraphs/index.ts#/ItemsSubgraph/ItemsSubgraph",
           `    digest ${digest}`,
           "    entries Query.items",
           "    types Item",
-          "  sdl schema-first ./subgraphs/sdl/schema.ts",
+          "  sdl legacy subgraph ./subgraphs/sdl/schema.ts",
           "0 errors, 0 warnings",
         ].join("\n"),
       );

@@ -1,4 +1,4 @@
-import type { SchemaFirstSubgraphSource } from "document-model/tooling";
+import type { SchemaFirstSubgraphSource } from "./sdl-conflicts.js";
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
