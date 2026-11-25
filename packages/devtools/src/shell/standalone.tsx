@@ -8,7 +8,7 @@ import {
   PanelSwitcher,
   SearchButton,
 } from "./frame.js";
-import { BOLT_FAVICON, BoltMark } from "./mark.js";
+import { POWERHOUSE_FAVICON, PowerhouseMark } from "./mark.js";
 import { usePageLinks } from "./page-link.js";
 import { useShortcuts } from "./shortcuts.js";
 import { useShell } from "./state.js";
@@ -26,7 +26,7 @@ function useTabIdentity(title: string) {
     const icon = document.createElement("link");
     icon.rel = "icon";
     icon.type = "image/svg+xml";
-    icon.href = BOLT_FAVICON;
+    icon.href = POWERHOUSE_FAVICON;
     document.head.append(icon);
     return () => {
       icon.remove();
@@ -54,7 +54,7 @@ export function StandalonePage() {
         data-testid="ph-devtools-bar"
         className="@container/bar flex h-10 shrink-0 items-center gap-2 border-b bg-card px-2 text-[11px] text-muted-foreground"
       >
-        <BoltMark />
+        <PowerhouseMark />
         {/* From this width the title fits beside the longest page name. */}
         <div className="hidden shrink-0 @2xl/bar:block">
           <DevtoolsTitle />
