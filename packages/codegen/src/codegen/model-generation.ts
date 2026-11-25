@@ -54,7 +54,7 @@ export type ModelGeneration = {
   ): Promise<void>;
   generateAllEditors(project: Project): Promise<GeneratedEditors>;
   generateAll(project: Project): Promise<void>;
-  /** Writes a new code-first model, the one choice `--code-first` makes. */
+  /** Writes a new code-first model, as `ph generate document-model --name` does. */
   scaffoldDocumentModel(
     args: GenerateCodeFirstDocumentModelArgs,
     project: Project,

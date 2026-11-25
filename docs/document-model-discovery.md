@@ -1,6 +1,6 @@
 # Document model discovery
 
-A package's document models are found from its model directories. There is no registration: `powerhouse.config.json` no longer has `definitionSources`, and `--code-first` only chooses how `ph generate document-model --name` creates a new model.
+A package's document models are found from its model directories. There is no registration: `powerhouse.config.json` no longer has `definitionSources`.
 
 ## Rules
 
@@ -24,7 +24,7 @@ Every generation command (single model, `--all`, editors, `ph generate`, Vetra's
 
 ## Converting a schema-first model
 
-`ph migrate --document-models` (or `--document-model <dir>`) turns a stored model directory into the layout `ph generate document-model --code-first` scaffolds:
+`ph migrate --document-models` (or `--document-model <dir>`) turns a stored model directory into the layout `ph generate document-model --name` scaffolds:
 
 - `index.ts` materializes the family and exports each version, the latest one and the upgrade manifest.
 - `upgrades/index.ts` declares the manifest. The existing `upgrades/v<N>.ts` transitions are kept.

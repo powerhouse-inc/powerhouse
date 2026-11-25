@@ -11,7 +11,7 @@ export const generateDocumentModelCmd = command({
       long: "document",
       short: "d",
       description:
-        "Path to a document model spec (.phd or .json) to generate from",
+        "Path to a document model spec (.phd or .json) to generate a legacy document model from",
     }),
     dir: option({
       type: optional(ModuleDir),
@@ -31,19 +31,11 @@ export const generateDocumentModelCmd = command({
       description:
         "Write a powerhouse/document-model spec for each existing document model into specs/document-models/",
     }),
-    /** @experimental Code-first scaffolding is being tested in production. */
     name: option({
       type: optional(string),
       long: "name",
       short: "n",
-      description:
-        "Experimental. Create a code-first document model with this name, with its editor",
-    }),
-    /** @experimental Chooses code-first authoring for the model --name creates. */
-    codeFirst: flag({
-      long: "code-first",
-      description:
-        "Experimental. With --name, create the model code-first. Existing models of both styles are discovered without it; ph migrate --document-model converts a schema-first one",
+      description: "Create a document model with this name, with its editor",
     }),
     ...debugArgs,
   },

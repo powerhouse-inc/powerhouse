@@ -29,6 +29,7 @@ import { startGeneratePiece } from "../src/services/generate-piece.js";
 import { startGenerateProcessor } from "../src/services/generate-processor.js";
 import { startGenerateSubgraph } from "../src/services/generate-subgraph.js";
 import type { GeneratePieceArgs } from "../src/types.js";
+import { copyLegacySubgraph } from "./subgraph-project.js";
 
 const SUBGRAPH_MODULE_SPEC = join(
   import.meta.dirname,
@@ -64,7 +65,6 @@ const documentModelArgs = (overrides: object) => ({
   all: false,
   extract: false,
   name: undefined,
-  codeFirst: false,
   ...overrides,
 });
 const pieceArgs = (
@@ -87,7 +87,6 @@ const subgraphArgs = (overrides: object) => ({
   all: false,
   extract: false,
   skipInstall: true,
-  codeFirst: false,
   ...overrides,
 });
 
@@ -102,7 +101,8 @@ function readManifest() {
 const ids = (kind: "documentModels" | "editors" | "processors" | "subgraphs") =>
   readManifest()[kind].map((entry) => entry.id);
 
-// Scaffolds once: a document model, an editor for it, a processor and a subgraph.
+// Scaffolds once: a legacy document model, an editor for it, a processor and a
+// legacy subgraph.
 beforeAll(async () => {
   base = realpathSync(mkdtempSync(join(tmpdir(), "ph-generate-modules-")));
   writeFileSync(
@@ -142,6 +142,7 @@ beforeAll(async () => {
     }),
     base,
   );
+  copyLegacySubgraph(base, "stock");
   await startGenerateSubgraph(subgraphArgs({ name: "Stock" }), base);
   await startGeneratePiece(pieceArgs({ namePositional: "Stock Feed" }), base);
   vi.restoreAllMocks();

@@ -11,14 +11,15 @@ export const generateSubgraphCmd = command({
       type: optional(string),
       long: "name",
       short: "n",
-      description: "The name of the subgraph to generate",
+      description:
+        "Create a subgraph with this name. A subgraph directory that already exists keeps its form",
     }),
     document: option({
       type: optional(File),
       long: "document",
       short: "d",
       description:
-        "Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen",
+        "Path to a powerhouse/subgraph spec file (.phd or .json) to generate a legacy subgraph from. A subgraph directory that already exists keeps its form",
     }),
     dir: option({
       type: optional(ModuleDir),
@@ -36,12 +37,6 @@ export const generateSubgraphCmd = command({
       short: "x",
       description:
         "Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/",
-    }),
-    /** @experimental */
-    codeFirst: flag({
-      long: "code-first",
-      description:
-        "Experimental. With --name or --document, create a new subgraph code-first. Existing subgraphs keep their own style; ph migrate --subgraph converts one",
     }),
     ...skipInstallArgs,
     ...debugArgs,

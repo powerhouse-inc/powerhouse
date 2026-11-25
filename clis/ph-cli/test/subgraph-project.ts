@@ -1,9 +1,12 @@
 import {
   existsSync,
   mkdirSync,
+  readdirSync,
+  readFileSync,
   realpathSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
@@ -106,6 +109,26 @@ export class ${className} extends BaseSubgraph {
 `,
     "schema.ts": schema,
   };
+}
+
+const LEGACY_SUBGRAPH = join(PH_CLI, "test", "fixtures", "legacy-subgraph");
+
+/**
+ * Writes `subgraphs/<name>` as the legacy subgraph generator wrote it for
+ * "stock". `name` is one lowercase word. The fixture's files end in `.txt`
+ * so that tsc and oxlint do not read them as ph-cli source.
+ */
+export function copyLegacySubgraph(root: string, name: string): void {
+  const className = name[0].toUpperCase() + name.slice(1);
+  const dir = join(root, "subgraphs", name);
+  mkdirSync(dir, { recursive: true });
+  for (const file of readdirSync(LEGACY_SUBGRAPH)) {
+    const text = readFileSync(join(LEGACY_SUBGRAPH, file), "utf8");
+    writeFileSync(
+      join(dir, file.replace(/\.txt$/, "")),
+      text.replaceAll("Stock", className).replaceAll("stock", name),
+    );
+  }
 }
 
 export const gqlModule = (sdl: string) =>
