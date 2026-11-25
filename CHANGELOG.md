@@ -1,3 +1,18 @@
+## 6.4.0-next.6 (2026-11-25)
+
+### 🩹 Fixes
+
+- **builder-tools:** the dev reactor worker loads the listed local packages' models ([4f7801a70a](https://github.com/powerhouse-inc/powerhouse/commit/4f7801a70a))
+- **clint:** a cli's reactor client holds the drive and document-model models ([1580a4759a](https://github.com/powerhouse-inc/powerhouse/commit/1580a4759a))
+- **codegen:** load graphql-codegen plugins with node's own require ([6f610ff251](https://github.com/powerhouse-inc/powerhouse/commit/6f610ff251))
+- **reactor-browser:** leave a create under a parent the switchboard lacks to createDocument ([451e8a1dce](https://github.com/powerhouse-inc/powerhouse/commit/451e8a1dce))
+- **reactor-browser:** a drive info request answers a refused credential as the clients do ([cbe7b7a79d](https://github.com/powerhouse-inc/powerhouse/commit/cbe7b7a79d))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.4.0-next.5 (2026-11-25)
 
 ### 🚀 Features

@@ -1,3 +1,7 @@
+## 6.4.0-next.6 (2026-11-25)
+
+This was a version bump only for @powerhousedao/reactor-workflow to align it with other projects, there were no code changes.
+
 ## 6.4.0-next.5 (2026-11-25)
 
 ### 🚀 Features

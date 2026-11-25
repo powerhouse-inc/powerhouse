@@ -1,3 +1,14 @@
+## 6.4.0-next.6 (2026-11-25)
+
+### 🩹 Fixes
+
+- **codegen:** load graphql-codegen plugins with node's own require ([6f610ff251](https://github.com/powerhouse-inc/powerhouse/commit/6f610ff251))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.4.0-next.5 (2026-11-25)
 
 ### 🚀 Features

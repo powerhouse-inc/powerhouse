@@ -1,3 +1,14 @@
+## 6.4.0-next.6 (2026-11-25)
+
+### 🩹 Fixes
+
+- **builder-tools:** the dev reactor worker loads the listed local packages' models ([4f7801a70a](https://github.com/powerhouse-inc/powerhouse/commit/4f7801a70a))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.4.0-next.5 (2026-11-25)
 
 ### 🚀 Features

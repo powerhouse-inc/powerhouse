@@ -1,3 +1,14 @@
+## 6.4.0-next.6 (2026-11-25)
+
+### 🩹 Fixes
+
+- **clint:** a cli's reactor client holds the drive and document-model models ([1580a4759a](https://github.com/powerhouse-inc/powerhouse/commit/1580a4759a))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.4.0-next.5 (2026-11-25)
 
 ### 🚀 Features
