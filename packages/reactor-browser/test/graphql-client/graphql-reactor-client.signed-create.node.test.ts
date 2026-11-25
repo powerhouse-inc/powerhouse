@@ -143,6 +143,18 @@ describe("a create with a signer", () => {
     expect(signAction).not.toHaveBeenCalled();
   });
 
+  it("leaves a create under a parent the Switchboard does not find to its createDocument", async () => {
+    const { url, received } = await serveStore({});
+    const { signer, signAction } = testSigner();
+    const client = new GraphQLReactorClient({ url, signer, realtime: false });
+
+    await client.create(modelDocument("doc-new"), "gone");
+
+    expect(sent(received, "CreateDocument")).toHaveLength(1);
+    expect(sent(received, "ExecuteBatch")).toHaveLength(0);
+    expect(signAction).not.toHaveBeenCalled();
+  });
+
   it("refuses a slug another document holds, and sends nothing", async () => {
     const { url, received } = await serveStore({});
     const { signer } = testSigner();

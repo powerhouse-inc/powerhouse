@@ -897,7 +897,8 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * client builds it, and submitted through `executeBatch`; the Switchboard
    * signs none of it. A create under a drive still runs the Switchboard's
    * `createDocument`, which files the document in the drive and signs that
-   * itself, as does a create without a signer.
+   * itself, as do a create under a parent it does not find and a create
+   * without a signer.
    */
   async create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
@@ -910,7 +911,12 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         parentIdentifier === undefined
           ? undefined
           : await this.parentOf(parentIdentifier, signal);
-      if (!parent || !isDriveType(parent.documentType)) {
+      // A parent the Switchboard does not hold is left to its
+      // `createDocument`, which refuses it: a 421 for a drive served elsewhere.
+      if (
+        parentIdentifier === undefined ||
+        (parent && !isDriveType(parent.documentType))
+      ) {
         return this.createSigned<TDocument>(
           document,
           parentIdentifier,
@@ -1003,21 +1009,30 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     );
   }
 
-  /** The id and type of the document a create names as its parent. */
+  /**
+   * The id and type of the document a create names as its parent, or
+   * `undefined` when the Switchboard does not find it.
+   */
   private async parentOf(
     identifier: string,
     signal: AbortSignal | undefined,
-  ): Promise<{ id: string; documentType: string }> {
-    const result = await this.sdk.GetDocument(
-      { idOrSlug: identifier, view: { branch: "main", scopes: ["document"] } },
-      undefined,
-      signal,
-    );
-    const parent = result.document?.document;
-    if (!parent) {
-      throw new Error(`Failed to create document: no parent ${identifier}`);
+  ): Promise<{ id: string; documentType: string } | undefined> {
+    let parent: { id: string; documentType: string } | undefined;
+    try {
+      const result = await this.sdk.GetDocument(
+        {
+          idOrSlug: identifier,
+          view: { branch: "main", scopes: ["document"] },
+        },
+        undefined,
+        signal,
+      );
+      parent = result.document?.document;
+    } catch (error) {
+      if (answersNotFound(error)) return undefined;
+      throw error;
     }
-    return { id: parent.id, documentType: parent.documentType };
+    return parent && { id: parent.id, documentType: parent.documentType };
   }
 
   /** Refuses a slug another document holds, as `createDocument` does. */
