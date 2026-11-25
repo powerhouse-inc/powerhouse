@@ -8,12 +8,12 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
-  type CodeFirstDocumentModelModule,
   defineDocumentModel,
   defineDocumentModelFamily,
   type DocumentModelVersionDefinition,
   type DocumentOf,
   materialize,
+  type MaterializedDocumentModelModule,
   ph,
 } from "../../../src/definition/index.js";
 import { canonicalJson } from "../../../src/definition/kernel/primitives.js";
@@ -133,7 +133,7 @@ describe("defineDocumentModelFamily", () => {
     );
     const module = family.at(1);
 
-    expectTypeOf(module).toEqualTypeOf<CodeFirstDocumentModelModule>();
+    expectTypeOf(module).toEqualTypeOf<MaterializedDocumentModelModule>();
     expect(module.version).toBe(1);
   });
 

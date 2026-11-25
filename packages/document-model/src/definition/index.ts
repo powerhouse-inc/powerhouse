@@ -57,6 +57,7 @@ export type {
   DocumentOf,
   GlobalStateOf,
   LocalStateOf,
+  MaterializedDocumentModelModule,
 } from "./runtime/types.js";
 export {
   compileSubgraph,

@@ -47,7 +47,7 @@ function staticSubgraphNameLiteral(classDeclaration: ClassDeclaration) {
     ?.getLiteralValue();
 }
 
-/** @experimental The subgraph class an `index.ts` under `subgraphs/`
+/** The subgraph class an `index.ts` under `subgraphs/`
  * declares, its style and its name. A code-first class names itself with
  * `static subgraphName`, a schema-first one with its instance `name`; either
  * is read only as a string literal. */

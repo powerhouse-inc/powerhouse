@@ -77,7 +77,7 @@ async function finalizeModels(
 }
 
 /**
- * @experimental Throws, as `regenerateDocumentModelBarrels` would, when a
+ * Throws, as `regenerateDocumentModelBarrels` would, when a
  * document-models barrel holds statements codegen did not write. Writes
  * nothing.
  */
@@ -89,7 +89,7 @@ export function assertDocumentModelBarrelsWritable(projectDir: string): void {
 }
 
 /**
- * @experimental Rewrites the document-models barrels and the manifest's
+ * Rewrites the document-models barrels and the manifest's
  * document models from the models discovery finds, as `ph generate` does, and
  * nothing else. Returns the project-relative paths it changed. Throws before
  * writing when a barrel holds statements codegen did not write; the
@@ -247,7 +247,7 @@ function unknownEditorDocumentType(
 }
 
 /**
- * @experimental Generation for every model discovery finds: `source` plans
+ * Generation for every model discovery finds: `source` plans
  * and writes the stored specifications, and the inventory supplies the
  * code-first models. Tests pass their own source.
  */
@@ -513,5 +513,5 @@ export function documentModelGeneration(
   };
 }
 
-/** @experimental The generation every command and Vetra's processor use. */
+/** The generation every command and Vetra's processor use. */
 export const modelGeneration: ModelGeneration = documentModelGeneration();

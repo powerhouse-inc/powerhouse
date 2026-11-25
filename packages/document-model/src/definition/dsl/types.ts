@@ -199,12 +199,12 @@ export type Nullable<T, TRequired extends boolean> = TRequired extends true
   ? T
   : T | null | undefined;
 
-/** @experimental The value a caller passes for a descriptor, such as an action input. */
+/** The value a caller passes for a descriptor, such as an action input. */
 export type InputOf<T> =
   T extends DescriptorNode<infer TInput, any, any> ? TInput : never;
 export type OutputOf<T> =
   T extends DescriptorNode<any, infer TOutput, any> ? TOutput : never;
-/** @experimental The value a descriptor holds in a document's state. */
+/** The value a descriptor holds in a document's state. */
 export type SourceOf<T> =
   T extends DescriptorNode<any, any, infer TSource> ? TSource : never;
 export type RequiredOf<T> = T extends { readonly required: infer TRequired }
@@ -229,7 +229,6 @@ type CallerRequiredKeys<TFields extends ObjectFields> = {
     : K;
 }[RequiredKeys<TFields>];
 
-/** @experimental */
 export type InputObjectOf<TFields extends ObjectFields> = {
   -readonly [K in CallerRequiredKeys<TFields>]: InputOf<TFields[K]>;
 } & {
@@ -246,7 +245,6 @@ type ResolvedInputObjectOf<TFields extends ObjectFields> = {
   >;
 };
 
-/** @experimental */
 export type OutputObjectOf<TFields extends ObjectFields> = {
   -readonly [K in keyof TFields]: OutputOf<TFields[K]>;
 };
@@ -275,7 +273,6 @@ export type EnumValue = {
   readonly deprecated: string | null;
 };
 
-/** @experimental */
 export type EnumDescriptor<
   TValues extends readonly EnumValueInput[] = readonly EnumValueInput[],
 > = TypeDescriptor<
@@ -288,7 +285,6 @@ export type EnumDescriptor<
   readonly values: readonly EnumValue[];
 };
 
-/** @experimental */
 export type InterfaceDescriptor<
   TFields extends ObjectFields = ObjectFields,
   // `any` breaks what would otherwise be a circular default.
@@ -305,7 +301,6 @@ export type InterfaceDescriptor<
   readonly implements: TImplements;
 };
 
-/** @experimental */
 export type ObjectDescriptor<
   TFields extends ObjectFields = ObjectFields,
   TImplements extends readonly InterfaceDescriptor[] =
@@ -321,7 +316,6 @@ export type ObjectDescriptor<
   readonly implements: TImplements;
 };
 
-/** @experimental */
 export type InputDescriptor<TFields extends ObjectFields = ObjectFields> =
   TypeDescriptor<
     InputObjectOf<TFields>,
@@ -332,7 +326,6 @@ export type InputDescriptor<TFields extends ObjectFields = ObjectFields> =
     readonly fields: TFields;
   };
 
-/** @experimental */
 export type UnionDescriptor<
   TMembers extends readonly ObjectDescriptor[] = readonly ObjectDescriptor[],
 > = TypeDescriptor<
@@ -347,7 +340,6 @@ export type UnionDescriptor<
 
 type RefTarget = AnyTypeDescriptor | (() => AnyTypeDescriptor);
 
-/** @experimental */
 export type ReferenceDescriptor<
   TInput,
   TOutput,
@@ -359,7 +351,6 @@ export type ReferenceDescriptor<
   readonly target: RefTarget;
 };
 
-/** @experimental */
 export type ListDescriptor<
   TInput,
   TOutput,
@@ -371,7 +362,6 @@ export type ListDescriptor<
   readonly item: AnyFieldDescriptor;
 };
 
-/** @experimental */
 export type ScalarDescriptor<
   TInput,
   TOutput,

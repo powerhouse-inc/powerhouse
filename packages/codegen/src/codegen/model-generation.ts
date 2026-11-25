@@ -5,7 +5,6 @@ import type {
   GenerateCodeFirstDocumentModelArgs,
 } from "../file-builders/document-model/code-first-model.js";
 
-/** @experimental */
 export type GenerateEditorRequest = {
   readonly editorName: string;
 
@@ -14,7 +13,6 @@ export type GenerateEditorRequest = {
   readonly editorDirName?: string;
 };
 
-/** @experimental */
 export type GeneratedDocumentModels = {
   readonly documentModels: DocumentModelGlobalState[];
 
@@ -25,7 +23,6 @@ export type GeneratedDocumentModels = {
   }[];
 };
 
-/** @experimental */
 export type GeneratedEditors = {
   readonly editors: {
     name: string;
@@ -37,7 +34,7 @@ export type GeneratedEditors = {
 };
 
 /**
- * @experimental Document-model and editor generation for a package's
+ * Document-model and editor generation for a package's
  * discovered models, schema-first and code-first alike. Every method reads
  * the whole inventory before it writes, and finishes through the one barrel
  * and manifest writer. The caller saves the project afterwards.

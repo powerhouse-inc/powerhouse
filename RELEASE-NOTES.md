@@ -1,5 +1,20 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — the authoring API is no longer experimental
+
+### ✨ `defineDocumentModel` and the `Subgraph` class lose the `@experimental` tag
+
+What you import to write a document model or a subgraph is no longer marked `@experimental`: `defineDocumentModel`, `defineDocumentModelFamily`, `materialize`, `ph`, `hostScalars` and `DefinitionError` from `document-model`, the `Subgraph` class, `SchemaBuilder` and `SubgraphSchemaEntry` from `@powerhousedao/reactor-api`, and the types they expose. The tag is also gone from the generation API of `@powerhousedao/codegen` (the converter aside), from the constants of `@powerhousedao/shared/clis/definition-sources`, and from `resolveOperation` in `@powerhousedao/reactor-mcp`. `ph model`, the release approval of `ph build --release` and the `document-model/tooling` entry stay experimental.
+
+### ⚡ Two exports have their final names
+
+- `MaterializedDocumentModelModule` replaces `CodeFirstDocumentModelModule` (`document-model`).
+- `SubgraphError` replaces `CodeFirstSubgraphError` (`@powerhousedao/reactor-api`).
+
+The old names are deprecated and still work: each one is the same type or class as its replacement. Both were only on the 6.3 dev channel. The error's `name` is now `"SubgraphError"`, so code that compares that string must accept the new value.
+
+---
+
 ## 🚀 **Unreleased** — `ph generate subgraph --name` writes a `Subgraph` class, and `--code-first` is gone
 
 ### ✨ `--name` creates a document model or a subgraph

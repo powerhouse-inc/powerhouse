@@ -1,7 +1,12 @@
 /**
- * @experimental Thrown when the host refuses a code-first subgraph class or
+ * Thrown when the host refuses a `Subgraph` class or
  * instance, and by the `Subgraph` constructor of a class that cannot compile.
  */
-export class CodeFirstSubgraphError extends Error {
-  override readonly name = "CodeFirstSubgraphError";
+export class SubgraphError extends Error {
+  override readonly name = "SubgraphError";
 }
+
+/** @deprecated Use {@link SubgraphError}. */
+export const CodeFirstSubgraphError = SubgraphError;
+/** @deprecated Use {@link SubgraphError}. */
+export type CodeFirstSubgraphError = SubgraphError;

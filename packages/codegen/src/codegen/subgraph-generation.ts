@@ -92,7 +92,7 @@ async function regenerateSubgraph(
   }
 }
 
-/** @experimental Regenerates the existing `subgraphs/<dirName>` in its own style. Its
+/** Regenerates the existing `subgraphs/<dirName>` in its own style. Its
  * `subgraphName` is `undefined` when its index.ts names no subgraph; then
  * nothing was written. */
 export async function generateSubgraphDir(dirName: string, project: Project) {

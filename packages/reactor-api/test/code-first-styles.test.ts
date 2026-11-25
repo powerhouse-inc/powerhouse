@@ -15,7 +15,7 @@ import { pathToFileURL } from "node:url";
 import { transformWithOxc } from "vite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
-import { CodeFirstSubgraphError } from "../src/graphql/code-first/errors.js";
+import { SubgraphError } from "../src/graphql/code-first/errors.js";
 import { defineIndexSubgraph } from "../src/graphql/index-subgraph.js";
 import type { SchemaBuilder } from "../src/graphql/code-first/schema-builder.js";
 import { Subgraph } from "../src/graphql/code-first/subgraph.js";
@@ -252,8 +252,7 @@ function loggedFailures(current: CodeFirstHost) {
       template,
       name,
       origin,
-      error:
-        error instanceof CodeFirstSubgraphError ? error.message : String(error),
+      error: error instanceof SubgraphError ? error.message : String(error),
     }));
 }
 
@@ -350,7 +349,7 @@ describe("code-first bases", () => {
 
   it("cannot be constructed", () => {
     expect(() => new CodeFirstBase({} as SubgraphArgs)).toThrow(
-      new CodeFirstSubgraphError(
+      new SubgraphError(
         "CodeFirstBase cannot be constructed: CodeFirstBase has no static subgraphName",
       ),
     );
@@ -391,7 +390,7 @@ describe("refused before construction", () => {
     const current = await start();
     await expect(
       current.manager.registerSubgraph(cls as unknown as SubgraphClass),
-    ).rejects.toMatchObject({ name: "CodeFirstSubgraphError", message });
+    ).rejects.toMatchObject({ name: "SubgraphError", message });
     await current.applyPackage("@acme/refused", [
       cls as unknown as SubgraphClass,
     ]);
@@ -418,7 +417,7 @@ describe("refused after construction or setup, naming the field", () => {
     const current = await start();
     await expect(
       current.manager.registerSubgraph(cls as unknown as SubgraphClass),
-    ).rejects.toMatchObject({ name: "CodeFirstSubgraphError", message });
+    ).rejects.toMatchObject({ name: "SubgraphError", message });
     await current.applyPackage("@acme/refused", [
       cls as unknown as SubgraphClass,
     ]);
@@ -448,7 +447,7 @@ describe("refused after construction or setup, naming the field", () => {
     await expect(
       current.manager.registerSubgraph(Declared),
     ).rejects.toMatchObject({
-      name: "CodeFirstSubgraphError",
+      name: "SubgraphError",
       message: `Refusing Declared after construction: ${AFTER_CONSTRUCTION("hasSubscriptions")}`,
     });
   });
@@ -470,7 +469,7 @@ describe("refused after construction or setup, naming the field", () => {
       current.manager.registerSubgraph(
         SetupEditsDocument as unknown as SubgraphClass,
       ),
-    ).rejects.toMatchObject({ name: "CodeFirstSubgraphError" });
+    ).rejects.toMatchObject({ name: "SubgraphError" });
     const next = new SetupEditsDocument({} as SubgraphArgs);
     expect(print(next.typeDefs)).toBe("type Query {\n  ping: String\n}");
     expect(SetupEditsDocument[SUBGRAPH_PROTOCOL].validate(next)).toEqual({

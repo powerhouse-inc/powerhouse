@@ -287,7 +287,7 @@ export function formatDefinitionDiagnostic(
 }
 
 /**
- * @experimental Thrown when a code-first declaration is refused. `diagnostics`
+ * Thrown when a declaration is refused. `diagnostics`
  * holds every problem found, sorted, each with its code, path and repair.
  */
 export class DefinitionError extends Error {

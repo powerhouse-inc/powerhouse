@@ -1174,7 +1174,7 @@
             "patterns": [
               {
                 "regex": "(^|/)document-model/(src|dist)(/|$)",
-                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts as @experimental instead of reaching into a deep path."
+                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts instead of reaching into a deep path."
               }
             ]
           }
@@ -1190,11 +1190,11 @@
             "patterns": [
               {
                 "regex": "(^|/)document-model/(src|dist)(/|$)",
-                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts as @experimental instead of reaching into a deep path."
+                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts instead of reaching into a deep path."
               },
               {
                 "regex": "(^|/)code-first(/|$)",
-                "message": "Code-first subgraph hosting enters reactor-api through graphql-manager.ts, packages/subgraph-extraction.ts and the package entry only. Call codeFirstCheck from one of those, or export the piece from index.mts as @experimental."
+                "message": "Code-first subgraph hosting enters reactor-api through graphql-manager.ts, packages/subgraph-extraction.ts and the package entry only. Call codeFirstCheck from one of those, or export the piece from index.mts."
               }
             ]
           }
@@ -1213,7 +1213,7 @@
             "patterns": [
               {
                 "regex": "(^|/)document-model/(src|dist)(/|$)",
-                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts as @experimental instead of reaching into a deep path."
+                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts instead of reaching into a deep path."
               }
             ]
           }
@@ -1229,7 +1229,7 @@
             "patterns": [
               {
                 "regex": "(^|/)document-model/(src|dist)(/|$)",
-                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts as @experimental instead of reaching into a deep path."
+                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts instead of reaching into a deep path."
               },
               {
                 "regex": "(^|/)document-model-schema(/|$)",
@@ -1263,7 +1263,7 @@
             "patterns": [
               {
                 "regex": "(^|/)document-model/(src|dist)(/|$)",
-                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts as @experimental instead of reaching into a deep path."
+                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts instead of reaching into a deep path."
               }
             ]
           }
@@ -1547,7 +1547,7 @@
             "patterns": [
               {
                 "regex": "(^|/)document-model/(src|dist)(/|$)",
-                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts as @experimental instead of reaching into a deep path."
+                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts instead of reaching into a deep path."
               },
               {
                 "regex": "(^|/)utils/create-schema(\\.js)?$",
@@ -1559,7 +1559,7 @@
               },
               {
                 "regex": "(^|/)code-first(/|$)",
-                "message": "Code-first subgraph hosting enters reactor-api through graphql-manager.ts, packages/subgraph-extraction.ts and the package entry only. Call codeFirstCheck from one of those, or export the piece from index.mts as @experimental."
+                "message": "Code-first subgraph hosting enters reactor-api through graphql-manager.ts, packages/subgraph-extraction.ts and the package entry only. Call codeFirstCheck from one of those, or export the piece from index.mts."
               }
             ]
           }

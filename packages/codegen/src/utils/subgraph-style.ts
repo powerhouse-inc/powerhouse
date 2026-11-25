@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { ts, type Project } from "ts-morph";
 
-/** @experimental How a `subgraphs/<dir>/` is authored: a `Subgraph` class, or SDL and a `BaseSubgraph`. */
+/** How a `subgraphs/<dir>/` is authored: a `Subgraph` class, or SDL and a `BaseSubgraph`. */
 export type SubgraphStyle = "code-first" | "schema-first";
 
 export type ReadSourceText = (path: string) => string | undefined;
@@ -313,7 +313,7 @@ export function codeFirstClasses(
 }
 
 /**
- * @experimental The style of `subgraphs/<dirName>/`: code first when its
+ * The style of `subgraphs/<dirName>/`: code first when its
  * `index.ts` declares or re-exports a class whose `extends` chain reaches
  * reactor-api's `Subgraph`, schema first otherwise.
  */
@@ -332,7 +332,7 @@ export function subgraphDirStyle(
 }
 
 /**
- * @experimental Each `subgraphs/<dir>/` on disk that holds an `index.ts`,
+ * Each `subgraphs/<dir>/` on disk that holds an `index.ts`,
  * sorted by name, with its style.
  */
 export function subgraphDirStyles(
