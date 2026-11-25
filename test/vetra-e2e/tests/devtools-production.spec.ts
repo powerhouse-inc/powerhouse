@@ -11,7 +11,6 @@ import {
 } from "./helpers/devtools.js";
 import { expect, test } from "./helpers/fixtures.js";
 import { DESCRIBE_TIMEOUT } from "./helpers/timeouts.js";
-import { waitForAppReady } from "./helpers/wait.js";
 
 /** Strings only DevTools' code holds: the launcher's test id and the API's
  * token header. */
@@ -24,8 +23,9 @@ test.describe.configure({ timeout: DESCRIBE_TIMEOUT });
 const READY_TIMEOUT = 90_000;
 
 async function gotoReadyApp(page: Page, path: string) {
-  await page.goto(path);
-  await waitForAppReady(page);
+  // Not networkidle: the build's reactor runs in a SharedWorker (the connect
+  // host's `worker` backend), so the page's network never goes idle.
+  await page.goto(path, { waitUntil: "domcontentloaded" });
   // Connect's chrome is up, so every plugin of the composition has rendered.
   await expect(page.locator("#sidebar")).toBeVisible({
     timeout: READY_TIMEOUT,
