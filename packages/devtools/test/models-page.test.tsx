@@ -543,3 +543,62 @@ describe("Build › Document models", () => {
     );
   });
 });
+
+describe("Build › Document models › schema view", () => {
+  const view = (id: "sdl" | "diagram") =>
+    within(screen.getByTestId("ph-schema-view")).getByRole("button", {
+      name: id === "sdl" ? "Show SDL" : "Show Diagram",
+    });
+
+  it("shows the state schema as SDL, with a switch to a diagram", async () => {
+    await open();
+    expect(view("sdl").getAttribute("aria-pressed")).toBe("true");
+    expect(view("diagram").getAttribute("aria-pressed")).toBe("false");
+    expect(text("ph-state-schema")).toContain("type InvoiceState {");
+  });
+
+  it("draws the schema with the initial state below it, and keeps the choice for every model", async () => {
+    await open();
+    click(view("diagram"));
+    await screen.findByTestId("ph-schema-diagram");
+    expect(view("diagram").getAttribute("aria-pressed")).toBe("true");
+    expect(screen.queryByTestId("ph-state-schema")).toBeNull();
+    expect(text("ph-diagram-count")).toBe("3 types · 2 relations");
+    expect(text("ph-state-initial")).toContain('"status": "DRAFT"');
+    expect(localStorage.getItem("ph-devtools:schema-view")).toBe('"diagram"');
+
+    cleanup();
+    await open("model:acme/customer");
+    await screen.findByTestId("ph-schema-diagram");
+    expect(view("diagram").getAttribute("aria-pressed")).toBe("true");
+
+    click(view("sdl"));
+    expect(screen.queryByTestId("ph-schema-diagram")).toBeNull();
+    expect(screen.getByTestId("ph-state-schema")).not.toBeNull();
+  });
+
+  it("says why a schema that does not parse has no diagram, and goes back to SDL", async () => {
+    const detail = invoiceDetail();
+    detail.specifications[0].state.global.schema =
+      "type InvoiceState {\n  number String\n}";
+    server.details["acme/invoice"] = detail;
+    await open();
+    click(view("diagram"));
+    const unavailable = await screen.findByTestId("ph-diagram-unavailable");
+    expect(unavailable.textContent).toContain("Diagram unavailable");
+    expect(unavailable.textContent).toContain('Syntax Error: Expected ":"');
+
+    click(within(unavailable).getByRole("button", { name: "Show SDL" }));
+    expect(view("sdl").getAttribute("aria-pressed")).toBe("true");
+    expect(text("ph-state-schema")).toContain("number String");
+  });
+
+  it("offers no switch for a state without a schema", async () => {
+    const detail = invoiceDetail();
+    detail.specifications[0].state.global.schema = "";
+    server.details["acme/invoice"] = detail;
+    await open();
+    expect(screen.queryByTestId("ph-schema-view")).toBeNull();
+    expect(text("ph-state-schema")).toBe("No schema.");
+  });
+});

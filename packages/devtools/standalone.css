@@ -4,6 +4,7 @@
 @layer theme, base, components, utilities;
 @import "tailwindcss" source(none);
 @import "@powerhousedao/design-system/theme.css";
+@import "@xyflow/react/dist/style.css" layer(components);
 @import "./tailwind.css";
 
 @source "./src";
