@@ -1,3 +1,24 @@
+## 6.4.0-next.5 (2026-11-25)
+
+### 🚀 Features
+
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **ph-cli:** ph mcp signs an mcp client's writes as the client's own session ([56e89cb281](https://github.com/powerhouse-inc/powerhouse/commit/56e89cb281))
+- **switchboard:** find an in-process renown itself, drop the credential sources ([062bd5abc0](https://github.com/powerhouse-inc/powerhouse/commit/062bd5abc0))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+
+### 🩹 Fixes
+
+- **switchboard:** probe the bind host when looking for a free port ([dafb4c51d5](https://github.com/powerhouse-inc/powerhouse/commit/dafb4c51d5))
+
+### ❤️ Thank You
+
+- Claude
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.4.0-next.3 (2026-11-23)
 
 ### 🚀 Features

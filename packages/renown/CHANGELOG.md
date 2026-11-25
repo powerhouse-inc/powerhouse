@@ -1,3 +1,29 @@
+## 6.4.0-next.5 (2026-11-25)
+
+### 🚀 Features
+
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **renown:** a browser keeps a pseudonym of its own, and a signer signs someone in first ([ea414cd6da](https://github.com/powerhouse-inc/powerhouse/commit/ea414cd6da))
+- **renown:** issue credentials for a page that signs in by link ([22e61d168d](https://github.com/powerhouse-inc/powerhouse/commit/22e61d168d))
+- **ph-cli:** ph mcp signs an mcp client's writes as the client's own session ([56e89cb281](https://github.com/powerhouse-inc/powerhouse/commit/56e89cb281))
+- **renown:** approve a store session at renown's console; keep self-acting ones withdrawn ([49b7c77d7a](https://github.com/powerhouse-inc/powerhouse/commit/49b7c77d7a))
+- **renown:** open a labelled session of whoever acts, ready to sign ([82016ed70e](https://github.com/powerhouse-inc/powerhouse/commit/82016ed70e))
+- **renown:** check credentials by record, then renown, and carry them in bearers ([99f42425bd](https://github.com/powerhouse-inc/powerhouse/commit/99f42425bd))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+- **renown:** sign as the person's identity, and write key files owner-only ([a21c860eab](https://github.com/powerhouse-inc/powerhouse/commit/a21c860eab))
+
+### 🩹 Fixes
+
+- **renown:** a bearer that fails to verify reads as refused in the sign-in issuer ([f228a82bc4](https://github.com/powerhouse-inc/powerhouse/commit/f228a82bc4))
+- **renown:** a locked pseudonym keeps signing with its held session credential ([9e3e145bb2](https://github.com/powerhouse-inc/powerhouse/commit/9e3e145bb2))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.4.0-next.3 (2026-11-23)
 
 ### 🚀 Features

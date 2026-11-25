@@ -1,3 +1,23 @@
+## 6.4.0-next.5 (2026-11-25)
+
+### 🚀 Features
+
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **ph-run:** a served connect signs this computer's pages in by link ([1017ce425a](https://github.com/powerhouse-inc/powerhouse/commit/1017ce425a))
+- **ph-cli:** ph mcp signs an mcp client's writes as the client's own session ([56e89cb281](https://github.com/powerhouse-inc/powerhouse/commit/56e89cb281))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+- **host-core:** the supervisor applies the restart policy to the instances it holds ([5c345bda8c](https://github.com/powerhouse-inc/powerhouse/commit/5c345bda8c))
+- **ph-run:** add `ph run supervisor` ([c3d98ecdd4](https://github.com/powerhouse-inc/powerhouse/commit/c3d98ecdd4))
+- **host-core:** one instance per host and data folder ([2338c2d145](https://github.com/powerhouse-inc/powerhouse/commit/2338c2d145))
+
+### ❤️ Thank You
+
+- Claude
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.4.0-next.3 (2026-11-23)
 
 ### 🚀 Features

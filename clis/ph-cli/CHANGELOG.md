@@ -1,3 +1,30 @@
+## 6.4.0-next.5 (2026-11-25)
+
+### 🚀 Features
+
+- **document-model,ph-cli:** say "legacy document model" and "legacy subgraph" in messages ([c51b86ca4a](https://github.com/powerhouse-inc/powerhouse/commit/c51b86ca4a))
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **ph-cli:** connect's servers sign pages in by link as the person's identity ([a4195ad4be](https://github.com/powerhouse-inc/powerhouse/commit/a4195ad4be))
+- **ph-cli:** ph mcp signs an mcp client's writes as the client's own session ([56e89cb281](https://github.com/powerhouse-inc/powerhouse/commit/56e89cb281))
+- **ph-cli:** list and withdraw a store's credential records ([bdb8ec7a01](https://github.com/powerhouse-inc/powerhouse/commit/bdb8ec7a01))
+- **switchboard:** find an in-process renown itself, drop the credential sources ([062bd5abc0](https://github.com/powerhouse-inc/powerhouse/commit/062bd5abc0))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+- **ph-cli:** log in for every project, add whoami and identity password ([3d01864eec](https://github.com/powerhouse-inc/powerhouse/commit/3d01864eec))
+- **ph-run:** add `ph run supervisor` ([c3d98ecdd4](https://github.com/powerhouse-inc/powerhouse/commit/c3d98ecdd4))
+- **host-core:** one instance per host and data folder ([2338c2d145](https://github.com/powerhouse-inc/powerhouse/commit/2338c2d145))
+
+### 🩹 Fixes
+
+- **ph-cli:** a second ph dev prints a fresh sign-in link too ([96f6c6168f](https://github.com/powerhouse-inc/powerhouse/commit/96f6c6168f))
+
+### ❤️ Thank You
+
+- Claude
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.4.0-next.3 (2026-11-23)
 
 ### 🚀 Features

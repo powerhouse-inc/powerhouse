@@ -1,3 +1,23 @@
+## 6.4.0-next.5 (2026-11-25)
+
+### 🚀 Features
+
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **ph-cli:** ph mcp signs an mcp client's writes as the client's own session ([56e89cb281](https://github.com/powerhouse-inc/powerhouse/commit/56e89cb281))
+- **desktop:** write a credential record when a local key delegates ([24b5b9bf17](https://github.com/powerhouse-inc/powerhouse/commit/24b5b9bf17))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+
+### 🩹 Fixes
+
+- write credential and key files readable by their user only ([f48508f643](https://github.com/powerhouse-inc/powerhouse/commit/f48508f643))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.4.0-next.3 (2026-11-23)
 
 ### 🚀 Features

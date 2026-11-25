@@ -1,3 +1,31 @@
+## 6.4.0-next.5 (2026-11-25)
+
+### 🚀 Features
+
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **host-core:** a compound prints a sign-in link for its connect, also at a second start ([7f318243e0](https://github.com/powerhouse-inc/powerhouse/commit/7f318243e0))
+- **ph-cli:** ph mcp signs an mcp client's writes as the client's own session ([56e89cb281](https://github.com/powerhouse-inc/powerhouse/commit/56e89cb281))
+- **host-core:** a handler asks its caller over the open control connection ([37c3c66b29](https://github.com/powerhouse-inc/powerhouse/commit/37c3c66b29))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+- **shared:** keep the person's pseudonym in the data folder and the home folder ([30528f892f](https://github.com/powerhouse-inc/powerhouse/commit/30528f892f))
+- **clint:** a service's -ps shows what the supervisor knows of it ([0649a43d07](https://github.com/powerhouse-inc/powerhouse/commit/0649a43d07))
+- **host-core:** the supervisor applies the restart policy to the instances it holds ([5c345bda8c](https://github.com/powerhouse-inc/powerhouse/commit/5c345bda8c))
+- **host-core:** add the per-user supervisor that holds hosts of any project ([f9a45dac92](https://github.com/powerhouse-inc/powerhouse/commit/f9a45dac92))
+- **host-core:** control protocol 2 with streamed output, cancel and owner-only access ([72bd0e46f3](https://github.com/powerhouse-inc/powerhouse/commit/72bd0e46f3))
+- **host-core:** one instance per host and data folder ([2338c2d145](https://github.com/powerhouse-inc/powerhouse/commit/2338c2d145))
+
+### 🩹 Fixes
+
+- **host-core:** a run record that holds the sign-in secret is its user's alone ([d66fb85394](https://github.com/powerhouse-inc/powerhouse/commit/d66fb85394))
+
+### ❤️ Thank You
+
+- Claude
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.4.0-next.3 (2026-11-23)
 
 ### 🚀 Features

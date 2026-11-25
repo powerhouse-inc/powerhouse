@@ -1,3 +1,84 @@
+## 6.4.0-next.5 (2026-11-25)
+
+### 🚀 Features
+
+- **clint:** keep service state under the data folder ([5e3704da8d](https://github.com/powerhouse-inc/powerhouse/commit/5e3704da8d))
+- **clint:** run commands that need the reactor or the agent in the running instance ([14ad8e0ad2](https://github.com/powerhouse-inc/powerhouse/commit/14ad8e0ad2))
+- **clint:** start host services through the user's supervisor when one runs ([675845ac9e](https://github.com/powerhouse-inc/powerhouse/commit/675845ac9e))
+- **clint:** a service's -ps shows what the supervisor knows of it ([0649a43d07](https://github.com/powerhouse-inc/powerhouse/commit/0649a43d07))
+- **clint:** a forwarded command signs as the person who typed it ([a88446954d](https://github.com/powerhouse-inc/powerhouse/commit/a88446954d))
+- **clint:** a cli's own signer may open at its first write; uploads bear as writes do ([462bcf6e5a](https://github.com/powerhouse-inc/powerhouse/commit/462bcf6e5a))
+- **clint:** mcp endpoints an agent discovers carry the bearer its consumer gives ([1a3418e488](https://github.com/powerhouse-inc/powerhouse/commit/1a3418e488))
+- **connect:** sign the tab in by link at boot, as this computer's identity or the browser's ([f9480f0b05](https://github.com/powerhouse-inc/powerhouse/commit/f9480f0b05))
+- **connect-core:** the gate asks a locked key's password and points to a fresh link ([fbc7298478](https://github.com/powerhouse-inc/powerhouse/commit/fbc7298478))
+- **desktop:** write a credential record when a local key delegates ([24b5b9bf17](https://github.com/powerhouse-inc/powerhouse/commit/24b5b9bf17))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+- **devtools:** title both bars "PH DevTools" ([3d7d523faa](https://github.com/powerhouse-inc/powerhouse/commit/3d7d523faa))
+- **devtools:** add DevTools as a Connect dev-server plugin ([#3409](https://github.com/powerhouse-inc/powerhouse/pull/3409))
+- **devtools:** read a GraphQL schema as a graph of declarations ([d698bbad1c](https://github.com/powerhouse-inc/powerhouse/commit/d698bbad1c))
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **devtools:** show a model's state schema as a diagram ([#3413](https://github.com/powerhouse-inc/powerhouse/pull/3413))
+- **document-model,ph-cli:** say "legacy document model" and "legacy subgraph" in messages ([c51b86ca4a](https://github.com/powerhouse-inc/powerhouse/commit/c51b86ca4a))
+- **document-model,ph-cli:** say "legacy document model" and "legacy subgraph" in messages ([#3415](https://github.com/powerhouse-inc/powerhouse/pull/3415))
+- **host-core:** one instance per host and data folder ([2338c2d145](https://github.com/powerhouse-inc/powerhouse/commit/2338c2d145))
+- **host-core:** control protocol 2 with streamed output, cancel and owner-only access ([72bd0e46f3](https://github.com/powerhouse-inc/powerhouse/commit/72bd0e46f3))
+- **host-core:** add the per-user supervisor that holds hosts of any project ([f9a45dac92](https://github.com/powerhouse-inc/powerhouse/commit/f9a45dac92))
+- **host-core:** the supervisor applies the restart policy to the instances it holds ([5c345bda8c](https://github.com/powerhouse-inc/powerhouse/commit/5c345bda8c))
+- **host-core:** a handler asks its caller over the open control connection ([37c3c66b29](https://github.com/powerhouse-inc/powerhouse/commit/37c3c66b29))
+- **host-core:** a compound prints a sign-in link for its connect, also at a second start ([7f318243e0](https://github.com/powerhouse-inc/powerhouse/commit/7f318243e0))
+- **ph-cli:** log in for every project, add whoami and identity password ([3d01864eec](https://github.com/powerhouse-inc/powerhouse/commit/3d01864eec))
+- **ph-cli:** list and withdraw a store's credential records ([bdb8ec7a01](https://github.com/powerhouse-inc/powerhouse/commit/bdb8ec7a01))
+- **ph-cli:** ph mcp signs an mcp client's writes as the client's own session ([56e89cb281](https://github.com/powerhouse-inc/powerhouse/commit/56e89cb281))
+- **ph-cli:** connect's servers sign pages in by link as the person's identity ([a4195ad4be](https://github.com/powerhouse-inc/powerhouse/commit/a4195ad4be))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([#3412](https://github.com/powerhouse-inc/powerhouse/pull/3412))
+- **ph-run:** add `ph run supervisor` ([c3d98ecdd4](https://github.com/powerhouse-inc/powerhouse/commit/c3d98ecdd4))
+- **ph-run:** a served connect signs this computer's pages in by link ([1017ce425a](https://github.com/powerhouse-inc/powerhouse/commit/1017ce425a))
+- **reactor-api:** verify every bearer at the door by records, then renown ([1321b4c2fe](https://github.com/powerhouse-inc/powerhouse/commit/1321b4c2fe))
+- **reactor-api:** log each write this host signs for its caller ([fbbfdaa46a](https://github.com/powerhouse-inc/powerhouse/commit/fbbfdaa46a))
+- **reactor-browser:** with a signer, the GraphQL client signs a create itself ([d839206388](https://github.com/powerhouse-inc/powerhouse/commit/d839206388))
+- **reactor-browser:** sign the tab in by link or as its browser's pseudonym ([a3c374db24](https://github.com/powerhouse-inc/powerhouse/commit/a3c374db24))
+- **reactor-mcp:** an mcp request names the label of the caller's session ([2d4f5bdc14](https://github.com/powerhouse-inc/powerhouse/commit/2d4f5bdc14))
+- **reactor-mcp:** run the tools in the caller's process over a remote client ([1cc0d5178a](https://github.com/powerhouse-inc/powerhouse/commit/1cc0d5178a))
+- **renown:** sign as the person's identity, and write key files owner-only ([a21c860eab](https://github.com/powerhouse-inc/powerhouse/commit/a21c860eab))
+- **renown:** check credentials by record, then renown, and carry them in bearers ([99f42425bd](https://github.com/powerhouse-inc/powerhouse/commit/99f42425bd))
+- **renown:** open a labelled session of whoever acts, ready to sign ([82016ed70e](https://github.com/powerhouse-inc/powerhouse/commit/82016ed70e))
+- **renown:** approve a store session at renown's console; keep self-acting ones withdrawn ([49b7c77d7a](https://github.com/powerhouse-inc/powerhouse/commit/49b7c77d7a))
+- **renown:** issue credentials for a page that signs in by link ([22e61d168d](https://github.com/powerhouse-inc/powerhouse/commit/22e61d168d))
+- **renown:** a browser keeps a pseudonym of its own, and a signer signs someone in first ([ea414cd6da](https://github.com/powerhouse-inc/powerhouse/commit/ea414cd6da))
+- **shared:** keep the person's pseudonym in the data folder and the home folder ([30528f892f](https://github.com/powerhouse-inc/powerhouse/commit/30528f892f))
+- **shared:** keep credential records in the store's data folder ([fec9602491](https://github.com/powerhouse-inc/powerhouse/commit/fec9602491))
+- **shared:** keep the sessions tools and agents sign actions with ([b70150d83f](https://github.com/powerhouse-inc/powerhouse/commit/b70150d83f))
+- **shared:** a store session a renown wallet approved signs as that wallet ([50ff54cce4](https://github.com/powerhouse-inc/powerhouse/commit/50ff54cce4))
+- **shared:** mint one-time sign-in codes for a connect served on this computer ([5ee57c65b6](https://github.com/powerhouse-inc/powerhouse/commit/5ee57c65b6))
+- **switchboard:** find an in-process renown itself, drop the credential sources ([062bd5abc0](https://github.com/powerhouse-inc/powerhouse/commit/062bd5abc0))
+- **vetra-studio:** sign in with the person's login, not the instance key ([7aec3673b2](https://github.com/powerhouse-inc/powerhouse/commit/7aec3673b2))
+
+### 🩹 Fixes
+
+- write credential and key files readable by their user only ([f48508f643](https://github.com/powerhouse-inc/powerhouse/commit/f48508f643))
+- **clint:** load the markdown renderer when the interactive session starts ([2b1049cec1](https://github.com/powerhouse-inc/powerhouse/commit/2b1049cec1))
+- **clint:** direct prints of a forwarded command reach its caller ([d506becebb](https://github.com/powerhouse-inc/powerhouse/commit/d506becebb))
+- **connect:** enrol the browser's pseudonym at a proxied switchboard by its full address ([a76f40cc3e](https://github.com/powerhouse-inc/powerhouse/commit/a76f40cc3e))
+- **devtools:** indent the JSON of initial states and examples ([d1751851ee](https://github.com/powerhouse-inc/powerhouse/commit/d1751851ee))
+- **host-core:** a run record that holds the sign-in secret is its user's alone ([d66fb85394](https://github.com/powerhouse-inc/powerhouse/commit/d66fb85394))
+- **ph-cli:** a second ph dev prints a fresh sign-in link too ([96f6c6168f](https://github.com/powerhouse-inc/powerhouse/commit/96f6c6168f))
+- **renown:** a locked pseudonym keeps signing with its held session credential ([9e3e145bb2](https://github.com/powerhouse-inc/powerhouse/commit/9e3e145bb2))
+- **renown:** a bearer that fails to verify reads as refused in the sign-in issuer ([f228a82bc4](https://github.com/powerhouse-inc/powerhouse/commit/f228a82bc4))
+- **shared:** an owner-only file keeps no explicit entry for another account on windows ([402c6b527e](https://github.com/powerhouse-inc/powerhouse/commit/402c6b527e))
+- **switchboard:** probe the bind host when looking for a free port ([dafb4c51d5](https://github.com/powerhouse-inc/powerhouse/commit/dafb4c51d5))
+
+### 🔥 Performance
+
+- **clint:** load templating, markdown and the proxy on first use ([3c848d3a98](https://github.com/powerhouse-inc/powerhouse/commit/3c848d3a98))
+
+### ❤️ Thank You
+
+- Claude
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.4.0-next.3 (2026-11-23)
 
 ### 🚀 Features

@@ -1,3 +1,30 @@
+## 6.4.0-next.5 (2026-11-25)
+
+### 🚀 Features
+
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **shared:** mint one-time sign-in codes for a connect served on this computer ([5ee57c65b6](https://github.com/powerhouse-inc/powerhouse/commit/5ee57c65b6))
+- **ph-cli:** ph mcp signs an mcp client's writes as the client's own session ([56e89cb281](https://github.com/powerhouse-inc/powerhouse/commit/56e89cb281))
+- **shared:** a store session a renown wallet approved signs as that wallet ([50ff54cce4](https://github.com/powerhouse-inc/powerhouse/commit/50ff54cce4))
+- **shared:** keep the sessions tools and agents sign actions with ([b70150d83f](https://github.com/powerhouse-inc/powerhouse/commit/b70150d83f))
+- **ph-cli:** list and withdraw a store's credential records ([bdb8ec7a01](https://github.com/powerhouse-inc/powerhouse/commit/bdb8ec7a01))
+- **reactor-api:** verify every bearer at the door by records, then renown ([1321b4c2fe](https://github.com/powerhouse-inc/powerhouse/commit/1321b4c2fe))
+- **shared:** keep credential records in the store's data folder ([fec9602491](https://github.com/powerhouse-inc/powerhouse/commit/fec9602491))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+- **ph-cli:** log in for every project, add whoami and identity password ([3d01864eec](https://github.com/powerhouse-inc/powerhouse/commit/3d01864eec))
+- **shared:** keep the person's pseudonym in the data folder and the home folder ([30528f892f](https://github.com/powerhouse-inc/powerhouse/commit/30528f892f))
+
+### 🩹 Fixes
+
+- **shared:** an owner-only file keeps no explicit entry for another account on windows ([402c6b527e](https://github.com/powerhouse-inc/powerhouse/commit/402c6b527e))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.4.0-next.3 (2026-11-23)
 
 ### 🚀 Features

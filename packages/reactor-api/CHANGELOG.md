@@ -1,3 +1,26 @@
+## 6.4.0-next.5 (2026-11-25)
+
+### 🚀 Features
+
+- **document-model,ph-cli:** say "legacy document model" and "legacy subgraph" in messages ([c51b86ca4a](https://github.com/powerhouse-inc/powerhouse/commit/c51b86ca4a))
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **ph-cli:** ph mcp signs an mcp client's writes as the client's own session ([56e89cb281](https://github.com/powerhouse-inc/powerhouse/commit/56e89cb281))
+- **reactor-mcp:** an mcp request names the label of the caller's session ([2d4f5bdc14](https://github.com/powerhouse-inc/powerhouse/commit/2d4f5bdc14))
+- **reactor-api:** log each write this host signs for its caller ([fbbfdaa46a](https://github.com/powerhouse-inc/powerhouse/commit/fbbfdaa46a))
+- **reactor-api:** verify every bearer at the door by records, then renown ([1321b4c2fe](https://github.com/powerhouse-inc/powerhouse/commit/1321b4c2fe))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+
+### 🩹 Fixes
+
+- write credential and key files readable by their user only ([f48508f643](https://github.com/powerhouse-inc/powerhouse/commit/f48508f643))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.4.0-next.3 (2026-11-23)
 
 ### 🚀 Features

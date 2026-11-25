@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-group",
-  "version": "6.4.0-next.3",
+  "version": "6.4.0-next.5",
   "description": "Platform document model for groups of member addresses, referenced by { group } principals in the auth scope.",
   "keywords": [
     "powerhouse",
