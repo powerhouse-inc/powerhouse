@@ -345,7 +345,7 @@ function unreadableDiagnostic(
     source: { specifier: packagePath(packageRoot, path) },
     path: [],
     message:
-      "This path under the document models directory could not be read, so the scan cannot tell whether it declares a code-first model that no model entry exports.",
+      "This path under the document models directory could not be read, so the scan cannot tell whether it declares a model that no model entry exports.",
     expected: "a readable file or directory",
     received: describeThrown(error),
     repair:

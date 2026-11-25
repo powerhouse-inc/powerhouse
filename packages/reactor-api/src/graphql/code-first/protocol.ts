@@ -80,7 +80,7 @@ function validateInstance(
   if (changed === undefined) return { ok: true };
   return {
     ok: false,
-    message: `\`${changed}\` differs from what the Subgraph constructor assigned from getSchema. A code-first subgraph declares its schema in getSchema only; remove the field initializer, field declaration or assignment that sets \`${changed}\`.`,
+    message: `\`${changed}\` differs from what the Subgraph constructor assigned from getSchema. A \`Subgraph\` class declares its schema in getSchema only; remove the field initializer, field declaration or assignment that sets \`${changed}\`.`,
   };
 }
 

@@ -33,7 +33,7 @@ describe("ph model check text output", () => {
       ],
     } as unknown as DefinitionCheckReport;
     expect(renderCheckReport(report).split("\n")).toStrictEqual([
-      "failed: 1 definition (./document-models: 1 code-first entry, 0 stored models)",
+      "failed: 1 definition (./document-models: 1 model entry, 0 stored models)",
       "  document-model example/model v1 ./definitions.ts#/Models/a~1b~0c",
       "PH-DM-DECLARATION-INVALID [error/definition] ./definitions.ts#/Models/a~1b~0c (root): Example Repair: Example",
       "1 error, 0 warnings",

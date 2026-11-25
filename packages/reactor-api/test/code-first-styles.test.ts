@@ -190,7 +190,7 @@ class NonObjectProtocol extends BaseSubgraph {
 }
 
 const AFTER_CONSTRUCTION = (field: string) =>
-  `\`${field}\` differs from what the Subgraph constructor assigned from getSchema. A code-first subgraph declares its schema in getSchema only; remove the field initializer, field declaration or assignment that sets \`${field}\`.`;
+  `\`${field}\` differs from what the Subgraph constructor assigned from getSchema. A \`Subgraph\` class declares its schema in getSchema only; remove the field initializer, field declaration or assignment that sets \`${field}\`.`;
 
 /**
  * A class body compiled with or without define semantics for class fields,

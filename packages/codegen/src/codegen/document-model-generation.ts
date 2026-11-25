@@ -184,7 +184,7 @@ function conflictsOf(
     ...(declared === undefined
       ? []
       : [
-          `${label} would overwrite ${declared.slice(2)}, which declares a code-first document model, while writing ${shown}. Move the code-first model to a directory of its own.`,
+          `${label} would overwrite ${declared.slice(2)}, which declares a document model with a definition, while writing ${shown}. Move the model with a definition to a directory of its own.`,
         ]),
     ...exportNames.flatMap((name) => {
       const other = owner.exportNames.get(name);
@@ -236,9 +236,9 @@ function unknownEditorDocumentType(
   return new Error(
     [
       existingEditorDir === undefined
-        ? `No code-first or schema-first document model in this package declares document type ${documentType}.`
-        : `${moduleFile} edits document type ${documentType}, which no code-first or schema-first document model in this package declares.`,
-      `Code-first models declare: ${declared.length === 0 ? "none" : declared.join(", ")}.`,
+        ? `No document model in this package declares document type ${documentType}.`
+        : `${moduleFile} edits document type ${documentType}, which no document model in this package declares.`,
+      `Document models with a definition declare: ${declared.length === 0 ? "none" : declared.join(", ")}.`,
       existingEditorDir === undefined
         ? "Pass --document-type with a document type a model declares."
         : `If the model's document type changed, set documentTypes in ${moduleFile} to the new type, then generate the editor again.`,

@@ -302,7 +302,7 @@ function normalizeConfig(
     collector.add({
       code: "PH-DM-DECLARATION-INVALID",
       path: ["version"],
-      message: "A code-first model version must be a positive safe integer.",
+      message: "A model version must be a positive safe integer.",
       expected: "a positive safe integer",
       received:
         typeof version === "number"
@@ -401,7 +401,7 @@ function normalizeErrors(
       collector.add({
         code: "PH-DM-DECLARATION-INVALID",
         path: errorPath,
-        message: `Error key ${JSON.stringify(key)} derives the class name ${JSON.stringify(className)}, so the message a failed operation persists would differ from the schema-first equivalent.`,
+        message: `Error key ${JSON.stringify(key)} derives the class name ${JSON.stringify(className)}, so the message a failed operation persists would differ from the one a legacy document model persists.`,
         expected: className,
         received: key,
         repair: `Rename the error to ${JSON.stringify(className)}.`,

@@ -24,7 +24,7 @@ function statusLine(
   counted: string,
 ): string {
   const { documentModelsDir, sources, stored } = report.sourceSet;
-  return `${report.status}: ${counted} (${documentModelsDir}: ${plural(sources.length, "code-first entry", "code-first entries")}, ${plural(stored.length, "stored model")})`;
+  return `${report.status}: ${counted} (${documentModelsDir}: ${plural(sources.length, "model entry", "model entries")}, ${plural(stored.length, "stored model")})`;
 }
 
 function skipped(reason: DefinitionCheckSkipReason | undefined): string[] {
@@ -109,11 +109,11 @@ function familyLines(family: FamilyInspection): string[] {
 function subgraphLines(subgraph: SubgraphInspection): string[] {
   if (subgraph.style === "schema-first") {
     return [
-      `  ${subgraph.name ?? "(unnamed)"} schema-first ${formatDefinitionSource(subgraph.source)}`,
+      `  ${subgraph.name ?? "(unnamed)"} legacy subgraph ${formatDefinitionSource(subgraph.source)}`,
     ];
   }
   return [
-    `  ${subgraph.name} code-first ${formatDefinitionSource(subgraph.source)}`,
+    `  ${subgraph.name} ${formatDefinitionSource(subgraph.source)}`,
     `    digest ${subgraph.digest}`,
     `    entries ${subgraph.entries.join(", ")}`,
     `    types ${subgraph.types.length === 0 ? "none" : subgraph.types.join(", ")}`,

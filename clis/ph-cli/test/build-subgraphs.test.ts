@@ -131,7 +131,7 @@ describe("ph build with code-first subgraphs", { timeout: 60_000 }, () => {
     );
     expect(rest).toEqual([]);
     expect(warning).toMatch(
-      /^⚠ The subgraph check reported problems; the build goes on:\ninvalid: 2 definitions \(\.\/document-models: 0 code-first entries, 0 stored models\)\n/,
+      /^⚠ The subgraph check reported problems; the build goes on:\ninvalid: 2 definitions \(\.\/document-models: 0 model entries, 0 stored models\)\n/,
     );
     expect(warning).toContain("PH-SG-DUPLICATE-NAME");
   }, 240_000);

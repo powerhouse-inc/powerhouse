@@ -7,14 +7,14 @@ function described({ unit, specifier, reason }: UnregisteredDefinition) {
   switch (reason) {
     case "stored-directory":
       return {
-        message: `${unit} stores a schema-first specification, so discovery reads it as schema-first and leaves out the code-first document model ${specifier} declares.`,
+        message: `${unit} stores a legacy document model's specification, so discovery reads it as a legacy document model and leaves out the document model ${specifier} declares.`,
         expected: "one authoring style per model directory",
-        received: "a stored specification and a code-first declaration",
-        repair: `Move the code-first model to a directory of its own with an index.ts that exports it, or delete the stored specification in ${unit}.`,
+        received: "a stored specification and a model with a definition",
+        repair: `Move the model with a definition to a directory of its own with an index.ts that exports it, or delete the stored specification in ${unit}.`,
       };
     case "not-exported":
       return {
-        message: `${unit} declares a code-first document model that an entry module imports but does not export, so the package leaves it out.`,
+        message: `${unit} declares a document model that an entry module imports but does not export, so the package leaves it out.`,
         expected: `an entry module that exports the model ${specifier} declares`,
         received: "imported, not exported",
         repair:
@@ -24,7 +24,7 @@ function described({ unit, specifier, reason }: UnregisteredDefinition) {
       };
     case "unreached":
       return {
-        message: `${unit} declares a code-first document model that no model entry module exports, so the package leaves it out.`,
+        message: `${unit} declares a document model that no model entry module exports, so the package leaves it out.`,
         expected: `${entry} exporting the model ${specifier} declares`,
         received: "no entry",
         repair:

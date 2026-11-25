@@ -1339,11 +1339,11 @@ show help<br><br>
 
 ## Model Check
 Check this package's document models through one set of checks:
-every model directory in documentModelsDir, whether it stores a schema-first
-<name>.json or exports a code-first model from its index.ts. Writes nothing.
+every model directory in documentModelsDir, whether it stores the <name>.json of
+a legacy document model or exports a model from its index.ts. Writes nothing.
 
-`tsc` cannot run these checks: a code-first model compiles when its module is
-evaluated.
+`tsc` cannot run these checks: a document model with a definition compiles when
+its module is evaluated.
 
 --release (experimental) runs the checks `ph build --release` runs: these,
 the release checks, and host validation, which validates every model and the

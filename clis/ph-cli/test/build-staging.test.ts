@@ -221,7 +221,7 @@ describe("a staged build", () => {
     expect(warnings).toEqual([]);
     expect(logs).toContain(
       [
-        "✔ skipped: 0 definitions (./document-models: 1 code-first entry, 0 stored models)",
+        "✔ skipped: 0 definitions (./document-models: 1 model entry, 0 stored models)",
         "The models directory holds no document model, so nothing was checked.",
         "0 errors, 0 warnings",
       ].join("\n"),
@@ -1747,7 +1747,7 @@ describe("the definitions step", () => {
     expect(logs).toContain("\n▶ Checking document model definitions...");
     expect(logs).toContain(
       [
-        "✔ ok: 1 definition (./document-models: 2 code-first entries, 0 stored models)",
+        "✔ ok: 1 definition (./document-models: 2 model entries, 0 stored models)",
         "  document-model example/ledger v1 ./document-models/ledger/index.ts#/Ledger",
         "0 errors, 0 warnings",
       ].join("\n"),
@@ -1762,7 +1762,7 @@ describe("the definitions step", () => {
     expect(warnings).toEqual([
       [
         "⚠ The definition check reported problems; the build goes on:",
-        "invalid: 0 definitions (./document-models: 2 code-first entries, 0 stored models)",
+        "invalid: 0 definitions (./document-models: 2 model entries, 0 stored models)",
         "PH-DEF-NAME-INVALID [error/definition] ./document-models/ledger/index.ts /name: A GraphQL name must match /^[_A-Za-z][_0-9A-Za-z]*$/ and must not start with two underscores. Expected: a GraphQL name such as InvoiceLineItem Received: Ledger State Repair: Use letters, digits, and underscores, start with a letter or one underscore, and avoid the reserved __ prefix.",
         "1 error, 0 warnings",
       ].join("\n"),
@@ -1783,7 +1783,7 @@ describe("the definitions step", () => {
     expect(errors).toEqual([
       [
         "✘ The release definition check stopped the build:",
-        "invalid: 0 definitions (./document-models: 2 code-first entries, 0 stored models)",
+        "invalid: 0 definitions (./document-models: 2 model entries, 0 stored models)",
         "PH-DEF-NAME-INVALID [error/definition] ./document-models/ledger/index.ts /name: A GraphQL name must match /^[_A-Za-z][_0-9A-Za-z]*$/ and must not start with two underscores. Expected: a GraphQL name such as InvoiceLineItem Received: Ledger State Repair: Use letters, digits, and underscores, start with a letter or one underscore, and avoid the reserved __ prefix.",
         "1 error, 0 warnings",
       ].join("\n"),

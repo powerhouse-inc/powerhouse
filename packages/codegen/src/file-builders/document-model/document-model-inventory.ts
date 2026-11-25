@@ -165,7 +165,7 @@ export async function loadDocumentModelInventory(
       const previous = names.get(model.aggregateExportName);
       if (previous !== undefined) {
         throw new Error(
-          `Code-first sources ${previous} and ${model.source.specifier} both export ${model.aggregateExportName} from document-models/index.ts. Choose distinct model names before generating.`,
+          `Sources ${previous} and ${model.source.specifier} both export ${model.aggregateExportName} from document-models/index.ts. Choose distinct model names before generating.`,
         );
       }
       names.set(model.aggregateExportName, model.source.specifier);
@@ -236,7 +236,7 @@ function identityOf({ source, value }: LoadedDefinition<DocumentModelModule>) {
   ) {
     throw new Error(
       [
-        `${source.specifier} does not export a valid code-first definition:`,
+        `${source.specifier} does not export a valid definition:`,
         ...result.diagnostics.map(formatDefinitionDiagnostic),
       ].join("\n"),
     );

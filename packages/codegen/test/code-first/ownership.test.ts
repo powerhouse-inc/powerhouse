@@ -381,7 +381,7 @@ describe("generating every model in a code-first package", () => {
     await expectRefusedWithoutWrites(
       (project) => generation().generateAll(project),
       "PH-PKG-DEFINITION-UNREGISTERED",
-      "./document-models/todo-list/ stores a schema-first specification",
+      "./document-models/todo-list/ stores a legacy document model's specification",
     );
   });
 });
