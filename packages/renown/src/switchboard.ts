@@ -369,6 +369,49 @@ export type SwitchboardRequestFn = (
 /** Where a SwitchboardClient reads from: an HTTP endpoint or a local executor. */
 export type SwitchboardSource = string | SwitchboardRequestFn;
 
+/**
+ * A credential as the renown-package's credential document takes it: the
+ * input of `renown_issueCredential`, and of its document's INIT action.
+ */
+export function renownCredentialInput(
+  credential: PowerhouseVerifiableCredential,
+): Record<string, unknown> {
+  return {
+    id: credential.id,
+    context: credential["@context"],
+    type: credential.type,
+    issuer: {
+      id: credential.issuer.id,
+      ethereumAddress: credential.issuer.ethereumAddress,
+    },
+    credentialSubject: {
+      id: credential.credentialSubject.id,
+      app: credential.credentialSubject.app,
+    },
+    credentialSchema: {
+      id: credential.credentialSchema.id,
+      type: credential.credentialSchema.type,
+    },
+    issuanceDate: credential.issuanceDate,
+    expirationDate: credential.expirationDate || undefined,
+    proof: {
+      type: credential.proof.type,
+      created: credential.proof.created,
+      verificationMethod: credential.proof.verificationMethod,
+      proofPurpose: credential.proof.proofPurpose,
+      proofValue: credential.proof.proofValue,
+      ethereumAddress: credential.proof.ethereumAddress,
+      eip712: {
+        domain: {
+          version: credential.proof.eip712.domain.version,
+          chainId: credential.proof.eip712.domain.chainId,
+        },
+        primaryType: credential.proof.eip712.primaryType,
+      },
+    },
+  };
+}
+
 // Reads and writes a Switchboard reactor's `renown-read-model` subgraph and
 // document mutations over GraphQL, replacing the Renown Next.js REST proxy.
 export class SwitchboardClient {
@@ -587,40 +630,7 @@ export class SwitchboardClient {
     credential: PowerhouseVerifiableCredential,
     parentIdentifier?: string,
   ): Promise<string> {
-    const input: Record<string, unknown> = {
-      id: credential.id,
-      context: credential["@context"],
-      type: credential.type,
-      issuer: {
-        id: credential.issuer.id,
-        ethereumAddress: credential.issuer.ethereumAddress,
-      },
-      credentialSubject: {
-        id: credential.credentialSubject.id,
-        app: credential.credentialSubject.app,
-      },
-      credentialSchema: {
-        id: credential.credentialSchema.id,
-        type: credential.credentialSchema.type,
-      },
-      issuanceDate: credential.issuanceDate,
-      expirationDate: credential.expirationDate || undefined,
-      proof: {
-        type: credential.proof.type,
-        created: credential.proof.created,
-        verificationMethod: credential.proof.verificationMethod,
-        proofPurpose: credential.proof.proofPurpose,
-        proofValue: credential.proof.proofValue,
-        ethereumAddress: credential.proof.ethereumAddress,
-        eip712: {
-          domain: {
-            version: credential.proof.eip712.domain.version,
-            chainId: credential.proof.eip712.domain.chainId,
-          },
-          primaryType: credential.proof.eip712.primaryType,
-        },
-      },
-    };
+    const input = renownCredentialInput(credential);
     try {
       const { renown_issueCredential } = await this.#request<{
         renown_issueCredential: string;
@@ -628,7 +638,8 @@ export class SwitchboardClient {
       return renown_issueCredential;
     } catch (error) {
       // Fallback for a switchboard on an older renown-package without the
-      // issuance subgraph: write via the generic reactor mutations instead.
+      // issuance subgraph: write via the generic reactor mutations instead,
+      // which a switchboard that signs no writes for its callers refuses.
       if (
         !isUnknownSchemaError(
           error,
