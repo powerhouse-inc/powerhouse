@@ -22,6 +22,7 @@ import {
 } from "@powerhousedao/host-core";
 import { instanceDataDir } from "@powerhousedao/host-core/instance";
 import { defineHostSchemas } from "@powerhousedao/host-core/schema";
+import { switchboardOfDrive } from "@powerhousedao/shared/host-tokens";
 import { z } from "zod";
 import { commandStoreOf } from "../core/command-control.js";
 import type {
@@ -34,6 +35,7 @@ import {
   attachDefaultReactor,
   resolveRemoteReactorConfig,
 } from "../integrations/powerhouse/index.js";
+import { withPersonSigning } from "../integrations/powerhouse/person-signing.js";
 import type { ReactorContext } from "../integrations/powerhouse/types.js";
 
 /**
@@ -57,6 +59,11 @@ export const kind = "reactor";
 /** The Cli owns the terminal: it reads stdin itself, and in a compound it is
  * the foreground member. */
 export const foreground = true;
+
+/** The switchboard a drive address, GraphQL endpoint or origin names. */
+function switchboardBaseOf(url: string): string {
+  return switchboardOfDrive(url)?.base ?? new URL(url).origin;
+}
 
 /** The verbs this runner exports (`runCli`, `loadCli` and `loadOwnCli` are
  * helpers). */
@@ -304,10 +311,18 @@ export async function runCli(
   // path of the Cli runs; it releases once.
   let attached: ReactorContext | undefined;
   const { url } = options;
+  // A Cli that names no signer writes as the person who runs it.
   const reactor: RunReactor | undefined = url
     ? async (setup, configured) =>
         (attached = await attachDefaultReactor(setup, {
-          ...(await resolveRemoteReactorConfig(configured?.remote, setup)),
+          ...withPersonSigning(
+            await resolveRemoteReactorConfig(configured?.remote, setup),
+            {
+              label: cli.name,
+              dataDir: instanceDataDir(setup.workdir),
+              switchboardBase: switchboardBaseOf(url),
+            },
+          ),
           url,
         }))
     : undefined;

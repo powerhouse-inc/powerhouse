@@ -481,9 +481,11 @@ export type RemoteReactorSource<R extends DocumentRegistry = AnyRegistry> =
  * What a CLI's reactor holds on a remote switchboard: the models its client
  * signs and reduces with, the drives to find or create there, the changes
  * to bridge to the event bus, and who it writes as. No drive: the drive the
- * address names. No signer: writes go out unsigned and the switchboard signs
- * them with its own key. While a forwarded command runs, its writes are
- * signed by its caller instead, whose bearer its requests carry (see
+ * address names. No signer: a host runner signs the writes as the person who
+ * runs the Cli (`withPersonSigning`); attached otherwise, they go out
+ * unsigned, and a switchboard refuses them, as it signs no writes for its
+ * callers. While a forwarded command runs, its writes are signed by its
+ * caller instead, whose bearer its requests carry (see
  * `Cli.configureIdentity`).
  */
 export interface RemoteReactorConfig<R extends DocumentRegistry = AnyRegistry> {
