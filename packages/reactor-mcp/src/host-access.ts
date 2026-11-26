@@ -20,6 +20,11 @@ import {
 export interface McpAccess {
   /** Policy-wide access (OPEN or a supreme admin): per-document checks are skipped. */
   readonly unrestricted: boolean;
+  /**
+   * Whether the caller operates the instance and may administer it (connect
+   * remote drives), whatever the policy. Omitted: `unrestricted` decides.
+   */
+  readonly operator?: boolean;
   /** Whether the caller is authenticated; a refused create says which. */
   readonly authenticated: boolean;
   canRead(documentId: string): Promise<boolean>;
@@ -62,6 +67,11 @@ export class HostAccessGate {
 
   get unrestricted(): boolean {
     return this.access.unrestricted;
+  }
+
+  /** Whether the caller may administer the instance; see {@link McpAccess.operator}. */
+  get operator(): boolean {
+    return this.access.operator ?? this.access.unrestricted;
   }
 
   // An unresolvable id is refused without saying whether it exists.

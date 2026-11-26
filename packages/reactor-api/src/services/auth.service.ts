@@ -61,6 +61,8 @@ export interface AuthConfig {
    * and an open socket's recheck asks it again.
    */
   accessGate?: AccessGate;
+  /** Who operates the instance besides `admins`; they pass the access gate as admins do. */
+  operators?: { has(address: string): boolean };
 }
 
 /** What a caller the access gate refused is told. */
@@ -399,6 +401,7 @@ export class AuthService implements ICredentialInvalidator {
     if (this.config.admins.some((admin) => admin.toLowerCase() === address)) {
       return true;
     }
+    if (this.config.operators?.has(address)) return true;
     return (await gate.check(address)).allowed;
   }
 

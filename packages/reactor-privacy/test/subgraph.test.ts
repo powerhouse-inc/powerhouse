@@ -45,6 +45,8 @@ function authorization(
     config: { policy },
     isSupremeAdmin: (userAddress?: string) =>
       !!userAddress && lowered.includes(userAddress.toLowerCase()),
+    isOperator: (userAddress?: string) =>
+      !!userAddress && lowered.includes(userAddress.toLowerCase()),
   };
 }
 
@@ -322,6 +324,7 @@ describe("privacy subgraph mounting", () => {
     const open: PrivacyAuthorization = {
       config: { policy: "OPEN" },
       isSupremeAdmin: () => true,
+      isOperator: () => false,
     };
     expect(() =>
       createPrivacySubgraph({ ...deps, authorizationService: open }),
@@ -341,6 +344,7 @@ describe("privacy subgraph mounting", () => {
     const lax: PrivacyAuthorization = {
       config: { policy: "DOCUMENT_PERMISSIONS" },
       isSupremeAdmin: () => true,
+      isOperator: () => true,
     };
     expect(() =>
       createPrivacySubgraph({ ...deps, authorizationService: lax }),

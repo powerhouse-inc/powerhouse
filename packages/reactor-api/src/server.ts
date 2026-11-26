@@ -36,6 +36,7 @@ import type {
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
+import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import type http from "node:http";
 import { tmpdir } from "node:os";
@@ -69,11 +70,8 @@ import {
   type CredentialVerifier as HostCredentialVerifier,
   type SwitchboardRequestFn,
 } from "@renown/sdk/node";
-import {
-  assertOwnerClaimBind,
-  OwnerClaim,
-} from "./services/host-auth-state.js";
 import { mountCredentialRoutes } from "./http/credential-routes.js";
+import { OperatorSet, parseOperatorSource } from "./services/operator-set.js";
 import {
   createAuthFetchMiddleware,
   type AuthFetchMiddleware,
@@ -217,9 +215,12 @@ type Options = {
     skipCredentialVerification?: boolean;
     credentialCacheTtlMs?: number;
     wsRecheckMs?: number;
-    /** The first verified caller becomes the admin of a host with none. A
-     *  configured admin list wins. Only for a host bound to loopback. */
+    /** No longer read (warned when on): no caller becomes the owner; the
+     *  operator runs the instance (`operator`), or is in `admins`. */
     ownerClaim?: boolean;
+    /** Who operates the instance besides `admins`, as its launcher says
+     *  (`PH_OPERATOR`): `os-user`, addresses, or both, comma separated. */
+    operator?: string;
     /** No longer read: Renown's answers are always kept, and a credential
      *  this host has no answer for is accepted on its signature while Renown
      *  cannot be reached (see `refuseUnseenOffline`). */
@@ -228,7 +229,7 @@ type Options = {
      *  no answer for, instead of accepting it on its signature. */
     refuseUnseenOffline?: boolean;
     /** The store's `.ph` folder: credential records (`credentials/`), Renown's
-     *  answers and the owner claim. Default: the working folder's. */
+     *  answers and the store's pseudonym. Default: the working folder's. */
     stateDir?: string;
     /** `ACCESS=licensed`: admit only admins and holders of a live licence,
      *  as Vetra's gate answers. See {@link assertAccessConfig}. */
@@ -713,10 +714,6 @@ function authStateDir(auth: NonNullable<Options["auth"]>): string {
   return auth.stateDir ?? path.join(process.cwd(), ".ph");
 }
 
-function claimOwner(claim: OwnerClaim): (user: User) => void {
-  return (user) => claim.observe(user.address);
-}
-
 function processorHostOf(
   signer: Options["hostSigner"],
   policy: AuthorizationPolicy,
@@ -971,7 +968,11 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
 
   /* Every host reads a bearer when one is sent (D8): verified, it names the
      caller; bad, it is refused. That is not the policy enforcing anything. */
-  if (optionAuth.ownerClaim) assertOwnerClaimBind(options.server?.host);
+  if (optionAuth.ownerClaim === true) {
+    logger.warn(
+      "auth.ownerClaim is no longer read: no caller becomes this host's owner. Whoever runs it administers it (PH_OPERATOR, which `ph run` passes), and so do the ADMINS. Remove the setting.",
+    );
+  }
   logger.info(
     "Setting up Auth middleware (policy enforcement: @enabled, caller identity: @resolve)",
     authEnabled,
@@ -980,6 +981,26 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   const renown =
     options.renown ?? resolveRenownConfig(configuredRenown, {}, logger);
   const stateDir = authStateDir(optionAuth);
+  // Administration over HTTP: ADMINS, and whom the launcher named.
+  const operators = new OperatorSet({
+    admins,
+    source: parseOperatorSource(optionAuth.operator),
+    dataDir: path.dirname(stateDir),
+  });
+  if (operators.configured) {
+    logger.info("Administered by @operators", operators.describe());
+  } else {
+    logger.warn(
+      "No administrator: package installs and other administration over HTTP are refused. Set ADMINS.",
+    );
+  }
+  const ownerFile = path.join(stateDir, ".owner.json");
+  if (existsSync(ownerFile)) {
+    logger.warn(
+      "@file is no longer read: its owner administers this host only from ADMINS or by running it. `ph migrate` removes the file.",
+      ownerFile,
+    );
+  }
   // The verifier of every host: the store's records, then Renown.
   let credentialVerifier: HostCredentialVerifier | undefined;
   let verifyCredential = options.verifyCredential;
@@ -1045,13 +1066,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       ? 0
       : optionAuth.credentialCacheTtlMs,
     verifyCredential,
-    ...(optionAuth.ownerClaim
-      ? {
-          onVerified: claimOwner(
-            new OwnerClaim(path.join(stateDir, ".owner.json"), admins),
-          ),
-        }
-      : {}),
+    operators,
   });
   if (credentialVerifier) {
     const verifier = credentialVerifier;
@@ -1149,6 +1164,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     admins,
     defaultProtection,
     policy,
+    operators,
   };
 
   // Initialize attachment service

@@ -288,6 +288,9 @@
                     "type": "string"
                   }
                 },
+                "operator": {
+                  "type": "string"
+                },
                 "defaultProtection": {
                   "type": "boolean"
                 },

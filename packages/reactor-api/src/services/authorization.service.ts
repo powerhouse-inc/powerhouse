@@ -1,5 +1,6 @@
 import { PURGE_DOCUMENT } from "@powerhousedao/shared/document-model";
 import type { DocumentPermissionLevel } from "../utils/db.js";
+import type { OperatorSet } from "./operator-set.js";
 import type {
   DocumentPermissionService,
   GetParentIdsFn,
@@ -63,6 +64,21 @@ export interface AuthorizationConfig {
   admins: string[];
   defaultProtection: boolean;
   policy: AuthorizationPolicy;
+  /** `admins` plus what the launcher passed (`PH_OPERATOR`); absent, `admins` alone. */
+  operators?: OperatorSet;
+}
+
+/**
+ * Whether `address` operates this instance: an admin, or named by its
+ * launcher. Whatever the policy; anonymous never is.
+ */
+export function isConfiguredOperator(
+  config: Pick<AuthorizationConfig, "admins" | "operators">,
+  address: string | undefined,
+): boolean {
+  if (!address) return false;
+  if (config.operators) return config.operators.has(address);
+  return config.admins.includes(address.toLowerCase());
 }
 
 /**
@@ -71,7 +87,8 @@ export interface AuthorizationConfig {
  *
  * The policy selects an implementation once at boot:
  * - OPEN: authentication disabled — everyone (incl. anonymous) is allowed.
- * - ADMIN_ONLY: authentication on, document permissions off — only ADMINS.
+ * - ADMIN_ONLY: authentication on, document permissions off — only operators
+ *   (ADMINS, and whom the launcher named).
  * - DOCUMENT_PERMISSIONS: the full per-document protection + grant model.
  *
  * Permission inheritance walks the parent-document hierarchy through a
@@ -87,6 +104,16 @@ export interface IAuthorizationService {
    * filtering. It does NOT mean the caller is in the ADMINS list.
    */
   isSupremeAdmin(userAddress?: string): boolean;
+
+  /**
+   * Whether the user operates this instance and may administer it (package
+   * installs, the AI gateway, remote drives, privacy erasure, inspection
+   * levers): one of `ADMINS`, or whom its launcher named (the OS user that
+   * runs it). Whatever the policy, so OPEN does not make everyone an
+   * operator; anonymous callers never are. Under ADMIN_ONLY and
+   * DOCUMENT_PERMISSIONS an operator is also a supreme admin.
+   */
+  isOperator(userAddress?: string): boolean;
 
   /**
    * Whether the user may create new documents under the current policy:
@@ -126,8 +153,11 @@ abstract class BaseAuthorizationService implements IAuthorizationService {
   constructor(readonly config: AuthorizationConfig) {}
 
   isSupremeAdmin(userAddress?: string): boolean {
-    if (!userAddress) return false;
-    return this.config.admins.includes(userAddress.toLowerCase());
+    return isConfiguredOperator(this.config, userAddress);
+  }
+
+  isOperator(userAddress?: string): boolean {
+    return isConfiguredOperator(this.config, userAddress);
   }
 
   abstract canCreate(userAddress?: string): boolean;
@@ -181,7 +211,7 @@ class OpenAuthorizationService extends BaseAuthorizationService {
   }
 }
 
-/** ADMIN_ONLY: authentication on, document permissions off — only ADMINS. */
+/** ADMIN_ONLY: authentication on, document permissions off — only operators. */
 class AdminOnlyAuthorizationService extends BaseAuthorizationService {
   canCreate(userAddress?: string): boolean {
     return this.isSupremeAdmin(userAddress);

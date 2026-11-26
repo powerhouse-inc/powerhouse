@@ -32,8 +32,11 @@ export type ReactorApiConfig = {
     skipCredentialVerification?: boolean;
     credentialCacheTtlMs?: number;
     wsRecheckMs?: number;
-    /** The first verified caller becomes the admin of a host with none. */
+    /** No longer read (warned when on): no caller becomes the owner. */
     ownerClaim?: boolean;
+    /** Who operates the host besides `admins`, as its launcher says
+     *  (`PH_OPERATOR`): `os-user`, addresses, or both. */
+    operator?: string;
     /** No longer read: Renown's answers are always kept. */
     offlineCredentials?: boolean;
     /** Renown unreachable: refuse a credential the host has no record of and
@@ -85,6 +88,7 @@ export function reactorApiConfigFromEnv(
     auth: pruned({
       enabled: exactlyTrue(env.AUTH_ENABLED),
       admins: env.ADMINS?.split(",").map((a) => a.toLowerCase()),
+      operator: env.PH_OPERATOR || undefined,
       resolveIdentity: exactlyTrue(env.RESOLVE_CALLER_IDENTITY),
       requireAuthenticatedCaller: exactlyTrue(env.REQUIRE_AUTHENTICATED_CALLER),
       requireAuthenticatedCallerExemptPaths:

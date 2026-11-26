@@ -10,6 +10,8 @@ import type { ErasureRequest, IErasureService } from "../erasure/types.js";
 export interface PrivacyAuthorization {
   readonly config: { readonly policy: string };
   isSupremeAdmin(userAddress?: string): boolean;
+  /** Whether the caller operates the instance; erasure and disclosure are theirs. */
+  isOperator(userAddress?: string): boolean;
 }
 
 export interface IDisclosureService {
@@ -35,7 +37,7 @@ function requireAdmin(
   ctx: PrivacySubgraphContext,
 ): string {
   const address = ctx.user?.address;
-  if (!address || !authorizationService.isSupremeAdmin(address)) {
+  if (!address || !authorizationService.isOperator(address)) {
     throw new GraphQLError("Admin access required", {
       extensions: { code: "FORBIDDEN" },
     });

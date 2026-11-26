@@ -170,6 +170,11 @@ const authSchema = z.object({
   requireAuthenticatedCaller: z.boolean().default(false),
   requireAuthenticatedCallerExemptPaths: z.array(z.string()).default([]),
   admins: z.array(z.string()).default([]),
+  /**
+   * Who operates the instance besides `admins`, as its launcher says
+   * (`PH_OPERATOR`): `os-user`, addresses, or both, comma separated.
+   */
+  operator: z.string().optional(),
   defaultProtection: z.boolean().default(false),
   attachmentReadsFollowDocumentPolicy: z.boolean().default(false),
   documentPermissions: z
@@ -182,7 +187,7 @@ const authSchema = z.object({
   /** Unset: 0 with a "self" renown source, else the AuthService default. */
   credentialCacheTtlMs: nonNegative.optional(),
   wsRecheckMs: nonNegative.optional(),
-  /** The first verified caller becomes the admin of a host with none. */
+  /** No longer read (warned when on): the operator runs the instance. */
   ownerClaim: z.boolean().default(false),
   /** No longer read (warned when on): Renown's answers are always kept. */
   offlineCredentials: z.boolean().default(false),

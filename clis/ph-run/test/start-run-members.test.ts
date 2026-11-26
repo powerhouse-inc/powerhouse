@@ -47,6 +47,15 @@ export async function run(host, ctx) {
 }
 `;
 
+// A one-shot reactor that prints the operator its host env names.
+const FAKE_ENV = `export const kind = "reactor";
+export const verbs = ["run"];
+export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
+export async function run(host, ctx) {
+  console.log("operator " + (ctx.env.PH_OPERATOR ?? "none"));
+}
+`;
+
 interface Run {
   child: ChildProcess;
   output(): string;
@@ -58,6 +67,7 @@ function childEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env, PH_NO_TELEMETRY: "1" };
   delete env.PH_STOP_ON_STDIN;
   delete env.PH_COMPOUND_MEMBER;
+  delete env.PH_OPERATOR;
   return { ...env, ...extra };
 }
 
@@ -114,6 +124,7 @@ describe("ph-run run, for a compound's member", () => {
     for (const [name, source] of [
       ["fake-runner", FAKE_RUNNER],
       ["fake-cli", FAKE_CLI],
+      ["fake-env", FAKE_ENV],
     ] as const) {
       const dir = path.join(project, "node_modules", name);
       mkdirSync(dir, { recursive: true });
@@ -126,6 +137,7 @@ describe("ph-run run, for a compound's member", () => {
     for (const [folder, module] of [
       ["sb", "fake-runner"],
       ["cli", "fake-cli"],
+      ["env", "fake-env"],
     ] as const) {
       mkdirSync(path.join(project, "hosts", folder), { recursive: true });
       writeFileSync(
@@ -152,6 +164,15 @@ describe("ph-run run, for a compound's member", () => {
     rmSync(project, { recursive: true, force: true, maxRetries: 10 });
     expect(survivors.map((child) => child.pid)).toEqual([]);
   });
+
+  it("names the OS user its host's operator, unless the env names one", async () => {
+    const named = phRun(["env"]);
+    expect(await exitCodeOf(named)).toBe(0);
+    expect(named.output()).toContain("operator os-user");
+    const given = phRun(["env"], { PH_OPERATOR: "0xabc" });
+    expect(await exitCodeOf(given)).toBe(0);
+    expect(given.output()).toContain("operator 0xabc");
+  }, 60_000);
 
   it("stops a reactor host when its supervisor's stdin ends, once it has started", async () => {
     const run = phRun(["sb"], { PH_STOP_ON_STDIN: "1", FAKE_READY_MS: "800" });

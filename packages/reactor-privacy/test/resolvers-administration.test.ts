@@ -30,6 +30,7 @@ function resolvers() {
     authorizationService: {
       config: { policy: "ADMIN_ONLY" },
       isSupremeAdmin: (address) => address === ADMIN,
+      isOperator: (address) => address === ADMIN,
     },
     erasure,
     disclosure,

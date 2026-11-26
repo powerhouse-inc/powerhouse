@@ -5,7 +5,10 @@ import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import { hashNamespace } from "@powerhousedao/shared/processors";
 import { sql, type Kysely, type RawBuilder } from "kysely";
 import type { AuthorizationConfig } from "./authorization.service.js";
-import { AuthorizationPolicy } from "./authorization.service.js";
+import {
+  AuthorizationPolicy,
+  isConfiguredOperator,
+} from "./authorization.service.js";
 import type { DocumentPermissionService } from "./document-permission.service.js";
 
 /**
@@ -252,9 +255,9 @@ export class ReadableDocumentsProjection implements ReadableDocumentsLike {
 
   filterFor(userAddress: string | undefined): ReadableFilter {
     const address = userAddress?.toLowerCase();
-    const { policy, admins } = this.#deps.config;
+    const { policy } = this.#deps.config;
     if (policy === AuthorizationPolicy.OPEN) return { kind: "all" };
-    const admin = address !== undefined && admins.includes(address);
+    const admin = isConfiguredOperator(this.#deps.config, address);
     if (policy === AuthorizationPolicy.ADMIN_ONLY) {
       return admin ? { kind: "all" } : { kind: "none" };
     }

@@ -8,11 +8,12 @@ import type { Context } from "../types.js";
 
 const logger = childLogger(["reactor-api", "administration"]);
 
+/** Package installs are instance administration: an operator's, whatever the policy. */
 function requireAdmin(
   authorizationService: IAuthorizationService,
   ctx: Context,
 ): void {
-  if (!authorizationService.isSupremeAdmin(ctx.user?.address)) {
+  if (!authorizationService.isOperator(ctx.user?.address)) {
     throw new GraphQLError("Admin access required");
   }
 }

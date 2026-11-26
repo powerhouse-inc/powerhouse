@@ -81,7 +81,8 @@ export function createAiPlugin(rawConfig: unknown): AiPlugin {
         registerAiRoutes(
           api.httpRoutes.scopeFor("@powerhousedao/switchboard"),
           {
-            isAdmin: (address) => authorizationService.isSupremeAdmin(address),
+            // The AI gateway is instance administration: an operator's.
+            isAdmin: (address) => authorizationService.isOperator(address),
             demoKey: () => readDemoKey(demoKeyFile),
             secrets: async () =>
               (ctx.workflows as ComposedWorkflowRuntime | undefined)?.secrets(),

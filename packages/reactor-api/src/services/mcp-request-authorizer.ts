@@ -77,6 +77,7 @@ function hostAccess(
   };
   return {
     unrestricted: authorization.isSupremeAdmin(address),
+    operator: authorization.isOperator(address),
     authenticated: address !== undefined,
     canRead: (identifier) =>
       decide(identifier, (id) => authorization.canRead(id, address)),

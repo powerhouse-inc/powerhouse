@@ -238,6 +238,16 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
     expect(config.auth.defaultProtection).toBe(true);
     expect(config.workers.executor.count).toBe(0);
   });
+
+  it("takes the operator its launcher names, over the host file's", async () => {
+    const config = parse(
+      await memberSwitchboardConfig(
+        { config: { switchboard: { auth: { operator: "0xfile" } } } },
+        { shell: { PH_OPERATOR: "os-user" }, dotenv: {} },
+      ),
+    );
+    expect(config.auth.operator).toBe("os-user");
+  });
 });
 
 describe("memberEnvOf", () => {

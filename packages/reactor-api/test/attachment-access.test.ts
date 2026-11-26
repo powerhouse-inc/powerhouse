@@ -57,6 +57,7 @@ function makeAuthorization(
   return {
     config: { admins: [], defaultProtection: false, policy: "OPEN" },
     isSupremeAdmin: () => false,
+    isOperator: () => false,
     canCreate: () => true,
     canRead: (documentId: CanonicalDocumentId, userAddress?: string) => {
       recorded.calls.push(`canRead:${documentId}:${userAddress ?? ""}`);

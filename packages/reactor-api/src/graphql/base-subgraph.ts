@@ -335,15 +335,12 @@ export class BaseSubgraph implements ISubgraph {
   }
 
   /**
-   * Whether the caller is in the ADMINS list. Not `isSupremeAdmin`: under
-   * OPEN that admits every caller, anonymous included.
+   * Whether the caller operates this instance: in ADMINS, or named by its
+   * launcher. Not `isSupremeAdmin`: under OPEN that admits every caller,
+   * anonymous included.
    */
   isListedAdmin(ctx: Context): boolean {
-    const address = ctx.user?.address.toLowerCase();
-    return (
-      address !== undefined &&
-      this.authorizationService.config.admins.includes(address)
-    );
+    return this.authorizationService.isOperator(ctx.user?.address);
   }
 
   /**

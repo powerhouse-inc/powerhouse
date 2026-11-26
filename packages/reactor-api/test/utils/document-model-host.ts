@@ -68,6 +68,7 @@ export function recordingAuthorization(denied?: string): {
       policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
     },
     isSupremeAdmin: () => false,
+    isOperator: () => false,
     canCreate: () => true,
     canRead: () => Promise.resolve(true),
     canWrite: () => Promise.resolve(true),

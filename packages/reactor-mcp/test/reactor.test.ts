@@ -30,6 +30,7 @@ import {
   getDocumentTool,
   getDrivesTool,
   getDriveTool,
+  HostAccessGate,
   isWriteTool,
   reactorAdminTools,
   reactorTools,
@@ -1794,6 +1795,41 @@ describe("reactor tools", () => {
         } finally {
           info.mockRestore();
         }
+      });
+
+      it("connects a remote drive for an operator only, even under OPEN", async () => {
+        const access = (operator: boolean) => ({
+          unrestricted: true,
+          operator,
+          authenticated: true,
+          canRead: () => Promise.resolve(true),
+          canWrite: () => Promise.resolve(true),
+          canMutate: () => Promise.resolve(true),
+          canCreate: () => true,
+        });
+        const syncManager = {
+          list: () => [],
+          add: () => Promise.resolve({}),
+        } as unknown as ISyncManager;
+        const toolFor = (operator: boolean) =>
+          toMcpTool(
+            reactorAdminTools({
+              syncManager,
+              remoteDriveUrls: [origin],
+              gate: new HostAccessGate(access(operator), client),
+            }).find((t) => t.name === "addRemoteDrive")!,
+            { client },
+          );
+        const refused = await toolFor(false).callback({
+          url: `${origin}/d/info`,
+        } as never);
+        expect(refused._meta?.error).toMatchObject({ code: "FORBIDDEN" });
+        const connected = await toolFor(true).callback({
+          url: `${origin}/d/info`,
+        } as never);
+        expect(connected.structuredContent).toEqual({
+          driveId: "remote-drive",
+        });
       });
 
       it("syncs with an allowed endpoint resolved against the info URL", async () => {

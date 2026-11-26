@@ -208,6 +208,7 @@ const OPEN: IAuthorizationService = {
   },
   // The reactor gate, not IAuthorizationService, is under test.
   isSupremeAdmin: () => true,
+  isOperator: () => false,
   canCreate: () => true,
   canRead: () => Promise.resolve(true),
   canWrite: () => Promise.resolve(true),

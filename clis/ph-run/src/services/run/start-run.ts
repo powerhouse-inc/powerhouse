@@ -1,3 +1,7 @@
+import {
+  OPERATOR_ENV,
+  OS_USER_OPERATOR,
+} from "@powerhousedao/shared/clis/constants";
 import path from "node:path";
 import {
   checkRunnerArgv,
@@ -46,6 +50,19 @@ import {
   type LoadedHost,
   type RunnerModule,
 } from "@powerhousedao/host-core";
+
+/**
+ * The env a host runs with: this process's, naming whoever runs it as the
+ * instance's operator (`PH_OPERATOR=os-user`) unless the env names one. A
+ * compound hands it to every member, so each switchboard it starts takes
+ * administration over HTTP from this OS user's identities. The bare
+ * switchboard bin and containers pass nothing: their `ADMINS` alone.
+ */
+export function hostEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return env[OPERATOR_ENV] === undefined
+    ? { ...env, [OPERATOR_ENV]: OS_USER_OPERATOR }
+    : env;
+}
 
 export interface StartRunArgs {
   /** A folder under the project's hosts/, or `<package>/<host>` for one an
@@ -186,7 +203,7 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
       projectRoot,
       ...(hostPackage ? { hostPackage } : {}),
       verb,
-      env: process.env,
+      env: hostEnv(process.env),
       ...(argv.length > 0 ? { argv } : {}),
     });
   }
@@ -201,7 +218,7 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
     projectRoot,
     ...(hostPackage ? { hostPackage } : {}),
     verb,
-    env: process.env,
+    env: hostEnv(process.env),
     ...(argv.length > 0 ? { argv } : {}),
   };
   const projectName = readProjectName(projectRoot);

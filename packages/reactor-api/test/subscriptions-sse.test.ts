@@ -69,6 +69,7 @@ function makeAuthorizationService(
       policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
     },
     isSupremeAdmin: () => false,
+    isOperator: () => false,
     canCreate: () => false,
     canRead: () => Promise.resolve(true),
     canWrite: () => Promise.resolve(true),

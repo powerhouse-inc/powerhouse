@@ -151,6 +151,7 @@ const refusingHost: IAuthorizationService = {
     policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
   },
   isSupremeAdmin: () => false,
+  isOperator: () => false,
   canCreate: () => true,
   canRead: () => Promise.resolve(false),
   canWrite: () => Promise.resolve(true),

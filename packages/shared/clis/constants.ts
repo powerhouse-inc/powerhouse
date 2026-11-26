@@ -22,6 +22,15 @@ export const LOG_LEVELS = [
 
 export const DEFAULT_TIMEOUT = 300 as const;
 
+/**
+ * Who operates an instance besides its `ADMINS`, as its launcher says:
+ * {@link OS_USER_OPERATOR}, Ethereum addresses, or both, comma separated.
+ */
+export const OPERATOR_ENV = "PH_OPERATOR";
+
+/** `PH_OPERATOR=os-user`: the identities of the OS user running the instance. */
+export const OS_USER_OPERATOR = "os-user";
+
 export const DEFAULT_CONNECT_STUDIO_PORT = 3000 as const;
 
 export const DEFAULT_VETRA_CONNECT_PORT = 3001 as const;

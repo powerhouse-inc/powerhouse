@@ -10,6 +10,7 @@ const REPLACED_WHOLE = new Set(["attachments.storage", "storage.keyframes"]);
 const ENV_WINS_AUTH = [
   "enabled",
   "admins",
+  "operator",
   "resolveIdentity",
   "requireAuthenticatedCaller",
   "requireAuthenticatedCallerExemptPaths",

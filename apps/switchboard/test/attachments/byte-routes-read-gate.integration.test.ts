@@ -51,6 +51,7 @@ const openAuthorization: IAuthorizationService = {
     policy: AuthorizationPolicy.OPEN,
   },
   isSupremeAdmin: () => true,
+  isOperator: () => false,
   canCreate: () => true,
   canRead: () => Promise.resolve(true),
   canWrite: () => Promise.resolve(true),

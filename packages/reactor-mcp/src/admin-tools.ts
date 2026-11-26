@@ -311,8 +311,8 @@ function addRemoteDriveTool(options: ReactorAdminToolsOptions) {
     },
     async execute(args, { signal }) {
       const { syncManager, remoteDriveUrls, gate } = options;
-      // Sync configuration is host-wide, as GraphQL's sync admin is.
-      if (gate && !gate.unrestricted) {
+      // Sync configuration is host-wide: the operator's, whatever the policy.
+      if (gate && !gate.operator) {
         throw new ReactorToolError(
           "FORBIDDEN",
           "Forbidden: only an administrator may connect remote drives",

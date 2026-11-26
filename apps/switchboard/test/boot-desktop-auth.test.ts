@@ -1,8 +1,9 @@
-// A switchboard shaped like the desktop host's: sign-in enforced, the first
-// person the owner, bound to loopback, and working with Renown unreachable once
-// that person has signed in: Renown's last answer is kept (ADR 0008 §11, D8).
+// A switchboard shaped like the desktop host's: sign-in enforced, the person
+// its launcher names its operator, bound to loopback, and working with Renown
+// unreachable once that person has signed in: Renown's last answer is kept
+// (ADR 0008 §11, D8). No caller becomes an owner by signing in first.
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { createRequire } from "node:module";
 import { networkInterfaces, tmpdir } from "node:os";
@@ -45,6 +46,7 @@ const ENV_KEYS = [
   "PH_REACTOR_DATABASE_URL",
   "AUTH_ENABLED",
   "ADMINS",
+  "PH_OPERATOR",
   "RESOLVE_CALLER_IDENTITY",
   "REQUIRE_AUTHENTICATED_CALLER",
   "RENOWN_URL",
@@ -134,7 +136,8 @@ describe(
         enabled: true,
         requireAuthenticatedCaller: true,
         resolveIdentity: true,
-        ownerClaim: true,
+        // What the desktop runner passes: its local key's address.
+        operator: PERSON.address,
         renown: { url: renownUrl },
       },
     });
@@ -167,12 +170,12 @@ describe(
       return response.status;
     };
 
-    const isAdmin = (address: string): boolean =>
+    const authorization = (of: Switchboard | undefined = switchboard) =>
       (
-        switchboard as unknown as { api: { graphqlManager: GraphQLManager } }
-      ).api.graphqlManager
-        .getAuthorizationService()
-        .isSupremeAdmin(address);
+        of as unknown as { api: { graphqlManager: GraphQLManager } }
+      ).api.graphqlManager.getAuthorizationService();
+    const isAdmin = (address: string): boolean =>
+      authorization().isSupremeAdmin(address);
 
     beforeAll(async () => {
       root = await mkdtemp(join(tmpdir(), "switchboard-desktop-auth-"));
@@ -212,19 +215,17 @@ describe(
       expect(await ask()).toBe(401);
     });
 
-    it("makes the first person to sign in its owner, with no env file", async () => {
-      expect(isAdmin(PERSON.address)).toBe(false);
-      expect(await ask(person, PERSON.address)).toBe(200);
+    it("is administered by the person its launcher named, with no env file", async () => {
+      expect(authorization().isOperator(PERSON.address)).toBe(true);
       expect(isAdmin(PERSON.address)).toBe(true);
-      const owner = JSON.parse(
-        await readFile(join(root, ".ph", ".owner.json"), "utf8"),
-      ) as { owner: string };
-      expect(owner.owner).toBe(PERSON.address.toLowerCase());
+      expect(await ask(person, PERSON.address)).toBe(200);
+      expect(existsSync(join(root, ".ph", ".owner.json"))).toBe(false);
     });
 
-    it("gives a second person no ownership", async () => {
+    it("gives a person who signs in no administration", async () => {
       expect(await ask(visitor, VISITOR.address)).toBe(200);
       expect(isAdmin(VISITOR.address)).toBe(false);
+      expect(authorization().isOperator(VISITOR.address)).toBe(false);
     });
 
     it("answers on loopback only", async () => {
@@ -239,24 +240,38 @@ describe(
       ).rejects.toThrow();
     });
 
-    it("refuses an owner claim on an address others can reach", async () => {
-      const exposed = config(renown.url);
-      await expect(
-        bootSwitchboard(
-          {
-            ...exposed,
-            server: { port: 0, host: "0.0.0.0" },
-            storage: {
-              userDataDir: join(root, "exposed"),
-              readModel: { url: join(root, "exposed", "read-model") },
-            },
+    it("ignores an owner claim and says so: the first to sign in gets nothing", async () => {
+      const claimed = config(renown.url);
+      const warn = vi.fn();
+      const claimLogger = { ...logger, warn, child: () => claimLogger };
+      const other = await bootSwitchboard(
+        {
+          ...claimed,
+          storage: {
+            userDataDir: join(root, "claimed"),
+            reactor: { url: join(root, "claimed", "reactor-storage") },
+            readModel: { url: join(root, "claimed", "read-model") },
           },
-          { logger },
-        ),
-      ).rejects.toThrow(/loopback/);
+          auth: { ...claimed.auth, operator: undefined, ownerClaim: true },
+        },
+        { logger: claimLogger as unknown as ILogger },
+      );
+      try {
+        expect(
+          warn.mock.calls.some((call) =>
+            String(call[0]).includes("auth.ownerClaim is no longer read"),
+          ),
+        ).toBe(true);
+        expect(authorization(other).isOperator(VISITOR.address)).toBe(false);
+        expect(existsSync(join(root, "claimed", ".ph", ".owner.json"))).toBe(
+          false,
+        );
+      } finally {
+        await other.shutdown();
+      }
     });
 
-    it("boots and verifies its owner with Renown unreachable", async () => {
+    it("boots and verifies its operator with Renown unreachable", async () => {
       expect(existsSync(join(root, ".ph", ".credentials.json"))).toBe(true);
       await stop();
       await stopped(renown.server);

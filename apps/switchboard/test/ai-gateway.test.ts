@@ -538,6 +538,7 @@ describe("the plugin's mount", () => {
           authorizationService: {
             config: { policy },
             isSupremeAdmin: () => true,
+            isOperator: () => true,
           },
           httpRoutes: { scopeFor: () => ({ route }) },
         },

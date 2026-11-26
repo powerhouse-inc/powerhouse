@@ -174,6 +174,7 @@ describe("Query.documentServed under the host's legacy permissions", () => {
       policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
     },
     isSupremeAdmin: () => false,
+    isOperator: () => false,
     canCreate: () => true,
     canRead: () => Promise.resolve(false),
     canWrite: () => Promise.resolve(false),

@@ -1,6 +1,9 @@
 import type { InspectorDocumentReader } from "@powerhousedao/reactor";
 import type { DocumentNode } from "graphql";
-import type { AuthorizationConfig } from "../../services/authorization.service.js";
+import {
+  isConfiguredOperator,
+  type AuthorizationConfig,
+} from "../../services/authorization.service.js";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { Context, SubgraphArgs } from "../types.js";
 import {
@@ -9,16 +12,16 @@ import {
 } from "./resolvers.js";
 import { inspectionTypeDefs } from "./schema.js";
 
-// Not isSupremeAdmin: under OPEN that admits every caller, anonymous included.
+/**
+ * Whether `address` operates this instance (ADMINS, or whom its launcher
+ * named). Not isSupremeAdmin: under OPEN that admits every caller, anonymous
+ * included.
+ */
 export function isListedAdmin(
   config: AuthorizationConfig,
   address: string | undefined,
 ): boolean {
-  if (!address) {
-    return false;
-  }
-  const caller = address.toLowerCase();
-  return config.admins.some((admin) => admin.toLowerCase() === caller);
+  return isConfiguredOperator(config, address);
 }
 
 /** The read half of the reactor's inspection surface. */
