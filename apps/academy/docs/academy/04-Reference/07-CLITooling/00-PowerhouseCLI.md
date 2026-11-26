@@ -1184,7 +1184,7 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 **Renown Url** - Renown server URL. - Usage: `--renown-url <str>`
 
 **Environment:** `PH_CONNECT_RENOWN_URL`
-**Default:** `https//www.renown.id`
+**Default:** `https//renown-staging.vetra.io`
 **Timeout** - Authentication timeout in seconds. - Usage: `--timeout <number>`
 
 **Default:** `300`
@@ -1229,7 +1229,7 @@ address. Reads files only; `--check` also asks Renown whether the login is still
 **Renown Url** - Renown server URL. - Usage: `--renown-url <str>`
 
 **Environment:** `PH_CONNECT_RENOWN_URL`
-**Default:** `https//www.renown.id`
+**Default:** `https//renown-staging.vetra.io`
 
 
 ## Logout
@@ -1243,7 +1243,7 @@ its key included. Your pseudonym acts again.
 **Renown Url** - Renown server URL. - Usage: `--renown-url <str>`
 
 **Environment:** `PH_CONNECT_RENOWN_URL`
-**Default:** `https//www.renown.id`
+**Default:** `https//renown-staging.vetra.io`
 
 
 
