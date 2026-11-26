@@ -650,14 +650,43 @@ export interface SessionApproval {
 }
 
 /**
+ * Renown's console page on which a person approves the session key `did`
+ * with their wallet: the console session it reports to, the key, the label
+ * the credential is to sign, and optionally the host that asks (an http(s)
+ * origin) and how many days the credential is to run. A console that reads
+ * fewer of these ignores the rest.
+ */
+export function consoleApprovalUrl(o: {
+  sessionId: string;
+  did: string;
+  label: string;
+  renownUrl?: string;
+  host?: string;
+  expiresInDays?: number;
+}): string {
+  const url = new URL("/console", o.renownUrl ?? DEFAULT_RENOWN_URL);
+  url.searchParams.set("session", o.sessionId);
+  url.searchParams.set("connect", o.did);
+  url.searchParams.set("app", o.label);
+  if (o.host !== undefined) url.searchParams.set("host", o.host);
+  if (o.expiresInDays !== undefined) {
+    url.searchParams.set("expiresInDays", String(o.expiresInDays));
+  }
+  return url.href;
+}
+
+/**
  * Starts the approval of the data-folder session `label` at Renown's console:
  * keeps its key (made when there is none) and builds the page the person
- * approves it on with their wallet. Nothing is asked of Renown yet.
+ * approves it on with their wallet. Nothing is asked of Renown yet. `host`
+ * and `expiresInDays` are shown on the page, by a console that reads them.
  */
 export function startSessionApproval(o: {
   dataDir: string;
   label: string;
   renownUrl?: string;
+  host?: string;
+  expiresInDays?: number;
   env?: Env;
 }): SessionApproval {
   const file = sessionFilePath({
@@ -669,11 +698,17 @@ export function startSessionApproval(o: {
   });
   const session = ensureSessionFile(file, o.label);
   const sessionId = randomUUID();
-  const url = new URL("/console", o.renownUrl ?? DEFAULT_RENOWN_URL);
-  url.searchParams.set("session", sessionId);
-  url.searchParams.set("connect", session.did);
-  url.searchParams.set("app", o.label);
-  return { url: url.href, sessionId, sessionDid: session.did, file };
+  const url = consoleApprovalUrl({
+    sessionId,
+    did: session.did,
+    label: o.label,
+    ...(o.renownUrl !== undefined ? { renownUrl: o.renownUrl } : {}),
+    ...(o.host !== undefined ? { host: o.host } : {}),
+    ...(o.expiresInDays !== undefined
+      ? { expiresInDays: o.expiresInDays }
+      : {}),
+  });
+  return { url, sessionId, sessionDid: session.did, file };
 }
 
 export type SessionApprovalResult =
@@ -687,6 +722,19 @@ export type SessionApprovalResult =
   /** Approved by a wallet `accept` turned down: nothing was kept. */
   | { status: "refused"; address: string };
 
+/** What the console gave for a session key, kept nowhere. */
+export type ConsoleCredentialResult =
+  | {
+      status: "ready";
+      address: string;
+      chainId: number;
+      credential: PowerhouseVerifiableCredential;
+    }
+  /** Not approved yet; ask again. */
+  | { status: "pending" }
+  /** Approved by a wallet `accept` turned down; its credential was not fetched. */
+  | { status: "refused"; address: string };
+
 const APPROVAL_POLL_MS = 1000;
 
 type ConsoleSession =
@@ -694,22 +742,22 @@ type ConsoleSession =
   | { status: "ready"; address: string; chainId: number };
 
 /**
- * Waits up to `timeoutMs` for the person to approve `approval` at Renown's
- * console, then fetches the credential their wallet signed for the session
- * key and keeps it in the session's file, and its record in `target`'s data
- * folder. A wallet `accept` turns down is not kept.
+ * Waits up to `timeoutMs` for the person to approve the key `sessionDid` at
+ * Renown's console (console session `sessionId`), then fetches the
+ * credential their wallet signed for it. Keeps nothing: the caller decides
+ * what the credential is for. A wallet `accept` turns down is not fetched.
  */
-export async function pollSessionApproval(o: {
-  approval: Pick<SessionApproval, "sessionId" | "sessionDid" | "file">;
+export async function pollConsoleCredential(o: {
+  sessionId: string;
+  sessionDid: string;
   renownUrl?: string;
   timeoutMs: number;
-  target?: Pick<SessionTarget, "dataDir">;
   accept?: (address: string) => boolean;
   signal?: AbortSignal;
-}): Promise<SessionApprovalResult> {
+}): Promise<ConsoleCredentialResult> {
   const baseUrl = o.renownUrl ?? DEFAULT_RENOWN_URL;
   const sessionUrl = new URL(
-    `/api/console/session/${encodeURIComponent(o.approval.sessionId)}`,
+    `/api/console/session/${encodeURIComponent(o.sessionId)}`,
     baseUrl,
   );
   const deadline = Date.now() + o.timeoutMs;
@@ -735,27 +783,59 @@ export async function pollSessionApproval(o: {
       const credential = await fetchDelegationCredential({
         address: ready.address,
         chainId: ready.chainId,
-        appDid: o.approval.sessionDid,
+        appDid: o.sessionDid,
         baseUrl,
       });
       if (credential) {
-        const session = readSessionFile(o.approval.file);
-        if (!session || session.did !== o.approval.sessionDid) {
-          throw new Error(
-            `The session key in ${o.approval.file} changed while it was being approved.`,
-          );
-        }
-        writeSessionFile(o.approval.file, {
-          ...session,
-          credential: credential as CredentialLike,
-        });
-        if (o.target?.dataDir) {
-          recordIn(o.target.dataDir, credential, session.label);
-        }
-        return { status: "ready", address: ready.address, credential };
+        return {
+          status: "ready",
+          address: ready.address,
+          chainId: ready.chainId,
+          credential,
+        };
       }
     }
     if (Date.now() >= deadline) return { status: "pending" };
     await new Promise((resolve) => setTimeout(resolve, APPROVAL_POLL_MS));
   }
+}
+
+/**
+ * Waits up to `timeoutMs` for the person to approve `approval` at Renown's
+ * console, then fetches the credential their wallet signed for the session
+ * key and keeps it in the session's file, and its record in `target`'s data
+ * folder. A wallet `accept` turns down is not kept.
+ */
+export async function pollSessionApproval(o: {
+  approval: Pick<SessionApproval, "sessionId" | "sessionDid" | "file">;
+  renownUrl?: string;
+  timeoutMs: number;
+  target?: Pick<SessionTarget, "dataDir">;
+  accept?: (address: string) => boolean;
+  signal?: AbortSignal;
+}): Promise<SessionApprovalResult> {
+  const result = await pollConsoleCredential({
+    sessionId: o.approval.sessionId,
+    sessionDid: o.approval.sessionDid,
+    timeoutMs: o.timeoutMs,
+    ...(o.renownUrl !== undefined ? { renownUrl: o.renownUrl } : {}),
+    ...(o.accept ? { accept: o.accept } : {}),
+    ...(o.signal ? { signal: o.signal } : {}),
+  });
+  if (result.status !== "ready") return result;
+  const { address, credential } = result;
+  const session = readSessionFile(o.approval.file);
+  if (!session || session.did !== o.approval.sessionDid) {
+    throw new Error(
+      `The session key in ${o.approval.file} changed while it was being approved.`,
+    );
+  }
+  writeSessionFile(o.approval.file, {
+    ...session,
+    credential: credential as CredentialLike,
+  });
+  if (o.target?.dataDir) {
+    recordIn(o.target.dataDir, credential, session.label);
+  }
+  return { status: "ready", address, credential };
 }

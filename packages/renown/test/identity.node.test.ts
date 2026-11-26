@@ -10,6 +10,7 @@ import {
 import { fileAccessList } from "@powerhousedao/shared/clis/owner-only";
 import {
   didOfP256Jwk,
+  newSession,
   readSessionFile,
   sessionFilePath,
   writeSessionFile,
@@ -30,9 +31,11 @@ import {
 import { NodeKeyStorage } from "../src/crypto/node-key-storage.js";
 import { RenownCryptoBuilder } from "../src/crypto/renown-crypto-builder.js";
 import {
+  consoleApprovalUrl,
   LoginExpiredError,
   logoutHome,
   openSession,
+  pollConsoleCredential,
   pollSessionApproval,
   readHomeLogin,
   resolveActiveIdentity,
@@ -660,5 +663,103 @@ describe("session approval at the console", () => {
     expect(result).toEqual({ status: "refused", address: WALLET.address });
     expect(readSessionFile(approval.file)?.credential).toBeUndefined();
     expect(listCredentialRecords({ dataDir })).toEqual([]);
+  });
+
+  it("names the asking host and the credential's days on the page, when given", () => {
+    const approval = startSessionApproval({
+      dataDir: store(),
+      label: "billing",
+      renownUrl: RENOWN,
+      host: "https://switchboard.example",
+      expiresInDays: 14,
+      env,
+    });
+    const url = new URL(approval.url);
+    expect(url.searchParams.get("host")).toBe("https://switchboard.example");
+    expect(url.searchParams.get("expiresInDays")).toBe("14");
+    // Without them the link is as an older console has always read it.
+    const plain = new URL(
+      consoleApprovalUrl({
+        sessionId: "s-1",
+        did: "did:key:zTest",
+        label: "billing",
+        renownUrl: RENOWN,
+      }),
+    );
+    expect([...plain.searchParams.keys()]).toEqual([
+      "session",
+      "connect",
+      "app",
+    ]);
+  });
+});
+
+describe("pollConsoleCredential", () => {
+  it("fetches the credential the wallet signed for a key, keeping nothing", async () => {
+    const { did } = newSession("billing");
+    const credential = await walletCredential(did);
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", (input: string | URL) => {
+      const url = new URL(String(input));
+      asked.push(`${url.pathname}${url.search}`);
+      if (url.pathname === "/api/console/session/console-1") {
+        return Promise.resolve(
+          Response.json({
+            status: "ready",
+            address: WALLET.address,
+            chainId: 1,
+          }),
+        );
+      }
+      if (url.pathname === "/api/auth/credential") {
+        return Promise.resolve(Response.json({ credential }));
+      }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    const result = await pollConsoleCredential({
+      sessionId: "console-1",
+      sessionDid: did,
+      renownUrl: RENOWN,
+      timeoutMs: 0,
+    });
+    expect(result).toMatchObject({
+      status: "ready",
+      address: WALLET.address,
+      chainId: 1,
+      credential: { id: credential.id },
+    });
+    expect(asked.some((a) => a.includes(encodeURIComponent(did)))).toBe(true);
+    expect(fs.existsSync(path.join(root, "store"))).toBe(false);
+  });
+
+  it("is pending while the console says nothing, and refuses a wallet turned down", async () => {
+    let ready = false;
+    vi.stubGlobal("fetch", (input: string | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.startsWith("/api/console/session/")) {
+        return Promise.resolve(
+          Response.json(
+            ready
+              ? { status: "ready", address: WALLET.address, chainId: 1 }
+              : { status: "pending" },
+          ),
+        );
+      }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    const poll = (accept?: (address: string) => boolean) =>
+      pollConsoleCredential({
+        sessionId: "console-2",
+        sessionDid: "did:key:zTest",
+        renownUrl: RENOWN,
+        timeoutMs: 0,
+        ...(accept ? { accept } : {}),
+      });
+    expect(await poll()).toEqual({ status: "pending" });
+    ready = true;
+    expect(await poll(() => false)).toEqual({
+      status: "refused",
+      address: WALLET.address,
+    });
   });
 });
