@@ -8,6 +8,7 @@ import {
   reactorWorkerModeRequested,
   test,
 } from "./helpers/fixtures.js";
+import { signInByLink } from "./helpers/sign-in.js";
 import { signedWriter, type SignedWriter } from "./helpers/signed-writer.js";
 import { DESCRIBE_TIMEOUT, LONG_VISIBLE_TIMEOUT } from "./helpers/timeouts.js";
 import { waitForAppReady } from "./helpers/wait.js";
@@ -398,8 +399,7 @@ test.describe("Connect routed to a switchboard", () => {
       home: placed,
       drives: [{ id: placed, sync: false }, { id: synced }],
     }));
-    await page.goto("/");
-    await waitForAppReady(page);
+    await signInByLink(page);
 
     const table = await routing(page);
     expect(table.backends).toEqual(["connect-local", "sb"]);
@@ -438,8 +438,7 @@ test.describe("Connect routed to a switchboard", () => {
       home: drive,
       drives: [placed ? { id: drive, sync: false } : { id: drive }],
     }));
-    await page.goto("/");
-    await waitForAppReady(page);
+    await signInByLink(page);
     await expect
       .poll(() => syncedDriveIds(page), { timeout: LONG_VISIBLE_TIMEOUT })
       .toContain(drive);
@@ -490,8 +489,7 @@ test.describe("Connect routed to a switchboard", () => {
       drives: [{ id: home }],
       newDrives: "sb",
     }));
-    await page.goto("/");
-    await waitForAppReady(page);
+    await signInByLink(page);
     await routing(page);
 
     const name = `On sb ${crypto.randomUUID().slice(0, 8)}`;
@@ -535,8 +533,7 @@ test.describe("Connect routed to a switchboard", () => {
       drives: [{ id: home }],
       newDrives: "sb",
     }));
-    await page.goto("/");
-    await waitForAppReady(page);
+    await signInByLink(page);
     await routing(page);
 
     await page.route(`${SWITCHBOARD}/graphql**`, (route) => route.abort());
@@ -556,8 +553,7 @@ test.describe("Connect routed to a switchboard", () => {
       home: drive,
       drives: [{ id: drive }],
     }));
-    await page.goto("/");
-    await waitForAppReady(page);
+    await signInByLink(page);
 
     expect((await routing(page)).backends).toEqual(["sb"]);
     expect(
@@ -590,6 +586,7 @@ test.describe("Connect routed to a switchboard", () => {
       home: drive,
       drives: [configPlaces ? { id: drive, sync: false } : { id: drive }],
     }));
+    await signInByLink(page);
 
     const section = await driveSettings(page, drive);
     await expect(section).toContainText("Opens on sb.");
@@ -667,8 +664,7 @@ test.describe("Connect routed to a switchboard", () => {
     const other = await context.newPage();
     await serveRouted(page, served);
     await serveRouted(other, served);
-    await page.goto("/");
-    await waitForAppReady(page);
+    await signInByLink(page);
     await other.goto("/");
     await waitForAppReady(other);
     await expect

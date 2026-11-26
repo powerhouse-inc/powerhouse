@@ -1,5 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
+import { signInByLink } from "./sign-in.js";
 import { LONG_VISIBLE_TIMEOUT } from "./timeouts.js";
 import { waitForAppReady } from "./wait.js";
 
@@ -65,9 +66,8 @@ export async function navigateToVetraDrive(
   page: Page,
   handleCookies = false,
 ): Promise<void> {
-  // Go to home page
-  await page.goto("/");
-  await waitForAppReady(page);
+  // The home page, signed in: the tab's writes name this computer's identity.
+  await signInByLink(page);
 
   // Handle cookie consent if requested
   if (handleCookies) {

@@ -1,24 +1,16 @@
-import { readRunRecord, signInLinksOf } from "@powerhousedao/host-core";
 import { expect, test } from "./helpers/fixtures.js";
+import { freshSignInLink } from "./helpers/sign-in.js";
 import { DESCRIBE_TIMEOUT } from "./helpers/timeouts.js";
 import { waitForAppReady } from "./helpers/wait.js";
 
 test.describe.configure({ timeout: DESCRIBE_TIMEOUT });
 
-/**
+/*
  * Sign-in by link (F3d): `ph run vetra` keeps a secret in its owner-only run
  * record, and a link minted from it signs the tab in as this computer's
  * identity (the person's pseudonym, made at the first sign-in). The tab's
  * writes then name that identity, and its own session key as "connect".
  */
-function freshSignInLink(): string {
-  const record = readRunRecord(process.cwd(), "vetra");
-  const link = record ? signInLinksOf(record)[0]?.link : undefined;
-  if (!link) {
-    throw new Error("The running vetra stack's record keeps no sign-in link");
-  }
-  return link;
-}
 
 type Signer = {
   user?: { address?: string };
