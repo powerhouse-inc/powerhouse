@@ -5,8 +5,6 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { Command } from "commander";
 import { bold, blue, green, red, gray, yellow } from "colorette";
-import type { Action } from "@powerhousedao/shared/document-model";
-import { generateActionId } from "@powerhousedao/shared/document-model";
 import { GraphQLClient } from "./client/graphql-client.js";
 import { DOCUMENT_MODEL_TYPE } from "./types.js";
 
@@ -19,24 +17,6 @@ interface OrchestratorOptions {
   duration: string;
   mutationInterval: string;
   verbose: boolean;
-}
-
-function createAddFileAction(
-  documentId: string,
-  documentName: string,
-  documentType: string,
-): Action {
-  return {
-    id: generateActionId(),
-    type: "ADD_FILE",
-    timestampUtcMs: new Date().toISOString(),
-    input: {
-      id: documentId,
-      name: documentName,
-      documentType,
-    },
-    scope: "global",
-  };
 }
 
 async function createDocument(
@@ -58,17 +38,12 @@ async function createDocument(
   const drive = drives[0];
   console.log(blue(`Using drive: ${drive.id}`));
 
-  const doc = await client.createEmptyDocument(DOCUMENT_MODEL_TYPE, drive.id);
-  const documentName =
-    doc.name ||
-    `TestDoc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-
-  const addFileAction = createAddFileAction(
-    doc.id,
-    documentName,
+  // Created and filed in the drive, every action signed.
+  const doc = await client.createEmptyDocument(
     DOCUMENT_MODEL_TYPE,
+    drive.id,
+    `TestDoc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
   );
-  await client.mutateDocument(drive.id, [addFileAction]);
 
   return doc.id;
 }

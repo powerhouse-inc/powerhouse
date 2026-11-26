@@ -1,4 +1,10 @@
-export { GraphQLClient } from "./client/graphql-client.js";
+export {
+  GraphQLClient,
+  LOAD_TEST_WRITER_ADDRESS,
+  loadTestSigner,
+  signedActions,
+  type GraphQLClientOptions,
+} from "./client/graphql-client.js";
 export { MetricsCollector } from "./metrics/collector.js";
 export { Reporter } from "./metrics/reporter.js";
 export {

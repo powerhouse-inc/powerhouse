@@ -32,6 +32,7 @@
     "colorette": "catalog:",
     "commander": "catalog:",
     "document-model": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*"
   },
   "devDependencies": {

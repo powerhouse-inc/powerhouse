@@ -4329,6 +4329,9 @@ importers:
 
   test/test-client:
     dependencies:
+      '@powerhousedao/reactor-browser':
+        specifier: workspace:*
+        version: link:../../packages/reactor-browser
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared

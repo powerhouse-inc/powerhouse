@@ -1,5 +1,3 @@
-import type { Action } from "@powerhousedao/shared/document-model";
-import { generateActionId } from "@powerhousedao/shared/document-model";
 import { GraphQLClient } from "../client/graphql-client.js";
 import { MetricsCollector } from "../metrics/collector.js";
 import { Reporter } from "../metrics/reporter.js";
@@ -15,24 +13,6 @@ import type {
   TestDocument,
 } from "../types.js";
 import { DOCUMENT_MODEL_TYPE } from "../types.js";
-
-function createAddFileAction(
-  documentId: string,
-  documentName: string,
-  documentType: string,
-): Action {
-  return {
-    id: generateActionId(),
-    type: "ADD_FILE",
-    timestampUtcMs: new Date().toISOString(),
-    input: {
-      id: documentId,
-      name: documentName,
-      documentType,
-    },
-    scope: "global",
-  };
-}
 
 export class TestScheduler {
   private client: GraphQLClient;
@@ -160,24 +140,13 @@ export class TestScheduler {
     let result: DocumentResult;
 
     try {
-      // Step 1: Create empty document using the high-level API
+      // Created and filed in the drive's file tree, every action signed
       const createdDoc = await this.client.createEmptyDocument(
         documentType,
         drive.id,
+        `TestDoc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       );
       const documentId = createdDoc.id;
-      // createEmptyDocument returns empty name, so generate a valid one for ADD_FILE
-      const documentName =
-        createdDoc.name ||
-        `TestDoc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-
-      // Step 2: Add the document to the drive's file tree
-      const addFileAction = createAddFileAction(
-        documentId,
-        documentName,
-        documentType,
-      );
-      await this.client.mutateDocument(drive.id, [addFileAction]);
 
       const testDoc = createTestDocument(documentId, documentType, drive.id);
       this.documents.set(documentId, testDoc);

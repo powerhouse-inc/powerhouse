@@ -11,6 +11,9 @@
       "path": "../../packages/document-model"
     },
     {
+      "path": "../../packages/reactor-browser"
+    },
+    {
       "path": "../../packages/shared"
     }
   ]
