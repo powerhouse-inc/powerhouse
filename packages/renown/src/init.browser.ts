@@ -22,7 +22,7 @@ export function readPersistedUser(basename?: string): User | undefined {
 export interface BrowserRenownBuilderOptions {
   /** Base path for storage keys (e.g., "/app" for multi-tenant apps) */
   basename?: string;
-  /** Renown server URL. Defaults to https://www.renown.id */
+  /** Renown server URL. Defaults to `DEFAULT_RENOWN_URL`. */
   baseUrl?: string;
   /** Switchboard GraphQL endpoint for the direct-to-reactor flow. */
   switchboardUrl?: string;

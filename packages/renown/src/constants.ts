@@ -1,4 +1,6 @@
-export const DEFAULT_RENOWN_URL = "https://www.renown.id";
+// One value for every built-in default (the SDK, the CLIs, Connect): it lives
+// in shared, and switching Renown is an edit there.
+export { DEFAULT_RENOWN_URL } from "@powerhousedao/shared/constants";
 export const DEFAULT_RENOWN_NETWORK_ID = "eip155";
 export const DEFAULT_RENOWN_CHAIN_ID = "1";
 

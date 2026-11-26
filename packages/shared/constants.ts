@@ -1,3 +1,18 @@
+/**
+ * The Renown every built-in default signs in at: the SDK, the CLIs, Connect,
+ * the switchboard and the registry read it, and the generated schemas and
+ * static configs carry it (the guard in constants.test.ts lists them).
+ *
+ * The 6.4 line uses renown.id on staging until renown.id runs in production;
+ * then it returns to https://www.renown.id (decided 11-26). Only the base
+ * address: the SDK discovers the GraphQL endpoint (`/api/switchboard`).
+ *
+ * Here, not in clis/constants.ts (which re-exports it), so browser code
+ * reaches it without node builtins. Not `as const`: a parameter that
+ * defaults to it takes any address.
+ */
+export const DEFAULT_RENOWN_URL = "https://renown-staging.vetra.io";
+
 // Every package published from the monorepo that `ph update` / `ph use` keep in lockstep.
 export const PACKAGES_DEPENDENCIES = [
   "@powerhousedao/builder-tools",

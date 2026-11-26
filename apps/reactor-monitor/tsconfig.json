@@ -24,6 +24,9 @@
       "path": "../../packages/reactor-router"
     },
     {
+      "path": "../../packages/shared"
+    },
+    {
       "path": "../../packages/workflow"
     }
   ]

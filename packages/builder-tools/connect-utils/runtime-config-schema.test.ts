@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
+import { DEFAULT_RENOWN_URL } from "@powerhousedao/shared/constants";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { PhConfigPluginOptions } from "./vite-plugins/ph-config.js";
 import { phConfigPlugin } from "./vite-plugins/ph-config.js";
@@ -266,7 +267,7 @@ describe("runtime-config schema", () => {
     // Defaults fill in unspecified leaves
     expect((connect.app as Record<string, unknown>).logLevel).toBe("info");
     expect((connect.renown as Record<string, unknown>).url).toBe(
-      "https://www.renown.id",
+      DEFAULT_RENOWN_URL,
     );
     expect(
       (connect.drives.sections as Record<string, Record<string, unknown>>)

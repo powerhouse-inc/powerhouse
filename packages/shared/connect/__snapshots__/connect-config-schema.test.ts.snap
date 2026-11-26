@@ -1131,7 +1131,7 @@ exports[`emitted JSON Schema fragment > matches the pinned fragment 1`] = `
           "type": "string",
         },
         "url": {
-          "default": "https://www.renown.id",
+          "default": "https://renown-staging.vetra.io",
           "description": "Renown auth service URL.",
           "type": "string",
         },

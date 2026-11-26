@@ -3,6 +3,7 @@ import type {
   PowerhouseConfig,
   PowerhousePackage,
 } from "../clis/types.js";
+import { DEFAULT_RENOWN_URL } from "../constants.js";
 
 export type RuntimePowerhouseConfig = {
   schemaVersion: 2;
@@ -51,7 +52,7 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
     icons: null,
   },
   renown: {
-    url: "https://www.renown.id",
+    url: DEFAULT_RENOWN_URL,
     networkId: "eip155",
     chainId: 1,
   },

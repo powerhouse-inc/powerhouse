@@ -7,6 +7,7 @@
 // is embedded in another schema root.
 
 import { z } from "zod";
+import { DEFAULT_RENOWN_URL } from "../constants.js";
 import { tokenable, type TokenField } from "../host-tokens/index.js";
 
 // ---------------------------------------------------------------------------
@@ -425,7 +426,7 @@ export const connectRenownSchema = z
   .strictObject({
     url: z.string().optional().meta({
       description: "Renown auth service URL.",
-      default: "https://www.renown.id",
+      default: DEFAULT_RENOWN_URL,
     }),
     networkId: z.string().optional().meta({
       description: "CAIP-2 network namespace (e.g. 'eip155').",

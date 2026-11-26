@@ -32,7 +32,7 @@ export interface RenownAuthConfig {
    *  Renown-signed bearer tokens. Required when renown auth is enabled. */
   publicUrl: string;
   /** Renown issuer base URLs accepted for credential verification, tried in
-   *  order (defaults to the SDK default, https://www.renown.id). */
+   *  order (defaults to the SDK default, `DEFAULT_RENOWN_URL`). */
   renownUrls?: string[];
 }
 

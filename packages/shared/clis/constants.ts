@@ -39,7 +39,8 @@ export const DEFAULT_CONNECT_PREVIEW_PORT = 4173 as const;
 
 export const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist/" as const;
 
-export const DEFAULT_RENOWN_URL = "https://www.renown.id" as const;
+// Defined in ../constants.ts, which browser code imports without node builtins.
+export { DEFAULT_RENOWN_URL } from "../constants.js";
 
 export const DEFAULT_REGISTRY_URL = "https://registry.vetra.io" as const;
 

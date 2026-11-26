@@ -42,7 +42,7 @@
       }
     },
     "renown": {
-      "url": "https://www.renown.id",
+      "url": "https://renown-staging.vetra.io",
       "networkId": "eip155",
       "chainId": 1
     },

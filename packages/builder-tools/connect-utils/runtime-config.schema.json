@@ -620,7 +620,7 @@
           "properties": {
             "url": {
               "description": "Renown auth service URL.",
-              "default": "https://www.renown.id",
+              "default": "https://renown-staging.vetra.io",
               "type": "string"
             },
             "networkId": {

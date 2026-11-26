@@ -1,4 +1,5 @@
 import { hostExportSchema } from "@powerhousedao/host-core/schema";
+import { DEFAULT_RENOWN_URL } from "@powerhousedao/shared/constants";
 import { describe, expect, it } from "vitest";
 import { FULL, hostExport, stack } from "./__fixtures__/hosts.js";
 import {
@@ -38,9 +39,12 @@ describe("folder catalog", () => {
     expect(folderTemplate(named, "switchboard")).toEqual(
       hostExport("switchboard").host,
     );
-    expect(folderTemplate(named, "connect")).toEqual(
-      hostExport("connect").host,
-    );
+    // The fixture records a scaffold of its day; `ph init` writes the
+    // current default Renown (DEFAULT_CONNECT_CONFIG).
+    const connect = hostExport("connect").host;
+    const config = connect.config as { renown: object };
+    config.renown = { ...config.renown, url: DEFAULT_RENOWN_URL };
+    expect(folderTemplate(named, "connect")).toEqual(connect);
   });
 
   it("is only for a blank host", () => {

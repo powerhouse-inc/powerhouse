@@ -13,7 +13,7 @@ import {
   phConnectRuntimeConfigSchema,
   powerhousePackageSchema,
 } from "../connect/schema-fragments.js";
-import { LOG_LEVELS } from "./constants.js";
+import { DEFAULT_RENOWN_URL, LOG_LEVELS } from "./constants.js";
 
 const keyframeRuleSchema = {
   type: "object",
@@ -149,8 +149,7 @@ export const sourceConfigSchema = {
             },
             url: {
               type: "string",
-              description:
-                "Renown base URL, also used by this reactor's own identity. Defaults to https://www.renown.id. Overridden by RENOWN_URL.",
+              description: `Renown base URL, also used by this reactor's own identity. Defaults to ${DEFAULT_RENOWN_URL} (DEFAULT_RENOWN_URL). Overridden by RENOWN_URL.`,
             },
             switchboardUrl: {
               type: "string",

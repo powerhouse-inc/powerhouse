@@ -41,7 +41,7 @@ function App() {
 | Prop        | Type                       | Description                                                                                             |
 | ----------- | -------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `appName`   | `string`                   | Application identifier                                                                                  |
-| `url`       | `string?`                  | Renown server URL (default: `https://www.renown.id`)                                                    |
+| `url`       | `string?`                  | Renown server URL (default: `DEFAULT_RENOWN_URL`)                                                       |
 | `namespace` | `string?`                  | Prefix for localStorage keys, allowing multiple apps to use Renown on the same domain without conflicts |
 | `onError`   | `(error: unknown) => void` | Error handler (component only, defaults to `console.error`)                                             |
 

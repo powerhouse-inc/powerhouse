@@ -33,6 +33,7 @@
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/reactor-monitor": "workspace:*",
     "@powerhousedao/reactor-router": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/workflow": "workspace:*",
     "pg": "catalog:",
     "react": "catalog:",

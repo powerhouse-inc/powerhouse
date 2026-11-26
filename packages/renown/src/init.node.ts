@@ -20,7 +20,7 @@ export interface NodeRenownBuilderOptions {
    * by default, an instance's key; null reads none.
    */
   keyEnv?: string | null;
-  /** Renown server URL. Defaults to https://www.renown.id */
+  /** Renown server URL. Defaults to `DEFAULT_RENOWN_URL`. */
   baseUrl?: string;
   /** Switchboard GraphQL endpoint for the direct-to-reactor flow. */
   switchboardUrl?: string;

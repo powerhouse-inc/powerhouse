@@ -406,7 +406,7 @@ still exists. `auth.renown` says which instance answers that question:
 | Field | Env override | Meaning |
 | --- | --- | --- |
 | `source` | `RENOWN_SOURCE` | `remote` (default) queries another instance; `self` reads this switchboard's own `renown-read-model` subgraph in-process. |
-| `url` | `RENOWN_URL` | Renown base URL, used for discovery and the REST fallback. Defaults to `https://www.renown.id`. |
+| `url` | `RENOWN_URL` | Renown base URL, used for discovery and the REST fallback. Defaults to `DEFAULT_RENOWN_URL` (`@powerhousedao/shared`). |
 | `switchboardUrl` | `SWITCHBOARD_URL` | A switchboard's GraphQL endpoint to read credentials from directly, skipping discovery. |
 
 Env vars win over the config file field by field; a blank value counts as unset.
@@ -488,7 +488,7 @@ identity — the `ph login` keypair it uses to authenticate *outbound* to remote
 drives and services. It authenticates against `auth.renown.url` too, so one
 setting covers both directions. Pass `identity.baseUrl` when starting the server
 to point it somewhere else; unset everywhere, it falls back to
-`https://www.renown.id`.
+`DEFAULT_RENOWN_URL`.
 
 ### 2. **Frontend Integration**
 

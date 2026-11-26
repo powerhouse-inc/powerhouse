@@ -1,4 +1,5 @@
-export const RENOWN_URL = "https://www.renown.id";
+// The SDK's default, which is shared's DEFAULT_RENOWN_URL: one value to switch.
+export { DEFAULT_RENOWN_URL as RENOWN_URL } from "@renown/sdk";
 export const RENOWN_NETWORK_ID = "eip155";
 export const RENOWN_CHAIN_ID = "1";
 

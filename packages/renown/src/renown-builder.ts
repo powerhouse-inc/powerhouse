@@ -87,7 +87,7 @@ export class BaseRenownBuilder {
 
   /**
    * Set the Renown server URL for credential verification.
-   * Defaults to https://www.renown.id
+   * Defaults to {@link DEFAULT_RENOWN_URL}.
    */
   withBaseUrl(baseUrl: string): this {
     this.#baseUrl = baseUrl;

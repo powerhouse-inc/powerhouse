@@ -131,7 +131,7 @@
             },
             "url": {
               "type": "string",
-              "description": "Renown base URL, also used by this reactor's own identity. Defaults to https://www.renown.id. Overridden by RENOWN_URL."
+              "description": "Renown base URL, also used by this reactor's own identity. Defaults to https://renown-staging.vetra.io (DEFAULT_RENOWN_URL). Overridden by RENOWN_URL."
             },
             "switchboardUrl": {
               "type": "string",
@@ -795,7 +795,7 @@
           "properties": {
             "url": {
               "description": "Renown auth service URL.",
-              "default": "https://www.renown.id",
+              "default": "https://renown-staging.vetra.io",
               "type": "string"
             },
             "networkId": {

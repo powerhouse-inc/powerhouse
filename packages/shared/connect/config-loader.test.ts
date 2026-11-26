@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_RENOWN_URL } from "../constants.js";
 import {
   ConfigLoader,
   deepMerge,
@@ -95,7 +96,7 @@ describe("ConfigLoader", () => {
       DEFAULT_CONNECT_CONFIG.branding?.appName,
     );
     expect(result.connect.app?.logLevel).toBe("info");
-    expect(result.connect.renown?.url).toBe("https://www.renown.id");
+    expect(result.connect.renown?.url).toBe(DEFAULT_RENOWN_URL);
     expect(result.connect.drives?.sections?.remote?.enabled).toBe(true);
   });
 
@@ -218,7 +219,7 @@ describe("ConfigLoader", () => {
     // Patch applied
     expect(written.connect.app?.logLevel).toBe("debug");
     // Untouched defaults still present
-    expect(written.connect.renown?.url).toBe("https://www.renown.id");
+    expect(written.connect.renown?.url).toBe(DEFAULT_RENOWN_URL);
   });
 
   it("passes top-level packageRegistryUrl through unchanged on read and write", async () => {

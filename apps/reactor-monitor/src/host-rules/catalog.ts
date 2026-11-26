@@ -1,5 +1,6 @@
 // The folders `ph init` scaffolds, for a host that starts blank. Browser-safe.
 import type { HostExport } from "@powerhousedao/host-core/schema";
+import { DEFAULT_RENOWN_URL } from "@powerhousedao/shared/constants";
 
 export type TemplateFolder = "switchboard" | "connect";
 
@@ -83,7 +84,7 @@ function connect(project: string): Record<string, unknown> {
         icons: null,
       },
       renown: {
-        url: "https://www.renown.id",
+        url: DEFAULT_RENOWN_URL,
         networkId: "eip155",
         chainId: 1,
       },

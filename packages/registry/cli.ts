@@ -9,6 +9,7 @@ import {
   string,
   type Type,
 } from "cmd-ts";
+import { DEFAULT_RENOWN_URL } from "@powerhousedao/shared/constants";
 import {
   DEFAULT_PORT,
   DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
@@ -236,8 +237,7 @@ export const registryCommand = command({
     renownUrl: option({
       long: "renown-url",
       type: optional(string),
-      description:
-        "Renown service base URL(s), comma-separated. Defaults to https://www.renown.id.",
+      description: `Renown service base URL(s), comma-separated. Defaults to ${DEFAULT_RENOWN_URL}.`,
       defaultValue: () => process.env.PH_REGISTRY_RENOWN_URL,
       defaultValueIsSerializable: true,
     }),
