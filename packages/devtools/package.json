@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/devtools",
-  "version": "6.3.0-dev.11",
+  "version": "6.3.0-dev.12",
   "publishConfig": {
     "access": "public"
   },

@@ -1,3 +1,16 @@
+## 6.3.0-dev.12 (2026-11-26)
+
+### 🚀 Features
+
+- **document-model,reactor-api:** finalize the authoring API names and drop @experimental ([e7563fa1ca](https://github.com/powerhouse-inc/powerhouse/commit/e7563fa1ca))
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.3.0-dev.11 (2026-11-24)
 
 This was a version bump only for @powerhousedao/connect-core to align it with other projects, there were no code changes.

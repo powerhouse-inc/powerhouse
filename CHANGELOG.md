@@ -1,3 +1,31 @@
+## 6.3.0-dev.12 (2026-11-26)
+
+### 🚀 Features
+
+- **devtools:** add DevTools as a Connect dev-server plugin ([979e32758a](https://github.com/powerhouse-inc/powerhouse/commit/979e32758a))
+- **devtools:** title both bars "PH DevTools" ([3d7d523faa](https://github.com/powerhouse-inc/powerhouse/commit/3d7d523faa))
+- **devtools:** add DevTools as a Connect dev-server plugin ([#3409](https://github.com/powerhouse-inc/powerhouse/pull/3409))
+- **devtools:** read a GraphQL schema as a graph of declarations ([d698bbad1c](https://github.com/powerhouse-inc/powerhouse/commit/d698bbad1c))
+- **devtools:** show a model's state schema as a diagram ([fba4774787](https://github.com/powerhouse-inc/powerhouse/commit/fba4774787))
+- **devtools:** show a model's state schema as a diagram ([#3413](https://github.com/powerhouse-inc/powerhouse/pull/3413))
+- **document-model,ph-cli:** say "legacy document model" and "legacy subgraph" in messages ([c51b86ca4a](https://github.com/powerhouse-inc/powerhouse/commit/c51b86ca4a))
+- **document-model,ph-cli:** say "legacy document model" and "legacy subgraph" in messages ([#3415](https://github.com/powerhouse-inc/powerhouse/pull/3415))
+- **document-model,reactor-api:** finalize the authoring API names and drop @experimental ([e7563fa1ca](https://github.com/powerhouse-inc/powerhouse/commit/e7563fa1ca))
+- **document-model,reactor-api:** finalize the authoring API names and drop @experimental ([#3417](https://github.com/powerhouse-inc/powerhouse/pull/3417))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([d15cb4f627](https://github.com/powerhouse-inc/powerhouse/commit/d15cb4f627))
+- **ph-cli:** generate --name creates the new authoring form, remove --code-first ([#3412](https://github.com/powerhouse-inc/powerhouse/pull/3412))
+
+### 🩹 Fixes
+
+- **devtools:** indent the JSON of initial states and examples ([d1751851ee](https://github.com/powerhouse-inc/powerhouse/commit/d1751851ee))
+- **devtools:** use the official Powerhouse logo ([960ceca529](https://github.com/powerhouse-inc/powerhouse/commit/960ceca529))
+- **devtools:** use the official Powerhouse logo ([#3416](https://github.com/powerhouse-inc/powerhouse/pull/3416))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.3.0-dev.11 (2026-11-24)
 
 This was a version bump only, there were no code changes.
