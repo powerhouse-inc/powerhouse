@@ -42,6 +42,7 @@ const PINNED_EDGES = new Set([
   "client -> executor",
   "client -> protocol",
   "client -> shared",
+  "client -> signer",
   "client -> storage",
   "client -> subs",
   "client -> sync",
