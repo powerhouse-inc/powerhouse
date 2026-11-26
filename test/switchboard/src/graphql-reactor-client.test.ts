@@ -1,4 +1,3 @@
-import { createClient } from "@powerhousedao/reactor-browser";
 import { GraphQLReactorClient } from "@powerhousedao/reactor-browser/graphql-client";
 import type {
   Action,
@@ -24,8 +23,6 @@ const SWITCHBOARD_URL =
   process.env.SWITCHBOARD_URL ?? "http://localhost:4001/graphql";
 
 const DRIVE_ID = process.env.SWITCHBOARD_DRIVE_ID ?? "powerhouse";
-
-const client = createClient(SWITCHBOARD_URL);
 
 /** Track created document IDs for cleanup. */
 const createdDocumentIds: string[] = [];
@@ -76,9 +73,14 @@ describe("GraphQLReactorClient signed batches e2e", () => {
   });
 
   afterAll(async () => {
+    const cleanup = new GraphQLReactorClient({
+      url: SWITCHBOARD_URL,
+      realtime: false,
+      signer,
+    });
     for (const id of createdDocumentIds) {
       try {
-        await client.DeleteDocument({ idOrSlug: id });
+        await cleanup.deleteDocument(id);
       } catch {
         // Ignore cleanup errors
       }
@@ -86,19 +88,20 @@ describe("GraphQLReactorClient signed batches e2e", () => {
   });
 
   it("sends three sequentially signed actions in one mutation", async () => {
-    const created = await client.CreateEmptyDocument({
-      documentType: "powerhouse/document-model",
-      parentIdOrSlug: DRIVE_ID,
-    });
-    const documentId = created.createEmptyDocument.id;
-    createdDocumentIds.push(documentId);
-
     const reactorClient = new GraphQLReactorClient({
       url: SWITCHBOARD_URL,
       realtime: false,
       documentModels: [documentModelDocumentModelModule],
       signer,
     });
+    // Created by the signer too: the switchboard signs no write for a caller.
+    const documentId = (
+      await reactorClient.create(
+        await reactorClient.newDocument("powerhouse/document-model"),
+        DRIVE_ID,
+      )
+    ).header.id;
+    createdDocumentIds.push(documentId);
 
     // The revision the batch has to chain onto, read the same way the client
     // reads it.

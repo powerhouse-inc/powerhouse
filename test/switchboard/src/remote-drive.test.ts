@@ -11,6 +11,7 @@ import {
   createClient,
   RemoteDocumentController,
 } from "@powerhousedao/reactor-browser";
+import { GraphQLReactorClient } from "@powerhousedao/reactor-browser/graphql-client";
 import { RenownBuilder } from "@renown/sdk/node";
 import {
   driveDocumentModelModule,
@@ -20,7 +21,7 @@ import type {
   DocumentModelDocument,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { toTransportAction } from "@powerhousedao/shared/document-model";
+import { testSigner } from "@powerhousedao/shared/testing";
 import {
   DocumentModelController,
   documentModelDocumentModelModule,
@@ -42,6 +43,17 @@ const SWITCHBOARD_URL =
 
 const client = createClient(SWITCHBOARD_URL);
 
+// The switchboard signs no write for its callers: its documents are written
+// by a client that signs.
+const writer = new GraphQLReactorClient({
+  url: SWITCHBOARD_URL,
+  signer: await testSigner("0x00000000000000000000000000000000000000e5", {
+    app: "e2e-test",
+  }),
+  documentModels: [driveDocumentModelModule, documentModelDocumentModelModule],
+  realtime: false,
+});
+
 /** Track created document/drive IDs for cleanup. */
 const createdDocumentIds: string[] = [];
 let clientModule: InProcessReactorClientModule | undefined;
@@ -49,19 +61,26 @@ let rejectDeadLetter: ((error: Error) => void) | undefined;
 let deadLetterPromise: Promise<never> | undefined;
 
 async function createDriveOnSwitchboard(name: string): Promise<string> {
-  const result = await client.CreateEmptyDocument({
-    documentType: "powerhouse/document-drive",
-  });
-  const driveId = result.createEmptyDocument.id;
+  const drive = await writer.create(
+    await writer.newDocument("powerhouse/document-drive"),
+  );
+  const driveId = drive.header.id;
   createdDocumentIds.push(driveId);
 
   // Set drive name
-  await client.MutateDocument({
-    documentIdOrSlug: driveId,
-    actions: [setDriveName({ name })].map(toTransportAction),
-  });
+  await writer.execute(driveId, "main", [setDriveName({ name })]);
 
   return driveId;
+}
+
+/** A document model created in `driveId` by the signing writer. */
+async function createDocumentInDrive(driveId: string): Promise<string> {
+  const created = await writer.create(
+    await writer.newDocument("powerhouse/document-model"),
+    driveId,
+  );
+  createdDocumentIds.push(created.header.id);
+  return created.header.id;
 }
 
 async function createLocalReactor(
@@ -146,7 +165,7 @@ describe("Remote drive sync via CONNECT channel", () => {
   afterAll(async () => {
     for (const id of createdDocumentIds) {
       try {
-        await client.DeleteDocument({ idOrSlug: id });
+        await writer.deleteDocument(id);
       } catch {
         // Ignore cleanup errors
       }
@@ -164,21 +183,13 @@ describe("Remote drive sync via CONNECT channel", () => {
     await waitForDocument(clientModule, driveId);
 
     // 4. Create a document on switchboard inside the drive
-    const createResult = await client.CreateEmptyDocument({
-      documentType: "powerhouse/document-model",
-      parentIdOrSlug: driveId,
-    });
-    const documentId = createResult.createEmptyDocument.id;
-    createdDocumentIds.push(documentId);
+    const documentId = await createDocumentInDrive(driveId);
 
     // 5. Mutate the document on switchboard
-    await client.MutateDocument({
-      documentIdOrSlug: documentId,
-      actions: [
-        setModelName({ name: "SyncedModel" }),
-        setModelDescription({ description: "Synced from switchboard" }),
-      ].map(toTransportAction),
-    });
+    await writer.execute(documentId, "main", [
+      setModelName({ name: "SyncedModel" }),
+      setModelDescription({ description: "Synced from switchboard" }),
+    ]);
 
     // 6. Wait for the document to sync to the local reactor
     await waitForDocument(clientModule, documentId);
@@ -209,12 +220,7 @@ describe("Remote drive sync via CONNECT channel", () => {
     await waitForDocument(clientModule, driveId);
 
     // 4. Create a document on switchboard so it syncs locally
-    const createResult = await client.CreateEmptyDocument({
-      documentType: "powerhouse/document-model",
-      parentIdOrSlug: driveId,
-    });
-    const documentId = createResult.createEmptyDocument.id;
-    createdDocumentIds.push(documentId);
+    const documentId = await createDocumentInDrive(driveId);
 
     // 5. Wait for document to sync locally
     await waitForDocument(clientModule, documentId);
@@ -251,24 +257,16 @@ describe("Remote drive sync via CONNECT channel", () => {
     await waitForDocument(clientModule, driveId);
 
     // 2. Create a document remotely
-    const createResult = await client.CreateEmptyDocument({
-      documentType: "powerhouse/document-model",
-      parentIdOrSlug: driveId,
-    });
-    const documentId = createResult.createEmptyDocument.id;
-    createdDocumentIds.push(documentId);
+    const documentId = await createDocumentInDrive(driveId);
 
     // 3. Wait for it to sync
     await waitForDocument(clientModule, documentId);
 
     // 4. Apply multiple sequential mutations on switchboard
     for (let i = 1; i <= 3; i++) {
-      await client.MutateDocument({
-        documentIdOrSlug: documentId,
-        actions: [setModelName({ name: `Iteration-${i}` })].map(
-          toTransportAction,
-        ),
-      });
+      await writer.execute(documentId, "main", [
+        setModelName({ name: `Iteration-${i}` }),
+      ]);
     }
 
     // 5. Wait for the final state to sync

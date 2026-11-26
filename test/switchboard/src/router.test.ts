@@ -81,11 +81,23 @@ function graphqlUrlOfDrive(driveAddress: string): string {
   return `${url.origin}${base}/graphql`;
 }
 
+/** A client of the Switchboard that signs as the suite's signer. */
+function writer(): GraphQLReactorClient {
+  return new GraphQLReactorClient({
+    url: SWITCHBOARD_URL,
+    signer,
+    documentModels: models(),
+    realtime: false,
+  });
+}
+
+/** A drive the signer creates on the Switchboard, which signs no write for it. */
 async function createDrive(): Promise<{ id: string; address: string }> {
-  const created = await sdk.CreateEmptyDocument({ documentType: DRIVE_TYPE });
-  const { id, slug } = created.createEmptyDocument;
+  const client = writer();
+  const created = await client.create(await client.newDocument(DRIVE_TYPE));
+  const { id, slug } = created.header;
   createdDocumentIds.push(id);
-  return { id, address: `${BASE_URL}/d/${slug ?? id}` };
+  return { id, address: `${BASE_URL}/d/${slug || id}` };
 }
 
 function switchboardAt(
@@ -224,9 +236,10 @@ afterEach(() => {
 
 afterAll(async () => {
   local.reactorModule?.reactor.kill();
+  const client = writer();
   for (const id of createdDocumentIds.reverse()) {
     try {
-      await sdk.DeleteDocument({ idOrSlug: id });
+      await client.deleteDocument(id);
     } catch {
       // Already gone.
     }
@@ -363,7 +376,7 @@ describe("a router over a local reactor and a real Switchboard", () => {
     const remote = switchboardAt(drive.address, recordingFetch(sent));
     const router = await routerOver(remote);
     await router.get(drive.id);
-    await sdk.DeleteDocument({ idOrSlug: drive.id });
+    await writer().deleteDocument(drive.id);
     // The delete returns before every read path drops the drive.
     await vi.waitFor(
       async () => {

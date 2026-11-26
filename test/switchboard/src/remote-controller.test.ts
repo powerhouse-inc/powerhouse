@@ -2,8 +2,10 @@ import type { ConflictInfo } from "@powerhousedao/reactor-browser";
 import {
   ConflictError,
   createClient,
+  RemoteClient,
   RemoteDocumentController,
 } from "@powerhousedao/reactor-browser";
+import { testSigner } from "@powerhousedao/shared/testing";
 import {
   MemoryKeyStorage,
   RenownCryptoBuilder,
@@ -19,15 +21,36 @@ const DRIVE_ID = process.env.SWITCHBOARD_DRIVE_ID ?? "powerhouse";
 
 const client = createClient(SWITCHBOARD_URL);
 
+// The switchboard signs no write for its callers: every controller here signs
+// its own creates, pushes and deletes.
+const signing = {
+  client,
+  signer: await testSigner("0x00000000000000000000000000000000000000e4", {
+    app: "e2e-test",
+  }),
+};
+
 /** Track created document IDs for cleanup. */
 const createdDocumentIds: string[] = [];
+
+/** A document the test's signer created under the drive and named `name`. */
+async function createNamed(name: string): Promise<string> {
+  const controller = await RemoteDocumentController.pull(
+    DocumentModelController,
+    { ...signing, mode: "batch", parentIdentifier: DRIVE_ID },
+  );
+  controller.setName({ name });
+  await controller.push();
+  return controller.status.documentId;
+}
 
 describe("RemoteDocumentController e2e", () => {
   afterAll(async () => {
     // Clean up created documents
+    const remote = new RemoteClient(client, undefined, signing.signer);
     for (const id of createdDocumentIds) {
       try {
-        await client.DeleteDocument({ idOrSlug: id });
+        await remote.deleteDocument(id);
       } catch {
         // Ignore cleanup errors
       }
@@ -39,7 +62,7 @@ describe("RemoteDocumentController e2e", () => {
     const controller = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
 
         mode: "batch",
         parentIdentifier: DRIVE_ID,
@@ -71,32 +94,14 @@ describe("RemoteDocumentController e2e", () => {
 
   it("pulls an existing document and reads its state", async () => {
     // First create a document to pull
-    const createResult = await client.CreateEmptyDocument({
-      documentType: "powerhouse/document-model",
-      parentIdOrSlug: DRIVE_ID,
-    });
-    const docId = createResult.createEmptyDocument.id;
+    const docId = await createNamed("Pulled Document");
     createdDocumentIds.push(docId);
-
-    // Mutate it directly via GraphQL
-    await client.MutateDocument({
-      documentIdOrSlug: docId,
-      actions: [
-        {
-          type: "SET_NAME",
-          input: { name: "Pulled Document" },
-          scope: "global",
-          id: crypto.randomUUID(),
-          timestampUtcMs: new Date().toISOString(),
-        },
-      ],
-    });
 
     // Pull via RemoteDocumentController
     const controller = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         documentId: docId,
         mode: "batch",
       },
@@ -111,7 +116,7 @@ describe("RemoteDocumentController e2e", () => {
     const controller = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
 
         mode: "batch",
         parentIdentifier: DRIVE_ID,
@@ -144,7 +149,7 @@ describe("RemoteDocumentController e2e", () => {
 
     // Wrap with remote capabilities
     const remote = RemoteDocumentController.from(local, {
-      client,
+      ...signing,
 
       mode: "batch",
       parentIdentifier: DRIVE_ID,
@@ -171,7 +176,7 @@ describe("RemoteDocumentController e2e", () => {
     const controller1 = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
 
         mode: "batch",
         parentIdentifier: DRIVE_ID,
@@ -191,7 +196,7 @@ describe("RemoteDocumentController e2e", () => {
     const controller2 = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         documentId: docId,
         mode: "batch",
       },
@@ -218,7 +223,7 @@ describe("RemoteDocumentController e2e", () => {
     const controller = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
 
         mode: "batch",
         parentIdentifier: DRIVE_ID,
@@ -256,7 +261,7 @@ describe("RemoteDocumentController e2e", () => {
     const controller = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
 
         mode: "batch",
         parentIdentifier: DRIVE_ID,
@@ -280,7 +285,7 @@ describe("RemoteDocumentController e2e", () => {
     const pulled = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         documentId: docId,
         mode: "batch",
       },
@@ -309,7 +314,7 @@ describe("RemoteDocumentController e2e", () => {
     const controller = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
 
         mode: "batch",
         parentIdentifier: DRIVE_ID,
@@ -333,7 +338,7 @@ describe("RemoteDocumentController e2e", () => {
     const controllerA = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         mode: "batch",
         parentIdentifier: DRIVE_ID,
       },
@@ -348,7 +353,7 @@ describe("RemoteDocumentController e2e", () => {
     const controllerB = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         documentId: docId,
         mode: "batch",
         onConflict: "reject",
@@ -382,7 +387,7 @@ describe("RemoteDocumentController e2e", () => {
     const controllerA = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         mode: "batch",
         parentIdentifier: DRIVE_ID,
       },
@@ -397,7 +402,7 @@ describe("RemoteDocumentController e2e", () => {
     const controllerB = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         documentId: docId,
         mode: "batch",
         onConflict: "rebase",
@@ -424,7 +429,7 @@ describe("RemoteDocumentController e2e", () => {
     const controllerA = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         mode: "batch",
         parentIdentifier: DRIVE_ID,
       },
@@ -441,7 +446,7 @@ describe("RemoteDocumentController e2e", () => {
     const controllerB = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         documentId: docId,
         mode: "batch",
         onConflict: (conflict) => {
@@ -483,7 +488,7 @@ describe("RemoteDocumentController e2e", () => {
     const controllerA = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         mode: "batch",
         parentIdentifier: DRIVE_ID,
       },
@@ -499,7 +504,7 @@ describe("RemoteDocumentController e2e", () => {
     const controllerB = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         documentId: docId,
         mode: "batch",
         onConflict: "reject",
@@ -543,7 +548,7 @@ describe("RemoteDocumentController e2e", () => {
     const controllerA = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         mode: "batch",
         parentIdentifier: DRIVE_ID,
       },
@@ -559,7 +564,7 @@ describe("RemoteDocumentController e2e", () => {
     const controllerB = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         documentId: docId,
         mode: "batch",
       },
@@ -586,7 +591,7 @@ describe("RemoteDocumentController e2e", () => {
     const controller = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         mode: "batch",
         parentIdentifier: DRIVE_ID,
       },
@@ -622,7 +627,7 @@ describe("RemoteDocumentController e2e", () => {
 
     // Fresh pull should have the same operation count
     const fresh = await RemoteDocumentController.pull(DocumentModelController, {
-      client,
+      ...signing,
       documentId: controller.status.documentId,
       mode: "batch",
     });
@@ -634,7 +639,7 @@ describe("RemoteDocumentController e2e", () => {
     const controller = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         mode: "batch",
         parentIdentifier: DRIVE_ID,
         operationsPageSize: 2,
@@ -665,7 +670,7 @@ describe("RemoteDocumentController e2e", () => {
 
     // Fresh pull with small page size should produce the same result
     const fresh = await RemoteDocumentController.pull(DocumentModelController, {
-      client,
+      ...signing,
       documentId: docId,
       mode: "batch",
       operationsPageSize: 2,
@@ -680,7 +685,7 @@ describe("RemoteDocumentController e2e", () => {
     const controllerA = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         mode: "batch",
         parentIdentifier: DRIVE_ID,
         operationsPageSize: 2,
@@ -697,7 +702,7 @@ describe("RemoteDocumentController e2e", () => {
     const controllerB = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         documentId: docId,
         mode: "batch",
         operationsPageSize: 2,
@@ -726,7 +731,7 @@ describe("RemoteDocumentController e2e", () => {
     const controllerA = await RemoteDocumentController.pull(
       DocumentModelController,
       {
-        client,
+        ...signing,
         mode: "batch",
         parentIdentifier: DRIVE_ID,
         onConflict: "reject",

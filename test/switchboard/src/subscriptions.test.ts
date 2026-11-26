@@ -6,8 +6,10 @@
  */
 import {
   createClient,
+  RemoteClient,
   RemoteDocumentController,
 } from "@powerhousedao/reactor-browser";
+import { testSigner } from "@powerhousedao/shared/testing";
 import { DocumentModelController } from "document-model";
 import { createClient as createSseClient } from "graphql-sse";
 import {
@@ -42,6 +44,9 @@ const WS_URL =
 const SSE_URL = SWITCHBOARD_URL + "/r/stream";
 
 const gqlClient = createClient(SWITCHBOARD_URL);
+const signer = await testSigner("0x00000000000000000000000000000000000000e6", {
+  app: "e2e-test",
+});
 
 /** Track created document IDs for cleanup. */
 const createdDocumentIds: string[] = [];
@@ -166,6 +171,8 @@ async function createAndPushDocument(name: string): Promise<string> {
     DocumentModelController,
     {
       client: gqlClient,
+      // The switchboard signs no write for its callers.
+      signer,
       mode: "batch",
       parentIdentifier: DRIVE_ID,
     },
@@ -179,9 +186,10 @@ async function createAndPushDocument(name: string): Promise<string> {
 
 describe("Subscription e2e", () => {
   afterAll(async () => {
+    const remote = new RemoteClient(gqlClient, undefined, signer);
     for (const id of createdDocumentIds) {
       try {
-        await gqlClient.DeleteDocument({ idOrSlug: id });
+        await remote.deleteDocument(id);
       } catch {
         // ignore cleanup errors
       }

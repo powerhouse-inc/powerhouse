@@ -1,17 +1,28 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { rmSync } from "node:fs";
 import { resolve } from "node:path";
+import { RenownCredentialV1 } from "@powerhousedao/renown-package/document-models";
 import {
   buildAndSignCredential,
   MemoryKeyStorage,
   RenownCryptoBuilder,
+  RenownCryptoSigner,
+  renownCredentialInput,
   SwitchboardClient,
   type RenownCrypto,
 } from "@renown/sdk/node";
-import { createSwitchboardBackend } from "@powerhousedao/reactor-browser/graphql-client";
+import {
+  createSwitchboardBackend,
+  GraphQLReactorClient,
+} from "@powerhousedao/reactor-browser/graphql-client";
 import { RoutingReactorClient } from "@powerhousedao/reactor-router";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import {
+  createAction,
+  type DocumentModelModule,
+  type ISigner,
+} from "@powerhousedao/shared/document-model";
+import { testSigner } from "@powerhousedao/shared/testing";
 import { privateKeyToAccount } from "viem/accounts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { SWITCHBOARD_COMMAND } from "./switchboard-bin.js";
@@ -119,6 +130,25 @@ async function readModelReady(): Promise<boolean> {
   }
 }
 
+const RENOWN_CREDENTIAL_TYPE = "powerhouse/renown-credential";
+
+/**
+ * A client of the fixture's switchboard writing as `signer`, bearing `token`:
+ * the switchboard signs no write for its callers.
+ */
+function writerOf(signer: ISigner, token?: string): GraphQLReactorClient {
+  return new GraphQLReactorClient({
+    url: ENDPOINT,
+    signer,
+    tokenProvider: () => Promise.resolve(token),
+    documentModels: [
+      driveDocumentModelModule,
+      RenownCredentialV1 as unknown as DocumentModelModule,
+    ],
+    realtime: false,
+  });
+}
+
 const CREATE_DOCUMENT_MUTATION = /* GraphQL */ `
   mutation CreateEmptyDocument($documentType: String!) {
     createEmptyDocument(documentType: $documentType) {
@@ -138,9 +168,11 @@ function createDocument(token?: string) {
 describe("switchboard as its own renown auth provider", () => {
   const account = privateKeyToAccount(WALLET_KEY);
   let appCrypto: RenownCrypto;
+  // The wallet's app key, as the credential delegates it.
+  let appSigner: ISigner;
   let bearerToken: string;
   let strangerToken: string;
-  let credentialId: string;
+  let credentialDocumentId: string;
   let run: RunningSwitchboard | undefined;
 
   const readClient = new SwitchboardClient(ENDPOINT);
@@ -167,6 +199,11 @@ describe("switchboard as its own renown auth provider", () => {
       .build();
     bearerToken = await appCrypto.getBearerToken(account.address);
     strangerToken = await strangerCrypto.getBearerToken(account.address);
+    appSigner = new RenownCryptoSigner(appCrypto, "switchboard", {
+      address: account.address,
+      networkId: "eip155",
+      chainId: CHAIN_ID,
+    });
 
     // Phase 1 — auth off: seed the delegation credential into this reactor.
     run = spawnSwitchboard(FIXTURE_DIR, {
@@ -189,8 +226,17 @@ describe("switchboard as its own renown auth provider", () => {
       app: "switchboard",
       appId: appCrypto.did,
     });
-    credentialId = credential.id;
-    await readClient.issueCredential(credential, DEFAULT_DRIVE_ID);
+    // The fixture's renown-package predates `renown_issueCredential`: the
+    // credential document is written signed, as the switchboard signs none.
+    const seeder = writerOf(await testSigner());
+    const seeded = await seeder.create(
+      await seeder.newDocument(RENOWN_CREDENTIAL_TYPE),
+      DEFAULT_DRIVE_ID,
+    );
+    credentialDocumentId = seeded.header.id;
+    await seeder.execute(credentialDocumentId, "main", [
+      createAction("INIT", renownCredentialInput(credential)),
+    ]);
     await waitFor(
       credentialInReadModel,
       60_000,
@@ -229,11 +275,11 @@ describe("switchboard as its own renown auth provider", () => {
   });
 
   it("accepts a bearer token whose delegation lives in the local read model", async () => {
-    const { status, body } = await createDocument(bearerToken);
-    expect(body.errors).toBeUndefined();
-    expect(status).toBe(200);
-    const created = body.data?.createEmptyDocument as { id: string };
-    expect(created.id).toBeTruthy();
+    const writer = writerOf(appSigner, bearerToken);
+    const created = await writer.create(
+      await writer.newDocument("powerhouse/document-drive"),
+    );
+    expect(created.header.id).toBeTruthy();
   });
 
   it("rejects a bearer token with no delegation credential", async () => {
@@ -247,7 +293,7 @@ describe("switchboard as its own renown auth provider", () => {
         name: "sb",
         url: ENDPOINT,
         tokenProvider: () => Promise.resolve(token),
-        signer: undefined,
+        signer: appSigner,
         documentModels: () => [driveDocumentModelModule],
         realtime: false,
       });
@@ -269,17 +315,18 @@ describe("switchboard as its own renown auth provider", () => {
   });
 
   it("rejects the token once the credential is revoked", async () => {
-    // Same transport as gql() but authenticated, since writes now need auth.
-    const authedClient = new SwitchboardClient(async (query, variables) => {
-      const { status, body } = await gql(query, variables, bearerToken);
-      if (status !== 200 || body.errors?.length) {
-        throw new Error(
-          `authenticated request failed (${status}): ${JSON.stringify(body.errors)}`,
-        );
-      }
-      return body.data;
-    });
-    await authedClient.revokeCredential(credentialId, { token: bearerToken });
+    // The fixture's renown-package predates `renown_revokeCredential`: the
+    // wallet's app revokes the credential document itself, signed.
+    await writerOf(appSigner, bearerToken).execute(
+      credentialDocumentId,
+      "main",
+      [
+        createAction("REVOKE", {
+          revokedAt: new Date().toISOString(),
+          reason: null,
+        }),
+      ],
+    );
     await waitFor(
       async () => !(await credentialInReadModel()),
       60_000,
