@@ -1,10 +1,11 @@
 import type { FactorySpec, SignerConfig } from "@powerhousedao/reactor";
 import {
+  BaseRenownBuilder,
   createRenownTrustPolicy,
   DEFAULT_KEYPAIR_PATH,
   DEFAULT_RENOWN_URL,
   NodeKeyStorage,
-  RenownBuilder,
+  RENOWN_PRIVATE_KEY_ENV,
   RenownCryptoBuilder,
   resolveSwitchboardEndpoint,
   type IRenown,
@@ -13,6 +14,7 @@ import {
 } from "@renown/sdk/node";
 import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import { childLogger } from "document-model";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 
@@ -25,16 +27,28 @@ export interface RenownOptions {
   requireExisting?: boolean;
   /** Base url of the Renown instance to use */
   baseUrl?: string;
-  /** Renown user storage; defaults to .ph/.renown.json under `userDataDir`, else renown's own default. */
+  /** No longer read (warned): the instance signs with no user. */
   storagePath?: string;
   /** The relocated `.ph` root (PH_USER_DATA_DIR at the edge). */
   userDataDir?: string;
 }
 
+/** A Renown login file a switchboard used to sign as: one that names a user. */
+function holdsLogin(file: string): boolean {
+  try {
+    const stored = JSON.parse(readFileSync(file, "utf8")) as {
+      user?: { address?: string };
+    };
+    return !!stored.user?.address;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Initialize Renown for the Switchboard instance.
- * This allows Switchboard to authenticate with remote services
- * using the same identity established during `ph login`.
+ * Initialize Renown for the Switchboard instance: its key (`.ph/.keypair.json`,
+ * or `PH_RENOWN_PRIVATE_KEY`) signs the host's own work, as the instance and
+ * no user. A Renown login is never read: no host signs as a person.
  */
 export async function initRenown(
   options: RenownOptions = {},
@@ -44,13 +58,34 @@ export async function initRenown(
     requireExisting = false,
     baseUrl = DEFAULT_RENOWN_URL,
     userDataDir,
-    storagePath = userDataDir
-      ? join(
-          resolvePhDir(undefined, { PH_USER_DATA_DIR: userDataDir }),
-          ".renown.json",
-        )
-      : undefined,
+    storagePath,
   } = options;
+
+  if (storagePath !== undefined) {
+    logger.warn(
+      "identity.storagePath is no longer read: this switchboard signs as its instance key only, never as a Renown login. Remove the setting.",
+    );
+  }
+  const loginFile =
+    storagePath ??
+    join(
+      resolvePhDir(
+        process.cwd(),
+        userDataDir ? { PH_USER_DATA_DIR: userDataDir } : {},
+      ),
+      ".renown.json",
+    );
+  if (holdsLogin(loginFile)) {
+    logger.warn(
+      "@file holds a Renown login from before Powerhouse 6.4. This switchboard no longer reads it and signs as its instance key only. Run `ph migrate` to withdraw and remove it.",
+      loginFile,
+    );
+  }
+  if (process.env[RENOWN_PRIVATE_KEY_ENV]) {
+    logger.info(
+      `${RENOWN_PRIVATE_KEY_ENV} is this switchboard's instance key: it signs the host's own work, never as a user.`,
+    );
+  }
 
   const keyStorage = new NodeKeyStorage(keypairPath, {
     logger,
@@ -74,11 +109,8 @@ export async function initRenown(
     .withKeyPairStorage(keyStorage)
     .build();
 
-  // keyPath too: the builder's default key storage mkdirs <cwd>/.ph.
-  const renown = await new RenownBuilder("switchboard", {
-    ...(storagePath ? { storagePath } : {}),
-    ...(keypairPath ? { keyPath: keypairPath } : {}),
-  })
+  // No user storage: the instance signs as itself, with no user.
+  const renown = await new BaseRenownBuilder("switchboard")
     .withCrypto(renownCrypto)
     .withBaseUrl(baseUrl)
     .build();

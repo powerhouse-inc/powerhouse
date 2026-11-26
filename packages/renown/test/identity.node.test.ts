@@ -206,6 +206,26 @@ describe("readHomeLogin", () => {
       user: { address: ADDRESS },
     });
   });
+
+  it("keeps its own session key: PH_RENOWN_PRIVATE_KEY names an instance's", async () => {
+    const { did } = await writeLogin();
+    const instance = await new RenownCryptoBuilder()
+      .withKeyPairStorage(
+        new NodeKeyStorage(path.join(root, "instance", ".keypair.json")),
+      )
+      .build();
+    vi.stubEnv(
+      NodeKeyStorage.RENOWN_PRIVATE_KEY_ENV,
+      fs.readFileSync(path.join(root, "instance", ".keypair.json"), "utf8"),
+    );
+    try {
+      const login = await readHomeLogin(env);
+      expect(login?.did).toBe(did);
+      expect(login?.did).not.toBe(instance.did);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });
 
 describe("withdrawLogin and logoutHome", () => {

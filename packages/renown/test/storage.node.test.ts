@@ -97,4 +97,17 @@ describe("Node key storage", () => {
     const loadedKeyPair = await keyStorage.loadKeyPair();
     expect(loadedKeyPair).toStrictEqual(keyPair);
   });
+
+  it("reads no environment variable with envKeyName null, and saves to its file", async () => {
+    const fileKeyPair = await generateKeyPair();
+    process.env[NodeKeyStorage.RENOWN_PRIVATE_KEY_ENV] = JSON.stringify(
+      await generateKeyPair(),
+    );
+
+    const keyStorage = new NodeKeyStorage(keyPairPath, { envKeyName: null });
+    expect(await keyStorage.loadKeyPair()).toBeUndefined();
+
+    await keyStorage.saveKeyPair(fileKeyPair);
+    expect(await keyStorage.loadKeyPair()).toStrictEqual(fileKeyPair);
+  });
 });

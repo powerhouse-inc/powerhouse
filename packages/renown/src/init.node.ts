@@ -15,6 +15,11 @@ export interface NodeRenownBuilderOptions {
   storagePath?: string;
   /** File path for keypair storage. Defaults to ".ph/.keypair.json" in cwd */
   keyPath?: string;
+  /**
+   * The environment variable that overrides the key file: PH_RENOWN_PRIVATE_KEY
+   * by default, an instance's key; null reads none.
+   */
+  keyEnv?: string | null;
   /** Renown server URL. Defaults to https://www.renown.id */
   baseUrl?: string;
   /** Switchboard GraphQL endpoint for the direct-to-reactor flow. */
@@ -33,13 +38,19 @@ export class RenownBuilder extends BaseRenownBuilder {
     const {
       storagePath = DEFAULT_RENOWN_STORAGE_PATH,
       keyPath,
+      keyEnv,
       baseUrl,
       switchboardUrl,
       revalidate = "always",
     } = options;
 
     this.#revalidate = revalidate;
-    this.withKeyPairStorage(new NodeKeyStorage(keyPath));
+    this.withKeyPairStorage(
+      new NodeKeyStorage(
+        keyPath,
+        keyEnv === undefined ? {} : { envKeyName: keyEnv },
+      ),
+    );
     this.withStorage(new NodeRenownStorage(storagePath));
     this.withEventEmitter(new NodeRenownEventEmitter());
     if (baseUrl) {

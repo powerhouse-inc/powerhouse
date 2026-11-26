@@ -45,9 +45,8 @@ export type IdentityOptions = {
   /** Path to the keypair file. Defaults to ~/.ph/keypair.json */
   keypairPath?: string;
   /**
-   * Path to the Renown user file (`.renown.json`), which Renown writes when
-   * it is missing. With `keypairPath`, nothing of the identity lands in the
-   * working directory's `.ph`.
+   * No longer read (warned): the switchboard signs as its instance key only
+   * and reads no Renown login file.
    */
   storagePath?: string;
   /**
@@ -141,9 +140,8 @@ export type StartServerOptions = {
     | boolean
     | undefined;
   /**
-   * Identity options for Renown.
-   * When configured, the switchboard will load the keypair from `ph login`
-   * and can authenticate with remote services on behalf of the user.
+   * The instance key: it signs the host's own work, as the instance and no
+   * user (`PH_RENOWN_PRIVATE_KEY` overrides its file).
    */
   identity?: IdentityOptions;
   /** Base URL for the attachment service; defaults to `PH_SWITCHBOARD_PUBLIC_URL` then `http(s)://localhost:${port}`. */

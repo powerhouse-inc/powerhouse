@@ -21,13 +21,13 @@ function stubLogger(): ILogger {
 }
 
 /**
- * A switchboard whose identity names both of its files (`identity.keypairPath`
- * and `identity.storagePath`) keeps them there: nothing lands in the `.ph` of
- * the working directory, which is the project's when a package's switchboard
- * runs in it.
+ * A switchboard whose identity names its key file (`identity.keypairPath`)
+ * keeps it there and writes no Renown user file, a named one included (it
+ * signs as the instance, no user): nothing lands in the `.ph` of the working
+ * directory, which is the project's when a package's switchboard runs in it.
  */
-describe("booting Switchboard with both identity files named", () => {
-  it("writes the keypair and the Renown user file there, and nothing under <cwd>/.ph", async () => {
+describe("booting Switchboard with its identity files named", () => {
+  it("writes the keypair there, no Renown user file, and nothing under <cwd>/.ph", async () => {
     const tempRoot = await mkdtemp(join(tmpdir(), "switchboard-identity-"));
     const cwd = join(tempRoot, "project");
     await mkdir(cwd);
@@ -52,7 +52,8 @@ describe("booting Switchboard with both identity files named", () => {
         { logger: stubLogger() },
       );
       expect(existsSync(join(identity, ".keypair.json"))).toBe(true);
-      expect(existsSync(join(identity, ".renown.json"))).toBe(true);
+      expect(existsSync(join(identity, ".renown.json"))).toBe(false);
+      expect(switchboard.renown?.signer.user).toBeUndefined();
       expect(existsSync(join(cwd, ".ph"))).toBe(false);
       await switchboard.shutdown();
       switchboard = undefined;

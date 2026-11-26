@@ -1820,9 +1820,8 @@ export const startSwitchboard = async (
     baseUrl: options.identity?.baseUrl ?? renownConfig.url,
     // Under a relocated .ph tree the identity lives in the user's .ph tree
     // with the stores, never in the install dir. Unset: unchanged — renown's
-    // own `<cwd>/.ph/.keypair.json` default applies. `storagePath` (the
-    // Renown user file) passes through as given; initRenown defaults it the
-    // same way.
+    // own `<cwd>/.ph/.keypair.json` default applies. No Renown user file is
+    // read (initRenown warns of one left from before 6.4).
     keypairPath:
       options.identity?.keypairPath ??
       (userDataDir

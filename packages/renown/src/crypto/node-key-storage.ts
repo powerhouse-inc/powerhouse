@@ -12,13 +12,15 @@ export const DEFAULT_KEYPAIR_PATH = ".ph/.keypair.json";
 
 /**
  * Key storage that supports:
- * 1. PH_RENOWN_PRIVATE_KEY environment variable (JSON-encoded JwkKeyPair)
+ * 1. PH_RENOWN_PRIVATE_KEY environment variable (JSON-encoded JwkKeyPair):
+ *    an instance's key, a switchboard's; `envKeyName: null` reads none, as
+ *    the Renown login's storage does
  * 2. Custom file path passed via options
  * 3. Falls back to file storage at .ph/.keypair.json in current working directory
  */
 export class NodeKeyStorage implements JsonWebKeyPairStorage {
   #filePath: string;
-  #envKeyName: string;
+  #envKeyName: string | undefined;
   #logger?: ILogger;
 
   static readonly DEFAULT_KEYPAIR_PATH = DEFAULT_KEYPAIR_PATH;
@@ -26,10 +28,13 @@ export class NodeKeyStorage implements JsonWebKeyPairStorage {
 
   constructor(
     filePath?: string,
-    options: { envKeyName?: string; logger?: ILogger } = {},
+    options: { envKeyName?: string | null; logger?: ILogger } = {},
   ) {
     this.#filePath = filePath || join(process.cwd(), DEFAULT_KEYPAIR_PATH);
-    this.#envKeyName = options.envKeyName || RENOWN_PRIVATE_KEY_ENV;
+    this.#envKeyName =
+      options.envKeyName === null
+        ? undefined
+        : options.envKeyName || RENOWN_PRIVATE_KEY_ENV;
     this.#logger = options.logger;
 
     // Ensure directory exists
@@ -41,7 +46,7 @@ export class NodeKeyStorage implements JsonWebKeyPairStorage {
 
   loadKeyPair(): Promise<JwkKeyPair | undefined> {
     // First check environment variable
-    const envKey = process.env[this.#envKeyName];
+    const envKey = this.#envKey();
     if (envKey) {
       try {
         const keyPairJson = JSON.parse(envKey) as unknown;
@@ -66,7 +71,7 @@ export class NodeKeyStorage implements JsonWebKeyPairStorage {
 
   async saveKeyPair(keyPair: JwkKeyPair): Promise<void> {
     // Don't save if using env var
-    if (process.env[this.#envKeyName]) {
+    if (this.#envKey()) {
       return;
     }
 
@@ -76,13 +81,17 @@ export class NodeKeyStorage implements JsonWebKeyPairStorage {
   }
 
   removeKeyPair(): Promise<void> {
-    if (process.env[this.#envKeyName]) {
+    if (this.#envKeyName && process.env[this.#envKeyName]) {
       delete process.env[this.#envKeyName];
     }
     if (existsSync(this.#filePath)) {
       unlinkSync(this.#filePath);
     }
     return Promise.resolve();
+  }
+
+  #envKey(): string | undefined {
+    return this.#envKeyName ? process.env[this.#envKeyName] : undefined;
   }
 
   #loadFromFile(): JwkKeyPair | undefined {

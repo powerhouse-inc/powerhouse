@@ -70,7 +70,11 @@ export class LoginExpiredError extends Error {
   }
 }
 
-/** The Renown login in the home folder: `ph login` writes it, every project reads it. */
+/**
+ * The Renown login in the home folder: `ph login` writes it, every project
+ * reads it. Its session key is the file's only: PH_RENOWN_PRIVATE_KEY names an
+ * instance's key, never the login's.
+ */
 export function homeLoginRenown(
   opts: {
     appName?: string;
@@ -83,6 +87,7 @@ export function homeLoginRenown(
   const paths = loginPaths(opts.env);
   return new RenownBuilder(opts.appName ?? "ph-cli", {
     keyPath: paths.keypair,
+    keyEnv: null,
     storagePath: paths.file,
     ...(opts.baseUrl ? { baseUrl: opts.baseUrl } : {}),
     ...(opts.switchboardUrl ? { switchboardUrl: opts.switchboardUrl } : {}),
@@ -107,10 +112,10 @@ export async function readHomeLogin(
   const login = readLogin(env);
   if (!login || login.expired) return undefined;
   const paths = loginPaths(env);
-  if (!fs.existsSync(paths.keypair) && !process.env.PH_RENOWN_PRIVATE_KEY) {
-    return undefined;
-  }
-  const keyPair = await new NodeKeyStorage(paths.keypair).loadKeyPair();
+  if (!fs.existsSync(paths.keypair)) return undefined;
+  const keyPair = await new NodeKeyStorage(paths.keypair, {
+    envKeyName: null,
+  }).loadKeyPair();
   if (!keyPair) return undefined;
   const crypto = await new RenownCryptoBuilder()
     .withKeyPairStorage(new MemoryKeyStorage(keyPair))
