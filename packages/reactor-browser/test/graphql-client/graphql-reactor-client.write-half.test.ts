@@ -283,10 +283,12 @@ describe("GraphQLReactorClient.read", () => {
       "addRelationship",
       "create",
       "deleteDocument",
+      "drives",
       "execute",
       "removeRelationship",
       "rename",
     ]);
+    expect(Object.keys(client.write.drives)).toEqual(["addFile"]);
     expect((client.read as unknown as Record<string, unknown>).execute).toBe(
       undefined,
     );
