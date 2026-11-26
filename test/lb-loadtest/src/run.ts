@@ -1,8 +1,11 @@
 import {
-  documentModelDocumentModelModule,
-  generateActionId,
-} from "document-model";
-import { randomUUID } from "node:crypto";
+  DOCUMENT_MODEL_TYPE,
+  GraphQLClient,
+  loadTestSigner,
+  signedActions,
+  type Action,
+} from "@powerhousedao/load-test-client";
+import { generateActionId } from "document-model";
 
 interface Args {
   url: string;
@@ -99,15 +102,6 @@ const SCHEMA_PREFLIGHT_QUERY = `
     __schema {
       mutationType { fields { name } }
       queryType    { fields { name } }
-    }
-  }
-`;
-
-const CREATE_DOCUMENT_MUTATION = `
-  mutation CreateDocument($document: JSONObject!) {
-    createDocument(document: $document) {
-      id
-      documentType
     }
   }
 `;
@@ -230,7 +224,7 @@ function fail(msg: string): never {
   process.exit(1);
 }
 
-function buildSetModelNameAction(name: string): Record<string, unknown> {
+function buildSetModelNameAction(name: string): Action {
   return {
     id: generateActionId(),
     type: "SET_MODEL_NAME",
@@ -238,6 +232,43 @@ function buildSetModelNameAction(name: string): Record<string, unknown> {
     timestampUtcMs: new Date().toISOString(),
     input: { name },
   };
+}
+
+type Signer = Awaited<ReturnType<typeof loadTestSigner>>;
+
+/**
+ * A client for one operation that writes signed, as a Powerhouse client
+ * does (a switchboard signs no write for its callers), and keeps the backend
+ * the LB routed its last response from (`X-LB-Upstream`).
+ */
+function writerFor(
+  args: Args,
+  signer: Signer,
+): { client: GraphQLClient; backend: () => string | null } {
+  let backend: string | null = null;
+  const client = new GraphQLClient(args.url, {
+    signer,
+    requestTimeoutMs: args.requestTimeoutMs,
+    fetch: async (input, init) => {
+      const response = await fetch(input, init);
+      backend = response.headers.get("x-lb-upstream") ?? backend;
+      return response;
+    },
+  });
+  return { client, backend: () => backend };
+}
+
+/** A failed write's bucket: it never got an answer, or the switchboard refused it. */
+function writeFailureKind(type: "create" | "mutate", err: unknown): string {
+  const transport =
+    err instanceof TypeError ||
+    (err instanceof Error &&
+      (err.name === "TimeoutError" || err.name === "AbortError"));
+  return `${type}.${transport ? "transport" : "gqlErrors"}`;
+}
+
+function messageOf(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
 
 async function schemaPreflight(lb: LbClient): Promise<void> {
@@ -268,15 +299,18 @@ async function schemaPreflight(lb: LbClient): Promise<void> {
   const queryNames = new Set(
     schema?.queryType?.fields?.map((f) => f.name) ?? [],
   );
-  // `execute`, not `mutateDocument`: the preflight has to name the mutation this
-  // run actually sends, or it passes against an image that cannot serve it.
-  const missingMutations = ["createDocument", "execute"].filter(
+  // What this run actually sends, or it passes against an image that cannot
+  // serve it: a signed create goes through `executeBatch` after reading the
+  // create defaults, a signed write through `execute`.
+  const missingMutations = ["executeBatch", "execute"].filter(
     (n) => !mutationNames.has(n),
   );
-  const missingQueries = ["document"].filter((n) => !queryNames.has(n));
+  const missingQueries = ["document", "createDefaults"].filter(
+    (n) => !queryNames.has(n),
+  );
   if (missingMutations.length || missingQueries.length) {
     fail(
-      `switchboard image stale; expected 6.0.0-dev.202+; missing ` +
+      `switchboard image stale; expected one that takes signed writes; missing ` +
         `mutations=[${missingMutations.join(",")}] queries=[${missingQueries.join(",")}]`,
     );
   }
@@ -451,78 +485,57 @@ class Aggregate {
   }
 }
 
-async function runCreate(
-  lb: LbClient,
-  pool: Pool,
-  agg: Aggregate,
-): Promise<void> {
-  const K = randomUUID();
-  const doc = documentModelDocumentModelModule.utils.createDocument();
-  doc.header.id = K;
+/** What every operation of a run shares. */
+interface RunContext {
+  lb: LbClient;
+  pool: Pool;
+  agg: Aggregate;
+  args: Args;
+  /** Signs every write the run makes. */
+  signer: Signer;
+}
 
-  const resp = await lb.post(CREATE_DOCUMENT_MUTATION, {
-    document: doc,
-    documentIdentifier: K,
-  });
-  if (resp.transportError) {
+async function runCreate(ctx: RunContext): Promise<void> {
+  const { pool, agg } = ctx;
+  const { client, backend } = writerFor(ctx.args, ctx.signer);
+  let K: string;
+  try {
+    K = (await client.createEmptyDocument(DOCUMENT_MODEL_TYPE)).id;
+  } catch (err) {
     return agg.recordFailure(
       "create",
-      "create.transport",
-      `K=${K} ${resp.transportError}`,
+      writeFailureKind("create", err),
+      messageOf(err),
     );
   }
-  if (resp.status !== 200) {
-    return agg.recordFailure(
-      "create",
-      "create.transport",
-      `K=${K} status=${resp.status}`,
-    );
-  }
-  if (resp.errors?.length) {
-    return agg.recordFailure(
-      "create",
-      "create.gqlErrors",
-      `K=${K} ${resp.errors.map((e) => e.message).join("; ")}`,
-    );
-  }
-  const id = (resp.data as { createDocument?: { id?: string } })?.createDocument
-    ?.id;
-  if (id !== K) {
-    return agg.recordFailure(
-      "create",
-      "create.idMismatch",
-      `K=${K} returned id=${id ?? "<null>"}`,
-    );
-  }
-  if (!resp.backend) {
+  const createBackend = backend();
+  if (!createBackend) {
     return agg.recordFailure(
       "create",
       "create.backend",
       `K=${K} no X-LB-Upstream`,
     );
   }
-  pool.add({ K, createBackend: resp.backend });
-  agg.recordSuccess("create", resp.backend);
+  pool.add({ K, createBackend });
+  agg.recordSuccess("create", createBackend);
 }
 
-async function runMutate(
-  lb: LbClient,
-  pool: Pool,
-  agg: Aggregate,
-  args: Args,
-): Promise<void> {
+async function runMutate(ctx: RunContext): Promise<void> {
+  const { pool, agg, args } = ctx;
   const doc = pool.pickRandom();
-  if (!doc) return runCreate(lb, pool, agg);
+  if (!doc) return runCreate(ctx);
 
   const namePrefix = `harness-${doc.K.slice(0, 8)}`;
   const expectedName = `${namePrefix}-${args.actions - 1}`;
-  const actions: Array<Record<string, unknown>> = [];
+  const actions: Action[] = [];
   for (let m = 0; m < args.actions; m++) {
     actions.push(buildSetModelNameAction(`${namePrefix}-${m}`));
   }
-  const resp = await lb.post(MUTATE_DOCUMENT_MUTATION, {
+  // Signed here and sent through `execute`, whose answer is the state as of
+  // this write, so the name check stays free of races with other workers.
+  const resp = await ctx.lb.post(MUTATE_DOCUMENT_MUTATION, {
     documentIdOrSlug: doc.K,
-    actions,
+    actions: await signedActions(ctx.signer, actions, doc.K),
   });
   if (resp.transportError) {
     return agg.recordFailure(
@@ -564,13 +577,10 @@ async function runMutate(
   agg.recordSuccess("mutate", resp.backend!);
 }
 
-async function runRead(
-  lb: LbClient,
-  pool: Pool,
-  agg: Aggregate,
-): Promise<void> {
+async function runRead(ctx: RunContext): Promise<void> {
+  const { lb, pool, agg } = ctx;
   const doc = pool.pickRandom();
-  if (!doc) return runCreate(lb, pool, agg);
+  if (!doc) return runCreate(ctx);
 
   const resp = await lb.post(READ_DOCUMENT_QUERY, { idOrSlug: doc.K });
   if (resp.transportError) {
@@ -614,21 +624,18 @@ async function runRead(
 }
 
 async function runWorker(
-  lb: LbClient,
-  pool: Pool,
-  agg: Aggregate,
+  ctx: RunContext,
   gate: RateGate,
   mix: MixSampler,
-  args: Args,
   deadlineMs: number,
 ): Promise<void> {
   while (Date.now() < deadlineMs) {
     await gate.acquire();
     if (Date.now() >= deadlineMs) break;
     const type = mix.pick();
-    if (type === "create") await runCreate(lb, pool, agg);
-    else if (type === "mutate") await runMutate(lb, pool, agg, args);
-    else await runRead(lb, pool, agg);
+    if (type === "create") await runCreate(ctx);
+    else if (type === "mutate") await runMutate(ctx);
+    else await runRead(ctx);
   }
 }
 
@@ -658,6 +665,14 @@ async function main(): Promise<void> {
 
   const pool = new Pool();
   const agg = new Aggregate();
+  // One signer for the whole run: the switchboard signs no write for its callers.
+  const ctx: RunContext = {
+    lb,
+    pool,
+    agg,
+    args,
+    signer: await loadTestSigner(),
+  };
   const gate = new RateGate(args.rateRps);
   const mix = new MixSampler({
     create: args.createWeight,
@@ -673,7 +688,7 @@ async function main(): Promise<void> {
 
   await Promise.all(
     Array.from({ length: args.concurrency }, () =>
-      runWorker(lb, pool, agg, gate, mix, args, deadlineMs),
+      runWorker(ctx, gate, mix, deadlineMs),
     ),
   );
 

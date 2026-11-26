@@ -1,14 +1,20 @@
 # `@powerhousedao/lb-loadtest`
 
 Sustained-load consistency harness for `apps/switchboard-lb`. Drives a
-configurable mix of `createDocument` / `mutateDocument` / `document(idOrSlug:)`
-calls through the LB at a target rate and concurrency for a fixed duration,
+configurable mix of creates, `execute` writes and `document(idOrSlug:)`
+reads through the LB at a target rate and concurrency for a fixed duration,
 asserts per-doc backend pinning + write/read consistency on every response,
 aggregates failures by category, and reports `PASS` / `FAIL` based on
 whether any consistency check failed during the run.
 
 This is **not** a throughput benchmark — it is a load-shaped correctness
 test. Failures are bucketed and counted, not bailed on.
+
+Every write is signed: a switchboard signs no write for its callers, so the
+harness writes as a test signer of its own (`loadTestSigner` from
+`@powerhousedao/load-test-client`). A create goes through that package's
+signing client (`executeBatch`); a write's `SET_MODEL_NAME` actions are
+signed here and sent through `execute`.
 
 ## Prerequisite — start the LB stack
 
@@ -45,8 +51,8 @@ pnpm --filter @powerhousedao/lb-loadtest verify [-- <flags>]
 ```
 
 The harness waits for `/health` 200, runs a one-shot schema preflight
-(asserts `createDocument` / `mutateDocument` / `document(idOrSlug:)` are
-present — fails fast if the image is stale), then starts `--concurrency`
+(asserts `executeBatch` / `execute` / `document(idOrSlug:)` / `createDefaults`
+are present — fails fast if the image is stale), then starts `--concurrency`
 workers that emit operations sampled from the workload mix until the
 duration deadline.
 
@@ -76,7 +82,7 @@ with a literal `--`.
 | `--duration-sec N`         | `60`                            | Sole termination control. Workers drain when the deadline is reached.       |
 | `--concurrency N`          | `50`                            | Number of parallel async workers.                                           |
 | `--rate-rps N`             | unset (unlimited)               | Global ops/sec cap, slot-based pacer shared across workers.                 |
-| `--actions M`              | `1`                             | `SET_MODEL_NAME` actions per `mutateDocument` call.                         |
+| `--actions M`              | `1`                             | `SET_MODEL_NAME` actions per `execute` call.                                |
 | `--create-weight N`        | `10`                            | Mix weights — normalized internally; at least one must be `> 0`.            |
 | `--mutate-weight N`        | `30`                            |                                                                             |
 | `--read-weight N`          | `60`                            |                                                                             |
@@ -114,7 +120,6 @@ Exit code is `1` if any consistency failure was recorded, `0` otherwise.
 | ------------------------- | --------------------------------------------------------------------------------- |
 | `<type>.transport`        | HTTP non-200, abort/timeout, or fetch-level error.                                |
 | `<type>.gqlErrors`        | Response has a non-empty `errors` array.                                          |
-| `create.idMismatch`       | `data.createDocument.id` ≠ the UUID we set on `header.id`.                        |
 | `create.backend`          | No `X-LB-Upstream` response header on a successful create.                        |
 | `mutate.pin` / `read.pin` | Response backend ≠ the doc's create backend (consistent-hash invariant violated). |
 | `mutate.state`            | `data.mutateDocument.state.global.name` ≠ the last `SET_MODEL_NAME` we just sent. |
@@ -123,21 +128,13 @@ Exit code is `1` if any consistency failure was recorded, `0` otherwise.
 `read` deliberately does not assert `state.global.name` — concurrent
 mutates of the same doc make any name check racy. The `mutate.state`
 check is race-free because the reactor serializes per-doc and
-`mutateDocument` returns post-action state, so each call gets its own
+`execute` returns post-action state, so each call gets its own
 last-sent name back regardless of interleavings.
 
-## How the routing key smuggling works
+## Routing
 
-The LB's `lua/route.lua` hashes by `$doc_id`, extracted from the JSON
-variables map (`TOP_KEYS = identifier, documentIdentifier, parentIdentifier,
-childIdentifier, docId`). For `mutateDocument` / `document(identifier:)`
-the routing key is the declared variable. For `createDocument` we
-pre-generate a UUID `K`, set `document.header.id = K`, and pass
-`{ document, documentIdentifier: K }` — Apollo Server silently ignores
-the extra `documentIdentifier` because the operation only declares
-`$document`, but the LB still hashes by it. Result: all three operations
-on a doc hash to the same backend.
-
-The schema preflight uses the same trick with a fixed string
-(`documentIdentifier: "schema-preflight"`) because the LB rejects
-requests without a routing key.
+The LB hashes `/graphql` by the `Drive-Id` request header
+(`lua/route.lua`, `conf/routes.conf`). The harness's documents are not
+drives and it sends no `Drive-Id`, so every request carries the same
+(empty) key. A create's id is the one its signed header gives it, not a
+UUID the harness picks, so it cannot be passed ahead as a routing key.
