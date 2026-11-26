@@ -32,6 +32,7 @@ import type {
   RemoteFilter,
   SyncEnvelope,
   SyncOperationErrorType,
+  SyncRefusalHandler,
 } from "../types.js";
 import { ChannelErrorSource, SyncOperationStatus } from "../types.js";
 import {
@@ -56,6 +57,8 @@ export type GqlChannelConfig = {
   url: string;
   /** Dynamic JWT token handler for generating fresh tokens per-request */
   jwtHandler?: JwtHandler;
+  /** Told when the remote refuses a request with HTTP 401 or 403. */
+  onRefused?: SyncRefusalHandler;
   /** Custom fetch function for testing (default: global fetch) */
   fetchFn?: typeof fetch;
   /** Collection to synchronize (drive-level abstraction) */
@@ -226,6 +229,7 @@ export class GqlRequestChannel implements IChannel {
     this.config = {
       url: config.url,
       jwtHandler: config.jwtHandler,
+      onRefused: config.onRefused,
       fetchFn: config.fetchFn,
       collectionId: config.collectionId,
       filter: config.filter,
@@ -1456,6 +1460,38 @@ export class GqlRequestChannel implements IChannel {
   }
 
   /**
+   * Tells `onRefused` that the remote refused this channel's caller, with the
+   * reason its door's JSON body names, if any.
+   */
+  private async reportRefusal(
+    response: Response,
+    deadline: RequestDeadline,
+    operationName: string,
+  ): Promise<void> {
+    const onRefused = this.config.onRefused;
+    if (!onRefused) return;
+    let reason: string | undefined;
+    try {
+      const body = (await this.withDeadline(
+        response.json() as Promise<unknown>,
+        deadline,
+        `${operationName} refusal body`,
+      )) as { reason?: unknown } | null;
+      if (typeof body?.reason === "string") reason = body.reason;
+    } catch {
+      // A refusal without a JSON body names no reason.
+    }
+    try {
+      onRefused(this.config.url, {
+        status: response.status === 401 ? 401 : 403,
+        ...(reason ? { reason } : {}),
+      });
+    } catch (error) {
+      this.logger.error("GqlChannel refusal handler failed: @Error", error);
+    }
+  }
+
+  /**
    * Gets the authorization header value using jwtHandler.
    */
   private async getAuthorizationHeader(): Promise<string | undefined> {
@@ -1627,6 +1663,9 @@ export class GqlRequestChannel implements IChannel {
     }
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        await this.reportRefusal(response, deadline, operationName);
+      }
       deadline.dispose();
       throw new GraphQLRequestError(
         `GraphQL request failed: ${response.status} ${response.statusText}`,

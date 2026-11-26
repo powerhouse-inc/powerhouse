@@ -11,6 +11,7 @@ import type {
   JwtHandler,
   RemoteFilter,
   RemoteOptions,
+  SyncRefusalHandler,
 } from "../types.js";
 import { PollBehavior } from "../types.js";
 import {
@@ -46,15 +47,18 @@ export class GqlRequestChannelFactory implements IChannelFactory {
   private readonly logger: ILogger;
   private readonly jwtHandler?: JwtHandler;
   private readonly queue: IQueue;
+  private readonly onRefused?: SyncRefusalHandler;
 
   constructor(
     logger: ILogger,
     jwtHandler: JwtHandler | undefined,
     queue: IQueue,
+    onRefused?: SyncRefusalHandler,
   ) {
     this.logger = logger;
     this.jwtHandler = jwtHandler;
     this.queue = queue;
+    this.onRefused = onRefused;
   }
 
   /**
@@ -90,6 +94,7 @@ export class GqlRequestChannelFactory implements IChannelFactory {
       collectionId,
       filter,
       jwtHandler: this.jwtHandler,
+      ...(this.onRefused ? { onRefused: this.onRefused } : {}),
       retryBaseDelayMs: 1000,
       retryMaxDelayMs: 300000,
     };

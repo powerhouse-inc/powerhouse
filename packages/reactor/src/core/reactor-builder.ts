@@ -163,7 +163,11 @@ import {
 } from "../sync/channels/gql-response-channel-factory.js";
 import type { IChannelFactory } from "../sync/interfaces.js";
 import { SyncBuilder } from "../sync/sync-builder.js";
-import type { JwtHandler, LocalPeer } from "../sync/types.js";
+import type {
+  JwtHandler,
+  LocalPeer,
+  SyncRefusalHandler,
+} from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
 import { createDefaultDatabase } from "./create-default-database.js";
 import {
@@ -379,6 +383,7 @@ type SchemeChannelDescriptor = {
     logger: ILogger,
     jwtHandler: JwtHandler | undefined,
     queue: IQueue,
+    onRefused: SyncRefusalHandler | undefined,
   ) => IChannelFactory;
 };
 
@@ -389,8 +394,8 @@ function schemeChannelDescriptor(
     case ChannelScheme.CONNECT:
       return {
         type: GQL_CHANNEL_TYPE,
-        create: (logger, jwtHandler, queue) =>
-          new GqlRequestChannelFactory(logger, jwtHandler, queue),
+        create: (logger, jwtHandler, queue, onRefused) =>
+          new GqlRequestChannelFactory(logger, jwtHandler, queue, onRefused),
       };
     case ChannelScheme.SWITCHBOARD:
       return {
@@ -442,6 +447,7 @@ export class ReactorBuilder {
     IChannelFactory
   >();
   private jwtHandler?: JwtHandler;
+  private syncRefusalHandler?: SyncRefusalHandler;
   private documentModelLoader?: IDocumentModelLoader;
   private shutdownHooks: Array<() => Promise<void>> = [];
   private driveContainerTypes: ReadonlySet<string> =
@@ -743,6 +749,12 @@ export class ReactorBuilder {
 
   withJwtHandler(handler: JwtHandler): this {
     this.jwtHandler = handler;
+    return this;
+  }
+
+  /** Told when a remote refuses a sync channel's request (HTTP 401 or 403). */
+  withSyncRefusalHandler(handler: SyncRefusalHandler): this {
+    this.syncRefusalHandler = handler;
     return this;
   }
 
@@ -1789,7 +1801,12 @@ export class ReactorBuilder {
     queue: IQueue,
   ): IChannelFactory {
     const { type, create } = schemeChannelDescriptor(scheme);
-    const schemeFactory = create(logger, this.jwtHandler, queue);
+    const schemeFactory = create(
+      logger,
+      this.jwtHandler,
+      queue,
+      this.syncRefusalHandler,
+    );
 
     if (this.additionalChannelFactories.size === 0) {
       return schemeFactory;

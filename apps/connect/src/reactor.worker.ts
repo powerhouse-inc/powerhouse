@@ -31,6 +31,7 @@ import {
   isSyncInspectionOp,
   ReactorHost,
   SIGNING_IDENTITY_NEEDED_EVENT,
+  SYNC_REFUSED_EVENT,
   SYNC_STATUS_CHANGED_EVENT,
   WorkerPackageLoader,
   type SyncInspectionOpTargets,
@@ -526,6 +527,10 @@ const host = new ReactorHost({
         .withDocumentModelSources(models)
         .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
         .withJwtHandler(jwtHandler)
+        // The tabs hold the refusal handler and the sign-in gate.
+        .withSyncRefusalHandler((url, refusal) =>
+          host.broadcastBusEvent(SYNC_REFUSED_EVENT, { url, ...refusal }),
+        )
         .withGroupCommitPGlite({
           pg: pg as unknown as GroupCommitPGliteInstance,
           onUnrecoverable: onStorePoisoned,

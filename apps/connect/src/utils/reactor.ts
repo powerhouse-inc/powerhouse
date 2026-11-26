@@ -3,6 +3,7 @@ import {
   addRemoteDrive,
   getFullReactorClient,
   getPHStore,
+  handleSyncRefusal,
   isDriveAuthError,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -90,6 +91,7 @@ export async function createBrowserReactor(
     .withUpgradeManifests(upgradeManifests)
     .withExecutorConfig({ featureFlags })
     .withJwtHandler(jwtHandler)
+    .withSyncRefusalHandler(handleSyncRefusal)
     .withGroupCommitPGlite({
       pg: pg as unknown as GroupCommitPGliteInstance,
       // A poisoned session's unflushed writes, and every position built on

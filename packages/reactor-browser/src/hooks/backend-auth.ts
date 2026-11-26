@@ -1,3 +1,4 @@
+import { answerCredentialRefusal } from "../graphql-client/auth.js";
 import type {
   BackendAuthState,
   SetPHGlobalValue,
@@ -77,6 +78,27 @@ export function backendAuthStatusOf(error: unknown): 401 | 403 | null {
 /** True when a backend refused the caller as unauthenticated or unauthorized. */
 export function isBackendAuthError(error: unknown): boolean {
   return backendAuthStatusOf(error) !== null;
+}
+
+/**
+ * The app's answer to a sync channel's refusal (`withSyncRefusalHandler`):
+ * a refused credential goes to the app's credential refusal handler (dropped
+ * or enrolled, as a GraphQL request's would), and the refusal is recorded for
+ * the sign-in gate, naming the switchboard that refused.
+ */
+export function handleSyncRefusal(
+  url: string,
+  refusal: { status: 401 | 403; reason?: string },
+): void {
+  if (refusal.reason) {
+    void answerCredentialRefusal({ reason: refusal.reason, url });
+  }
+  setBackendAuth({
+    requiresAuth: true,
+    status: refusal.status,
+    backend: url,
+    at: new Date().toISOString(),
+  });
 }
 
 /** Records the refusal `error` carries, if it is one; returns whether it was. */

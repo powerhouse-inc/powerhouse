@@ -1,7 +1,9 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { setCredentialRefusalHandler } from "../src/graphql-client/auth.js";
 import {
   addBackendAuthEventHandler,
   backendAuthStatusOf,
+  handleSyncRefusal,
   isBackendAuthError,
   recordBackendAuthError,
   setBackendAuth,
@@ -82,6 +84,52 @@ describe("recordBackendAuthError", () => {
     });
     setBackendAuth(undefined);
     expect(getPHStore()?.backendAuth).toBeUndefined();
+  });
+});
+
+describe("handleSyncRefusal", () => {
+  beforeAll(() => {
+    addBackendAuthEventHandler();
+  });
+  beforeEach(() => {
+    window.ph = {};
+  });
+  afterEach(() => {
+    setCredentialRefusalHandler(undefined);
+    setBackendAuth(undefined);
+    window.ph = {};
+  });
+
+  it("hands a refused credential to the app's refusal handler and records the refusal for the gate", async () => {
+    const answered: unknown[] = [];
+    setCredentialRefusalHandler((refusal) => {
+      answered.push(refusal);
+      return Promise.resolve("anonymous");
+    });
+    handleSyncRefusal("http://sb.test/graphql", {
+      status: 401,
+      reason: "expired",
+    });
+    await Promise.resolve();
+    expect(answered).toEqual([
+      { reason: "expired", url: "http://sb.test/graphql" },
+    ]);
+    expect(getPHStore()?.backendAuth).toMatchObject({
+      requiresAuth: true,
+      status: 401,
+      backend: "http://sb.test/graphql",
+    });
+  });
+
+  it("records a refusal that names no reason without asking the handler", () => {
+    const answered: unknown[] = [];
+    setCredentialRefusalHandler((refusal) => {
+      answered.push(refusal);
+      return Promise.resolve(undefined);
+    });
+    handleSyncRefusal("http://sb.test/graphql", { status: 403 });
+    expect(answered).toEqual([]);
+    expect(getPHStore()?.backendAuth).toMatchObject({ status: 403 });
   });
 });
 

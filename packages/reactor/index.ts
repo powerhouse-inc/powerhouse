@@ -659,6 +659,8 @@ export {
   type ISyncManager,
   type ISyncStatusTracker,
   type JwtHandler,
+  type SyncRefusal,
+  type SyncRefusalHandler,
   type OperationBatch,
   type PollDelegate,
   type Remote,

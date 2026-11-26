@@ -30,6 +30,8 @@ export type {
   ConnectionStateSnapshot,
   DeadLetterAddedEvent,
   JwtHandler,
+  SyncRefusal,
+  SyncRefusalHandler,
   LocalPeer,
   PurgeLookup,
   RemoteCursor,

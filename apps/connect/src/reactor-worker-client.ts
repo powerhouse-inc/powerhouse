@@ -9,6 +9,7 @@ import {
   type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import {
+  handleSyncRefusal,
   setPGliteDB,
   type WorkerReactorClientModule,
 } from "@powerhousedao/reactor-browser";
@@ -23,6 +24,7 @@ import {
   postReactorIdentity,
   RPC_PROTOCOL_VERSION,
   SIGNING_IDENTITY_NEEDED_EVENT,
+  SYNC_REFUSED_EVENT,
   SyncManagerProxy,
   type ReactorSessionIdentity,
   type VersionFingerprint,
@@ -243,6 +245,15 @@ export function createWorkerReactorClientModule(
   args.renown.on("user", (user) =>
     postReactorIdentity(router, toReactorIdentity(user)),
   );
+  // A remote refused one of the worker's sync channels.
+  busProxy.subscribe(SYNC_REFUSED_EVENT, (_type, event) => {
+    const { url, status, reason } = event as {
+      url: string;
+      status: 401 | 403;
+      reason?: string;
+    };
+    handleSyncRefusal(url, { status, ...(reason ? { reason } : {}) });
+  });
   // The answer is the identity, null included, so the worker stops waiting.
   busProxy.subscribe(SIGNING_IDENTITY_NEEDED_EVENT, () => {
     void (args.ensureUser?.() ?? Promise.resolve())

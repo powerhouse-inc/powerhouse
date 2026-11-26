@@ -19,6 +19,20 @@ export enum ChannelScheme {
  */
 export type JwtHandler = (url: string) => Promise<string | undefined>;
 
+/** A remote that refused this reactor's caller: the HTTP status, and the door's reason when it gave one. */
+export type SyncRefusal = {
+  status: 401 | 403;
+  /** `expired`, `withdrawn-here`, `not-registered`, ... */
+  reason?: string;
+};
+
+/**
+ * Told when a remote refuses a channel's request (HTTP 401 or 403), with the
+ * remote's GraphQL URL: the app's place to drop a refused credential or show
+ * its sign-in. Called once per refused request; it must not throw.
+ */
+export type SyncRefusalHandler = (url: string, refusal: SyncRefusal) => void;
+
 /**
  * Controls how a remote drives its polling schedule.
  * - `Auto` (default): the channel runs the configured interval timer in the background.

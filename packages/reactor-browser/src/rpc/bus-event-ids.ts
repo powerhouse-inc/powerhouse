@@ -7,3 +7,6 @@ export const SYNC_REMOTES_CHANGED_EVENT = 90002;
 // The worker is about to sign with nobody signed in: a tab may sign someone in
 // (hosted Connect's browser pseudonym) and posts its identity in answer.
 export const SIGNING_IDENTITY_NEEDED_EVENT = 90003;
+// A remote refused one of the worker's sync channels: `{ url, status, reason? }`,
+// for the tab's refusal handler.
+export const SYNC_REFUSED_EVENT = 90004;
