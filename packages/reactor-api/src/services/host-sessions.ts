@@ -9,11 +9,12 @@ import {
   hostSessionsDir,
   listHostSessions,
   matchHostSessionToken,
+  noteHostSessionUsed,
   parseHostSessionToken,
   readHostSession,
+  readHostSessionLastUsed,
   removeHostSession,
   shortHostSessionId,
-  writeHostSession,
   type HostSessionFile,
 } from "@powerhousedao/shared/clis/host-sessions";
 import { sessionSignerOf } from "@powerhousedao/shared/clis/sessions";
@@ -50,9 +51,12 @@ import {
  * matches the token's hash, checks both ends, and asks the host's credential
  * verifier about the session's credential, so a withdrawal (its tombstone)
  * refuses the token at the next request, as it refuses a self-signed bearer.
- * A session the verifier reports withdrawn is deleted. A token that passes
- * readies the session's signer, which the host's caller writes sign with for
- * that request (`signerFor`, the `delegatedSigner` of the API).
+ * A session the verifier reports withdrawn is deleted. A session a Renown
+ * login approved through Renown's console is asked of Renown too (within the
+ * verifier's answer TTL), so its withdrawal there refuses the token as well.
+ * A token that passes readies the session's signer, which the host's caller
+ * writes sign with for that request (`signerFor`, the `delegatedSigner` of
+ * the API).
  */
 
 /** Why a host session token was refused. */
@@ -169,6 +173,8 @@ export class HostSessions {
   >();
   // Sessions seen here and since removed: their tokens read as withdrawn.
   readonly #removed = new Set<string>();
+  // When each session was last noted used, as written to its `.used` file.
+  readonly #lastUsed = new Map<string, number>();
   readonly #listeners = new Set<(claim: HostSessionClaim) => void>();
   #watcher: fs.FSWatcher | undefined;
   #watchFailed: boolean;
@@ -302,6 +308,7 @@ export class HostSessions {
   #forget(id: string): void {
     this.#held.delete(id);
     this.#signers.delete(id);
+    this.#lastUsed.delete(id);
     if (this.#removed.size >= MAX_REMOVED) {
       const oldest = this.#removed.values().next().value;
       if (oldest !== undefined) this.#removed.delete(oldest);
@@ -365,6 +372,8 @@ export class HostSessions {
     ) {
       return { ok: false, reason: "unknown" };
     }
+    // Renown signed it at its console: what Renown says of it counts too.
+    // A pseudonym's approval has no word at Renown: the record decides.
     const verdict = await this.#verifier.check(
       {
         address: binding.address,
@@ -373,6 +382,7 @@ export class HostSessions {
         sessionDid: session.did,
       },
       credential as PowerhouseVerifiableCredential,
+      session.approvedThrough === "renown" ? { atRenown: true } : undefined,
     );
     if (!verdict.ok) {
       if (
@@ -446,18 +456,24 @@ export class HostSessions {
     }
   }
 
-  /** `lastUsedAt`, at most hourly; a failure to write it refuses nothing. */
+  /**
+   * Notes the session's last use in its `.used` file, at most hourly; never
+   * a rewrite of the session's own file. A failure to note it refuses nothing.
+   */
   #touch(session: HostSessionFile): void {
     const now = this.#now();
-    const last = Date.parse(session.lastUsedAt ?? "");
+    const id = session.id;
+    let last = this.#lastUsed.get(id);
+    if (last === undefined) {
+      last = Date.parse(
+        readHostSessionLastUsed({ dataDir: this.#dataDir, id }) ?? "",
+      );
+      if (Number.isFinite(last)) this.#lastUsed.set(id, last);
+    }
     if (Number.isFinite(last) && now - last < LAST_USED_EVERY_MS) return;
     try {
-      const fresh = readHostSession({ dataDir: this.#dataDir, id: session.id });
-      if (!fresh) return;
-      writeHostSession(this.#dataDir, {
-        ...fresh,
-        lastUsedAt: new Date(now).toISOString(),
-      });
+      noteHostSessionUsed({ dataDir: this.#dataDir, id, at: new Date(now) });
+      this.#lastUsed.set(id, now);
     } catch (error) {
       this.#logger.warn(
         "Host session @id: could not note its last use: @error",

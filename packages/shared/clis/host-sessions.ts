@@ -18,7 +18,9 @@ import { newSession, type JsonWebKey } from "./sessions.js";
  * key and the hashes of its tokens, never a token: a token is shown once,
  * when it is issued. The credential's record (`source: "host-session"`) is
  * kept beside the others (`.ph/credentials/`), so withdrawing it is the same
- * withdrawal as `ph credentials withdraw`.
+ * withdrawal as `ph credentials withdraw`. Beside it, `<id>.used` notes the
+ * session's last use, and `keys/` marks every key a host approved, kept after
+ * the session goes.
  *
  * A token is `phs_<id>_<secret>`: the session's id (32 hex) and 32 random
  * bytes, base64url. The prefix tells a host's door it is no self-signed
@@ -75,8 +77,8 @@ export type HostSessionFile = {
   approvedAt?: string;
   /** The session's end, once approved: its tokens end with it. */
   expiresAt?: string;
-  /** When a token of it last opened the door; written at most hourly. */
-  lastUsedAt?: string;
+  /** How it was approved: a credential Renown's console signed is checked at Renown too. */
+  approvedThrough?: "renown";
 };
 
 /** `<dataDir>/.ph/host-sessions`. */
@@ -171,6 +173,101 @@ export function writeHostSession(
 export function removeHostSession(o: { dataDir: string; id: string }): void {
   if (!isHostSessionId(o.id)) return;
   fs.rmSync(hostSessionFile(o.dataDir, o.id), { force: true });
+  fs.rmSync(hostSessionUsedFile(o.dataDir, o.id), { force: true });
+}
+
+// ------------------------------------------------------------- last use
+
+/**
+ * `<id>.used` beside the session's file: when a token of it last opened a
+ * host's door. A file of its own, so noting a use never rewrites the session
+ * (on Windows a rewrite can leave a moment with no session file).
+ */
+export function hostSessionUsedFile(dataDir: string, id: string): string {
+  if (!isHostSessionId(id)) throw new Error(`"${id}" is no host session id.`);
+  return path.join(hostSessionsDir(dataDir), `${id}.used`);
+}
+
+/** When the session was last used; undefined when never (or unreadable). */
+export function readHostSessionLastUsed(o: {
+  dataDir: string;
+  id: string;
+}): string | undefined {
+  if (!isHostSessionId(o.id)) return undefined;
+  let text: string;
+  try {
+    text = fs.readFileSync(hostSessionUsedFile(o.dataDir, o.id), "utf8").trim();
+  } catch {
+    return undefined;
+  }
+  return Number.isFinite(Date.parse(text)) ? text : undefined;
+}
+
+/** Notes a use of the session at `at`. */
+export function noteHostSessionUsed(o: {
+  dataDir: string;
+  id: string;
+  at: Date;
+}): void {
+  fs.writeFileSync(hostSessionUsedFile(o.dataDir, o.id), o.at.toISOString());
+}
+
+// ------------------------------------------------------------- the keys
+
+/** What a host keeps of every session key it approved, after the session goes. */
+export type HostSessionKeyMark = {
+  did: string;
+  id: string;
+  scope: string;
+  grant: HostSessionGrant;
+};
+
+function keyMarkFile(dataDir: string, did: string): string {
+  const name = createHash("sha256").update(did).digest("hex").slice(0, 32);
+  return path.join(hostSessionsDir(dataDir), "keys", `${name}.json`);
+}
+
+/**
+ * Marks `session`'s key as a host session's, for good: an operation it signed
+ * stays a host session's (which administers nothing) after the session is
+ * withdrawn or ends, so a workflow it published never runs as its user's
+ * administration. Written before the session is approved; kept forever.
+ */
+export function markHostSessionKey(
+  dataDir: string,
+  session: Pick<HostSessionFile, "did" | "id" | "scope" | "grant">,
+): void {
+  const file = keyMarkFile(dataDir, session.did);
+  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  const mark: HostSessionKeyMark = {
+    did: session.did,
+    id: session.id,
+    scope: session.scope,
+    grant: session.grant,
+  };
+  fs.writeFileSync(file, `${JSON.stringify(mark)}\n`);
+}
+
+/** The host session `did` was the key of, if it was one here. */
+export function hostSessionOfKey(
+  dataDir: string,
+  did: string,
+): HostSessionKeyMark | undefined {
+  let value: Partial<HostSessionKeyMark> | undefined;
+  try {
+    value = JSON.parse(
+      fs.readFileSync(keyMarkFile(dataDir, did), "utf8"),
+    ) as Partial<HostSessionKeyMark>;
+  } catch {
+    return undefined;
+  }
+  return value?.did === did &&
+    typeof value.id === "string" &&
+    isHostSessionId(value.id) &&
+    typeof value.scope === "string" &&
+    typeof value.grant === "string"
+    ? (value as HostSessionKeyMark)
+    : undefined;
 }
 
 /** Every host session in `dataDir`, oldest first; other files are skipped. */

@@ -6,6 +6,7 @@ import {
   credentialRecordId,
   readCredentialRecord,
   readCredentialWithdrawal,
+  withdrawCredentialRecords,
   writeCredentialRecord,
   writeCredentialWithdrawal,
 } from "@powerhousedao/shared/clis/credential-records";
@@ -29,10 +30,12 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ExpressHttpAdapter } from "../src/graphql/gateway/adapter-http-express.js";
 import { HttpRouteService } from "../src/http/index.js";
+import { listDeviceGrants } from "../src/http/oauth-grants.js";
 import { mountOAuthMetadata } from "../src/http/oauth-metadata.js";
 import {
   mountOAuthRoutes,
   RENOWN_APP_LABEL,
+  type OAuthRoutesOptions,
 } from "../src/http/oauth-routes.js";
 import { AuthService } from "../src/services/auth.service.js";
 import { HostSessions } from "../src/services/host-sessions.js";
@@ -67,8 +70,25 @@ let issuer: string;
 let clock: number | undefined;
 let disposeRoutes: () => void;
 let withdrawn: string[];
+let routes: HttpRouteService;
 
 const now = () => clock ?? Date.now();
+
+/** Mounts the routes again, with `extra` over the test's options. */
+function remount(extra: Partial<OAuthRoutesOptions> = {}) {
+  disposeRoutes();
+  const mounted = mountOAuthRoutes(routes.hostScope("oauth", "/oauth"), {
+    dataDir,
+    publicOrigin: undefined,
+    basePath: "/",
+    renownUrl: "https://renown.test",
+    hostDid: () => "did:key:zHostKey",
+    onWithdrawn: (binding) => withdrawn.push(binding.sessionDid),
+    now,
+    ...extra,
+  });
+  disposeRoutes = () => mounted.dispose();
+}
 
 beforeEach(async () => {
   clock = undefined;
@@ -99,18 +119,10 @@ beforeEach(async () => {
   const port = (server.address() as { port: number }).port;
   url = `http://127.0.0.1:${port}`;
   issuer = url;
-  const routes = new HttpRouteService({ httpAdapter: adapter, authService });
-  const mounted = mountOAuthRoutes(routes.hostScope("oauth", "/oauth"), {
-    dataDir,
-    publicOrigin: undefined,
-    basePath: "/",
-    renownUrl: "https://renown.test",
-    hostDid: () => "did:key:zHostKey",
-    onWithdrawn: (binding) => withdrawn.push(binding.sessionDid),
-    now,
-  });
+  routes = new HttpRouteService({ httpAdapter: adapter, authService });
+  disposeRoutes = () => undefined;
+  remount();
   mountOAuthMetadata(adapter, { publicOrigin: undefined, basePath: "/" });
-  disposeRoutes = () => mounted.dispose();
 });
 
 afterEach(async () => {
@@ -657,25 +669,276 @@ describe("a person's sessions", () => {
 });
 
 describe("limits", () => {
-  it("lets one address start 10 grants a minute", async () => {
+  // A fresh X-Forwarded-For per request, as a script escaping limits sends.
+  let forged = 0;
+  const forgedFor = () => ({
+    "x-forwarded-for": `198.51.100.${++forged % 250}`,
+  });
+
+  it("lets one address start 10 grants a minute, whatever X-Forwarded-For says", async () => {
+    // No proxy is trusted here: the header names nobody, and the request is
+    // still made over loopback, so the issuer holds too.
+    remount({ publicOrigin: url });
     const statuses: number[] = [];
     for (let i = 0; i < 11; i++) {
       statuses.push(
-        (await form("/oauth/device_authorization", { client_id: "c" })).status,
+        (
+          await form(
+            "/oauth/device_authorization",
+            { client_id: "c" },
+            forgedFor(),
+          )
+        ).status,
       );
     }
     expect(statuses.slice(0, 10).every((s) => s === 200)).toBe(true);
     expect(statuses[10]).toBe(429);
+    // The "From" the consent page shows is the socket's.
+    const grants = listDeviceGrants(dataDir);
+    expect(new Set(grants.map((g) => g.requestedFrom))).toEqual(
+      new Set(["127.0.0.1"]),
+    );
   });
 
-  it("lets one address miss a code 10 times a minute", async () => {
+  it("lets one address miss a code 10 times a minute, whatever X-Forwarded-For says", async () => {
     const statuses: number[] = [];
     for (let i = 0; i < 11; i++) {
       statuses.push(
-        (await fetch(`${url}/oauth/device/pending?user_code=BBBB-BBBB`)).status,
+        (
+          await fetch(`${url}/oauth/device/pending?user_code=BBBB-BBBB`, {
+            headers: forgedFor(),
+          })
+        ).status,
       );
     }
-    expect(statuses.slice(0, 10).every((s) => s === 404)).toBe(true);
+    // A forwarded request names no issuer here, which answers first.
+    expect(statuses.slice(0, 10).every((s) => s === 503)).toBe(true);
+    remount({ publicOrigin: url });
+    const counted: number[] = [];
+    for (let i = 0; i < 11; i++) {
+      counted.push(
+        (
+          await fetch(`${url}/oauth/device/pending?user_code=BBBB-BBBB`, {
+            headers: forgedFor(),
+          })
+        ).status,
+      );
+    }
+    expect(counted.slice(0, 10).every((s) => s === 404)).toBe(true);
+    expect(counted[10]).toBe(429);
+  });
+
+  it("behind a trusted proxy, charges the right-most hop that is not the proxy's own", async () => {
+    remount({ publicOrigin: url, trustProxy: true });
+    const start = (forwardedFor: string) =>
+      form(
+        "/oauth/device_authorization",
+        { client_id: "c" },
+        { "x-forwarded-for": forwardedFor },
+      );
+    const statuses: number[] = [];
+    for (let i = 0; i < 11; i++) {
+      // The caller writes what is left of its own address; the proxies
+      // append theirs (private addresses) after it.
+      statuses.push(
+        (await start(`198.51.100.${i}, 203.0.113.7, 10.0.0.4`)).status,
+      );
+    }
+    expect(statuses.slice(0, 10).every((s) => s === 200)).toBe(true);
     expect(statuses[10]).toBe(429);
+    expect((await start("203.0.113.8, 10.0.0.4")).status).toBe(200);
+    expect(
+      listDeviceGrants(dataDir).filter(
+        (g) => g.requestedFrom === "203.0.113.7",
+      ),
+    ).toHaveLength(10);
+  });
+
+  it("holds at most 20 pending grants per address", async () => {
+    remount({ publicOrigin: url });
+    clock = Date.now();
+    const statuses: number[] = [];
+    for (let minute = 0; minute < 3; minute++) {
+      for (let i = 0; i < 10; i++) {
+        statuses.push(
+          (await form("/oauth/device_authorization", { client_id: "c" }))
+            .status,
+        );
+      }
+      clock += 61_000;
+    }
+    expect(statuses.slice(0, 20).every((s) => s === 200)).toBe(true);
+    expect(statuses[20]).toBe(429);
+  });
+});
+
+describe("a session nobody collected", () => {
+  it("is withdrawn when its code expires, and counts for nobody", async () => {
+    const started = await start();
+    expect((await approve(started)).status).toBe(200);
+    const pending = listDeviceGrants(dataDir)[0]!;
+    clock = Date.now() + 11 * 60_000;
+    expect((await poll(started)).body.error).toBe("expired_token");
+    expect(readHostSession({ dataDir, id: pending.sessionId })).toBeUndefined();
+    expect(
+      readCredentialWithdrawal({
+        dataDir,
+        id: credentialRecordId({
+          address: PERSON.address,
+          chainId: 1,
+          sessionDid: pending.sessionDid,
+        }),
+      })?.by,
+    ).toBe("host");
+    expect(withdrawn).toEqual([pending.sessionDid]);
+  });
+
+  it("is not listed once withdrawn by `ph credentials withdraw`", async () => {
+    const started = await start();
+    await approve(started);
+    const { body } = await poll(started);
+    const session = readHostSession({
+      dataDir,
+      id: body.ph_session as string,
+    })!;
+    withdrawCredentialRecords({
+      dataDir,
+      ids: [
+        credentialRecordId({
+          address: PERSON.address,
+          chainId: 1,
+          sessionDid: session.did,
+        }),
+      ],
+      by: "command",
+    });
+    const key = await new RenownCryptoBuilder()
+      .withKeyPairStorage(new MemoryKeyStorage())
+      .build();
+    writeCredentialRecord({
+      dataDir,
+      credential: await credentialFor(PERSON, key.did, { label: "ph-cli" }),
+      source: "cli",
+    });
+    const listed = await fetch(`${url}/oauth/sessions`, {
+      headers: {
+        authorization: `Bearer ${await key.getBearerToken(PERSON.address, { expiresIn: 60 })}`,
+      },
+    });
+    expect(await listed.json()).toEqual({ sessions: [] });
+  });
+});
+
+describe("an approval racing the person", () => {
+  it("loses to a Deny that lands while its credential is checked", async () => {
+    let entered!: () => void;
+    const checking = new Promise<void>((resolve) => (entered = resolve));
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const { checkCredentialFor } = await import("@renown/sdk/node");
+    remount({
+      checkCredential: async (...args) => {
+        entered();
+        await held;
+        return checkCredentialFor(...args);
+      },
+    });
+    const started = await start();
+    const pending = await pendingOf(started.user_code);
+    const approving = approve(started);
+    // The approval waits in its check; the person denies meanwhile.
+    await checking;
+    const denied = await post("/oauth/device/deny", {
+      user_code: started.user_code,
+      nonce: pending.nonce,
+    });
+    expect(denied.status).toBe(200);
+    release();
+    const response = await approving;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: "invalid_grant" });
+    expect((await poll(started)).body.error).toBe("access_denied");
+  });
+});
+
+describe("the Renown button", () => {
+  const press = (started: Started, nonce: string, headers = {}) =>
+    fetchOriginal(`${url}/oauth/device/renown`, {
+      method: "POST",
+      redirect: "manual",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        ...headers,
+      },
+      body: new URLSearchParams({
+        user_code: started.user_code,
+        nonce,
+      }).toString(),
+    });
+
+  beforeEach(() => {
+    vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      const target = String(input instanceof Request ? input.url : input);
+      return target.startsWith("https://renown.test")
+        ? Promise.resolve(Response.json({ status: "pending" }))
+        : fetchOriginal(input, init);
+    });
+  });
+
+  it("needs this host's Origin: a client sending none is refused", async () => {
+    const started = await start();
+    const { nonce } = await pendingOf(started.user_code);
+    expect((await press(started, nonce)).status).toBe(403);
+    expect((await press(started, nonce, { origin: issuer })).status).toBe(303);
+  });
+
+  it("starts at most 3 polls per address", async () => {
+    const statuses: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      const started = await start();
+      const { nonce } = await pendingOf(started.user_code);
+      statuses.push((await press(started, nonce, { origin: issuer })).status);
+    }
+    expect(statuses).toEqual([303, 303, 303, 429]);
+  });
+});
+
+describe("a host where a session could do nothing", () => {
+  it("refuses a grant, saying why", async () => {
+    remount({ sessionsUseless: () => "Nothing to do here: ADMIN_ONLY." });
+    const response = await form("/oauth/device_authorization", {
+      client_id: "c",
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: "invalid_scope",
+      error_description: "Nothing to do here: ADMIN_ONLY.",
+    });
+    expect(listDeviceGrants(dataDir)).toEqual([]);
+  });
+});
+
+describe("a request through a proxy on this computer", () => {
+  it("names no issuer without PUBLIC_URL, and says to set it", async () => {
+    const headers = { "x-forwarded-proto": "https" };
+    const metadata = await fetch(
+      `${url}/.well-known/oauth-authorization-server`,
+      { headers },
+    );
+    expect(metadata.status).toBe(404);
+    expect(
+      ((await metadata.json()) as { error_description: string })
+        .error_description,
+    ).toContain("PUBLIC_URL");
+    const started = await form(
+      "/oauth/device_authorization",
+      { client_id: "c" },
+      { forwarded: "for=203.0.113.7" },
+    );
+    expect(started.status).toBe(503);
+    expect(
+      ((await started.json()) as { error_description: string })
+        .error_description,
+    ).toMatch(/proxy.*PUBLIC_URL/);
   });
 });

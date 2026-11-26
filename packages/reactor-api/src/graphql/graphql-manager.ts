@@ -46,6 +46,7 @@ import {
   validateDocumentModelsForHost,
 } from "../packages/host-validation.js";
 import { debounce } from "../packages/util.js";
+import { isHostSessionUser } from "../services/host-session-scope.js";
 import {
   reportFailure,
   runDetached,
@@ -1064,7 +1065,10 @@ export class GraphQLManager {
     if (request.user) {
       setAuthContext(http, {
         user: request.user,
-        admins: this.authorizationService.config.admins,
+        // A host session's user administers nothing, as at the door.
+        admins: isHostSessionUser(request.user)
+          ? []
+          : this.authorizationService.config.admins,
         auth_enabled: this.authService !== undefined,
       });
     }

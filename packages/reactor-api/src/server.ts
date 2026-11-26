@@ -75,6 +75,7 @@ import {
   type SwitchboardRequestFn,
 } from "@renown/sdk/node";
 import { DEFAULT_RENOWN_URL } from "@powerhousedao/shared/constants";
+import { hostSessionOfKey } from "@powerhousedao/shared/clis/host-sessions";
 import { mountCredentialRoutes } from "./http/credential-routes.js";
 import { mountOAuthMetadata } from "./http/oauth-metadata.js";
 import { mountOAuthRoutes } from "./http/oauth-routes.js";
@@ -1281,15 +1282,16 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     basePath: settings.basePath,
     publicUrl,
   });
+  // The reactor sits behind switchboard-lb in every deployed topology, so the
+  // forwarded headers naming the public origin come from the balancer, not a caller.
+  const trustProxy = true;
   const httpRoutes = new HttpRouteService({
     httpAdapter,
     basePath: settings.basePath,
     authService,
     webhooks,
     publicUrl,
-    // The reactor sits behind switchboard-lb in every deployed topology, so the
-    // forwarded headers naming the public origin come from the balancer, not a caller.
-    trustProxy: true,
+    trustProxy,
   });
   // The endpoint family serves from a host scope rather than the adapter, so
   // one dispatch path covers package routes and webhooks alike.
@@ -1315,6 +1317,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
             binding.chainId,
             binding.sessionDid,
           ),
+        trustProxy,
       },
     );
   }
@@ -1341,6 +1344,12 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
             binding.chainId,
             binding.sessionDid,
           ),
+        // ADMIN_ONLY decides every document by its admins, and a host
+        // session administers nothing: a token for one could do nothing.
+        ...(policy === AuthorizationPolicy.ADMIN_ONLY
+          ? { sessionsUseless: () => HOST_SESSIONS_USELESS_UNDER_ADMIN_ONLY }
+          : {}),
+        trustProxy,
         logger: logger.child(["oauth"]),
       },
     );
@@ -1740,6 +1749,17 @@ async function _setupAPI(
     authorizationService,
     relationalDb,
     readableDocuments,
+    // Read from the marks whether host sessions are on now: a key a session
+    // held signed as one, whatever the host does since.
+    hostSessionOfKey: (key) => {
+      const mark = hostSessionOfKey(
+        path.dirname(authStateDir(options.auth ?? {})),
+        key,
+      );
+      return mark
+        ? { id: mark.id, scope: mark.scope, grant: mark.grant }
+        : undefined;
+    },
     inspection,
     dispose,
   };
@@ -2110,6 +2130,10 @@ function withScheme(origin: string): string {
   const trimmed = origin.replace(/\/+$/, "");
   return /^https?:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
+
+/** Why `device_authorization` refuses on an ADMIN_ONLY host. */
+const HOST_SESSIONS_USELESS_UNDER_ADMIN_ONLY =
+  "This host runs with AUTH_ENABLED and no document permissions (ADMIN_ONLY): only its admins read or write documents there, and a host session administers nothing, whoever approves it. A host session token could do nothing on it. Turn on document permissions (DOCUMENT_PERMISSIONS_ENABLED=true) to issue them.";
 
 /** Whether an origin is plain HTTP to a name other than this computer's. */
 function insecureOffLoopback(origin: string): boolean {

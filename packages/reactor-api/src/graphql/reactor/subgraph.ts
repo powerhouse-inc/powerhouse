@@ -48,7 +48,7 @@ import { runAsCaller } from "../../services/host-session-scope.js";
  * published, outside the subscriber's request, so a host session's scope is
  * entered here.
  */
-function asSubscriber<P, A>(
+export function asSubscriber<P, A>(
   filter: (payload: P, args: A, ctx: Context | undefined) => Promise<boolean>,
 ): (payload: P, args: A, ctx: Context | undefined) => Promise<boolean> {
   return (payload, args, ctx) =>

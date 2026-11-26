@@ -133,6 +133,21 @@ reactor subgraph its subscription filters. In the scope `isOperator` and the
 admin half of `isSupremeAdmin` answer false (OPEN's policy-wide access stays),
 and MCP's `unrestricted` and `operator` are false.
 
+Host work a session started acts as that session too. Every key a host
+approves is marked for good (`<dataDir>/.ph/host-sessions/keys/`, kept after
+the session ends or is withdrawn), and `API.hostSessionOfKey` reads the mark:
+a workflow run whose publish such a key signed reads indexes and attachments
+in that session's scope, and `executeSubgraph` gives a host session's user
+`admins: []`. So an admin's session cannot drive admin reads through a run.
+
+The door notes a session's last use in `<id>.used` beside its file, at most
+hourly, never by rewriting the session file. A session a Renown login
+approved through the console (`approvedThrough: "renown"`) is asked of Renown
+too, at most once per the verifier's answer TTL: withdrawn there, the
+verifier writes the tombstone (`by: "renown"`) and the token is refused.
+Renown unreachable leaves the record's answer; a pseudonym's session is the
+record's alone.
+
 A host session's document writes are signed by the session: the door readies
 a `RenownCryptoSigner` over the session's key (`app.name` the credential's
 label, `user` the session's user), and the API's `delegatedSigner` hands it to
@@ -164,7 +179,25 @@ token once. `revoke` (RFC 7009) and `sessions/<id>/withdraw` (a self-signed
 bearer) write the tombstone. Every route is public: the caller has no token
 yet. The metadata documents are mounted at the origin's root. The issuer is
 the configured public URL plus the base path, else a loopback request's own
-origin; without either the routes answer 503.
+origin, but not one a proxy forwarded (`Forwarded`, `X-Forwarded-*`: a proxy
+on this computer connects over loopback for callers anywhere); without either
+the routes answer 503, naming `PUBLIC_URL`.
+
+An approval reads its grant again after the credential check, so a Deny (or
+a Renown login taking the grant over) that lands meanwhile wins. A grant
+whose token nobody collected withdraws its session when it is dropped, and
+withdrawn sessions count toward no cap. Under ADMIN_ONLY (`AUTH_ENABLED`
+without document permissions) a session could read and write nothing, so
+`device_authorization` refuses with `invalid_scope`, saying so.
+
+Limits are charged per client (`src/http/client-limits.ts`): the socket's
+address, or with `trustProxy` the right-most `X-Forwarded-For` hop that is no
+loopback, private or link-local address. Counters drop ended windows; a full
+table refuses a client it holds no count for. Per client: 10 device starts
+and 10 unknown codes a minute, 20 pending grants, 3 Renown polls; in all,
+1,000 pending grants and 50 Renown polls. `device/renown` needs an Origin
+header naming the issuer's origin. The sweep of ended grants runs at most
+every 30 s.
 
 `AuthService.authenticate()` (the old Express middleware signature) is kept for
 backwards compatibility but is `@deprecated`. New code uses `authenticateRequest()`.

@@ -29,10 +29,22 @@ export function basePathOf(basePath: string): string {
 }
 
 /**
+ * Whether a proxy says it forwarded the request (`Forwarded`, any
+ * `X-Forwarded-*`). A proxy on this computer (Caddy, frpc: Portle's
+ * publishing) connects over loopback, and may name a loopback host, for a
+ * caller anywhere on the network.
+ */
+function forwarded(req: Pick<IncomingMessage, "headers">): boolean {
+  return Object.keys(req.headers).some(
+    (name) => name === "forwarded" || name.startsWith("x-forwarded-"),
+  );
+}
+
+/**
  * The issuer: the configured public URL plus the base path; without one, the
  * request's own origin, but only for a request made over loopback to a
- * loopback name (a host on a network names itself by its PUBLIC_URL).
- * Undefined when it cannot be told.
+ * loopback name, and through no proxy (a host on a network names itself by
+ * its PUBLIC_URL). Undefined when it cannot be told: {@link noIssuer} says why.
  */
 export function issuerOf(
   req: IncomingMessage,
@@ -42,6 +54,7 @@ export function issuerOf(
   if (o.publicOrigin) return `${o.publicOrigin.replace(/\/+$/, "")}${base}`;
   const host = req.headers.host;
   if (!host || !isLoopbackAddress(req.socket.remoteAddress)) return undefined;
+  if (forwarded(req)) return undefined;
   let url: URL;
   try {
     url = new URL(`http://${host}`);
@@ -51,6 +64,13 @@ export function issuerOf(
   if (!LOOPBACK_HOSTS.has(url.hostname)) return undefined;
   const encrypted = (req.socket as { encrypted?: boolean }).encrypted === true;
   return `${encrypted ? "https" : "http"}://${url.host}${base}`;
+}
+
+/** Why {@link issuerOf} named no issuer for `req`: both name PUBLIC_URL. */
+export function noIssuer(req: Pick<IncomingMessage, "headers">): string {
+  return forwarded(req)
+    ? "This request came through a proxy (Forwarded or X-Forwarded-* headers) and this host has no public URL: set PUBLIC_URL to the URL the proxy serves it at, to issue host session tokens there."
+    : "This host has no public URL (PUBLIC_URL): it issues host session tokens over loopback only.";
 }
 
 /** The OAuth endpoints under an issuer. */
@@ -127,14 +147,7 @@ export function mountOAuthMetadata(
       const issuer = issuerOf(req, o);
       const [status, body] = issuer
         ? [200, document(issuer)]
-        : [
-            404,
-            {
-              error: "not_found",
-              error_description:
-                "This host has no public URL (PUBLIC_URL): its OAuth metadata is served over loopback only.",
-            },
-          ];
+        : [404, { error: "not_found", error_description: noIssuer(req) }];
       const text = JSON.stringify(body);
       res.statusCode = status;
       res.setHeader("content-type", "application/json");

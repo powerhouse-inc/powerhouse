@@ -3,16 +3,23 @@
 // /mcp and attachments only, as the session acting for its user, and never
 // as an administrator. Real files in a temp data folder, the real credential
 // verifier, Renown out of reach.
+import type {
+  IReactorReadClient,
+  IReactorWriteClient,
+} from "@powerhousedao/reactor";
 import {
+  readCredentialWithdrawal,
   withdrawCredentialRecords,
   writeCredentialRecord,
 } from "@powerhousedao/shared/clis/credential-records";
 import {
   hostSessionFile,
+  hostSessionUsedFile,
   mintHostSessionToken,
   newHostSession,
   parseHostSessionToken,
   readHostSession,
+  readHostSessionLastUsed,
   writeHostSession,
   type HostSessionFile,
 } from "@powerhousedao/shared/clis/host-sessions";
@@ -22,13 +29,18 @@ import {
   type CredentialVerifier,
   type PowerhouseVerifiableCredential,
 } from "@renown/sdk/node";
-import { mkdtempSync, rmSync } from "node:fs";
+import { childLogger } from "document-model";
+import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { WebSocket, WebSocketServer } from "ws";
 import { ExpressHttpAdapter } from "../src/graphql/gateway/adapter-http-express.js";
 import { createAuthFetchMiddleware } from "../src/graphql/gateway/auth-middleware.js";
+import { asSubscriber } from "../src/graphql/reactor/subgraph.js";
+import { RequestClientBinder } from "../src/graphql/request-clients.js";
+import { WsCredentialMonitor } from "../src/graphql/ws-credential-monitor.js";
 import { HttpRouteService } from "../src/http/index.js";
 import { AuthService, type AuthContext } from "../src/services/auth.service.js";
 import {
@@ -169,10 +181,63 @@ describe("a host session token at the door", () => {
         },
       },
     });
-    // Its last use is noted.
-    expect(
-      readHostSession({ dataDir, id: session.id })?.lastUsedAt,
-    ).toBeDefined();
+    // Its last use is noted beside it, never by rewriting it.
+    expect(readHostSessionLastUsed({ dataDir, id: session.id })).toBeDefined();
+  });
+
+  it("notes a use without rewriting the session's own file", async () => {
+    const { session, token } = await approved();
+    const file = hostSessionFile(dataDir, session.id);
+    const before = statSync(file).mtimeMs;
+    const text = readFileSync(file, "utf8");
+    expect((await sessions.verify(token)).ok).toBe(true);
+    expect(statSync(file).mtimeMs).toBe(before);
+    expect(readFileSync(file, "utf8")).toBe(text);
+    expect(readHostSessionLastUsed({ dataDir, id: session.id })).toBeDefined();
+    // Without its note, a session reads as never used, and still opens.
+    rmSync(hostSessionUsedFile(dataDir, session.id));
+    const fresh = new HostSessions({ dataDir, verifier, watch: false });
+    expect((await fresh.verify(token)).ok).toBe(true);
+  });
+
+  it("refuses a session Renown approved once Renown withdraws it, and writes the tombstone", async () => {
+    const { session, token, credential, recordId } = await approved();
+    writeHostSession(dataDir, { ...session, approvedThrough: "renown" });
+    const atRenown = createCredentialVerifier({ dataDir, answerTtlMs: 0 });
+    const door = new HostSessions({
+      dataDir,
+      verifier: atRenown,
+      watch: false,
+    });
+    try {
+      vi.mocked(globalThis.fetch).mockImplementation(() =>
+        Promise.resolve(Response.json({ credential })),
+      );
+      expect((await door.verify(token)).ok).toBe(true);
+      // Renown serves it no more: withdrawn there.
+      vi.mocked(globalThis.fetch).mockImplementation(() =>
+        Promise.resolve(Response.json({}, { status: 404 })),
+      );
+      expect(await door.verify(token)).toEqual({
+        ok: false,
+        reason: "withdrawn",
+      });
+      expect(readCredentialWithdrawal({ dataDir, id: recordId })?.by).toBe(
+        "renown",
+      );
+      expect(readHostSession({ dataDir, id: session.id })).toBeUndefined();
+    } finally {
+      door.close();
+      atRenown.close();
+    }
+  });
+
+  it("asks Renown nothing for a session a pseudonym approved", async () => {
+    const { token } = await approved();
+    const fetched = vi.mocked(globalThis.fetch);
+    fetched.mockClear();
+    expect((await sessions.verify(token)).ok).toBe(true);
+    expect(fetched).not.toHaveBeenCalled();
   });
 
   it("is refused where host sessions are not taken", async () => {
@@ -328,6 +393,60 @@ describe("a host session token at the door", () => {
       timeout: 5000,
     });
   });
+
+  it("closes a real WebSocket its token opened when the session file goes", async () => {
+    const { session, token } = await approved();
+    const service = door();
+    // As the host wires it: a removed session invalidates its credential,
+    // and the monitor closes the sockets it admitted.
+    sessions.onGone((claim) =>
+      service.invalidateCredential(
+        claim.address,
+        claim.chainId,
+        claim.sessionDid,
+      ),
+    );
+    const monitor = new WsCredentialMonitor({
+      authService: service,
+      intervalMs: 0,
+      logger: childLogger(["test"]),
+    });
+    monitor.start();
+    const wss = new WebSocketServer({ port: 0, host: "127.0.0.1" });
+    await new Promise<void>((resolve) =>
+      wss.once("listening", () => resolve()),
+    );
+    try {
+      wss.on("connection", (socket, request) => {
+        void service
+          .authenticateWebSocketConnection({
+            authorization: request.headers.authorization,
+          })
+          .then((user) => {
+            if (user) monitor.track({ socket }, user);
+            socket.send("admitted");
+          });
+      });
+      const { port } = wss.address() as { port: number };
+      const client = new WebSocket(`ws://127.0.0.1:${port}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const closed = new Promise<{ code: number; reason: string }>((resolve) =>
+        client.on("close", (code, reason) =>
+          resolve({ code, reason: reason.toString() }),
+        ),
+      );
+      await new Promise<void>((resolve) =>
+        client.once("message", () => resolve()),
+      );
+      expect(monitor.size).toBe(1);
+      rmSync(hostSessionFile(dataDir, session.id));
+      expect(await closed).toMatchObject({ code: 4403 });
+    } finally {
+      monitor.dispose();
+      await new Promise<void>((resolve) => wss.close(() => resolve()));
+    }
+  });
 });
 
 describe("a host session administers nothing", () => {
@@ -384,6 +503,46 @@ describe("a host session administers nothing", () => {
       // OPEN's policy-wide access is nobody's administration: it stays.
       expect(service.isSupremeAdmin(PERSON.address)).toBe(true);
     });
+  });
+
+  it("runs a WebSocket operation's fields, and its subscription filters, in its scope", async () => {
+    const user = await userOf();
+    const seen: (string | undefined)[] = [];
+    const binder = new RequestClientBinder(
+      {} as IReactorReadClient,
+      {} as IReactorWriteClient,
+    );
+    const bound = binder.bindResolvers({
+      Subscription: {
+        ticks: {
+          subscribe: () => {
+            seen.push(currentHostSession()?.hostSession.id);
+            return { [Symbol.asyncIterator]: () => ({}) };
+          },
+        },
+      },
+    }) as {
+      Subscription: { ticks: { subscribe: (...args: unknown[]) => unknown } };
+    };
+    // What the WebSocket server calls, with the context of the connection.
+    bound.Subscription.ticks.subscribe(
+      undefined,
+      {},
+      { user },
+      {
+        operation: { operation: "subscription" },
+        parentType: { name: "Subscription" },
+        fieldName: "ticks",
+      },
+    );
+    // A filter runs when an event is published, outside any request.
+    expect(currentHostSession()).toBeUndefined();
+    const filtered = await asSubscriber(() => {
+      seen.push(currentHostSession()?.hostSession.id);
+      return Promise.resolve(true);
+    })({}, {}, { user } as never);
+    expect(filtered).toBe(true);
+    expect(seen).toEqual([user.hostSession.id, user.hostSession.id]);
   });
 
   it("runs a GraphQL request in its scope", async () => {

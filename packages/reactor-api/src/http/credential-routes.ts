@@ -20,6 +20,7 @@ import {
 } from "@renown/sdk/node";
 import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { clientAddress, perMinuteLimit } from "./client-limits.js";
 import { BodyTooLargeError, readBody, writeError } from "./node-response.js";
 
 /**
@@ -36,6 +37,8 @@ export interface CredentialRoutesOptions {
   hostDid: () => string | undefined;
   /** A record was withdrawn: close what holds it. */
   onWithdrawn: (binding: CredentialBinding) => void;
+  /** Whether a proxy the host trusts is in front: limits then go by `X-Forwarded-For`. */
+  trustProxy?: boolean;
   now?: () => number;
 }
 
@@ -52,15 +55,6 @@ function json(res: ServerResponse, status: number, body: unknown): void {
   res.setHeader("content-type", "application/json");
   res.setHeader("content-length", Buffer.byteLength(text));
   res.end(text);
-}
-
-/** The requesting address: the first forwarded for, else the socket's. */
-export function clientOf(req: IncomingMessage): string {
-  const forwarded = req.headers["x-forwarded-for"];
-  const first = (Array.isArray(forwarded) ? forwarded[0] : forwarded)
-    ?.split(",")[0]
-    ?.trim();
-  return first || req.socket.remoteAddress || "unknown";
 }
 
 async function bodyOf(req: IncomingMessage): Promise<unknown> {
@@ -86,7 +80,9 @@ export function mountCredentialRoutes(
 ): { dispose(): void } {
   const now = options.now ?? Date.now;
   const nonces = new Map<string, number>();
-  const rates = new Map<string, { start: number; count: number }>();
+  const limited = perMinuteLimit(ENROLMENTS_PER_MINUTE, now);
+  const clientOf = (req: IncomingMessage) =>
+    clientAddress(req, options.trustProxy ?? false);
 
   const issueNonce = (): { nonce: string; expiresAt: number } => {
     const at = now();
@@ -106,18 +102,6 @@ export function mountCredentialRoutes(
     const expires = nonces.get(nonce);
     nonces.delete(nonce);
     return expires !== undefined && expires > now();
-  };
-
-  const limited = (client: string): boolean => {
-    const at = now();
-    const rate = rates.get(client);
-    if (!rate || at - rate.start >= 60_000) {
-      if (rates.size >= MAX_NONCES) rates.clear();
-      rates.set(client, { start: at, count: 1 });
-      return false;
-    }
-    rate.count++;
-    return rate.count > ENROLMENTS_PER_MINUTE;
   };
 
   const verifiedRequest = async (

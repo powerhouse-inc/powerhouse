@@ -11,15 +11,20 @@ import {
   HOST_SESSION_SCOPE,
   hostSessionEnd,
   hostSessionFile,
+  hostSessionOfKey,
   hostSessionSecretHash,
   hostSessionTokenOf,
+  hostSessionUsedFile,
   isHostSessionToken,
   listHostSessions,
+  markHostSessionKey,
   matchHostSessionToken,
   mintHostSessionToken,
   newHostSession,
+  noteHostSessionUsed,
   parseHostSessionToken,
   readHostSession,
+  readHostSessionLastUsed,
   removeHostSession,
   shortHostSessionId,
   writeHostSession,
@@ -144,6 +149,49 @@ describe("host session files", () => {
     expect(listCredentialRecords({ dataDir })).toMatchObject([
       { source: "host-session", sessionDid: made.did, label: "billing" },
     ]);
+  });
+});
+
+describe("a host session's last use and key mark", () => {
+  it("notes the last use beside the session, and removes it with the session", () => {
+    const session = newHostSession({
+      label: "billing",
+      clientId: "curl",
+      grant: "device",
+    });
+    writeHostSession(dataDir, session);
+    expect(readHostSessionLastUsed({ dataDir, id: session.id })).toBe(
+      undefined,
+    );
+    const at = new Date("2026-11-27T10:00:00.000Z");
+    noteHostSessionUsed({ dataDir, id: session.id, at });
+    expect(readHostSessionLastUsed({ dataDir, id: session.id })).toBe(
+      at.toISOString(),
+    );
+    // Not a session file: listing skips it.
+    expect(listHostSessions({ dataDir }).map((s) => s.id)).toEqual([
+      session.id,
+    ]);
+    removeHostSession({ dataDir, id: session.id });
+    expect(fs.existsSync(hostSessionUsedFile(dataDir, session.id))).toBe(false);
+  });
+
+  it("marks a session's key for good, so it is known after the session goes", () => {
+    const session = newHostSession({
+      label: "billing",
+      clientId: "curl",
+      grant: "device",
+    });
+    expect(hostSessionOfKey(dataDir, session.did)).toBeUndefined();
+    markHostSessionKey(dataDir, session);
+    removeHostSession({ dataDir, id: session.id });
+    expect(hostSessionOfKey(dataDir, session.did)).toEqual({
+      did: session.did,
+      id: session.id,
+      scope: HOST_SESSION_SCOPE,
+      grant: "device",
+    });
+    expect(hostSessionOfKey(dataDir, "did:key:zOther")).toBeUndefined();
   });
 });
 

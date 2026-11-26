@@ -4,6 +4,7 @@ import {
   credentialRecordsDir,
   credentialWithdrawalFile,
   parsePkhIssuer,
+  withdrawCredentialRecords,
   writeCredentialWithdrawal,
   type CredentialRecord,
 } from "@powerhousedao/shared/clis/credential-records";
@@ -82,10 +83,22 @@ export interface CredentialVerifierOptions {
   onError?: (error: unknown) => void;
 }
 
+export interface CredentialCheckOptions {
+  /**
+   * Renown signed the credential (its console): a record here does not end
+   * the check. Renown is asked too, at most once per answer TTL; withdrawn
+   * there, the record is withdrawn here (its tombstone) and the credential
+   * refused. Renown unreachable, or holding no such credential, leaves the
+   * record's answer.
+   */
+  atRenown?: boolean;
+}
+
 export interface CredentialVerifier {
   check(
     claim: CredentialClaim,
     carried?: PowerhouseVerifiableCredential,
+    options?: CredentialCheckOptions,
   ): Promise<CredentialVerdict>;
   /** Called with the claim of each record found removed; returns an unsubscribe. */
   onWithdrawn(listener: (claim: CredentialClaim) => void): () => void;
@@ -379,12 +392,14 @@ export function createCredentialVerifier(
   // never registered, which is the common answer (a pseudonym's).
   const askRenown = async (
     claim: CredentialClaim,
+    expirationDate?: string,
   ): Promise<DelegationCredentialCheck> => {
     const base = {
       address: claim.address,
       chainId: claim.chainId,
       appDid: claim.sessionDid,
       timeoutMs,
+      ...(expirationDate ? { expirationDate } : {}),
     };
     const local = await options.inProcessRenown?.();
     if (local) {
@@ -401,10 +416,16 @@ export function createCredentialVerifier(
     );
   };
 
-  const ask = (key: string, claim: CredentialClaim) => {
+  const ask = (
+    key: string,
+    claim: CredentialClaim,
+    expirationDate?: string,
+  ) => {
     let pending = asking.get(key);
     if (!pending) {
-      pending = askRenown(claim).finally(() => asking.delete(key));
+      pending = askRenown(claim, expirationDate).finally(() =>
+        asking.delete(key),
+      );
       asking.set(key, pending);
     }
     return pending;
@@ -497,13 +518,62 @@ export function createCredentialVerifier(
     }
   };
 
+  // Renown's word on a credential that has a record here, kept for the answer
+  // TTL: whether it was withdrawn there. Apart from `answers`, which speak
+  // for credentials with no record.
+  const words = new Map<string, { withdrawn: boolean; at: number }>();
+
+  // Renown signed this credential, so it held it: asked with the credential's
+  // date, a credential Renown no longer serves reads as withdrawn (over REST
+  // too, which serves active ones only), unless that date has passed.
+  const withdrawnAtRenown = async (
+    claim: CredentialClaim,
+    expirationDate: string,
+  ) => {
+    const key = keyOf(claim.address, claim.chainId, claim.sessionDid);
+    const inProcess = (await options.inProcessRenown?.()) !== undefined;
+    const held = words.get(key);
+    if (!inProcess && held && ttl > 0 && now() - held.at < ttl) {
+      return held.withdrawn;
+    }
+    const check = await ask(`signed|${key}`, claim, expirationDate);
+    // Unreachable: the record's answer stands, and Renown is asked next time.
+    if (check.status === "unknown") return false;
+    const withdrawn = check.status === "revoked";
+    words.delete(key);
+    if (words.size >= MAX_ANSWERS) {
+      const oldest = words.keys().next().value;
+      if (oldest !== undefined) words.delete(oldest);
+    }
+    words.set(key, { withdrawn, at: now() });
+    return withdrawn;
+  };
+
   return {
-    async check(claim, carried) {
+    async check(claim, carried, o = {}) {
       if (carried) {
         const check = await checkCredentialFor(carried, claim, now());
         if (check !== "ok") return { ok: false, reason: check };
       }
-      return (await fromRecord(claim)) ?? fromRenown(claim, carried);
+      const recorded = await fromRecord(claim);
+      if (!recorded) return fromRenown(claim, carried);
+      if (
+        !recorded.ok ||
+        !o.atRenown ||
+        !(await withdrawnAtRenown(claim, recorded.expiresAt))
+      ) {
+        return recorded;
+      }
+      // Withdrawn at Renown: so it is here, from now on and after a restart.
+      const id = credentialRecordId(claim);
+      try {
+        withdrawCredentialRecords({ dataDir, ids: [id], by: "renown" });
+      } catch (error) {
+        report(error);
+      }
+      seen.delete(id);
+      notify(claim);
+      return { ok: false, reason: "withdrawn-at-renown" };
     },
 
     onWithdrawn(listener) {

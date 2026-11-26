@@ -56,8 +56,11 @@ export type CredentialRecord<C extends CredentialLike = CredentialLike> = {
   credential: C;
 };
 
-/** Who withdrew: the command, the host (a record removed by hand), a signed request. */
-export type CredentialWithdrawer = "command" | "host" | "request";
+/**
+ * Who withdrew: the command, the host (a record removed by hand), a signed
+ * request, or Renown (the host found it withdrawn there).
+ */
+export type CredentialWithdrawer = "command" | "host" | "request" | "renown";
 
 export type CredentialWithdrawal = {
   format: "ph-credential-withdrawal";

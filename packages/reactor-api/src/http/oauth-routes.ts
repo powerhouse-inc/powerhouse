@@ -16,11 +16,13 @@ import {
   HOST_SESSION_SCOPE,
   hostSessionEnd,
   listHostSessions,
+  markHostSessionKey,
   matchHostSessionToken,
   mintHostSessionToken,
   newHostSession,
   parseHostSessionToken,
   readHostSession,
+  readHostSessionLastUsed,
   removeHostSession,
   shortHostSessionId,
   writeHostSession,
@@ -43,7 +45,7 @@ import {
   describeHostSession,
   shortAddress,
 } from "../services/host-session-scope.js";
-import { clientOf } from "./credential-routes.js";
+import { clientAddress, perMinuteLimit } from "./client-limits.js";
 import { BodyTooLargeError, readBody } from "./node-response.js";
 import {
   DEVICE_GRANT_TTL_MS,
@@ -67,6 +69,7 @@ import {
 import {
   DEVICE_CODE_GRANT,
   issuerOf,
+  noIssuer,
   oauthEndpoints,
 } from "./oauth-metadata.js";
 import {
@@ -110,15 +113,31 @@ export interface OAuthRoutesOptions {
   maxDays?: number;
   /** A session was withdrawn: close what holds it. */
   onWithdrawn: (binding: CredentialBinding) => void;
+  /**
+   * Why a host session could do nothing on this host, when it could not
+   * (ADMIN_ONLY: every document decision is an admin's, and a session
+   * administers nothing). A grant is then refused, saying so.
+   */
+  sessionsUseless?: () => string | undefined;
+  /** Whether a proxy the host trusts is in front: limits then go by `X-Forwarded-For`. */
+  trustProxy?: boolean;
   logger?: ILogger;
   now?: () => number;
+  /** @internal The credential check of an approval; tests slow it down. */
+  checkCredential?: typeof checkCredentialFor;
 }
 
 const MAX_BODY_BYTES = 16 * 1024;
 const STARTS_PER_MINUTE = 10;
 const MISSES_PER_MINUTE = 10;
 const MAX_PENDING_GRANTS = 1000;
+const PENDING_PER_CLIENT = 20;
 const SESSIONS_PER_ADDRESS = 50;
+/** Expired grants and unapproved sessions are swept at most this often. */
+const SWEEP_EVERY_MS = 30_000;
+/** Renown console polls running at once, in all and per client. */
+const RENOWN_POLLS = 50;
+const RENOWN_POLLS_PER_CLIENT = 3;
 const SKEW_MS = 5 * 60_000;
 const DAY_MS = 24 * 60 * 60_000;
 const LABEL_MAX = 64;
@@ -127,22 +146,6 @@ const CLIENT_ID_MAX = 200;
 const POLL_MEMORY_MS = 2 * DEVICE_GRANT_TTL_MS;
 
 type Params = Record<string, unknown>;
-
-/** Counts per client and minute; true once a client is over `limit`. */
-function perMinute(limit: number, now: () => number) {
-  const counts = new Map<string, { start: number; count: number }>();
-  return (client: string): boolean => {
-    const at = now();
-    const held = counts.get(client);
-    if (!held || at - held.start >= 60_000) {
-      if (counts.size >= 10_000) counts.clear();
-      counts.set(client, { start: at, count: 1 });
-      return false;
-    }
-    held.count++;
-    return held.count > limit;
-  };
-}
 
 function send(
   res: ServerResponse,
@@ -231,13 +234,20 @@ export function mountOAuthRoutes(
     HOST_SESSION_MAX_DAYS,
     Math.max(1, Math.floor(options.maxDays ?? HOST_SESSION_MAX_DAYS)),
   );
-  const startsLimited = perMinute(STARTS_PER_MINUTE, now);
-  const missesLimited = perMinute(MISSES_PER_MINUTE, now);
+  const checkCredential = options.checkCredential ?? checkCredentialFor;
+  const startsLimited = perMinuteLimit(STARTS_PER_MINUTE, now);
+  const missesLimited = perMinuteLimit(MISSES_PER_MINUTE, now);
+  const clientOf = (req: IncomingMessage) =>
+    clientAddress(req, options.trustProxy ?? false);
   // When each grant was last polled, and its interval (slow_down raises it).
   const polls = new Map<string, { at: number; interval: number }>();
-  // The Renown console polls running, per grant.
-  const renownPolls = new Map<string, AbortController>();
+  // The Renown console polls running, per grant, and who started each.
+  const renownPolls = new Map<
+    string,
+    { abort: AbortController; client: string }
+  >();
   const renownOrigin = new URL(options.renownUrl).origin;
+  let sweptAt = Number.NEGATIVE_INFINITY;
 
   const issuerFor = (req: IncomingMessage, res: ServerResponse) => {
     const issuer = issuerOf(req, {
@@ -245,21 +255,23 @@ export function mountOAuthRoutes(
       basePath: options.basePath,
     });
     if (!issuer) {
-      oauthError(
-        res,
-        "temporarily_unavailable",
-        "This host has no public URL (PUBLIC_URL): it issues host session tokens over loopback only.",
-        503,
-      );
+      oauthError(res, "temporarily_unavailable", noIssuer(req), 503);
     }
     return issuer;
   };
 
+  const stopRenownPoll = (grantId: string) => {
+    renownPolls.get(grantId)?.abort.abort();
+    renownPolls.delete(grantId);
+  };
+
   // ---------------------------------------------------------- the files
 
-  /** Grants and unapproved sessions past their time go. */
+  /** Grants and unapproved sessions past their time go; at most every 30 s. */
   const sweep = () => {
     const at = now();
+    if (at - sweptAt < SWEEP_EVERY_MS) return;
+    sweptAt = at;
     for (const grant of listDeviceGrants(dataDir)) {
       // Kept a while past its end, so a polling client hears `expired_token`.
       if (Date.parse(grant.expiresAt) + DEVICE_GRANT_TTL_MS <= at) {
@@ -279,15 +291,21 @@ export function mountOAuthRoutes(
     }
   };
 
-  /** A grant that will never issue goes, with its session if nobody approved it. */
+  /**
+   * A grant that will never issue goes, with its session: removed if nobody
+   * approved it, withdrawn if its token was never collected (an approved
+   * grant still on file was never taken by a poll).
+   */
   const dropGrant = (grant: DeviceGrant) => {
     removeDeviceGrant(dataDir, grant.id);
     polls.delete(grant.id);
-    renownPolls.get(grant.id)?.abort();
-    renownPolls.delete(grant.id);
+    stopRenownPoll(grant.id);
     const session = readHostSession({ dataDir, id: grant.sessionId });
-    if (session && !session.credential) {
+    if (!session) return;
+    if (!session.credential) {
       removeHostSession({ dataDir, id: session.id });
+    } else if (session.tokens.length === 0) {
+      withdraw(session, "host");
     }
   };
 
@@ -302,13 +320,34 @@ export function mountOAuthRoutes(
       },
     });
 
+  /** Whether the session's credential was withdrawn here (its tombstone). */
+  const tombstoned = (session: HostSessionFile) => {
+    const binding = session.credential
+      ? credentialBindingOf(session.credential)
+      : undefined;
+    if (!binding || !session.credential) return false;
+    const withdrawal = readCredentialWithdrawal({
+      dataDir,
+      id: credentialRecordId(binding),
+    });
+    return (
+      withdrawal !== undefined &&
+      !(
+        Date.parse(session.credential.issuanceDate) >
+        Date.parse(withdrawal.withdrawnAt)
+      )
+    );
+  };
+
+  /** The address's approved sessions that have not ended nor been withdrawn. */
   const liveSessionsOf = (address: string) => {
     const lower = address.toLowerCase();
     const at = now();
     return listHostSessions({ dataDir }).filter(
       (session) =>
         session.address?.toLowerCase() === lower &&
-        (hostSessionEnd(session) ?? 0) > at,
+        (hostSessionEnd(session) ?? 0) > at &&
+        !tombstoned(session),
     );
   };
 
@@ -358,31 +397,39 @@ export function mountOAuthRoutes(
    * grant pending, the credential for the grant's key with its dates, no
    * longer than asked, the asked label, no tombstone, the per-address cap.
    */
-  const approve = async (
-    grantId: string,
-    credential: PowerhouseVerifiableCredential,
-  ): Promise<Approval> => {
-    const grant = readDeviceGrant(dataDir, grantId);
-    const at = now();
-    if (!grant) return refused("invalid_grant", "No such grant.");
+  /** Why `grant` takes no approval now; undefined when it does. */
+  const notPending = (grant: DeviceGrant, at: number): Approval | undefined => {
     if (Date.parse(grant.expiresAt) <= at) {
       return refused("expired_token", "The code has expired.");
     }
     if (grant.status !== "pending") {
       return refused("invalid_grant", `The code was already ${grant.status}.`);
     }
+    return undefined;
+  };
+
+  const approve = async (
+    grantId: string,
+    credential: PowerhouseVerifiableCredential,
+    through?: "renown",
+  ): Promise<Approval> => {
+    const read = readDeviceGrant(dataDir, grantId);
+    const at = now();
+    if (!read) return refused("invalid_grant", "No such grant.");
+    const early = notPending(read, at);
+    if (early) return early;
     const binding = credentialBindingOf(credential as CredentialLike);
     const issuer = parsePkhIssuer(credential.issuer.id);
     if (!binding || !issuer) {
       return refused("invalid_request", "The credential names no issuer.");
     }
-    const check = await checkCredentialFor(
+    const check = await checkCredential(
       credential,
       {
         address: binding.address,
         chainId: binding.chainId,
         networkId: issuer.networkId,
-        sessionDid: grant.sessionDid,
+        sessionDid: read.sessionDid,
       },
       at,
     );
@@ -392,6 +439,18 @@ export function mountOAuthRoutes(
         check === "expired"
           ? "The credential has expired."
           : "The credential does not verify for this grant's session key.",
+      );
+    }
+    // Read again after the wait: a Deny, another approval or a Renown login
+    // that took the grant over in the meantime wins over this one.
+    const grant = readDeviceGrant(dataDir, grantId);
+    if (!grant) return refused("invalid_grant", "No such grant.");
+    const late = notPending(grant, now());
+    if (late) return late;
+    if (grant.renownSession !== read.renownSession) {
+      return refused(
+        "invalid_grant",
+        "The code was taken to Renown's console meanwhile: approve it there.",
       );
     }
     const end = Date.parse(credential.expirationDate ?? "");
@@ -443,7 +502,10 @@ export function mountOAuthRoutes(
       expiresAt: new Date(
         Math.min(end, at + grant.days * DAY_MS),
       ).toISOString(),
+      ...(through ? { approvedThrough: through } : {}),
     };
+    // Before the key can sign: what it signs is a host session's for good.
+    markHostSessionKey(dataDir, approved);
     try {
       writeCredentialRecord({
         dataDir,
@@ -463,6 +525,7 @@ export function mountOAuthRoutes(
       status: "approved",
       address: approved.address,
     });
+    if (through !== "renown") stopRenownPoll(grant.id);
     logger.info(
       "@session: approved by its user for @days days (client @client)",
       describe(approved),
@@ -522,15 +585,17 @@ export function mountOAuthRoutes(
 
   /**
    * A consent action: POST only, with a nonce of the grant's page (or of
-   * `device/pending`). The page's own buttons (`sameOrigin`) are also taken
-   * only from this host's pages: Origin, and Sec-Fetch-Site when sent. An
-   * approval carries the person's credential for the session's key, which no
-   * other site can forge, so a client elsewhere (Connect) may post it.
+   * `device/pending`). The page's own buttons are also taken only from this
+   * host's pages (`origin`): Origin, and Sec-Fetch-Site when sent; the Renown
+   * button, which starts a poll and hands out a console session, needs the
+   * Origin header too (`required`). An approval carries the person's
+   * credential for the session's key, which no other site can forge, so a
+   * client elsewhere (Connect) may post it (`any`).
    */
   const consentAction = async (
     req: IncomingMessage,
     res: ServerResponse,
-    sameOrigin: boolean,
+    from: "any" | "own-page" | "own-page-required",
   ): Promise<
     { grant: DeviceGrant; params: Params; issuer: string } | undefined
   > => {
@@ -540,8 +605,9 @@ export function mountOAuthRoutes(
     const origin = req.headers.origin;
     const site = req.headers["sec-fetch-site"];
     if (
-      sameOrigin &&
-      ((origin !== undefined && origin !== new URL(issuer).origin) ||
+      from !== "any" &&
+      ((origin === undefined && from === "own-page-required") ||
+        (origin !== undefined && origin !== new URL(issuer).origin) ||
         (site !== undefined && site !== "same-origin" && site !== "none"))
     ) {
       if (page) {
@@ -594,6 +660,11 @@ export function mountOAuthRoutes(
   ) => {
     const issuer = issuerFor(req, res);
     if (!issuer) return;
+    const useless = options.sessionsUseless?.();
+    if (useless) {
+      oauthError(res, "invalid_scope", useless);
+      return;
+    }
     const client = clientOf(req);
     if (startsLimited(client)) {
       oauthError(
@@ -648,6 +719,18 @@ export function mountOAuthRoutes(
         res,
         "slow_down",
         "This host holds too many pending grants: try again later.",
+        429,
+      );
+      return;
+    }
+    if (
+      waiting.filter((grant) => grant.requestedFrom === client).length >=
+      PENDING_PER_CLIENT
+    ) {
+      oauthError(
+        res,
+        "slow_down",
+        `This address holds ${PENDING_PER_CLIENT} pending grants: approve, deny or let them expire first.`,
         429,
       );
       return;
@@ -885,7 +968,7 @@ export function mountOAuthRoutes(
   };
 
   const approveRoute = async (req: IncomingMessage, res: ServerResponse) => {
-    const action = await consentAction(req, res, false);
+    const action = await consentAction(req, res, "any");
     if (!action) return;
     let value: unknown = action.params.credential;
     if (typeof value === "string") {
@@ -914,12 +997,12 @@ export function mountOAuthRoutes(
   };
 
   const denyRoute = async (req: IncomingMessage, res: ServerResponse) => {
-    const action = await consentAction(req, res, true);
+    const action = await consentAction(req, res, "own-page");
     if (!action) return;
     const { grant } = action;
     if (grant.status === "pending") {
       writeDeviceGrant(dataDir, { ...grant, status: "denied" });
-      renownPolls.get(grant.id)?.abort();
+      stopRenownPoll(grant.id);
       logger.info(
         'Host session @id "@label": device grant denied',
         shortHostSessionId(grant.sessionId),
@@ -942,18 +1025,34 @@ export function mountOAuthRoutes(
   };
 
   const renownRoute = async (req: IncomingMessage, res: ServerResponse) => {
-    const action = await consentAction(req, res, true);
+    const action = await consentAction(req, res, "own-page-required");
     if (!action) return;
     const { grant, issuer } = action;
     if (grant.status !== "pending") {
       oauthError(res, "invalid_grant", `The code was already ${grant.status}.`);
       return;
     }
+    // A new poll for this grant replaces its old one; others count.
+    const client = clientOf(req);
+    const others = [...renownPolls].filter(([id]) => id !== grant.id);
+    if (
+      others.length >= RENOWN_POLLS ||
+      others.filter(([, poll]) => poll.client === client).length >=
+        RENOWN_POLLS_PER_CLIENT
+    ) {
+      oauthError(
+        res,
+        "slow_down",
+        "Too many Renown approvals are waiting: finish one, or wait for it to expire.",
+        429,
+      );
+      return;
+    }
     const consoleSession = randomUUID();
     writeDeviceGrant(dataDir, { ...grant, renownSession: consoleSession });
-    renownPolls.get(grant.id)?.abort();
+    stopRenownPoll(grant.id);
     const abort = new AbortController();
-    renownPolls.set(grant.id, abort);
+    renownPolls.set(grant.id, { abort, client });
     void (async () => {
       try {
         const result = await pollConsoleCredential({
@@ -964,7 +1063,7 @@ export function mountOAuthRoutes(
           signal: abort.signal,
         });
         if (result.status !== "ready") return;
-        const approval = await approve(grant.id, result.credential);
+        const approval = await approve(grant.id, result.credential, "renown");
         if (!approval.ok) {
           const held = readDeviceGrant(dataDir, grant.id);
           if (held?.status === "pending") {
@@ -986,7 +1085,9 @@ export function mountOAuthRoutes(
           );
         }
       } finally {
-        if (renownPolls.get(grant.id) === abort) renownPolls.delete(grant.id);
+        if (renownPolls.get(grant.id)?.abort === abort) {
+          renownPolls.delete(grant.id);
+        }
       }
     })();
     const location = consoleApprovalUrl({
@@ -1009,7 +1110,7 @@ export function mountOAuthRoutes(
     created_at: session.createdAt,
     approved_at: session.approvedAt ?? null,
     expires_at: session.expiresAt ?? null,
-    last_used_at: session.lastUsedAt ?? null,
+    last_used_at: readHostSessionLastUsed({ dataDir, id: session.id }) ?? null,
   });
 
   const callerOf = (
@@ -1118,7 +1219,7 @@ export function mountOAuthRoutes(
   return {
     dispose() {
       for (const handle of handles) handle.dispose();
-      for (const abort of renownPolls.values()) abort.abort();
+      for (const poll of renownPolls.values()) poll.abort.abort();
       renownPolls.clear();
     },
   };

@@ -10,7 +10,10 @@ import type {
   AttachmentReferenceIndexBuildResult,
 } from "@powerhousedao/reactor-attachments";
 import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
-import type { IRelationalDb } from "@powerhousedao/shared/processors";
+import type {
+  IRelationalDb,
+  RouteHostSession,
+} from "@powerhousedao/shared/processors";
 import type { IReactorInspectionSource } from "./graphql/inspection/source.js";
 import type { HttpRouteService, IHttpScope } from "./http/index.js";
 import type { IHttpAdapter } from "./graphql/gateway/types.js";
@@ -83,6 +86,13 @@ export type API = {
    * and stopped with it.
    */
   readableDocuments: ReadableDocumentsLike;
+  /**
+   * The host session `key` (a did:key) was the key of, when this host
+   * approved one for it, also after the session ended: what it signed acts in
+   * that session's scope, which administers nothing (a workflow it published
+   * runs so). Undefined for any other key.
+   */
+  hostSessionOfKey?: (key: string) => RouteHostSession | undefined;
   /** Present when the host serves inspection; `facts` takes late-bound facts. */
   inspection?: IReactorInspectionSource;
   /**

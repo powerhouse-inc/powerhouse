@@ -1427,6 +1427,10 @@ async function initServer(
       // The manager that serves this reactor's subgraphs: a piece's index read
       // runs through it in process, as the run's user.
       indexQueries: api.graphqlManager,
+      // A run a host session published acts as that session: no admin's.
+      ...(api.hostSessionOfKey
+        ? { hostSessionOfKey: api.hostSessionOfKey }
+        : {}),
       // The manager that already loads this reactor's packages: the project it
       // runs in is one of them, so its own pieces arrive with the rest.
       pieces: api.packageManager,

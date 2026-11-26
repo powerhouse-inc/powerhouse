@@ -15,6 +15,7 @@ import {
   AuthorizationPolicy,
   ForbiddenError,
   callerSubject,
+  runAsCaller,
   createCanonicalDocumentIdResolver,
   type CanonicalDocumentId,
   type Context,
@@ -37,6 +38,7 @@ import type {
 import type {
   IHttpScope,
   IWebhookScope,
+  RouteHostSession,
   ScopedRouteHandle,
 } from "@powerhousedao/shared/processors";
 import type {
@@ -289,6 +291,9 @@ export interface ComposeWorkflowRuntimeDeps {
    * process, as the run's user: the GraphQL manager that serves the same
    * subgraphs over HTTP. Absent, pieces get the method refused by name. */
   indexQueries?: Pick<GraphQLManager, "executeSubgraph">;
+  /** The host session a run user's key was, if any (`api.hostSessionOfKey`):
+   * such a run acts in that session's scope, which administers nothing. */
+  hostSessionOfKey?: HostSessionOfKey;
   /** Where the pieces installed packages ship come from; absent leaves the
    * runtime with none and only published bundles resolvable. */
   pieces?: IPackagePieceSource;
@@ -452,55 +457,83 @@ export function reactorAccessOf(
  * with nothing, which a piece cannot tell from "nothing exists", and an upsert
  * would then create a duplicate of everything: a granter who left ADMINS must
  * stop a run, not double its documents.
+ *
+ * A run a host session published acts as that session, not as its user: the
+ * read runs in the session's scope and its request names the session, so it
+ * administers nothing, as the session's own requests do not.
  */
 export function indexQueryFor(
   manager: Pick<GraphQLManager, "executeSubgraph">,
   clientModule: InProcessReactorClientModule | undefined,
   authorization?: Pick<IAuthorizationService, "config" | "isSupremeAdmin">,
+  hostSessionOfKey?: HostSessionOfKey,
 ): NonNullable<WorkflowEngine.WorkflowRuntimeHostDeps["queryIndex"]> {
   const signer = clientModule?.signer;
   const host = signer?.user as Partial<UserActionSigner> | undefined;
   const hostKey = signer?.app?.key ?? "";
   const chainId = host?.chainId ?? 1;
   const networkId = host?.networkId ?? "eip155";
-  return async (request, runUser) => {
+  return (request, runUser) => {
     const user = runUser
       ? {
           address: runUser.address,
           chainId,
           networkId,
           appKey: runUser.subject.key ?? hostKey,
+          ...runUserSession(runUser, hostSessionOfKey),
         }
       : host?.address
         ? { address: host.address, chainId, networkId, appKey: hostKey }
         : undefined;
-    if (
-      authorization?.config.policy === AuthorizationPolicy.ADMIN_ONLY &&
-      !authorization.isSupremeAdmin(user?.address)
-    ) {
-      return {
-        data: null,
-        errors: [
-          {
-            message: user
-              ? `Forbidden: ${user.address} is not an admin of this host, so it reads no index`
-              : "Forbidden: this run has no person behind it, so it reads no index",
-          },
-        ],
-      };
-    }
-    const result = await manager.executeSubgraph(request.subgraph, {
-      query: request.query,
-      variables: request.variables,
+    return runAsCaller(
       user,
-    });
-    return {
-      data: (result.data as Record<string, unknown> | null | undefined) ?? null,
-      ...(result.errors
-        ? { errors: result.errors.map((e) => ({ message: e.message })) }
-        : {}),
-    };
+      async () => {
+        if (
+          authorization?.config.policy === AuthorizationPolicy.ADMIN_ONLY &&
+          !authorization.isSupremeAdmin(user?.address)
+        ) {
+          return {
+            data: null,
+            errors: [
+              {
+                message: !user
+                  ? "Forbidden: this run has no person behind it, so it reads no index"
+                  : "via" in user
+                    ? `Forbidden: this run acts as a host session of ${user.address}, which administers nothing, so it reads no index`
+                    : `Forbidden: ${user.address} is not an admin of this host, so it reads no index`,
+              },
+            ],
+          };
+        }
+        const result = await manager.executeSubgraph(request.subgraph, {
+          query: request.query,
+          variables: request.variables,
+          user,
+        });
+        return {
+          data:
+            (result.data as Record<string, unknown> | null | undefined) ?? null,
+          ...(result.errors
+            ? { errors: result.errors.map((e) => ({ message: e.message })) }
+            : {}),
+        };
+      },
+      "workflow index read",
+    );
   };
+}
+
+/** Resolves the host session a key was, if it was one (`api.hostSessionOfKey`). */
+export type HostSessionOfKey = (key: string) => RouteHostSession | undefined;
+
+/** `via` and `hostSession` for a run user whose key was a host session's. */
+function runUserSession(
+  runUser: { subject: { key?: string } },
+  hostSessionOfKey: HostSessionOfKey | undefined,
+): { via: "host-session"; hostSession: RouteHostSession } | object {
+  const key = runUser.subject.key;
+  const hostSession = key ? hostSessionOfKey?.(key) : undefined;
+  return hostSession ? { via: "host-session" as const, hostSession } : {};
 }
 
 /** Whom a run's created documents also grant: the host, as §8 grants it. */
@@ -532,10 +565,12 @@ const REFERENCE_INDEX_RETRY_MS = 250;
 /** A step reads an attachment the way the download route serves one: when the
  * run's user may read a document that references it. The candidates are the
  * documents the run was handed; the reference index can trail the operation
- * that fired the trigger, so a denial is retried briefly. */
+ * that fired the trigger, so a denial is retried briefly. A run a host session
+ * published decides in that session's scope: no admin's read for it. */
 export function attachmentReadPolicy(
   access: IAttachmentAccessService | undefined,
   retryMs = REFERENCE_INDEX_RETRY_MS,
+  hostSessionOfKey?: HostSessionOfKey,
 ): (request: AttachmentReadRequest) => Promise<boolean> {
   return async (request) => {
     try {
@@ -544,26 +579,46 @@ export function attachmentReadPolicy(
       return false;
     }
     if (!access || request.documentIds.length === 0) return false;
-    const subject = request.runUser?.subject;
+    const runUser = request.runUser;
+    const subject = runUser?.subject;
     const caller = {
       ...(subject?.address ? { userAddress: subject.address } : {}),
       ...(subject?.key ? { appKey: subject.key } : {}),
     };
-    for (let attempt = 0; attempt <= REFERENCE_INDEX_RETRIES; attempt++) {
-      for (const documentId of request.documentIds) {
-        const result = await access.canReadAttachment({
-          documentId,
-          attachmentRef: request.ref,
-          ...caller,
-        });
-        if (result.kind === "allowed") return true;
-      }
-      if (attempt < REFERENCE_INDEX_RETRIES) {
-        await new Promise((resolve) => setTimeout(resolve, retryMs));
-      }
-    }
-    return false;
+    const session = runUser
+      ? {
+          address: runUser.address,
+          ...runUserSession(runUser, hostSessionOfKey),
+        }
+      : undefined;
+    return runAsCaller(
+      session,
+      () => readsAttachment(access, request, caller, retryMs),
+      "workflow attachment read",
+    );
   };
+}
+
+async function readsAttachment(
+  access: IAttachmentAccessService,
+  request: AttachmentReadRequest,
+  caller: { userAddress?: string; appKey?: string },
+  retryMs: number,
+): Promise<boolean> {
+  for (let attempt = 0; attempt <= REFERENCE_INDEX_RETRIES; attempt++) {
+    for (const documentId of request.documentIds) {
+      const result = await access.canReadAttachment({
+        documentId,
+        attachmentRef: request.ref,
+        ...caller,
+      });
+      if (result.kind === "allowed") return true;
+    }
+    if (attempt < REFERENCE_INDEX_RETRIES) {
+      await new Promise((resolve) => setTimeout(resolve, retryMs));
+    }
+  }
+  return false;
 }
 
 // The trigger read model lives exactly as long as its runtime: tearDown takes
@@ -761,6 +816,7 @@ async function composeClaimed(
             deps.indexQueries,
             deps.clientModule,
             deps.authorizationService,
+            deps.hostSessionOfKey,
           ),
         }
       : {}),
@@ -774,7 +830,11 @@ async function composeClaimed(
     webhooks: deps.webhooks,
     waitpointBaseUrl: deps.http ? waitpointBaseUrlOf(deps.http) : undefined,
     attachments: deps.attachments,
-    canReadAttachmentRef: attachmentReadPolicy(deps.attachmentAccess),
+    canReadAttachmentRef: attachmentReadPolicy(
+      deps.attachmentAccess,
+      undefined,
+      deps.hostSessionOfKey,
+    ),
     logger: deps.logger,
     ...(deps.reactorThreads ? { reactorThreads: deps.reactorThreads } : {}),
     ...(deps.telemetry ? { telemetry: deps.telemetry } : {}),

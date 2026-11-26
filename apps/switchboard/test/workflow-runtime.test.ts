@@ -13,6 +13,7 @@ import {
 import {
   AuthorizationPolicy,
   BaseSubgraph,
+  currentHostSession,
   type CanonicalDocumentId,
   type GraphQLManager,
   type PackagePieceEntry,
@@ -31,6 +32,7 @@ import type { ILogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { createAuthorizationService } from "../../../packages/reactor-api/src/services/authorization.service.js";
 import { ReadableDocumentsProjection } from "../../../packages/reactor-api/src/services/readable-documents.js";
 import type { startSwitchboard } from "../src/server.mjs";
 import { bootSwitchboard } from "./boot-helpers.js";
@@ -240,6 +242,48 @@ describe("composeWorkflowRuntime", () => {
         runUser,
       }),
     ).toBe(false);
+  });
+
+  it("decides a step's read for a run a host session published in that session's scope", async () => {
+    const ref = `attachment://v1:${"c".repeat(64)}`;
+    const session = {
+      id: "a".repeat(32),
+      scope: "documents:write",
+      grant: "device",
+    };
+    // Under ADMIN_ONLY, as the access service decides: the admin reads.
+    const authorization = createAuthorizationService({
+      admins: ["0xabc"],
+      defaultProtection: false,
+      policy: AuthorizationPolicy.ADMIN_ONLY,
+    });
+    const policy = attachmentReadPolicy(
+      {
+        canReadAttachment: async (request) =>
+          (await authorization.canRead(
+            request.documentId as CanonicalDocumentId,
+            request.userAddress,
+          ))
+            ? {
+                kind: "allowed",
+                documentId: request.documentId as CanonicalDocumentId,
+                ref: request.attachmentRef as AttachmentRef,
+              }
+            : { kind: "denied" },
+        admitCaller: () => Promise.resolve({ kind: "admitted" }),
+      },
+      1,
+      (key) => (key === "did:key:zSession" ? session : undefined),
+    );
+    const read = (key: string) =>
+      policy({
+        workflowId: "wf-1",
+        ref,
+        documentIds: ["doc-a"],
+        runUser: { address: "0xabc", subject: { address: "0xabc", key } },
+      });
+    expect(await read("did:key:zOwn")).toBe(true);
+    expect(await read("did:key:zSession")).toBe(false);
   });
 
   it("waits for the reference index to catch up with the triggering operation", async () => {
@@ -1078,6 +1122,82 @@ describe("a piece's index query through the host", () => {
       const m = manager();
       await indexQueryFor(m, module, adminOnly(["0xrun"]))(request, runUser);
       expect(m.executeSubgraph).toHaveBeenCalledOnce();
+    });
+
+    // An admin's host session signs a workflow's publish: its runs act as
+    // that session, which administers nothing, not as the admin.
+    const SESSION = {
+      id: "3f9c1a2b".padEnd(32, "0"),
+      scope: "documents:write",
+      grant: "device",
+    };
+    const sessionOfKey = (key: string) =>
+      key === "did:key:zSession" ? SESSION : undefined;
+    const sessionRun = {
+      address: "0xrun",
+      subject: { address: "0xrun", key: "did:key:zSession" },
+    };
+
+    it("refuses an admin-only index read to a run an admin's host session published", async () => {
+      const m = manager();
+      const authorization = createAuthorizationService({
+        admins: ["0xrun"],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.ADMIN_ONLY,
+      });
+      const result = await indexQueryFor(
+        m,
+        module,
+        authorization,
+        sessionOfKey,
+      )(request, sessionRun);
+      expect(m.executeSubgraph).not.toHaveBeenCalled();
+      expect(result.errors?.[0].message).toMatch(
+        /acts as a host session of 0xrun, which administers nothing/,
+      );
+      // The admin's own runs still read.
+      await indexQueryFor(
+        m,
+        module,
+        authorization,
+        sessionOfKey,
+      )(request, runUser);
+      expect(m.executeSubgraph).toHaveBeenCalledOnce();
+    });
+
+    it("asks as the session, in its scope, where the policy lets the index decide", async () => {
+      const inScope: unknown[] = [];
+      const executeSubgraph = vi.fn(() => {
+        inScope.push(currentHostSession()?.hostSession.id);
+        return Promise.resolve({ data: {} });
+      });
+      await indexQueryFor(
+        { executeSubgraph },
+        module,
+        {
+          ...adminOnly([]),
+          config: {
+            admins: ["0xrun"],
+            defaultProtection: false,
+            policy: AuthorizationPolicy.OPEN,
+          },
+        },
+        sessionOfKey,
+      )(request, sessionRun);
+      expect(inScope).toEqual([SESSION.id]);
+      expect(
+        (
+          executeSubgraph.mock.calls[0] as unknown as [
+            string,
+            { user: unknown },
+          ]
+        )[1].user,
+      ).toMatchObject({
+        address: "0xrun",
+        appKey: "did:key:zSession",
+        via: "host-session",
+        hostSession: SESSION,
+      });
     });
 
     it.each([

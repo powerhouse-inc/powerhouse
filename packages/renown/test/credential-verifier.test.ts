@@ -417,6 +417,67 @@ describe("createCredentialVerifier: Renown", () => {
   });
 });
 
+describe("createCredentialVerifier: a recorded credential Renown signed", () => {
+  it("is refused, and withdrawn here, once Renown no longer serves it", async () => {
+    const credential = await issue();
+    const { id } = writeCredentialRecord({
+      dataDir,
+      credential,
+      source: "host-session",
+    });
+    fetchSpy.mockImplementation(reply(200, { credential }));
+    const v = verifier({ answerTtlMs: 0, watch: false });
+    const heard: string[] = [];
+    v.onWithdrawn((c) => heard.push(c.sessionDid));
+    expect(await v.check(claim(), undefined, { atRenown: true })).toMatchObject(
+      { ok: true, via: "record" },
+    );
+    // Withdrawn at Renown: REST serves active credentials only.
+    fetchSpy.mockImplementation(reply(404, {}));
+    expect(await v.check(claim(), undefined, { atRenown: true })).toEqual({
+      ok: false,
+      reason: "withdrawn-at-renown",
+    });
+    expect(readCredentialWithdrawal({ dataDir, id })?.by).toBe("renown");
+    expect(fs.existsSync(credentialRecordFile(dataDir, id))).toBe(false);
+    expect(heard).toEqual([SESSION]);
+    // From now on, and without Renown, it is withdrawn here.
+    fetchSpy.mockRejectedValue(new TypeError("fetch failed"));
+    expect(await v.check(claim())).toEqual({
+      ok: false,
+      reason: "withdrawn-here",
+    });
+  });
+
+  it("asks Renown once per TTL, and keeps the record's answer while Renown cannot be reached", async () => {
+    const credential = await issue();
+    writeCredentialRecord({ dataDir, credential, source: "host-session" });
+    fetchSpy.mockImplementation(reply(200, { credential }));
+    const v = verifier();
+    for (let i = 0; i < 3; i++) {
+      expect((await v.check(claim(), undefined, { atRenown: true })).ok).toBe(
+        true,
+      );
+    }
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    fetchSpy.mockRejectedValue(new TypeError("fetch failed"));
+    expect(
+      await verifier().check(claim(), undefined, { atRenown: true }),
+    ).toMatchObject({ ok: true, via: "record" });
+  });
+
+  it("is the record's alone without `atRenown`: a pseudonym's is never asked", async () => {
+    writeCredentialRecord({
+      dataDir,
+      credential: await issue(),
+      source: "host-session",
+    });
+    fetchSpy.mockImplementation(reply(404, {}));
+    expect((await verifier().check(claim())).ok).toBe(true);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
 describe("credential record requests", () => {
   it("are signed by the address and bound to their chain", async () => {
     const request: CredentialRecordRequest = {
