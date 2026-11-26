@@ -1756,8 +1756,9 @@ export async function moveRelationship(
  * Deletes a document. With `signedDelete` (the caller's own signed
  * DELETE_DOCUMENT of it) the host completes that delete as its own work,
  * asking `mayDelete` for each document it removes; see
- * `ISignedDeleteWriteClient.deleteSigned`. Without one the host builds and
- * signs the delete itself, as it always has.
+ * `ISignedDeleteWriteClient.deleteSigned`. Without one the host is asked to
+ * build the delete, which the caller writes refuse unless the request
+ * delegated a signer to the host.
  */
 export async function deleteDocument(
   clients: RequestClients,

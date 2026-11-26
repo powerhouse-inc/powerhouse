@@ -1,5 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type {
+  IReactorClient,
+  IReactorWriteClient,
+  ISyncManager,
+} from "@powerhousedao/reactor";
+import {
+  unsignedWriteMessage,
+  type UnsignedWriteCaller,
+} from "@powerhousedao/shared/clis/unsigned-writes";
 import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import {
   type CodegenStatusRegistry,
@@ -12,10 +20,17 @@ import {
   type McpAccess,
 } from "./host-access.js";
 import { SubjectScopedClient } from "./subject-client.js";
+import { ReactorToolError } from "./tools/errors.js";
 import { codegenStatusTool, reactorTools, toMcpTool } from "./tools/index.js";
 
 export interface CreateServerOptions {
   client: IReactorClient;
+  /**
+   * The write half the reactor tools write through; omitted, the client's.
+   * Over HTTP it is the host's caller writes, which sign nothing for the
+   * caller, so a write tool is refused with the host's fix.
+   */
+  write?: IReactorWriteClient;
   syncManager?: ISyncManager;
   /** Who the tools read as; omitted, the client's signer. */
   subject?: AuthSubject;
@@ -46,6 +61,55 @@ Examples:
 <example>Context: User needs to create a new document model for their application. user: 'I need to create a user profile document model with fields for name, email, and preferences' assistant: 'I'll use the reactor-mcp-server to help you create this document model.' <commentary>Since the user is requesting document model creation, use the reactor-mcp-document-expert agent to ensure proper reactor-mcp tool usage.</commentary></example> <example>Context: User is building a content management system and needs create documents for certain types of document models. user: 'Can you help me create example documents for blog posts and categories document models?' assistant: 'Let me use the reactor-mcp-server to create these documents using the appropriate reactor-mcp tool calls.' <commentary>Document model creation requires the reactor-mcp-server tool calls to ensure compliance.</commentary></example>
 <example>Context: User needs to create a new document instance of a given document model. user: 'I need to create a demo user profile document' assistant: 'I'll use the reactor-mcp-server to help you create this document with example values.' <commentary>Since the user is requesting document model creation, use the reactor-mcp-document-expert agent to ensure proper reactor-mcp tool usage.</commentary></example> <example>Context: User is building a content management system and needs create documents for certain types of document models. user: 'Can you help me create example documents for blog posts and categories document models?' assistant: 'Let me use the reactor-mcp-server to create these documents using the appropriate reactor-mcp tool calls.' <commentary>Document creation requires the reactor-mcp-server tool calls to ensure compliance.</commentary></example>
 `;
+
+/** The refused write `error` is or wraps, matched by name across bundles. */
+function unsignedWriteOf(
+  error: unknown,
+): { kind?: string; actionType?: string } | undefined {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current; depth++) {
+    if (current instanceof Error && current.name === "UnsignedWriteError") {
+      return current as { kind?: string; actionType?: string };
+    }
+    current = (current as { cause?: unknown }).cause;
+  }
+  return undefined;
+}
+
+/**
+ * `tool`, a write of which this host refuses because nobody signed it for
+ * its caller told as the host's refusal: cause, caller and fix.
+ */
+function refusingUnsignedWrites<T extends { name: string }>(
+  tool: T,
+  caller: UnsignedWriteCaller,
+): T {
+  const { execute } = tool as unknown as {
+    execute: (args: unknown, ctx: unknown) => Promise<unknown>;
+  };
+  return {
+    ...tool,
+    execute: async (args: unknown, ctx: unknown) => {
+      try {
+        return await execute(args, ctx);
+      } catch (error) {
+        const refused = unsignedWriteOf(error);
+        if (!refused) throw error;
+        throw new ReactorToolError(
+          "UNSIGNED_WRITE",
+          unsignedWriteMessage({
+            reason:
+              refused.kind === "no-identity" ? "no-identity" : "mcp-http-write",
+            field: tool.name,
+            caller,
+            actions: refused.actionType ? [refused.actionType] : [],
+          }),
+          { cause: error },
+        );
+      }
+    },
+  };
+}
 
 export function createServer(options: CreateServerOptions): Promise<McpServer> {
   const { client, syncManager, subject, access, remoteDriveUrls, label } =
@@ -89,16 +153,21 @@ export function createServer(options: CreateServerOptions): Promise<McpServer> {
     }),
   );
 
-  const scoped = new SubjectScopedClient(client, subject);
+  const scoped = new SubjectScopedClient(client, subject, options.write);
   const gate = access && new HostAccessGate(access, client);
   const userContext = {
     client: gate ? new HostAccessClient(scoped, gate) : scoped,
   };
+  const caller = subject?.address
+    ? { address: subject.address, ...(label ? { label } : {}) }
+    : null;
   const tools = [
     ...[
       ...reactorTools({ codegenStatus }),
       codegenStatusTool(codegenStatus),
-    ].map((tool) => toMcpTool(tool, userContext)),
+    ].map((tool) =>
+      toMcpTool(refusingUnsignedWrites(tool, caller), userContext),
+    ),
     ...reactorAdminTools({
       syncManager,
       remoteDriveUrls,

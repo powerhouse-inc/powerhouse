@@ -4,6 +4,8 @@ export const REACTOR_TOOL_ERROR_CODES = [
   "INVALID_ACTION",
   "REDUCER_ERROR",
   "CONFLICT",
+  // A write nobody signed for its caller, which the host refuses to sign.
+  "UNSIGNED_WRITE",
 ] as const;
 
 export type ReactorToolErrorCode = (typeof REACTOR_TOOL_ERROR_CODES)[number];
@@ -71,6 +73,7 @@ const NAME_CODES: Partial<Record<string, ReactorToolErrorCode>> = {
   ReactorAccessDeniedError: "FORBIDDEN",
   ReservedActionError: "FORBIDDEN",
   InvalidSignatureError: "FORBIDDEN",
+  UnsignedWriteError: "UNSIGNED_WRITE",
   InvalidActionInputError: "INVALID_ACTION",
   InvalidActionInputZodError: "INVALID_ACTION",
   ReactorActionsFailedError: "REDUCER_ERROR",

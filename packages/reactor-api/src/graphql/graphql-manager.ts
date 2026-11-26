@@ -88,7 +88,11 @@ import { callerSubject } from "./base-subgraph.js";
 import type { IReactorInspectionSource } from "./inspection/source.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
 import { PackageScalarBindingLog } from "./document-model-schema/package-scalars.js";
-import { RequestClientBinder, type RequestClients } from "./request-clients.js";
+import {
+  RequestClientBinder,
+  type DelegatedSignerResolver,
+  type RequestClients,
+} from "./request-clients.js";
 import {
   admitDocumentModels,
   byClaimPriority,
@@ -177,8 +181,17 @@ export type GraphQLManagerOptions = {
    * so do setup-time lookups, drive discovery and the drive ownership cache.
    */
   readClient: IReactorReadClient;
-  /** The write half, handed to mutation resolvers as `ctx.clients.write`. */
+  /**
+   * The write half, handed to mutation resolvers as `ctx.clients.write`: the
+   * host's caller writes (`callerWrite`), which sign no action for a caller.
+   */
   writeClient: IReactorWriteClient;
+  /**
+   * The signer a request's caller delegated to this host, from its context;
+   * a caller write signs with it. None: every action the host would build or
+   * sign for a caller is refused.
+   */
+  delegatedSigner?: DelegatedSignerResolver;
   /**
    * @deprecated The facade over both halves. The manager does not read or
    * write through it; it is only handed to subgraphs as their deprecated
@@ -508,6 +521,7 @@ export class GraphQLManager {
     this.#clients = new RequestClientBinder(
       options.readClient,
       options.writeClient,
+      options.delegatedSigner,
     );
     this.#unboundClients = this.#clients.unboundClients();
     this.relationalDb = options.relationalDb;

@@ -21,7 +21,10 @@ import type { BaseSubgraph } from "./base-subgraph.js";
 import type { IReactorInspectionSource } from "./inspection/source.js";
 import type { RequestClients } from "./request-clients.js";
 
-export type { RequestClients } from "./request-clients.js";
+export type {
+  DelegatedSignerResolver,
+  RequestClients,
+} from "./request-clients.js";
 
 export type SubgraphClass = typeof BaseSubgraph;
 

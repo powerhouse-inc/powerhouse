@@ -215,6 +215,16 @@ const forbiddenTool = (result: ToolResult) =>
 const forbiddenGraphql = (result: GraphqlResult) =>
   result.errors?.some((e) => e.extensions?.code === "FORBIDDEN") ?? false;
 
+// A write the host may not sign for its caller: GraphQL's refusal, and a
+// write tool's over HTTP /mcp, which names `ph mcp`.
+const unsignedGraphql = (result: GraphqlResult) =>
+  result.errors?.some((e) => e.extensions?.code === "UNSIGNED_WRITE") ?? false;
+
+const unsignedTool = (result: ToolResult) =>
+  result.isError === true &&
+  JSON.stringify(result.content).includes("over HTTP /mcp") &&
+  JSON.stringify(result.content).includes("ph mcp");
+
 async function postPing(header?: string): Promise<number> {
   const response = await fetch(`${base()}/mcp`, {
     method: "POST",
@@ -309,7 +319,7 @@ describe("Switchboard's /mcp authorizes as its GraphQL API does", () => {
     }
   });
 
-  it("refuses and allows each caller the same write", async () => {
+  it("refuses each caller the same write, and signs none for a caller it allows", async () => {
     for (const caller of CALLERS) {
       const folder = (via: string) => {
         const { id, type, input, scope, timestampUtcMs } = addFolder({
@@ -337,9 +347,9 @@ describe("Switchboard's /mcp authorizes as its GraphQL API does", () => {
 
       expect(forbiddenGraphql(viaGraphql), caller).toBe(!mayWrite);
       if (mayWrite) {
-        expect(viaMcp.structuredContent, caller).toMatchObject({
-          success: true,
-        });
+        // Allowed by the ACL, and still nobody's to sign: refused on both.
+        expect(unsignedGraphql(viaGraphql), caller).toBe(true);
+        expect(unsignedTool(viaMcp), caller).toBe(true);
       } else if (caller !== READER) {
         // addActions reads its target first, so a non-reader is refused there.
         expect(forbiddenTool(viaMcp), caller).toBe(true);
@@ -354,14 +364,7 @@ describe("Switchboard's /mcp authorizes as its GraphQL API does", () => {
     const nodes = (
       drive.state as unknown as { global: { nodes: { id: string }[] } }
     ).global.nodes.map((n) => n.id);
-    expect(nodes.sort()).toEqual(
-      [
-        `graphql-${ADMIN}`,
-        `graphql-${WRITER}`,
-        `mcp-${ADMIN}`,
-        `mcp-${WRITER}`,
-      ].sort(),
-    );
+    expect(nodes).toEqual([]);
   });
 
   it("refuses and allows each caller the same creates", async () => {
@@ -400,32 +403,33 @@ describe("Switchboard's /mcp authorizes as its GraphQL API does", () => {
         }),
       }));
 
-      expect(viaMcp.inDrive.isError === true, caller).toBe(
+      // The same callers are forbidden on both; an allowed create is still
+      // the host's to build, so both refuse it as unsigned.
+      expect(forbiddenTool(viaMcp.inDrive), caller).toBe(
         forbiddenGraphql(inDrive),
       );
-      expect(viaMcp.loose.isError === true, caller).toBe(
-        (loose.errors?.length ?? 0) > 0,
-      );
+      for (const [viaGraphql, viaTool] of [
+        [inDrive, viaMcp.inDrive],
+        [loose, viaMcp.loose],
+      ] as const) {
+        expect(viaTool.isError === true, caller).toBe(true);
+        expect(unsignedTool(viaTool), caller).toBe(unsignedGraphql(viaGraphql));
+      }
     }
   });
 
-  it("makes an MCP creator the owner GraphQL then lets manage the document", async () => {
-    const documentId = await withClient(OUTSIDER, async (call) => {
-      const created = await call("createDocument", {
-        documentType: "powerhouse/document-model",
-      });
-      return (created.structuredContent as { documentId: string }).documentId;
+  it("creates nothing for an MCP caller over HTTP, and says to use ph mcp", async () => {
+    const before = await switchboard!.reactor.read.find({
+      type: "powerhouse/document-model",
     });
-    const data = await graphqlOk(
-      OUTSIDER,
-      `mutation ($id: String!) { setDocumentProtection(documentIdOrSlug: $id, protected: true) { documentId } }`,
-      { id: documentId },
+    const created = await withClient(OUTSIDER, (call) =>
+      call("createDocument", { documentType: "powerhouse/document-model" }),
     );
-    expect(data.setDocumentProtection).toEqual({ documentId });
-    const refused = await withClient(READER, (call) =>
-      call("getDocument", { documentId }),
-    );
-    expect(forbiddenTool(refused)).toBe(true);
+    expect(unsignedTool(created)).toBe(true);
+    const after = await switchboard!.reactor.read.find({
+      type: "powerhouse/document-model",
+    });
+    expect(after.results.length).toBe(before.results.length);
   });
 
   it("refuses a delete the caller may not make, as GraphQL does", async () => {

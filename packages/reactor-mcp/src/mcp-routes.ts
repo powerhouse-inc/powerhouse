@@ -1,5 +1,9 @@
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type {
+  IReactorClient,
+  IReactorWriteClient,
+  ISyncManager,
+} from "@powerhousedao/reactor";
 import type { AuthSubject } from "@powerhousedao/shared/document-model";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
@@ -43,6 +47,12 @@ export type McpRequestAuthorizer = (
 
 export interface SetupMcpServerOptions {
   client: IReactorClient;
+  /**
+   * The write half the reactor tools write through: the host's caller
+   * writes, which sign no action for an HTTP caller, so a write tool is
+   * refused (`mcp-http-write`) and reads stay. Omitted: `client.write`.
+   */
+  write?: IReactorWriteClient;
   syncManager?: ISyncManager;
   authorizeRequest: McpRequestAuthorizer;
   /** URLs `addRemoteDrive` may fetch; omitted, the tool is not mounted. */
@@ -128,15 +138,11 @@ export function setupMcpServer(
       // Stateless mode: every request owns its McpServer + transport so
       // concurrent or slow handlers cannot collide on a shared Protocol
       // instance (which throws "Already connected to a transport").
-      // The tools write through this host's client, signed with its key.
-      logger.debug(
-        "MCP request from @address (@label): this host signs its writes",
-        grant.subject.address ?? "anonymous",
-        grant.label ?? "no label",
-      );
+      // The tools write through `write`, which signs nothing for the caller.
       try {
         const server = await createServer({
           client: options.client,
+          ...(options.write ? { write: options.write } : {}),
           syncManager: options.syncManager,
           subject: grant.subject,
           access: grant.access,

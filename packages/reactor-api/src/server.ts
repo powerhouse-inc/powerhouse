@@ -92,6 +92,10 @@ import {
   type GraphQLManagerOptions,
 } from "./graphql/graphql-manager.js";
 import {
+  createRequestCallerSigner,
+  type DelegatedSignerResolver,
+} from "./graphql/request-clients.js";
+import {
   CORE_PACKAGE_NAME,
   HttpRouteService,
   RelationalWebhookStore,
@@ -256,6 +260,12 @@ type Options = {
   processorConfig?: Map<string, unknown>;
   /** Read live, so a login shows; absent leaves processors without `host`. */
   hostSigner?: { app?: { key: string }; user?: { address: string } };
+  /**
+   * The signer a request's caller delegated to this host (a host session),
+   * from the GraphQL context; its caller writes sign with it. None: this
+   * host signs no write for a caller, and refuses one nobody signed.
+   */
+  delegatedSigner?: DelegatedSignerResolver;
   /**
    * Document permission service instance.
    * When provided, the Auth subgraph is registered and document permission
@@ -620,6 +630,7 @@ type SetupGraphQLManagerOptions = {
   inspection?: IReactorInspectionSource;
   driveStore?: DriveStore;
   reportError?: ReportError;
+  delegatedSigner?: DelegatedSignerResolver;
 };
 
 /**
@@ -655,6 +666,7 @@ async function setupGraphQLManager({
   inspection,
   driveStore,
   reportError,
+  delegatedSigner,
 }: SetupGraphQLManagerOptions): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager({
     wsCredentialRecheckIntervalMs: settings.wsCredentialRecheckIntervalMs,
@@ -662,7 +674,8 @@ async function setupGraphQLManager({
     httpServer,
     wsServer,
     readClient: clients.read,
-    writeClient: clients.write,
+    writeClient: clients.callerWrite,
+    ...(delegatedSigner ? { delegatedSigner } : {}),
     reactorClient: clients.client,
     relationalDb,
     analyticsStore,
@@ -1283,13 +1296,20 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
 }
 
 /**
- * The reactor clients the API runs on: the halves the framework wires, and the
- * facade kept for consumers that have not moved (MCP, subgraphs that still
- * call `reactorClient`).
+ * The reactor clients the API runs on: the halves the framework wires, the
+ * caller writes, and the facade kept for consumers that have not moved (MCP,
+ * subgraphs that still call `reactorClient`).
  */
 type ApiClients = {
   read: IReactorReadClient;
+  /** The host's own work: processors, package routes, workflows. */
   write: IReactorWriteClient;
+  /**
+   * A caller's writes (resolvers, HTTP `/mcp`): no action is signed for the
+   * caller unless the request delegated a signer; the derived work of a
+   * signed delete keeps the instance key.
+   */
+  callerWrite: IReactorWriteClient;
   client: IReactorClient;
 };
 
@@ -1543,6 +1563,7 @@ async function _setupAPI(
     inspection,
     driveStore,
     reportError: options.reportError,
+    delegatedSigner: options.delegatedSigner,
   });
 
   // Set up event listeners
@@ -1559,6 +1580,8 @@ async function _setupAPI(
     await setupMcpServer(
       {
         client: clients.client,
+        // A tool's write over HTTP is a caller's: nothing is signed for it.
+        write: clients.callerWrite,
         syncManager,
         authorizeRequest: createMcpRequestAuthorizer(
           authService,
@@ -1892,6 +1915,7 @@ export async function initializeAndStartAPI(
     {
       read: reactorClientModule.read,
       write: reactorClientModule.write,
+      callerWrite: reactorClient.callerWrite(createRequestCallerSigner()),
       client: reactorClient,
     },
     syncManager,

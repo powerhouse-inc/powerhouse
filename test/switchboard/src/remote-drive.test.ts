@@ -278,7 +278,7 @@ describe("Remote drive sync via CONNECT channel", () => {
     });
   });
 
-  it("adds operations via MCP and verifies sync to local reactor", async () => {
+  it("refuses MCP write tools over HTTP, and syncs a signed client's writes to a drive MCP made", async () => {
     const MCP_URL =
       process.env.SWITCHBOARD_MCP_URL ??
       SWITCHBOARD_URL.replace(/\/graphql\/?$/, "/mcp");
@@ -309,7 +309,7 @@ describe("Remote drive sync via CONNECT channel", () => {
       clientModule = await createLocalReactor(driveId);
       await waitForDocument(clientModule, driveId);
 
-      // 4. Create a document via MCP inside the drive
+      // 4. A write tool over HTTP is nobody's to sign: refused, naming ph mcp
       const createDocResult = await mcpClient.callTool({
         name: "createDocument",
         arguments: {
@@ -318,37 +318,15 @@ describe("Remote drive sync via CONNECT channel", () => {
           driveId,
         },
       });
-      const documentId = JSON.parse(
-        (createDocResult.content as Array<{ text: string }>)[0].text,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      ).documentId as string;
-      createdDocumentIds.push(documentId);
+      expect(createDocResult.isError).toBe(true);
+      expect(JSON.stringify(createDocResult.content)).toContain("`ph mcp`");
 
-      // 5. Add actions via MCP
-      const addActionsResult = await mcpClient.callTool({
-        name: "addActions",
-        arguments: {
-          documentId,
-          actions: [
-            {
-              type: "SET_MODEL_NAME",
-              input: { name: "McpModel" },
-              scope: "global",
-            },
-            {
-              type: "SET_MODEL_DESCRIPTION",
-              input: { description: "Created via MCP" },
-              scope: "global",
-            },
-          ],
-        },
-      });
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const addActionsOutput = JSON.parse(
-        (addActionsResult.content as Array<{ text: string }>)[0].text,
-      );
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(addActionsOutput.success).toBe(true);
+      // 5. The writes a signing client makes in the drive sync
+      const documentId = await createDocumentInDrive(driveId);
+      await writer.execute(documentId, "main", [
+        setModelName({ name: "McpModel" }),
+        setModelDescription({ description: "Created via MCP" }),
+      ]);
 
       // 6. Wait for the document to sync to the local reactor
       await waitForDocument(clientModule, documentId);

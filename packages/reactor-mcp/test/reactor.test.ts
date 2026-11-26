@@ -2008,6 +2008,45 @@ describe("reactor tools", () => {
       );
     });
 
+    it("refuses a write over a host's caller writes with the host's fix, and serves reads", async () => {
+      const documentId = await newModelDocument();
+      const server = await createServer({
+        client,
+        write: reactorModule.callerWrite,
+        subject: { address: "0xcaller" },
+        label: "mcp test",
+      });
+      const mcp = new Client({ name: "test", version: "1.0.0" });
+      const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+      await Promise.all([server.connect(serverSide), mcp.connect(clientSide)]);
+      try {
+        const refused = (await mcp.callTool({
+          name: "addActions",
+          arguments: {
+            documentId,
+            actions: [{ type: "SET_NAME", input: "nobody's" }],
+          },
+        })) as CallToolResult;
+        expect(refused.isError).toBe(true);
+        const text = JSON.stringify(refused.content);
+        expect(text).toContain("UNSIGNED_WRITE");
+        expect(text).toContain(
+          "`addActions` from 0xcaller (mcp test) over HTTP /mcp asks the host to sign SET_NAME",
+        );
+        expect(text).toContain("`ph mcp`");
+        expect((await client.get(documentId)).header.name).not.toBe("nobody's");
+
+        const read = (await mcp.callTool({
+          name: "getDocument",
+          arguments: { documentId },
+        })) as CallToolResult;
+        expect(read.isError).toBeFalsy();
+      } finally {
+        await mcp.close();
+        await server.close();
+      }
+    });
+
     it("serves every tool through the MCP server with valid output", async () => {
       const server = await createServer({ client });
       const mcp = new Client({ name: "test", version: "1.0.0" });

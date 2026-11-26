@@ -2,8 +2,11 @@ import type {
   IReactorReadClient,
   IReactorWriteClient,
 } from "@powerhousedao/reactor";
-import type { GraphQLResolveInfo } from "graphql";
+import { CallerSigner, UnsignedWriteError } from "@powerhousedao/reactor";
+import type { ISigner } from "@powerhousedao/shared/document-model";
+import type { GraphQLError, GraphQLResolveInfo } from "graphql";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { unsignedWriteRefusal } from "./errors.js";
 
 /**
  * The reactor client halves a resolver may use, carried on the GraphQL
@@ -53,6 +56,124 @@ export class WriteClientUnavailableError extends Error {
 
 /** The field whose resolver is running, so a refusal can name it. */
 const executingField = new AsyncLocalStorage<string>();
+
+/**
+ * What one Mutation field's caller writes run in: the signer the caller
+ * delegated to this host for the request, if any, and what was refused.
+ */
+type CallerWriteScope = {
+  /**
+   * A host session's signer (F3e part 2 sets it for a request borne by one);
+   * without one an action the host would sign is refused.
+   */
+  signer: ISigner | undefined;
+  refused: UnsignedWriteError[];
+};
+
+const callerWrites = new AsyncLocalStorage<CallerWriteScope>();
+
+/**
+ * The signer of the caller writes the GraphQL layer hands out (and HTTP
+ * `/mcp`): it signs with the signer the request's caller delegated, and tells
+ * the field's scope what it refused.
+ */
+export function createRequestCallerSigner(): CallerSigner {
+  return new CallerSigner({
+    resolve: () => callerWrites.getStore()?.signer,
+    onRefused: (error) => callerWrites.getStore()?.refused.push(error),
+  });
+}
+
+/**
+ * The delegated signer a request's caller writes sign with, from its context:
+ * none (the default) refuses every action the host would build or sign.
+ */
+export type DelegatedSignerResolver = (context: unknown) => ISigner | undefined;
+
+/** The Mutation fields whose caller hands the actions over. */
+const CALLER_ACTION_FIELDS = new Set([
+  "Mutation.execute",
+  "Mutation.executeAsync",
+  "Mutation.executeBatch",
+  "Mutation.mutateDocument",
+  "Mutation.mutateDocumentAsync",
+]);
+
+/** The refused write `error` is or wraps, if any. */
+function unsignedWriteOf(error: unknown): UnsignedWriteError | undefined {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current; depth++) {
+    if (UnsignedWriteError.isError(current)) return current;
+    const next = current as { originalError?: unknown; cause?: unknown };
+    current = next.originalError ?? next.cause;
+  }
+  return undefined;
+}
+
+/**
+ * The refusal a field's failure stands for: the first write its scope
+ * refused, else one the error carries. Undefined for any other failure.
+ */
+function refusalOf(
+  error: unknown,
+  scope: CallerWriteScope,
+  field: string,
+  context: unknown,
+): GraphQLError | undefined {
+  const first = scope.refused.at(0) ?? unsignedWriteOf(error);
+  if (!first) return undefined;
+  const user = (context as { user?: { address?: string; label?: string } })
+    .user;
+  const actions = [
+    ...new Set(
+      (scope.refused.length > 0 ? scope.refused : [first]).map(
+        (refused) => refused.actionType,
+      ),
+    ),
+  ];
+  return unsignedWriteRefusal({
+    reason:
+      first.kind === "no-identity"
+        ? "no-identity"
+        : CALLER_ACTION_FIELDS.has(field)
+          ? "unsigned-actions"
+          : "host-built",
+    field,
+    caller: user?.address
+      ? {
+          address: user.address,
+          ...(user.label ? { label: user.label } : {}),
+        }
+      : null,
+    actions,
+  });
+}
+
+/** Runs a Mutation field, its failure from a refused write turned into the refusal. */
+function refusingUnsignedWrites(
+  scope: CallerWriteScope,
+  field: string,
+  context: unknown,
+  run: () => unknown,
+): unknown {
+  const fail = (error: unknown): never => {
+    throw refusalOf(error, scope, field, context) ?? error;
+  };
+  let result: unknown;
+  try {
+    result = run();
+  } catch (error) {
+    return fail(error);
+  }
+  if (
+    result !== null &&
+    typeof result === "object" &&
+    typeof (result as { then?: unknown }).then === "function"
+  ) {
+    return (result as Promise<unknown>).then(undefined, fail);
+  }
+  return result;
+}
 
 const operations = new WeakMap<RequestClients, ClientOperation>();
 
@@ -165,17 +286,28 @@ const TYPE_LEVEL_RESOLVERS = new Set([
  *
  * The derived context is memoized per request context and operation, so every
  * field of one operation sees the same object, which per-request memos key on.
+ *
+ * `write` is the host's caller writes (`callerWrite`): a Mutation field runs
+ * in a scope whose refused writes it fails with, as `UNSIGNED_WRITE`, naming
+ * the field and the caller. `delegatedSigner` names, per request, the signer
+ * its caller delegated to this host (none by default).
  */
 export class RequestClientBinder {
   readonly #read: IReactorReadClient;
   readonly #write: IReactorWriteClient;
+  readonly #delegatedSigner: DelegatedSignerResolver;
   readonly #contexts = new WeakMap<object, Map<string, ClientsContext>>();
   readonly #derived = new WeakSet<object>();
   readonly #wrapped = new WeakMap<object, Record<string, unknown>>();
 
-  constructor(read: IReactorReadClient, write: IReactorWriteClient) {
+  constructor(
+    read: IReactorReadClient,
+    write: IReactorWriteClient,
+    delegatedSigner: DelegatedSignerResolver = () => undefined,
+  ) {
     this.#read = read;
     this.#write = write;
+    this.#delegatedSigner = delegatedSigner;
   }
 
   /** The clients for a context the host builds before the operation is known. */
@@ -285,14 +417,25 @@ export class RequestClientBinder {
       if (!info?.operation) {
         return resolver(parent, args, context, info);
       }
+      const operation = info.operation.operation as ClientOperation;
       const derived = this.contextFor(
         (context ?? {}) as object,
-        info.operation.operation as ClientOperation,
+        operation,
         writeSide,
       );
-      return executingField.run(
-        `${info.parentType.name}.${info.fieldName}`,
-        () => resolver(parent, args, derived, info),
+      const field = `${info.parentType.name}.${info.fieldName}`;
+      const run = () => resolver(parent, args, derived, info);
+      if (operation !== "mutation") {
+        return executingField.run(field, run);
+      }
+      const scope: CallerWriteScope = {
+        signer: this.#delegatedSigner(derived),
+        refused: [],
+      };
+      return executingField.run(field, () =>
+        callerWrites.run(scope, () =>
+          refusingUnsignedWrites(scope, field, derived, run),
+        ),
       );
     };
   }

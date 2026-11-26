@@ -1,8 +1,26 @@
+import {
+  unsignedWriteExtensions,
+  unsignedWriteMessage,
+  type UnsignedWrite,
+} from "@powerhousedao/shared/clis/unsigned-writes";
 import { GraphQLError } from "graphql";
 import {
   DRIVE_AUTH_ERROR_MESSAGES,
   RECOVERABLE_GRAPHQL_ERROR_CODES,
 } from "@powerhousedao/reactor";
+
+/**
+ * A write nobody signed for its caller: this host signs no writes for its
+ * callers, so it refuses one that carries unsigned actions, asks it to build
+ * them, or is signed by a key that names no user. HTTP 200, as every GraphQL
+ * error; `extensions.code` is `UNSIGNED_WRITE`, with the reason, the field,
+ * the caller and the refused action types.
+ */
+export function unsignedWriteRefusal(write: UnsignedWrite): GraphQLError {
+  return new GraphQLError(unsignedWriteMessage(write), {
+    extensions: unsignedWriteExtensions(write),
+  });
+}
 
 /** Caller (authenticated or anonymous) lacks permission for the document. */
 export class ForbiddenError extends GraphQLError {

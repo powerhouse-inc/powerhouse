@@ -1,6 +1,7 @@
 import type {
   ConsistencyToken,
   IReactorClient,
+  IReactorWriteClient,
   NewDocumentOptions,
   OperationFilter,
   PagingOptions,
@@ -21,7 +22,7 @@ import {
 type DriveNodes = { global?: { nodes?: { id: string }[] } };
 
 // The tool subset over a full client, reading as `subject`. Writes go through
-// the write half and are judged as the client's signer.
+// `writeHalf` (the client's own by default) and are judged as its signer.
 export class SubjectScopedClient implements ReactorToolClient {
   readonly write: ReactorToolWriteClient & {
     evaluateActions: IReactorClient["write"]["evaluateActions"];
@@ -30,8 +31,9 @@ export class SubjectScopedClient implements ReactorToolClient {
   constructor(
     private readonly inner: IReactorClient,
     private readonly subject?: AuthSubject,
+    writeHalf?: IReactorWriteClient,
   ) {
-    const write = inner.write;
+    const write = writeHalf ?? inner.write;
     this.write = {
       create: (document, parentIdentifier, signal) =>
         write.create(document, parentIdentifier, signal),
