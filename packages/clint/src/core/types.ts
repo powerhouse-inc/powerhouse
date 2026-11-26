@@ -1406,7 +1406,9 @@ export interface Cli {
   /**
    * How this Cli's command line signs as the person: a command it forwards
    * to the running instance is signed here, over the control channel.
-   * Without it, such a command signs as the instance.
+   * Without it, such a command signs as the person's active identity on this
+   * computer, a session labelled with the Cli's name in their home folder,
+   * when the instance can ask for that; an older instance signs it itself.
    */
   configureIdentity(config: IdentityConfiguration): void;
   getCommand(id: string): Command | undefined;

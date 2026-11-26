@@ -21,6 +21,41 @@ function refuse(message: string, code = "refused"): Error {
   return Object.assign(new Error(message), { code });
 }
 
+/**
+ * How a Cli's command line signs when the Cli configures no identity
+ * (`Cli.configureIdentity`): as the person's active identity on this
+ * computer (their Renown login, else their pseudonym, made at the first
+ * signature), with a session labelled `label` (the Cli's name) kept in their
+ * home folder. Renown's signing code loads at that first signature only.
+ */
+export function defaultIdentity(label: string): IdentityConfiguration {
+  return {
+    label,
+    async open(o) {
+      const { openSession } = await import("@renown/sdk/identity");
+      const session = await openSession({
+        dataDir: o.dataDir,
+        label: o.label,
+        place: "home",
+        interactive: o.interactive,
+        ...(o.target ? { target: o.target } : {}),
+      });
+      return {
+        signer: session.signer,
+        signAction: (action, target, previousStateHash) =>
+          session.actionSigner.signAction(
+            {
+              ...action,
+              context: { ...action.context, prevOpHash: previousStateHash },
+            },
+            target,
+          ),
+        bearer: (b) => session.bearer(b),
+      };
+    },
+  };
+}
+
 /** The action, target and previous state hash of a `sign-action` ask. */
 function signRequestOf(payload: unknown): {
   action: Action;

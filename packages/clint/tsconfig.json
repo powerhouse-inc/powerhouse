@@ -30,6 +30,9 @@
       "path": "../reactor-browser"
     },
     {
+      "path": "../renown"
+    },
+    {
       "path": "../shared"
     }
   ]

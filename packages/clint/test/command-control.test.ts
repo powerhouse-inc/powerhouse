@@ -455,10 +455,41 @@ describe("a command that runs in the running instance", () => {
       expect(err.join("\n")).toContain("`ph lab`");
     });
 
-    it("lists no asks from a Cli that does not sign", async () => {
-      const control = await serve();
+    it("signs as the person's active identity, a session named after the Cli, when the Cli names no identity", async () => {
+      // The person's pseudonym, given; nothing of it lands in the workdir.
+      vi.stubEnv(
+        "PH_IDENTITY_KEY",
+        "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+      );
+      const control = await serveSigning();
       await call(["docs"], { forward: { target: { control } } });
-      expect([...requests[0]!.asks]).toEqual([]);
+      expect(codes).toEqual([]);
+      expect([...requests[0]!.asks]).toEqual([
+        "signer",
+        "sign-action",
+        "bearer",
+      ]);
+      const [address] = fs.readdirSync(home);
+      const file = path.join(home, address!, "sessions", `${NAME}.json`);
+      const session = JSON.parse(fs.readFileSync(file, "utf8")) as {
+        label: string;
+        did: string;
+      };
+      expect(session.label).toBe(NAME);
+      expect(out.join("")).toBe(`signed by ${session.did}\n`);
+      expect(fs.existsSync(path.join(workdir, ".ph", ".pseudonym.json"))).toBe(
+        false,
+      );
+    }, 30_000);
+
+    it("leaves an instance that cannot ask it to sign to sign itself, when the Cli names no identity", async () => {
+      channel = await openControlChannel();
+      channel.handle(COMMAND_METHOD, () => ({ exitCode: 0 }));
+      await call(["docs"], {
+        forward: { target: { control: channel.record }, required: true },
+      });
+      expect(codes).toEqual([]);
+      expect(err.join("\n")).not.toContain("cannot sign as you");
     });
 
     it("names the caller's identity when the request carries it", () => {

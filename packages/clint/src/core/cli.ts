@@ -61,7 +61,7 @@ import {
   COMMAND_SIGNING,
   withCallerSigning,
 } from "./forwarded-signing.js";
-import { callerAnswers } from "./caller-signing.js";
+import { callerAnswers, defaultIdentity } from "./caller-signing.js";
 import {
   instanceDataDir,
   instanceServicesDir,
@@ -1697,10 +1697,15 @@ export function defineCli<
         }
         return 1;
       }
-      // A command's writes are signed here, as the person, when this Cli
-      // says how; an instance that cannot ask for that is refused.
-      const signs = identityConfig !== undefined && "command" in what;
-      if (signs && hello?.signing !== COMMAND_SIGNING) {
+      // A command's writes are signed here, as the person: as this Cli says
+      // how, else as the person's active identity (`defaultIdentity`). An
+      // instance that cannot ask for that is refused when the Cli said how;
+      // without that, the command goes as before, its writes the instance's.
+      const identity = identityConfig ?? defaultIdentity(options.name);
+      const canSign = hello?.signing === COMMAND_SIGNING;
+      const signs =
+        "command" in what && (identityConfig !== undefined || canSign);
+      if (signs && !canSign) {
         stderr(
           `${name} was not sent: the running ${options.name}${target.pid ? ` (pid ${target.pid})` : ""} is another version and cannot sign as you. Restart it${opts.serveCommand ? ` (\`${opts.serveCommand}\`)` : ""}, then run this again.`,
         );
@@ -1728,7 +1733,7 @@ export function defineCli<
       const store = commandStoreSchema.safeParse(hello?.store);
       const answers = signs
         ? callerAnswers({
-            identity: identityConfig!,
+            identity,
             workdir,
             dataDir: instanceDataDir(workdir),
             interactive: stdin === undefined && process.stdin.isTTY === true,
