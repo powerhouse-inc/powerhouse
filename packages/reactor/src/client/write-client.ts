@@ -1,7 +1,12 @@
+import {
+  driveDocumentType,
+  type DocumentDriveDocument,
+} from "@powerhousedao/shared/document-drive";
 import type {
   Action,
   AuthSubject,
   BaseReducerCapabilities,
+  DeleteDocumentActionInput,
   ISigner,
   PHDocument,
   PHDocumentHeader,
@@ -10,6 +15,7 @@ import {
   actions,
   capabilitiesOf,
   createVersionsOf,
+  derivedActionId,
   serializeByKey,
   undoNeedsTargets,
   undoRedoActions,
@@ -35,8 +41,11 @@ import {
 } from "../protocol/gate.js";
 import {
   AuthEnforcementDisabledError,
+  DocumentNotFoundError,
+  InvalidSignedDeleteError,
   RelationshipNotFoundError,
 } from "../shared/errors.js";
+import { verifyActionSignature } from "../signer/verify-action-signature.js";
 import {
   JobStatus,
   PropagationMode,
@@ -68,7 +77,16 @@ import {
   type JobSetHandle,
 } from "./internal/handles.js";
 import type { ReactorClientParts } from "./internal/parts.js";
-import { deletePlanKey, planDelete, planRemoval } from "./internal/signing.js";
+import {
+  deletePart,
+  deletePlanKey,
+  nodePart,
+  planDelete,
+  planNodeRemoval,
+  planRemoval,
+  removalPart,
+  signedDeletePlan,
+} from "./internal/signing.js";
 import { WriteTargets } from "./internal/targets.js";
 import type { ReactorReadClient } from "./read-client.js";
 import type {
@@ -77,8 +95,10 @@ import type {
   BatchWriteHandle,
   IDriveWriteClient,
   IReactorWriteClient,
+  ISignedDeleteWriteClient,
   MoveRelationshipHandles,
   NewDocumentOptions,
+  SignedDeleteIntent,
   UndoRedoAvailability,
   UpgradeDocumentOptions,
   WriteHandle,
@@ -92,6 +112,12 @@ export type SubmittedExecution = {
   documentId: string;
 };
 
+/** The documents a delete removes, in deletion order, and the edges into each. */
+type Deletion = {
+  order: string[];
+  incoming: Map<string, DocumentRelationship[]>;
+};
+
 /**
  * The in-process write half of the reactor client: signs, resolves targets and
  * enqueues. Every write resolves once its job is accepted and returns a
@@ -102,7 +128,9 @@ export type SubmittedExecution = {
  * Holds the read half for what a write needs to read: creation defaults,
  * model lookups and the read-back a handle's `document()` makes.
  */
-export class ReactorWriteClient implements IReactorWriteClient {
+export class ReactorWriteClient
+  implements IReactorWriteClient, ISignedDeleteWriteClient
+{
   readonly drives: IDriveWriteClient;
 
   private readonly logger: ILogger;
@@ -834,97 +862,94 @@ export class ReactorWriteClient implements IReactorWriteClient {
       "main",
       signal,
     );
-    const toDelete = new Set([rootId]);
+    const deletion = await this.planDeletion(rootId, propagate, signal);
+    const plans = await this.deletePlans(
+      deletion,
+      {
+        delete: (documentId) => planDelete(this.signer, documentId, signal),
+        removal: (rel, dependsOn, index) =>
+          planRemoval(this.signer, rel, dependsOn, index, signal),
+      },
+      signal,
+    );
+    return this.submitDeletion(rootId, plans, signal);
+  }
 
-    if (propagate === PropagationMode.Cascade) {
-      let changed = true;
-
-      while (changed) {
-        if (signal?.aborted) {
-          throw new Error("Operation aborted");
-        }
-        changed = false;
-        const orphans = await this.documentIndexer.getOrphanedChildren(
-          [...toDelete],
-          ["child"],
-          signal,
-        );
-        for (const id of orphans) {
-          if (!toDelete.has(id)) {
-            toDelete.add(id);
-            changed = true;
-          }
-        }
-      }
+  /**
+   * Completes the delete a caller signed; see
+   * {@link ISignedDeleteWriteClient.deleteSigned}. The signed action is
+   * checked, and the signer asked `mayDelete` for every document the delete
+   * removes, before anything is submitted. A document drive that files the
+   * document loses its node first, as `drives.removeNode` does it, so a drive
+   * that refuses the removal leaves the document untouched.
+   */
+  async deleteSigned(
+    intent: SignedDeleteIntent,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    const { action } = intent;
+    this.logger.verbose(
+      "deleteSigned(@id, @propagate)",
+      action.id,
+      intent.propagate,
+    );
+    const rootId = await this.verifySignedDelete(action, signal);
+    const deletion = await this.planDeletion(rootId, intent.propagate, signal);
+    const signer = action.context!.signer!;
+    for (const documentId of deletion.order) {
+      await intent.mayDelete?.({ documentId, rootId, signer }, signal);
     }
 
-    // Discovery puts sources before targets; reversed, children go first.
-    const order = [...toDelete].reverse();
-    const position = new Map(order.map((id, index) => [id, index]));
-    const incoming = new Map<string, DocumentRelationship[]>();
-    for (const documentId of order) {
-      const page = await this.documentIndexer.getIncoming(
-        documentId,
-        undefined,
-        undefined,
-        undefined,
+    const derived = (part: string) => derivedActionId(action.id, part);
+    for (const drive of await this.filingDocumentDrives(
+      rootId,
+      deletion,
+      signal,
+    )) {
+      await this.complete(
+        await this.reactor.executeBatch(
+          {
+            jobs: [
+              await planNodeRemoval(
+                this.signer,
+                drive,
+                rootId,
+                signal,
+                derived(nodePart(drive)),
+              ),
+            ],
+          },
+          signal,
+        ),
         signal,
       );
-      incoming.set(documentId, page.results);
-    }
-    // An edge whose source is deleted no later than its target cannot wait.
-    const waitsForTarget = (rel: DocumentRelationship): boolean => {
-      const source = position.get(rel.sourceId);
-      return source === undefined || source > position.get(rel.targetId)!;
-    };
-    const leadingBySource = new Map<string, DocumentRelationship[]>();
-    for (const rels of incoming.values()) {
-      for (const rel of rels) {
-        if (waitsForTarget(rel)) continue;
-        const leading = leadingBySource.get(rel.sourceId) ?? [];
-        leading.push(rel);
-        leadingBySource.set(rel.sourceId, leading);
-      }
     }
 
-    const plans: ExecutionJobPlan[] = [];
-    for (const documentId of order) {
-      for (const rel of leadingBySource.get(documentId) ?? []) {
-        plans.push(
-          await planRemoval(this.signer, rel, [], plans.length, signal),
-        );
-      }
-      plans.push(await planDelete(this.signer, documentId, signal));
-      for (const rel of incoming.get(documentId)!) {
-        if (waitsForTarget(rel)) {
-          plans.push(
-            await planRemoval(
-              this.signer,
-              rel,
-              [deletePlanKey(documentId)],
-              plans.length,
-              signal,
-            ),
-          );
-        }
-      }
-    }
-
-    const batchResult = await this.reactor.executeBatch(
-      { jobs: plans },
+    const plans = await this.deletePlans(
+      deletion,
+      {
+        delete: (documentId) =>
+          documentId === rootId
+            ? Promise.resolve(signedDeletePlan(action, rootId))
+            : planDelete(
+                this.signer,
+                documentId,
+                signal,
+                derived(deletePart(documentId)),
+              ),
+        removal: (rel, dependsOn, index) =>
+          planRemoval(
+            this.signer,
+            rel,
+            dependsOn,
+            index,
+            signal,
+            derived(removalPart(rel)),
+          ),
+      },
       signal,
     );
-
-    const jobs = Object.values(batchResult.jobs);
-    const rootJob = batchResult.jobs[deletePlanKey(rootId)] ?? jobs[0];
-    return this.handles.forJobs(
-      rootJob.id,
-      jobs,
-      rootId,
-      "main",
-      signal,
-      this.readerById(rootId),
-    );
+    return this.submitDeletion(rootId, plans, signal);
   }
 
   async deleteDocuments(
@@ -1099,6 +1124,236 @@ export class ReactorWriteClient implements IReactorWriteClient {
       undoRedoActions(caps, type, scope, targets),
       signal,
     );
+  }
+
+  /**
+   * What a delete of `rootId` removes: the documents in deletion order
+   * (children first, the root last; with CASCADE every orphaned descendant)
+   * and the relationships into each of them.
+   */
+  private async planDeletion(
+    rootId: string,
+    propagate: PropagationMode | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<Deletion> {
+    const toDelete = new Set([rootId]);
+
+    if (propagate === PropagationMode.Cascade) {
+      let changed = true;
+
+      while (changed) {
+        if (signal?.aborted) {
+          throw new Error("Operation aborted");
+        }
+        changed = false;
+        const orphans = await this.documentIndexer.getOrphanedChildren(
+          [...toDelete],
+          ["child"],
+          signal,
+        );
+        for (const id of orphans) {
+          if (!toDelete.has(id)) {
+            toDelete.add(id);
+            changed = true;
+          }
+        }
+      }
+    }
+
+    // Discovery puts sources before targets; reversed, children go first.
+    const order = [...toDelete].reverse();
+    const incoming = new Map<string, DocumentRelationship[]>();
+    for (const documentId of order) {
+      const page = await this.documentIndexer.getIncoming(
+        documentId,
+        undefined,
+        undefined,
+        undefined,
+        signal,
+      );
+      incoming.set(documentId, page.results);
+    }
+    return { order, incoming };
+  }
+
+  /**
+   * The jobs of a deletion, `build` making each delete and relationship
+   * removal: an edge whose source is deleted no later than its target is
+   * removed before that source's delete, every other one after its target's.
+   */
+  private async deletePlans(
+    { order, incoming }: Deletion,
+    build: {
+      delete: (documentId: string) => Promise<ExecutionJobPlan>;
+      removal: (
+        rel: DocumentRelationship,
+        dependsOn: string[],
+        index: number,
+      ) => Promise<ExecutionJobPlan>;
+    },
+    signal: AbortSignal | undefined,
+  ): Promise<ExecutionJobPlan[]> {
+    const position = new Map(order.map((id, index) => [id, index]));
+    // An edge whose source is deleted no later than its target cannot wait.
+    const waitsForTarget = (rel: DocumentRelationship): boolean => {
+      const source = position.get(rel.sourceId);
+      return source === undefined || source > position.get(rel.targetId)!;
+    };
+    const leadingBySource = new Map<string, DocumentRelationship[]>();
+    for (const rels of incoming.values()) {
+      for (const rel of rels) {
+        if (waitsForTarget(rel)) continue;
+        const leading = leadingBySource.get(rel.sourceId) ?? [];
+        leading.push(rel);
+        leadingBySource.set(rel.sourceId, leading);
+      }
+    }
+
+    const plans: ExecutionJobPlan[] = [];
+    for (const documentId of order) {
+      signal?.throwIfAborted();
+      for (const rel of leadingBySource.get(documentId) ?? []) {
+        plans.push(await build.removal(rel, [], plans.length));
+      }
+      plans.push(await build.delete(documentId));
+      for (const rel of incoming.get(documentId)!) {
+        if (waitsForTarget(rel)) {
+          plans.push(
+            await build.removal(rel, [deletePlanKey(documentId)], plans.length),
+          );
+        }
+      }
+    }
+    return plans;
+  }
+
+  /** Submits a deletion's jobs; the handle's job is the root's delete. */
+  private async submitDeletion(
+    rootId: string,
+    plans: ExecutionJobPlan[],
+    signal: AbortSignal | undefined,
+  ): Promise<WriteHandle> {
+    const batchResult = await this.reactor.executeBatch(
+      { jobs: plans },
+      signal,
+    );
+
+    const jobs = Object.values(batchResult.jobs);
+    const rootJob = batchResult.jobs[deletePlanKey(rootId)] ?? jobs[0];
+    return this.handles.forJobs(
+      rootJob.id,
+      jobs,
+      rootId,
+      "main",
+      signal,
+      this.readerById(rootId),
+    );
+  }
+
+  /**
+   * The document a signed delete deletes, once its action is a signed
+   * DELETE_DOCUMENT of a document named by its id whose v2 signature
+   * verifies for that document's log; else {@link InvalidSignedDeleteError}.
+   * Who the signer is, and what it may delete, is not decided here.
+   */
+  private async verifySignedDelete(
+    action: Action,
+    signal: AbortSignal | undefined,
+  ): Promise<string> {
+    if (action.type !== "DELETE_DOCUMENT") {
+      throw new InvalidSignedDeleteError(
+        `it is a ${action.type}, not a DELETE_DOCUMENT`,
+      );
+    }
+    const documentId = (
+      action.input as Partial<DeleteDocumentActionInput> | undefined
+    )?.documentId;
+    if (typeof documentId !== "string" || documentId === "") {
+      throw new InvalidSignedDeleteError(
+        "its DELETE_DOCUMENT names no document",
+      );
+    }
+    const signer = action.context?.signer;
+    if (!signer?.app?.key || !signer.signatures?.length) {
+      throw new InvalidSignedDeleteError("its DELETE_DOCUMENT is unsigned");
+    }
+    let resolved: string;
+    try {
+      resolved = (await this.targets.describe(documentId, "main", signal))
+        .documentId;
+    } catch (error) {
+      if (error instanceof DocumentNotFoundError) {
+        throw new InvalidSignedDeleteError(`no document ${documentId} is held`);
+      }
+      throw error;
+    }
+    if (resolved !== documentId) {
+      throw new InvalidSignedDeleteError(
+        `it names ${documentId}, which is not a document's id (it names ${resolved})`,
+      );
+    }
+    const verdict = await verifyActionSignature(
+      action,
+      { documentId, branch: "main", policy: "v2-required" },
+      "mutation",
+    );
+    if (!verdict.ok) {
+      throw new InvalidSignedDeleteError(
+        `its signature does not verify (${verdict.code}): ${verdict.reason}`,
+      );
+    }
+    return documentId;
+  }
+
+  /**
+   * The document drives that file `rootId` and outlive the delete: each holds
+   * a `child` relationship into it and a node of it. A reactor drive files a
+   * document by its relationship alone, which the deletion removes.
+   */
+  private async filingDocumentDrives(
+    rootId: string,
+    deletion: Deletion,
+    signal: AbortSignal | undefined,
+  ): Promise<string[]> {
+    const deleted = new Set(deletion.order);
+    const sources = new Set(
+      (deletion.incoming.get(rootId) ?? [])
+        .filter(
+          (rel) =>
+            rel.relationshipType === "child" && !deleted.has(rel.sourceId),
+        )
+        .map((rel) => rel.sourceId),
+    );
+    const filing: string[] = [];
+    for (const sourceId of sources) {
+      const described = await this.targets.describe(sourceId, "main", signal);
+      if (described.documentType !== driveDocumentType) continue;
+      const drive = await this.documentView.get<DocumentDriveDocument>(
+        sourceId,
+        { branch: "main" },
+        undefined,
+        signal,
+      );
+      if (drive.state.global.nodes.some((node) => node.id === rootId)) {
+        filing.push(sourceId);
+      }
+    }
+    return filing;
+  }
+
+  /** Waits for a batch every job of which must land; a FAILED one is thrown. */
+  private async complete(
+    batch: BatchExecutionResult,
+    signal: AbortSignal | undefined,
+  ): Promise<void> {
+    for (const job of Object.values(batch.jobs)) {
+      const settled = await this.read.waitForJob(job, signal);
+      if (settled.status === JobStatus.FAILED) {
+        throw new Error(
+          settled.error?.message ?? `Job ${settled.id} of the delete failed`,
+        );
+      }
+    }
   }
 
   /** As the reactor runs the header; a versionless one is legacy. */

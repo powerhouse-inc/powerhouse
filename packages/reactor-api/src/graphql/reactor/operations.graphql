@@ -536,6 +536,18 @@ mutation DeleteDocument($idOrSlug: String!, $propagate: PropagationMode) {
   deleteDocument(idOrSlug: $idOrSlug, propagate: $propagate)
 }
 
+mutation DeleteDocumentSigned(
+  $idOrSlug: String!
+  $propagate: PropagationMode
+  $signedDelete: ActionInput!
+) {
+  deleteDocument(
+    idOrSlug: $idOrSlug
+    propagate: $propagate
+    signedDelete: $signedDelete
+  )
+}
+
 mutation DeleteDocuments($idsOrSlugs: [String!]!, $propagate: PropagationMode) {
   deleteDocuments(idsOrSlugs: $idsOrSlugs, propagate: $propagate)
 }

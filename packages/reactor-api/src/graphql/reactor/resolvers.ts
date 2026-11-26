@@ -6,12 +6,15 @@ import {
   type BatchWriteHandle,
   ChannelError,
   ChannelErrorSource,
+  completesSignedDeletes,
   consolidateSyncOperations,
   type ConsistencyToken,
+  type DeleteAuthorizer,
   type DocumentRelationship,
   DriveCollectionId,
   envelopesToSyncOperations,
   type ExecutionJobPlan,
+  InvalidSignedDeleteError,
   type IReactorReadClient,
   type IReactorWriteClient,
   type ISyncManager,
@@ -21,6 +24,7 @@ import {
   type OperationFilter,
   type PagedResults,
   type PagingOptions,
+  type PropagationMode,
   type RemoteFilter,
   type SearchFilter,
   supportsPurgeRefusals,
@@ -1748,14 +1752,32 @@ export async function moveRelationship(
   }
 }
 
+/**
+ * Deletes a document. With `signedDelete` (the caller's own signed
+ * DELETE_DOCUMENT of it) the host completes that delete as its own work,
+ * asking `mayDelete` for each document it removes; see
+ * `ISignedDeleteWriteClient.deleteSigned`. Without one the host builds and
+ * signs the delete itself, as it always has.
+ */
 export async function deleteDocument(
   clients: RequestClients,
   args: {
     idOrSlug: string;
     propagate?: GqlPropagationMode | null;
+    signedDelete?: ActionInput | null;
+    mayDelete?: DeleteAuthorizer;
   },
 ): Promise<boolean> {
   const propagate = toReactorPropagationMode(args.propagate);
+  if (args.signedDelete) {
+    await deleteSigned(
+      clients.write,
+      args.signedDelete,
+      propagate,
+      args.mayDelete,
+    );
+    return true;
+  }
 
   try {
     // Cascade discovery reads the relationship graph, as it always has.
@@ -1784,15 +1806,67 @@ export async function deleteDocument(
   }
 }
 
+/** Completes the caller's signed delete; see {@link deleteDocument}. */
+async function deleteSigned(
+  write: IReactorWriteClient | Pick<IReactorWriteClient, "deleteDocuments">,
+  signedDelete: ActionInput,
+  propagate: PropagationMode | undefined,
+  mayDelete: DeleteAuthorizer | undefined,
+): Promise<void> {
+  if (!completesSignedDeletes(write)) {
+    throw new GraphQLError("This host cannot complete a signed delete", {
+      extensions: { code: "BAD_USER_INPUT" },
+    });
+  }
+  const [action] = toSubmittableActions([signedDelete]);
+  try {
+    const handle = await write.deleteSigned({
+      action,
+      ...(propagate === undefined ? {} : { propagate }),
+      ...(mayDelete ? { mayDelete } : {}),
+    });
+    await handle.readable;
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to delete document: ${error instanceof Error ? error.message : "Unknown error"}`,
+      InvalidSignedDeleteError.isError(error)
+        ? { extensions: { code: "BAD_USER_INPUT" } }
+        : undefined,
+    );
+  }
+}
+
+/** The document a signed DELETE_DOCUMENT deletes, or undefined for any other action. */
+export function signedDeleteTarget(
+  signedDelete: ActionInput,
+): string | undefined {
+  const documentId = (signedDelete.input as { documentId?: unknown } | null)
+    ?.documentId;
+  return signedDelete.type === "DELETE_DOCUMENT" &&
+    typeof documentId === "string"
+    ? documentId
+    : undefined;
+}
+
 export async function deleteDocuments(
   write: Pick<IReactorWriteClient, "deleteDocuments">,
   args: {
     idsOrSlugs: readonly string[];
     propagate?: GqlPropagationMode | null;
+    signedDeletes?: readonly ActionInput[] | null;
+    mayDelete?: DeleteAuthorizer;
   },
 ): Promise<boolean> {
   const propagate = toReactorPropagationMode(args.propagate);
   const idsOrSlugs = [...args.idsOrSlugs];
+  if (args.signedDeletes) {
+    await Promise.all(
+      args.signedDeletes.map((signedDelete) =>
+        deleteSigned(write, signedDelete, propagate, args.mayDelete),
+      ),
+    );
+    return true;
+  }
 
   try {
     const handles = await write.deleteDocuments(idsOrSlugs, propagate);

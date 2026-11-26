@@ -533,6 +533,24 @@ export class RelationshipNotFoundError extends Error {
   }
 }
 
+/**
+ * A signed delete the host refuses to complete before it writes anything:
+ * not a DELETE_DOCUMENT, unsigned, naming no stored document by its id, or
+ * signed by a key its signature does not verify for.
+ */
+export class InvalidSignedDeleteError extends Error {
+  constructor(reason: string) {
+    super(`The signed delete is refused: ${reason}`);
+    this.name = "InvalidSignedDeleteError";
+
+    Error.captureStackTrace(this, InvalidSignedDeleteError);
+  }
+
+  static override isError(error: unknown): error is InvalidSignedDeleteError {
+    return Error.isError(error) && error.name === "InvalidSignedDeleteError";
+  }
+}
+
 export type StoredProtocolRefusal = {
   protocol: string;
   version: number;

@@ -3,6 +3,7 @@ import { createActionIdGenerator } from "./action-id.js";
 import {
   compareActionIds,
   compareCanonical,
+  derivedActionId,
   groupedActionId,
   idOrderFor,
   legacyIdOrder,
@@ -134,5 +135,28 @@ describe("synthesizedActionId", () => {
     expect(() =>
       synthesizedActionId("u", capabilitiesOf(3).synthesizedId),
     ).toThrow("Action u cannot synthesize");
+  });
+});
+
+describe("derivedActionId", () => {
+  it("is the same for the same signed action and part, and differs otherwise", () => {
+    const signed = "0192f0a4-0000-7000-8000-000000000001";
+    expect(derivedActionId(signed, "delete:doc-2")).toBe(
+      derivedActionId(signed, "delete:doc-2"),
+    );
+    expect(derivedActionId(signed, "delete:doc-2")).toMatch(/^[0-9a-f]{32}$/);
+    expect(derivedActionId(signed, "delete:doc-2")).not.toBe(
+      derivedActionId(signed, "delete:doc-3"),
+    );
+    expect(derivedActionId(signed, "delete:doc-2")).not.toBe(
+      derivedActionId("0192f0a4-0000-7000-8000-000000000002", "delete:doc-2"),
+    );
+  });
+
+  it("never names the action a submitted UNDO synthesizes", () => {
+    expect(derivedActionId("u", "")).not.toBe(
+      synthesizedActionId("u", "hashed"),
+    );
+    expect(undoGroupOfId(derivedActionId("u", "x"))).toBeUndefined();
   });
 });

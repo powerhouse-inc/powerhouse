@@ -63,6 +63,16 @@ export function undoGroupOfId(id: string): string | undefined {
     : undefined;
 }
 
+/**
+ * The id of an action a host derives from the signed action `signedId` as
+ * its own work (the consequences of a signed delete), one per `part`. The
+ * same signed action always derives the same ids, so a second completion of
+ * it is refused as a repeat rather than written again.
+ */
+export function derivedActionId(signedId: string, part: string): string {
+  return hashBrowser(`derived:${signedId}:${part}`, "sha1", "hex").slice(0, 32);
+}
+
 /** The sha1 form released v1/v2 stores hold; v3 synthesizes nothing. */
 export function synthesizedActionId(
   submittedId: string,

@@ -55,9 +55,16 @@ const NODE_QUERY_TYPES = [
   "DriveNodePage",
 ];
 
+/** The delete mutations' signed-delete arguments, added with F3e. */
+const SIGNED_DELETE_ARGS: Record<string, string> = {
+  deleteDocument: "signedDelete",
+  deleteDocuments: "signedDeletes",
+};
+
 /** The schema with exactly the allowed additions taken out again. */
 function withoutTheAddition(source: string): GraphQLSchema {
   let inQuery = false;
+  let inMutation = false;
   const stripped = visit(parse(source), {
     InputObjectTypeDefinition: (node) =>
       ADDED_TYPES.includes(node.name.value) ? null : undefined,
@@ -69,14 +76,25 @@ function withoutTheAddition(source: string): GraphQLSchema {
       enter: (node) => {
         if (NODE_QUERY_TYPES.includes(node.name.value)) return null;
         inQuery = node.name.value === "Query";
+        inMutation = node.name.value === "Mutation";
       },
       leave: () => {
         inQuery = false;
+        inMutation = false;
       },
     },
     FieldDefinition: (node) => {
       if (inQuery && NODE_QUERY_FIELDS.includes(node.name.value)) {
         return null;
+      }
+      const signedDelete = SIGNED_DELETE_ARGS[node.name.value];
+      if (inMutation && signedDelete) {
+        return {
+          ...node,
+          arguments: node.arguments?.filter(
+            (arg) => arg.name.value !== signedDelete,
+          ),
+        };
       }
       if (!inQuery || !CONSISTENCY_FIELDS.includes(node.name.value)) {
         return undefined;
@@ -105,7 +123,7 @@ function fieldTypes(
 }
 
 describe("reactor schema", () => {
-  it("is the baseline plus the consistency argument and the drive node queries, nothing else", () => {
+  it("is the baseline plus the consistency argument, the drive node queries and the signed deletes, nothing else", () => {
     // Both sides printed the same way, so a formatter touching the baseline
     // file changes nothing.
     expect(
@@ -125,6 +143,18 @@ describe("reactor schema", () => {
         .getFields()
         [name].args.find((candidate) => candidate.name === "consistency");
       expect(String(arg?.type), name).toBe("ConsistencyTokenInput");
+    }
+  });
+
+  it("takes the caller's signed delete, optional, on the two delete mutations", () => {
+    const mutation = schema.getMutationType()!;
+    for (const [name, argument] of Object.entries(SIGNED_DELETE_ARGS)) {
+      const arg = mutation
+        .getFields()
+        [name].args.find((candidate) => candidate.name === argument);
+      expect(String(arg?.type), name).toBe(
+        name === "deleteDocument" ? "ActionInput" : "[ActionInput!]",
+      );
     }
   });
 

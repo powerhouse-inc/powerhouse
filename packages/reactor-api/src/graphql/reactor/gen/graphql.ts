@@ -464,12 +464,14 @@ export type MutationDeleteDocumentArgs = {
   idOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   identifier?: InputMaybe<Scalars["String"]["input"]>;
   propagate?: InputMaybe<PropagationMode>;
+  signedDelete?: InputMaybe<ActionInput>;
 };
 
 export type MutationDeleteDocumentsArgs = {
   identifiers?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   idsOrSlugs?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   propagate?: InputMaybe<PropagationMode>;
+  signedDeletes?: InputMaybe<ReadonlyArray<ActionInput>>;
 };
 
 export type MutationExecuteArgs = {
@@ -1883,6 +1885,14 @@ export type DeleteDocumentMutationVariables = Exact<{
 }>;
 
 export type DeleteDocumentMutation = { readonly deleteDocument: boolean };
+
+export type DeleteDocumentSignedMutationVariables = Exact<{
+  idOrSlug: Scalars["String"]["input"];
+  propagate?: InputMaybe<PropagationMode>;
+  signedDelete: ActionInput;
+}>;
+
+export type DeleteDocumentSignedMutation = { readonly deleteDocument: boolean };
 
 export type DeleteDocumentsMutationVariables = Exact<{
   idsOrSlugs: ReadonlyArray<Scalars["String"]["input"]>;
@@ -4284,6 +4294,19 @@ export const DeleteDocumentDocument = gql`
     deleteDocument(idOrSlug: $idOrSlug, propagate: $propagate)
   }
 `;
+export const DeleteDocumentSignedDocument = gql`
+  mutation DeleteDocumentSigned(
+    $idOrSlug: String!
+    $propagate: PropagationMode
+    $signedDelete: ActionInput!
+  ) {
+    deleteDocument(
+      idOrSlug: $idOrSlug
+      propagate: $propagate
+      signedDelete: $signedDelete
+    )
+  }
+`;
 export const DeleteDocumentsDocument = gql`
   mutation DeleteDocuments(
     $idsOrSlugs: [String!]!
@@ -4772,6 +4795,19 @@ export function getSdk<C>(requester: Requester<C>) {
         variables,
         options,
       ) as Promise<DeleteDocumentMutation>;
+    },
+    DeleteDocumentSigned(
+      variables: DeleteDocumentSignedMutationVariables,
+      options?: C,
+    ): Promise<DeleteDocumentSignedMutation> {
+      return requester<
+        DeleteDocumentSignedMutation,
+        DeleteDocumentSignedMutationVariables
+      >(
+        DeleteDocumentSignedDocument,
+        variables,
+        options,
+      ) as Promise<DeleteDocumentSignedMutation>;
     },
     DeleteDocuments(
       variables: DeleteDocumentsMutationVariables,

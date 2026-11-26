@@ -3002,11 +3002,13 @@ type Mutation {
     idOrSlug: String
     identifier: String @deprecated(reason: "Use idOrSlug.")
     propagate: PropagationMode
+    signedDelete: ActionInput
   ): Boolean!
   deleteDocuments(
     idsOrSlugs: [String!]
     identifiers: [String!] @deprecated(reason: "Use idsOrSlugs.")
     propagate: PropagationMode
+    signedDeletes: [ActionInput!]
   ): Boolean!
   touchChannel(input: TouchChannelInput!): TouchChannelResult!
   pushSyncEnvelopes(

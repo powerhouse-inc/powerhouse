@@ -965,18 +965,24 @@ type Mutation {
     branch: String
   ): MoveRelationshipResult!
 
-  # Delete a single document
+  # Delete a single document. signedDelete is the caller's own signed
+  # DELETE_DOCUMENT of it: the host completes that delete as its own work (the
+  # relationships into the document, its drive's node and, with CASCADE, the
+  # orphaned descendants).
   deleteDocument(
     idOrSlug: String
     identifier: String @deprecated(reason: "Use idOrSlug.")
     propagate: PropagationMode
+    signedDelete: ActionInput
   ): Boolean!
 
-  # Delete multiple documents
+  # Delete multiple documents. signedDeletes, when given, holds the caller's
+  # signed DELETE_DOCUMENT of each, in the order of idsOrSlugs.
   deleteDocuments(
     idsOrSlugs: [String!]
     identifiers: [String!] @deprecated(reason: "Use idsOrSlugs.")
     propagate: PropagationMode
+    signedDeletes: [ActionInput!]
   ): Boolean!
 
   # Touch (create or update) a channel for sync

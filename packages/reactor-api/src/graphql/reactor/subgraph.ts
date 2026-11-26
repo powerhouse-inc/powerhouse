@@ -1,5 +1,8 @@
 import { ConsoleLogger } from "document-model";
-import { DriveCollectionId } from "@powerhousedao/reactor";
+import {
+  DriveCollectionId,
+  type DeleteAuthorizer,
+} from "@powerhousedao/reactor";
 import { GraphQLError } from "graphql";
 import { optionalOneOf, requireOneOf } from "../argument-aliases.js";
 import { ForbiddenError } from "../errors.js";
@@ -28,7 +31,7 @@ import {
   requireDriveNodeSource,
   type DriveNodeGate,
 } from "./drive-nodes.js";
-import type { Resolvers } from "./gen/graphql.js";
+import type { ActionInput, Resolvers } from "./gen/graphql.js";
 import {
   DocumentChangeFeed,
   ensureJobSubscription,
@@ -150,6 +153,46 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
     };
+  }
+
+  /**
+   * The door's check that the caller may delete the document `idOrSlug`
+   * names, signed delete or not: today the host's policy, the write check.
+   */
+  private assertMayDelete(
+    idOrSlug: string,
+    ctx: Context,
+  ): Promise<AuthorizedDocumentHandle> {
+    return this.assertCanWrite(idOrSlug, ctx);
+  }
+
+  /**
+   * Stage G's seam: whether the signer of a signed delete may delete one
+   * document it removes, by that document's own rules. The reactor asks it
+   * for the document the delete names and for each document its CASCADE
+   * removes, before anything is written; a throw refuses the whole delete.
+   * Until document rules are enforced the door's host-policy check
+   * ({@link assertMayDelete}) decides alone, so every document is allowed.
+   */
+  #documentRulesMayDelete: DeleteAuthorizer = () => Promise.resolve();
+
+  /** Refuses a signed delete that is not the DELETE_DOCUMENT of `idOrSlug`'s document. */
+  async #assertSignedDeleteOf(
+    idOrSlug: string,
+    signedDelete: ActionInput,
+    ctx: Context,
+  ): Promise<void> {
+    const deletes = resolvers.signedDeleteTarget(signedDelete);
+    const documentId = (await this.clientsOf(ctx).write.describe(idOrSlug))
+      .documentId;
+    if (deletes !== documentId) {
+      throw new GraphQLError(
+        deletes === undefined
+          ? `signedDelete is a ${signedDelete.type}, not the DELETE_DOCUMENT of ${documentId}`
+          : `signedDelete deletes ${deletes}, not ${documentId}`,
+        { extensions: { code: "BAD_USER_INPUT" } },
+      );
+    }
   }
 
   /**
@@ -1385,13 +1428,16 @@ export class ReactorSubgraph extends BaseSubgraph {
 
       deleteDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("deleteDocument(@args)", args);
-        this.logHostSigned("deleteDocument", ctx);
+        if (!args.signedDelete) this.logHostSigned("deleteDocument", ctx);
         try {
-          const handle = await this.assertCanWrite(
+          const handle = await this.assertMayDelete(
             requireOneOf<string>(args, "idOrSlug", "identifier"),
             ctx,
           );
           const idOrSlug = handle.fetchIdentifier;
+          if (args.signedDelete) {
+            await this.#assertSignedDeleteOf(idOrSlug, args.signedDelete, ctx);
+          }
 
           // Resolve identifier (id or slug) to detect drive deletes for cache
           // invalidation. Only one read; no-op for non-drive callers via the
@@ -1401,6 +1447,8 @@ export class ReactorSubgraph extends BaseSubgraph {
           const result = await resolvers.deleteDocument(this.clientsOf(ctx), {
             idOrSlug,
             propagate: args.propagate,
+            signedDelete: args.signedDelete,
+            mayDelete: this.#documentRulesMayDelete,
           });
 
           if (result && driveIdToInvalidate) {
@@ -1420,7 +1468,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
       deleteDocuments: async (_parent, args, ctx: Context) => {
         this.logger.debug("deleteDocuments(@args)", args);
-        this.logHostSigned("deleteDocuments", ctx);
+        if (!args.signedDeletes) this.logHostSigned("deleteDocuments", ctx);
         try {
           // Check write permission on each document, resolving slugs so the
           // delete targets the same canonical ids the checks authorized.
@@ -1430,12 +1478,30 @@ export class ReactorSubgraph extends BaseSubgraph {
             "idsOrSlugs",
             "identifiers",
           )) {
-            const handle = await this.assertCanWrite(idOrSlug, ctx);
+            const handle = await this.assertMayDelete(idOrSlug, ctx);
             idsOrSlugs.push(handle.fetchIdentifier);
+          }
+          const { signedDeletes } = args;
+          if (signedDeletes) {
+            if (signedDeletes.length !== idsOrSlugs.length) {
+              throw new GraphQLError(
+                "signedDeletes needs one signed DELETE_DOCUMENT per document, in the order of idsOrSlugs",
+                { extensions: { code: "BAD_USER_INPUT" } },
+              );
+            }
+            for (const [index, idOrSlug] of idsOrSlugs.entries()) {
+              await this.#assertSignedDeleteOf(
+                idOrSlug,
+                signedDeletes[index],
+                ctx,
+              );
+            }
           }
           return await resolvers.deleteDocuments(this.clientsOf(ctx).write, {
             idsOrSlugs,
             propagate: args.propagate,
+            signedDeletes,
+            mayDelete: this.#documentRulesMayDelete,
           });
         } catch (error) {
           this.logFailure(

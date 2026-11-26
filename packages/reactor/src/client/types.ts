@@ -10,6 +10,7 @@ import type {
 } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
+  ActionSigner,
   AuthSubject,
   CreateProtocolVersionsOptions,
   DocumentModelModule,
@@ -689,6 +690,66 @@ export interface IReactorWriteClient {
     request: BatchLoadRequest,
     signal?: AbortSignal,
   ): Promise<BatchLoadResult>;
+}
+
+/** One document a signed delete removes, as its {@link DeleteAuthorizer} is asked. */
+export type DeleteAuthorizerRequest = {
+  /** The document to delete. */
+  documentId: string;
+  /** The document the signed DELETE_DOCUMENT names: `documentId` itself, or the root of its CASCADE. */
+  rootId: string;
+  /** Whom the signed DELETE_DOCUMENT names, and its signatures. */
+  signer: ActionSigner;
+};
+
+/**
+ * Whether the signer of a delete may delete one document it removes; throws
+ * to refuse the whole delete. Asked for the document the delete names and
+ * for each document its CASCADE removes, before anything is written.
+ */
+export type DeleteAuthorizer = (
+  request: DeleteAuthorizerRequest,
+  signal?: AbortSignal,
+) => Promise<void>;
+
+/** A delete a caller signed, for the host to complete. */
+export type SignedDeleteIntent = {
+  /** The caller's own signed DELETE_DOCUMENT of the document, on "main". */
+  action: Action;
+  /** CASCADE also deletes the orphaned descendants. */
+  propagate?: PropagationMode;
+  mayDelete?: DeleteAuthorizer;
+};
+
+/**
+ * A write half that completes a delete its caller signed: a host's own
+ * in-process client. The caller signs one DELETE_DOCUMENT; the consequences
+ * (the relationships into the deleted documents, a document drive's node of
+ * the document, and with CASCADE the orphaned descendants' deletes) are this
+ * client's own work, signed by its signer under ids derived from the signed
+ * action's id, so completing the same signed delete again writes nothing new.
+ */
+export interface ISignedDeleteWriteClient {
+  /**
+   * Refuses with `InvalidSignedDeleteError` before writing anything when the
+   * action is not a signed DELETE_DOCUMENT of a document named by its id
+   * whose v2 signature verifies. The handle's job is the signed delete's;
+   * its stages wait for the whole delete.
+   */
+  deleteSigned(
+    intent: SignedDeleteIntent,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+}
+
+/** Whether `write` completes a delete its caller signed. */
+export function completesSignedDeletes(
+  write: unknown,
+): write is ISignedDeleteWriteClient {
+  return (
+    typeof (write as Partial<ISignedDeleteWriteClient> | null)?.deleteSigned ===
+    "function"
+  );
 }
 
 /**
