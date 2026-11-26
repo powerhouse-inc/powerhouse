@@ -7,10 +7,26 @@
   },
   "include": ["scripts/**/*.ts", "fixture-piece/**/*.ts"],
   "references": [
-    { "path": "../../clis/ph-cli" },
-    { "path": "../../packages/pieces-framework" },
-    { "path": "../../packages/registry" },
-    { "path": "../../packages/shared" },
-    { "path": "../e2e-utils" }
+    {
+      "path": "../../clis/ph-cli"
+    },
+    {
+      "path": "../../packages/pieces-framework"
+    },
+    {
+      "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/registry"
+    },
+    {
+      "path": "../../packages/shared"
+    },
+    {
+      "path": "../../packages/workflow"
+    },
+    {
+      "path": "../e2e-utils"
+    }
   ]
 }

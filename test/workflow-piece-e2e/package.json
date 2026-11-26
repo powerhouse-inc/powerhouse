@@ -11,8 +11,10 @@
     "@powerhousedao/e2e-utils": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/pieces-framework": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/registry": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/workflow": "workspace:*",
     "@types/node": "catalog:",
     "tsx": "catalog:",
     "typescript": "^5.9.3"

@@ -1,5 +1,21 @@
-// The switchboard surface this suite drives: the workflow document model's own
-// subgraph to author a workflow, and the runtime subgraph to run and read it.
+// The switchboard surface this suite drives: the workflow document, authored
+// with actions the suite signs itself (a switchboard signs no write for its
+// callers), and the runtime subgraph to run and read it.
+import { GraphQLReactorClient } from "@powerhousedao/reactor-browser/graphql-client";
+import type { Action } from "@powerhousedao/shared/document-model";
+import { testSigner } from "@powerhousedao/shared/testing";
+import {
+  addEdge,
+  addStep,
+  publishWorkflow,
+  setTrigger,
+  setWorkflowName,
+  setWorkflowStatus,
+  Workflow,
+} from "@powerhousedao/workflow/document-models/workflow";
+
+/** The address the suite's own writes are signed for. */
+export const E2E_WRITER_ADDRESS = "0x00000000000000000000000000000000000000e4";
 
 export interface GraphQLErrorShape {
   message: string;
@@ -18,7 +34,25 @@ export class GraphQLFailure extends Error {
 }
 
 export class SwitchboardClient {
+  #writer: Promise<GraphQLReactorClient> | undefined;
+
   constructor(private readonly baseUrl: string) {}
+
+  /** Writes to the switchboard as the suite's own signer, as a Powerhouse client does. */
+  writer(): Promise<GraphQLReactorClient> {
+    this.#writer ??= testSigner(E2E_WRITER_ADDRESS, {
+      app: "workflow-piece-e2e",
+    }).then(
+      (signer) =>
+        new GraphQLReactorClient({
+          url: `${this.baseUrl}/graphql`,
+          signer,
+          documentModels: [Workflow],
+          realtime: false,
+        }),
+    );
+    return this.#writer;
+  }
 
   async request<T>(
     path: string,
@@ -93,7 +127,6 @@ export interface RunRecord {
 }
 
 const RUNTIME_PATH = "/graphql/workflow-runtime";
-const WORKFLOW_PATH = "/graphql/workflow";
 
 export async function runtimeHealth(
   client: SwitchboardClient,
@@ -184,74 +217,33 @@ export interface WorkflowInput {
 }
 
 // Authored the way a client authors one: create the document, then one
-// mutation per structural edit, then enable it.
+// signed action per structural edit, then enable it.
 export async function createWorkflow(
   client: SwitchboardClient,
   input: WorkflowInput,
 ): Promise<string> {
-  const created = await client.request<{
-    Workflow: { createDocument: { id: string } };
-  }>(
-    WORKFLOW_PATH,
-    `mutation Create($name: String!) {
-      Workflow { createDocument(name: $name) { id } }
-    }`,
-    { name: input.name },
+  const writer = await client.writer();
+  const created = await writer.create(
+    await writer.newDocument(Workflow.documentModel.global.id, {
+      name: input.name,
+    }),
   );
-  const id = created.Workflow.createDocument.id;
+  const id = created.header.id;
+  const write = async (action: Action) => {
+    await writer.execute(id, "main", [action]);
+  };
 
-  await client.request(
-    WORKFLOW_PATH,
-    `mutation Name($docId: String!, $input: Workflow_SetWorkflowNameInput!) {
-      Workflow { setWorkflowName(documentIdOrSlug: $docId, input: $input) { id } }
-    }`,
-    { docId: id, input: { name: input.name } },
-  );
-
-  await client.request(
-    WORKFLOW_PATH,
-    `mutation Trigger($docId: String!, $input: Workflow_SetTriggerInput!) {
-      Workflow { setTrigger(documentIdOrSlug: $docId, input: $input) { id } }
-    }`,
-    { docId: id, input: input.trigger },
-  );
-
+  await write(setWorkflowName({ name: input.name }));
+  await write(setTrigger(input.trigger));
   for (const step of input.steps) {
-    await client.request(
-      WORKFLOW_PATH,
-      `mutation Step($docId: String!, $input: Workflow_AddStepInput!) {
-        Workflow { addStep(documentIdOrSlug: $docId, input: $input) { id } }
-      }`,
-      { docId: id, input: step },
-    );
+    await write(addStep(step));
   }
-
   for (const edge of input.edges) {
-    await client.request(
-      WORKFLOW_PATH,
-      `mutation Edge($docId: String!, $input: Workflow_AddEdgeInput!) {
-        Workflow { addEdge(documentIdOrSlug: $docId, input: $input) { id } }
-      }`,
-      { docId: id, input: edge },
-    );
+    await write(addEdge(edge));
   }
-
   // Enabling requires a published snapshot.
-  await client.request(
-    WORKFLOW_PATH,
-    `mutation Publish($docId: String!, $input: Workflow_PublishWorkflowInput!) {
-      Workflow { publishWorkflow(documentIdOrSlug: $docId, input: $input) { id } }
-    }`,
-    { docId: id, input: { publishedAt: new Date().toISOString() } },
-  );
-
-  await client.request(
-    WORKFLOW_PATH,
-    `mutation Status($docId: String!, $input: Workflow_SetWorkflowStatusInput!) {
-      Workflow { setWorkflowStatus(documentIdOrSlug: $docId, input: $input) { id } }
-    }`,
-    { docId: id, input: { status: "ENABLED" } },
-  );
+  await write(publishWorkflow({ publishedAt: new Date().toISOString() }));
+  await write(setWorkflowStatus({ status: "ENABLED" }));
 
   return id;
 }

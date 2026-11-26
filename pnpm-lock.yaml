@@ -4822,12 +4822,18 @@ importers:
       '@powerhousedao/pieces-framework':
         specifier: workspace:*
         version: link:../../packages/pieces-framework
+      '@powerhousedao/reactor-browser':
+        specifier: workspace:*
+        version: link:../../packages/reactor-browser
       '@powerhousedao/registry':
         specifier: workspace:*
         version: link:../../packages/registry
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@powerhousedao/workflow':
+        specifier: workspace:*
+        version: link:../../packages/workflow
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
