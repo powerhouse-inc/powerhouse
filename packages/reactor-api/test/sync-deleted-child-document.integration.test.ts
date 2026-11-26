@@ -35,7 +35,8 @@ import { AuthorizationPolicy } from "../src/services/authorization.service.js";
 import { buildSyncServingGate } from "../src/services/sync-serving-gate.js";
 import type { BridgeTarget } from "./utils/gql-resolver-bridge.js";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
-import { createTestSigner, trustOnly } from "./utils/test-signer.js";
+import { testSigner } from "@powerhousedao/shared/testing";
+import { trustOnly } from "./utils/trust-only.js";
 
 const MODULES = [
   driveDocumentModelModule as unknown as DocumentModelModule,
@@ -105,7 +106,7 @@ async function setup(): Promise<Fixture> {
     pollErrors,
   );
 
-  const signer = await createTestSigner();
+  const signer = await testSigner();
   const models = new DocumentModelRegistry();
   models.registerModules(...MODULES);
 

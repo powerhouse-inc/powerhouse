@@ -14,7 +14,7 @@ import {
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as resolvers from "../src/graphql/reactor/resolvers.js";
-import { createTestSigner, signFor } from "./utils/test-signer.js";
+import { signFor, testSigner } from "@powerhousedao/shared/testing";
 
 const createTestDocument = (): PHDocument => {
   return documentModelDocumentModelModule.utils.createDocument();
@@ -29,7 +29,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
       documentModelDocumentModelModule as unknown as DocumentModelModule,
     ]);
     module = await new ReactorClientBuilder()
-      .withSigner(await createTestSigner())
+      .withSigner(await testSigner())
       .withReactorBuilder(reactorBuilder)
       .buildModule();
   });
@@ -251,7 +251,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       documentModelDocumentModelModule as unknown as DocumentModelModule,
     ]);
     module = await new ReactorClientBuilder()
-      .withSigner(await createTestSigner())
+      .withSigner(await testSigner())
       .withReactorBuilder(reactorBuilder)
       .buildModule();
   });
@@ -559,10 +559,10 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
 
 describe("execute", () => {
   let module: InProcessReactorClientModule;
-  let server: Awaited<ReturnType<typeof createTestSigner>>;
+  let server: Awaited<ReturnType<typeof testSigner>>;
 
   beforeEach(async () => {
-    server = await createTestSigner("0xserver");
+    server = await testSigner("0xserver");
     module = await new ReactorClientBuilder()
       .withSigner(server)
       .withReactorBuilder(
@@ -613,7 +613,7 @@ describe("execute", () => {
 
       const signer = await lastSigner(document.header.id);
       expect(signer?.user.address).toBe("0xserver");
-      expect(signer?.app.key).toBe(server.app.key);
+      expect(signer?.app.key).toBe(server.app?.key);
       expect(signer?.signatures).toHaveLength(1);
     },
   );
@@ -621,7 +621,7 @@ describe("execute", () => {
   it("keeps the signature of an action its author signed", async () => {
     const document = createTestDocument();
     await module.client.create(document);
-    const author = await createTestSigner("0xauthor");
+    const author = await testSigner("0xauthor");
     const signed = await signFor(
       author,
       documentModelDocumentModelModule.actions.setModelName({ name: "own" }),
@@ -648,7 +648,7 @@ describe("execute", () => {
 
     const signer = await lastSigner(document.header.id);
     expect(signer?.user.address).toBe("0xauthor");
-    expect(signer?.app.key).toBe(author.app.key);
+    expect(signer?.app.key).toBe(author.app?.key);
     expect(signer?.signatures).toEqual(signed.context!.signer!.signatures);
   });
 });
@@ -666,7 +666,7 @@ describe("create mutations under the client's creation default", () => {
     policy: "legacy" | "v2-required",
   ): Promise<InProcessReactorClientModule> {
     const built = await new ReactorClientBuilder()
-      .withSigner(await createTestSigner())
+      .withSigner(await testSigner())
       .withReactorBuilder(
         new ReactorBuilder().withDocumentModelSources([
           driveDocumentModelModule as unknown as DocumentModelModule,

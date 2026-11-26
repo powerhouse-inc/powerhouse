@@ -20,7 +20,7 @@ import {
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
 import { mutationContextFor } from "./utils/read-gate-fixture.js";
-import { createTestSigner } from "./utils/test-signer.js";
+import { testSigner } from "@powerhousedao/shared/testing";
 
 type Resolver = (p: unknown, a: unknown, c: Context) => Promise<unknown>;
 
@@ -33,7 +33,7 @@ describe("creating a document with a slug another document holds", () => {
 
   beforeEach(async () => {
     module = await new ReactorClientBuilder()
-      .withSigner(await createTestSigner())
+      .withSigner(await testSigner())
       .withReactorBuilder(
         new ReactorBuilder().withDocumentModelSources([
           driveDocumentModelModule as unknown as DocumentModelModule,

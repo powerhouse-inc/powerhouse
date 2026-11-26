@@ -32,7 +32,7 @@ import {
 import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
-import { createTestSigner, signFor } from "./utils/test-signer.js";
+import { signFor, testSigner } from "@powerhousedao/shared/testing";
 
 type ConnectSwitchboardSetup = {
   connectReactor: IReactor;
@@ -122,7 +122,7 @@ async function setupConnectSwitchboard(): Promise<ConnectSwitchboardSetup> {
     connectSyncManager,
     switchboardSyncManager,
     resolverBridge,
-    signer: await createTestSigner(),
+    signer: await testSigner(),
   };
 }
 

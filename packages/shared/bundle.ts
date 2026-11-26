@@ -29,6 +29,8 @@ await build({
     "processors/index.ts",
     // Test helpers; their PGlite peers are optional.
     "processors/testing.ts",
+    // Test signer: WebCrypto only, for node and browser suites.
+    "testing/index.ts",
     "registry/index.ts",
     // Browser-safe deep entries: Connect and the design system import these
     // directly so they don't pull the registry barrel's node:fs helpers into

@@ -26,7 +26,7 @@ import type {
 import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
-import { createTestSigner, signFor } from "./utils/test-signer.js";
+import { signFor, testSigner } from "@powerhousedao/shared/testing";
 
 type BridgeMode = "online" | "offline" | "rejecting";
 
@@ -154,7 +154,7 @@ async function setupPushBackfill(): Promise<PushBackfillSetup> {
     connectSyncManager,
     switchboardSyncManager,
     bridge,
-    signer: await createTestSigner(),
+    signer: await testSigner(),
     setOffline,
     setMode,
   };

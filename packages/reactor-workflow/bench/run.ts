@@ -42,7 +42,7 @@ import { freshDatabase, hostKysely, journalDb } from "./postgres.ts";
 import { createBenchDurablePglite } from "./pglite-durable.ts";
 import { profilesIn, pushProfiles } from "./pyroscope-push.ts";
 import { benchTelemetry } from "./telemetry.ts";
-import { testSigner } from "../test/helpers/signer.ts";
+import { testSigner } from "@powerhousedao/shared/testing";
 
 const { values: args } = parseArgs({
   options: {

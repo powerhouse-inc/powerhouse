@@ -47,7 +47,7 @@ import { packagePieces } from "../../../src/reactor/piece-registry.js";
 import { REACTOR_PIECE } from "../../../src/reactor/reactor-piece.js";
 import type { WorkflowRuntimeService } from "../../../src/reactor/service.js";
 import { testRuntime } from "../../helpers/runtime.js";
-import { testSigner } from "../../helpers/signer.js";
+import { testSigner } from "@powerhousedao/shared/testing";
 
 const PIECE = "@acme/piece-reactor-probe";
 const VERSION = "1.0.0";

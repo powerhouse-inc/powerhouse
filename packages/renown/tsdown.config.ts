@@ -9,6 +9,8 @@ export default defineConfig({
     "src/identity.ts",
     // Node: credentials for a page that signs in by link (F3d).
     "src/local-sign-in.ts",
+    // Node: a door test's caller, with its pseudonym, record and bearer.
+    "src/testing.ts",
     "src/crypto.ts",
     "src/trust.ts",
     "src/wallet/index.ts",

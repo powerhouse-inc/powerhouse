@@ -21,7 +21,7 @@ import {
   AuthorizationPolicy,
   type IAuthorizationService,
 } from "../../src/services/authorization.service.js";
-import { createTestSigner } from "./test-signer.js";
+import { testSigner } from "@powerhousedao/shared/testing";
 
 export const READER = "0xreader";
 export const OUTSIDER = "0xoutsider";
@@ -72,7 +72,7 @@ export async function buildReadGateReactor(
   signer?: ISigner,
 ): Promise<InProcessReactorClientModule> {
   return new ReactorClientBuilder()
-    .withSigner(signer ?? (await createTestSigner(HOST)))
+    .withSigner(signer ?? (await testSigner(HOST)))
     .withReactorBuilder(
       new ReactorBuilder()
         .withDocumentModelSources([

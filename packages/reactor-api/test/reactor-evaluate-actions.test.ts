@@ -26,7 +26,7 @@ import * as resolvers from "../src/graphql/reactor/resolvers.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import type { IAuthorizationService } from "../src/services/authorization.service.js";
-import { createTestSigner } from "./utils/test-signer.js";
+import { testSigner } from "@powerhousedao/shared/testing";
 
 const WRITER = "0xWriter";
 const OUTSIDER = "0xOutsider";
@@ -66,7 +66,7 @@ describe("the evaluateActions resolver", () => {
     flags: Partial<ReactorFeatureFlags>,
   ): Promise<InProcessReactorClientModule> {
     module = await new ReactorClientBuilder()
-      .withSigner(await createTestSigner())
+      .withSigner(await testSigner())
       .withReactorBuilder(
         new ReactorBuilder()
           .withDocumentModelSources([

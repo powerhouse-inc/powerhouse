@@ -14,7 +14,7 @@ import {
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as resolvers from "../src/graphql/reactor/resolvers.js";
-import { createTestSigner } from "./utils/test-signer.js";
+import { testSigner } from "@powerhousedao/shared/testing";
 
 describe("undoRedoTargets resolver", () => {
   it("asks the client as the caller, so the client's read gate decides", async () => {
@@ -48,7 +48,7 @@ describe("undoRedoTargets over a reactor", () => {
 
   async function createEdited(versions: ProtocolVersions): Promise<string> {
     module = await new ReactorClientBuilder()
-      .withSigner(await createTestSigner())
+      .withSigner(await testSigner())
       .withReactorBuilder(
         new ReactorBuilder()
           .withDocumentModelSources([

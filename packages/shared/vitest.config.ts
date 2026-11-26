@@ -97,6 +97,7 @@ export default defineConfig({
       "processors/**/*.test.ts",
       "registry/manifest-slim.test.ts",
       "registry/updates.test.ts",
+      "testing/*.test.ts",
     ],
     exclude: ["**/node_modules/**", "**/dist/**"],
   },

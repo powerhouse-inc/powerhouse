@@ -20,7 +20,7 @@ import {
   actions as workflowActions,
 } from "@powerhousedao/workflow/document-models/workflow";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { testSigner } from "../../test/helpers/signer.js";
+import { testSigner } from "@powerhousedao/shared/testing";
 import { CORE_PIECE_NAME, CORE_PIECE_VERSION } from "../pieces/index.js";
 import { buildReactorRunScope } from "./run-scope-builder.js";
 import { publishRunUser } from "./run-user.js";

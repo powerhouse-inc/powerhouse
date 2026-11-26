@@ -32,7 +32,8 @@ import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import type { BridgeTarget } from "./utils/gql-resolver-bridge.js";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
-import { createTestSigner, signFor, trustOnly } from "./utils/test-signer.js";
+import { signFor, testSigner } from "@powerhousedao/shared/testing";
+import { trustOnly } from "./utils/trust-only.js";
 
 const PEER = "0xpeer";
 
@@ -148,7 +149,7 @@ async function setup(withholdUninitialized: boolean): Promise<Fixture> {
     },
   });
 
-  const signer = await createTestSigner();
+  const signer = await testSigner();
   const models = new DocumentModelRegistry();
   models.registerModules(
     driveDocumentModelModule as unknown as DocumentModelModule,

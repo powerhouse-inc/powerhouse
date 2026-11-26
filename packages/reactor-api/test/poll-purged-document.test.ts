@@ -19,7 +19,7 @@ import {
 import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pollSyncEnvelopes } from "../src/graphql/reactor/resolvers.js";
-import { createTestSigner, signFor } from "./utils/test-signer.js";
+import { signFor, testSigner } from "@powerhousedao/shared/testing";
 
 type Envelope = {
   operations?: Array<{
@@ -58,7 +58,7 @@ describe("polling a document purged after its rows were served", () => {
       .buildModule();
     const reactor = module.reactor;
     const sync: ISyncManager = module.syncModule!.syncManager;
-    const signer = await createTestSigner();
+    const signer = await testSigner();
 
     const drive = driveDocumentModelModule.utils.createDocument();
     const driveId = drive.header.id;

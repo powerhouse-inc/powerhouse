@@ -15,7 +15,7 @@ import {
   READER,
   type ReadGateClient,
 } from "./utils/read-gate-fixture.js";
-import { createTestSigner } from "./utils/test-signer.js";
+import { testSigner } from "@powerhousedao/shared/testing";
 import {
   startReactorHttpServer,
   type ReactorHttpServer,
@@ -127,7 +127,7 @@ describe("the drive middleware in front of the reactor subgraph", () => {
 
   beforeAll(async () => {
     // Shared with the sync peer, so the host accepts the peer's signatures.
-    signer = await createTestSigner(HOST);
+    signer = await testSigner(HOST);
     module = await buildReadGateReactor([], signer);
     owned = await createFixture(module.client, "dm-owned", {
       source: driveDocumentModelModule,

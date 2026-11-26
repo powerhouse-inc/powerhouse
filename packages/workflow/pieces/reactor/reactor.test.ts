@@ -31,7 +31,7 @@ import {
   folderProp,
 } from "./lib/reactor.js";
 import { reactor as piece } from "./index.js";
-import { testSigner } from "./test-signer.js";
+import { testSigner } from "@powerhousedao/shared/testing";
 
 const CONNECTION = "powerhouse/connection";
 const DRIVE = "powerhouse/document-drive";

@@ -11,7 +11,7 @@ import { ReactorSubgraph } from "../../src/graphql/reactor/subgraph.js";
 import { createRequestClients } from "../../src/graphql/request-clients.js";
 import type { Context, SubgraphArgs } from "../../src/graphql/types.js";
 import { openAuthorization } from "../utils/read-gate-fixture.js";
-import { createTestSigner } from "../utils/test-signer.js";
+import { testSigner } from "@powerhousedao/shared/testing";
 
 type Resolver = (p: unknown, a: unknown, c: Context) => Promise<unknown>;
 type Served = { document: { name: string } };
@@ -32,7 +32,7 @@ describe("the consistency argument", () => {
 
   it("makes a document query wait for the write its token names", async () => {
     module = await new ReactorClientBuilder()
-      .withSigner(await createTestSigner())
+      .withSigner(await testSigner())
       .withReactorBuilder(
         new ReactorBuilder().withDocumentModelSources([
           documentModelDocumentModelModule as unknown as DocumentModelModule,
@@ -101,7 +101,7 @@ describe("the consistency argument", () => {
 
   it("answers at once without a token", async () => {
     module = await new ReactorClientBuilder()
-      .withSigner(await createTestSigner())
+      .withSigner(await testSigner())
       .withReactorBuilder(
         new ReactorBuilder().withDocumentModelSources([
           documentModelDocumentModelModule as unknown as DocumentModelModule,

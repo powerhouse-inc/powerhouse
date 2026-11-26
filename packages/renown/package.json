@@ -38,6 +38,12 @@
       "import": "./dist/local-sign-in.js",
       "default": "./dist/local-sign-in.js"
     },
+    "./testing": {
+      "source": "./src/testing.ts",
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "default": "./dist/testing.js"
+    },
     "./crypto": {
       "source": "./src/crypto.ts",
       "types": "./dist/crypto.d.ts",

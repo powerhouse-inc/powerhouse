@@ -15,7 +15,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Connection } from "../../document-models/connection/v1/module.js";
 import { documentCreateAction } from "../reactor/lib/actions/document-create.js";
 import { documentDispatchAction } from "../reactor/lib/actions/document-dispatch.js";
-import { testSigner } from "../reactor/test-signer.js";
+import { testSigner } from "@powerhousedao/shared/testing";
 import { buildActionsSchema, allowedOperations } from "./lib/action-schema.js";
 import { decideOnDocuments } from "./lib/actions/decide-on-documents.js";
 import {
