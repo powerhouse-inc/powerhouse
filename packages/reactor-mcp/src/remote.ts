@@ -4,7 +4,8 @@
  * `GraphQLReactorClient`) and signs, and bears, as the caller's own session,
  * so the caller's writes are its own and not the host's. There is no subject
  * and no host ACL here: the switchboard's door decides from the bearer.
- * Host-only tools (codegen status, remote drives) stay on the host's `/mcp`.
+ * The drive tools (`addDrive`, `deleteDrive`) run here too; host-only tools
+ * (codegen status, remote drives) stay on the host's `/mcp`.
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type {
@@ -25,6 +26,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { ReactorMcpInstructions } from "./server.js";
 import {
+  driveTools,
   reactorTools,
   toMcpTool,
   type ReactorToolClient,
@@ -186,10 +188,11 @@ export interface CreateRemoteServerOptions extends RemoteToolClientOptions {
 }
 
 /**
- * reactor-mcp's tools (reads, document create and delete, `addActions`) over
- * a remote client, as an MCP server for one process: no subject, no host
- * ACL, no codegen status. Multi-action `addActions` is signed by the client,
- * which predicts the chain with the document's own model.
+ * reactor-mcp's tools (reads, document create and delete, `addActions`, and
+ * the drive tools `addDrive` and `deleteDrive`) over a remote client, as an
+ * MCP server for one process: no subject, no host ACL, no codegen status.
+ * Multi-action `addActions` is signed by the client, which predicts the
+ * chain with the document's own model.
  */
 export function createRemoteServer(
   options: CreateRemoteServerOptions,
@@ -203,9 +206,10 @@ export function createRemoteServer(
     { capabilities: { tools: {} } },
   );
   const ctx = { client: remoteToolClient(options.client, options) };
-  for (const { name, callback, ...config } of reactorTools().map((tool) =>
-    toMcpTool(tool, ctx),
-  )) {
+  for (const { name, callback, ...config } of [
+    ...reactorTools(),
+    ...driveTools(),
+  ].map((tool) => toMcpTool(tool, ctx))) {
     // The records carry zod shapes the SDK accepts; its overloads cannot infer them.
     server.registerTool(name, config as never, callback as never);
   }

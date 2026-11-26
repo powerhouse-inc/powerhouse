@@ -45,6 +45,17 @@ export type McpRequestAuthorizer = (
   req: IncomingMessage,
 ) => Promise<McpAuthorizationResult>;
 
+/**
+ * Runs one request's tools in the host's caller-write scope, so a write signs
+ * with the signer the request's caller delegated to this host (a host
+ * session), or is refused when there is none.
+ */
+export type McpCallerWriteScope = (
+  req: IncomingMessage,
+  grant: McpGrant,
+  run: () => Promise<void>,
+) => Promise<void>;
+
 export interface SetupMcpServerOptions {
   client: IReactorClient;
   /**
@@ -53,6 +64,11 @@ export interface SetupMcpServerOptions {
    * refused (`mcp-http-write`) and reads stay. Omitted: `client.write`.
    */
   write?: IReactorWriteClient;
+  /**
+   * The scope each request's tools run in, for `write`: it names the signer
+   * the request's caller delegated, if any. Omitted, they run in none.
+   */
+  callerWrites?: McpCallerWriteScope;
   syncManager?: ISyncManager;
   authorizeRequest: McpRequestAuthorizer;
   /** URLs `addRemoteDrive` may fetch; omitted, the tool is not mounted. */
@@ -138,8 +154,9 @@ export function setupMcpServer(
       // Stateless mode: every request owns its McpServer + transport so
       // concurrent or slow handlers cannot collide on a shared Protocol
       // instance (which throws "Already connected to a transport").
-      // The tools write through `write`, which signs nothing for the caller.
-      try {
+      // The tools write through `write`, which signs nothing for the caller
+      // but with the signer its `callerWrites` scope names.
+      const serve = async () => {
         const server = await createServer({
           client: options.client,
           ...(options.write ? { write: options.write } : {}),
@@ -156,6 +173,11 @@ export function setupMcpServer(
         });
         await server.connect(transport);
         await transport.handleRequest(req, res, body);
+      };
+      try {
+        await (options.callerWrites
+          ? options.callerWrites(req, grant, serve)
+          : serve());
       } catch (error) {
         logger.error("Error handling MCP request: @error", error);
         if (!res.headersSent) {

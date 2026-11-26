@@ -282,6 +282,43 @@ describe("setupMcpServer", () => {
       });
     });
 
+    it("handles each request inside its callerWrites scope, with the request and grant", async () => {
+      const { Transport, handleRequest } = makeTransportMock();
+      const { adapter, routes } = makeMockAdapter();
+      const subject = { address: "0xcaller" };
+      const scoped: unknown[] = [];
+      let inScope = false;
+      handleRequest.mockImplementation(() => {
+        scoped.push(inScope);
+        return Promise.resolve();
+      });
+      await setupMcpServer(
+        {
+          client: mockClient,
+          authorizeRequest: () =>
+            Promise.resolve({ authorized: true, subject, label: "mcp x" }),
+          callerWrites: async (req, grant, run) => {
+            scoped.push({ req, grant });
+            inScope = true;
+            try {
+              await run();
+            } finally {
+              inScope = false;
+            }
+          },
+        },
+        adapter,
+        Transport,
+      );
+
+      const { req } = await invokePost(routes);
+
+      expect(scoped).toEqual([
+        { req, grant: { authorized: true, subject, label: "mcp x" } },
+        true,
+      ]);
+    });
+
     it("creates a fresh transport per request for stateless isolation", async () => {
       const { Transport, handleRequest } = makeTransportMock();
       const { adapter, routes } = makeMockAdapter();

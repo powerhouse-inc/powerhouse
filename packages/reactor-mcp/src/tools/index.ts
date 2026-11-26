@@ -3,6 +3,7 @@ export * from "./codegen.js";
 export * from "./compact-schema.js";
 export * from "./definition.js";
 export * from "./documents.js";
+export * from "./drives.js";
 export * from "./errors.js";
 export * from "./jsonpath.js";
 export * from "./operations.js";

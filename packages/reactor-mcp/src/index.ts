@@ -1,6 +1,7 @@
 export {
   setupMcpServer,
   type McpAuthorizationResult,
+  type McpCallerWriteScope,
   type McpGrant,
   type McpRequestAuthorizer,
   type SetupMcpServerOptions,

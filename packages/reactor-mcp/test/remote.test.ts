@@ -120,6 +120,33 @@ describe("createRemoteServer", () => {
     );
   });
 
+  it("adds and deletes a drive, each write through the client", async () => {
+    let writes = 0;
+    const client = await connect({
+      documentModels: () => baseDocumentModels,
+      onWrite: () => {
+        writes++;
+      },
+    });
+    const added = await call(client, "addDrive", {
+      name: "Remote Drive",
+      icon: "r",
+      preferredEditor: "app",
+    });
+    expect(added.isError, JSON.stringify(added.content)).toBeFalsy();
+    const { driveId } = added.structuredContent as { driveId: string };
+    expect(writes).toBeGreaterThan(0);
+    const drive = await module.client.get<DocumentDriveDocument>(driveId);
+    expect(drive.header.name).toBe("Remote Drive");
+    expect(drive.header.meta?.preferredEditor).toBe("app");
+    expect(drive.state.global.name).toBe("Remote Drive");
+    expect(drive.state.global.icon).toBe("r");
+
+    const deleted = await call(client, "deleteDrive", { documentId: driveId });
+    expect(deleted.isError, JSON.stringify(deleted.content)).toBeFalsy();
+    await expect(module.client.get(driveId)).rejects.toThrow();
+  });
+
   it("names a model it does not hold before it writes anything", async () => {
     const missing: string[] = [];
     let writes = 0;
