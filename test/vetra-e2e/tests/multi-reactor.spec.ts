@@ -2,11 +2,13 @@ import { closePage } from "@powerhousedao/coverage-baseline/playwright";
 // Connect routed to the Vetra switchboard (4002) by a rewritten served config.
 
 import type { Locator, Page } from "@playwright/test";
+import { addFolder } from "@powerhousedao/shared/document-drive";
 import {
   expect,
   reactorWorkerModeRequested,
   test,
 } from "./helpers/fixtures.js";
+import { signedWriter, type SignedWriter } from "./helpers/signed-writer.js";
 import { DESCRIBE_TIMEOUT, LONG_VISIBLE_TIMEOUT } from "./helpers/timeouts.js";
 import { waitForAppReady } from "./helpers/wait.js";
 
@@ -74,13 +76,16 @@ async function gql<T>(
   return result.data;
 }
 
+// The switchboard signs no write for its callers: the spec's own writes there
+// are signed.
+let writer: Promise<SignedWriter> | undefined;
+function switchboardWriter(): Promise<SignedWriter> {
+  writer ??= signedWriter(`${SWITCHBOARD}/graphql`);
+  return writer;
+}
+
 async function createSwitchboardDrive(): Promise<string> {
-  const { createEmptyDocument } = await gql<{
-    createEmptyDocument: { id: string };
-  }>(
-    `mutation { createEmptyDocument(documentType: "powerhouse/document-drive") { id } }`,
-  );
-  return createEmptyDocument.id;
+  return (await switchboardWriter()).create("powerhouse/document-drive");
 }
 
 async function folderNames(driveId: string): Promise<string[]> {
@@ -98,18 +103,13 @@ async function addFoldersOnSwitchboard(
   driveId: string,
   names: string[],
 ): Promise<void> {
-  await gql(
-    `mutation($id: String!, $actions: [ActionInput!]!) { execute(documentIdOrSlug: $id, actions: $actions) { id } }`,
-    {
-      id: driveId,
-      actions: names.map((name) => ({
-        id: crypto.randomUUID(),
-        type: "ADD_FOLDER",
-        timestampUtcMs: new Date().toISOString(),
-        input: { id: crypto.randomUUID(), name, parentFolder: null },
-        scope: "global",
-      })),
-    },
+  await (
+    await switchboardWriter()
+  ).execute(
+    driveId,
+    names.map((name) =>
+      addFolder({ id: crypto.randomUUID(), name, parentFolder: null }),
+    ),
   );
 }
 

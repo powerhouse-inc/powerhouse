@@ -11,6 +11,7 @@ import {
   test,
 } from "./helpers/fixtures.js";
 import { createDocument, navigateToVetraDrive } from "./helpers/document.js";
+import { signedWriter } from "./helpers/signed-writer.js";
 import { DESCRIBE_TIMEOUT, LONG_VISIBLE_TIMEOUT } from "./helpers/timeouts.js";
 import { waitForAppReady } from "./helpers/wait.js";
 
@@ -320,15 +321,10 @@ test.describe("reactor worker multi-tab", () => {
 
     // Server -> client: a document created on the switchboard fans out to
     // every tab through the same single worker.
-    const created = await gql<{ createEmptyDocument?: { id: string } }>(
-      `mutation($parentId: String) { createEmptyDocument(documentType: "powerhouse/document-model", parentIdOrSlug: $parentId) { id } }`,
-      { parentId: driveId },
-    );
-    const createdId = created.data?.createEmptyDocument?.id;
-    expect(
-      createdId,
-      `createEmptyDocument failed: ${JSON.stringify(created.errors)}`,
-    ).toBeTruthy();
+    // Written by a client that signs: the switchboard signs none for it.
+    const writer = await signedWriter(REACTOR_GRAPHQL_URL.replace(/\/r$/, ""));
+    const createdId = await writer.create("powerhouse/document-model", driveId);
+    expect(createdId).toBeTruthy();
 
     for (const tab of tabs) {
       await expect

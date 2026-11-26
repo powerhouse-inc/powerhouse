@@ -10,6 +10,7 @@ import {
   startPrivacySwitchboard,
   type PrivacySwitchboard,
 } from "./helpers/privacy-switchboard.js";
+import { signedWriter } from "./helpers/signed-writer.js";
 import { DESCRIBE_TIMEOUT, LONG_VISIBLE_TIMEOUT } from "./helpers/timeouts.js";
 import { waitForAppReady } from "./helpers/wait.js";
 
@@ -32,24 +33,10 @@ type PhWindow = {
 
 const ERASED_NOTICE = "The document you were editing has been erased";
 
+/** A document model in the erasure drive, created by a client that signs. */
 async function createDocument(graphqlUrl: string): Promise<string> {
-  const response = await fetch(graphqlUrl, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      query: `mutation($parentId: String) { createEmptyDocument(documentType: "powerhouse/document-model", parentIdOrSlug: $parentId) { id } }`,
-      variables: { parentId: ERASURE_DRIVE_ID },
-    }),
-  });
-  const result = (await response.json()) as {
-    data?: { createEmptyDocument?: { id: string } };
-    errors?: unknown[];
-  };
-  const id = result.data?.createEmptyDocument?.id;
-  if (!id) {
-    throw new Error(`createEmptyDocument failed: ${JSON.stringify(result)}`);
-  }
-  return id;
+  const writer = await signedWriter(graphqlUrl.replace(/\/r$/, ""));
+  return writer.create("powerhouse/document-model", ERASURE_DRIVE_ID);
 }
 
 // null while the page is navigating, so callers can poll across a reload.
