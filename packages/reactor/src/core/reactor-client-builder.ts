@@ -354,6 +354,7 @@ export class ReactorClientBuilder {
     return {
       read: client.read,
       write: client.write,
+      callerWrite: client.callerWrite(),
       client,
       reactor,
       eventBus,

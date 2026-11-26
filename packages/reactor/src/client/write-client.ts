@@ -45,6 +45,7 @@ import {
   InvalidSignedDeleteError,
   RelationshipNotFoundError,
 } from "../shared/errors.js";
+import { isCallerSigner } from "../signer/caller-signer.js";
 import { verifyActionSignature } from "../signer/verify-action-signature.js";
 import {
   JobStatus,
@@ -127,6 +128,11 @@ type Deletion = {
  *
  * Holds the read half for what a write needs to read: creation defaults,
  * model lookups and the read-back a handle's `document()` makes.
+ *
+ * `parts.signer` signs the actions it is handed and builds; `hostSigner`
+ * (the same by default) signs the host's own work a signed delete derives.
+ * A host's caller writes (`ReactorClient.callerWrite`) take a `CallerSigner`
+ * as the first and keep the instance signer as the second.
  */
 export class ReactorWriteClient
   implements IReactorWriteClient, ISignedDeleteWriteClient
@@ -136,6 +142,7 @@ export class ReactorWriteClient
   private readonly logger: ILogger;
   private readonly reactor: IReactor;
   private readonly signer: ISigner;
+  private readonly hostSigner: ISigner;
   private readonly documentIndexer: IDocumentIndexer;
   private readonly documentView: IDocumentView;
   private readonly gating: ReadGating;
@@ -147,13 +154,18 @@ export class ReactorWriteClient
   // Tail of each (document, scope, branch) undo/redo chain.
   private readonly undoRedoChains = new Map<string, Promise<unknown>>();
 
-  constructor(parts: ReactorClientParts, read: ReactorReadClient) {
+  constructor(
+    parts: ReactorClientParts,
+    read: ReactorReadClient,
+    hostSigner: ISigner = parts.signer,
+  ) {
     this.logger = parts.logger;
     this.baseReducer = baseReducerResolver(
       parts.protocolSelection.protocolSupport,
     );
     this.reactor = parts.reactor;
     this.signer = parts.signer;
+    this.hostSigner = hostSigner;
     this.documentIndexer = parts.documentIndexer;
     this.documentView = parts.documentView;
     this.gating = new ReadGating(
@@ -894,12 +906,14 @@ export class ReactorWriteClient
       intent.propagate,
     );
     const rootId = await this.verifySignedDelete(action, signal);
+    if (isCallerSigner(this.signer)) this.signer.admitSigned(action);
     const deletion = await this.planDeletion(rootId, intent.propagate, signal);
     const signer = action.context!.signer!;
     for (const documentId of deletion.order) {
       await intent.mayDelete?.({ documentId, rootId, signer }, signal);
     }
 
+    // The delete's consequences are the host's own work.
     const derived = (part: string) => derivedActionId(action.id, part);
     for (const drive of await this.filingDocumentDrives(
       rootId,
@@ -911,7 +925,7 @@ export class ReactorWriteClient
           {
             jobs: [
               await planNodeRemoval(
-                this.signer,
+                this.hostSigner,
                 drive,
                 rootId,
                 signal,
@@ -932,14 +946,14 @@ export class ReactorWriteClient
           documentId === rootId
             ? Promise.resolve(signedDeletePlan(action, rootId))
             : planDelete(
-                this.signer,
+                this.hostSigner,
                 documentId,
                 signal,
                 derived(deletePart(documentId)),
               ),
         removal: (rel, dependsOn, index) =>
           planRemoval(
-            this.signer,
+            this.hostSigner,
             rel,
             dependsOn,
             index,

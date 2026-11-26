@@ -728,6 +728,13 @@ export interface ReactorClientModule {
 export interface InProcessReactorClientModule extends ReactorClientModule {
   read: ReactorReadClient;
   write: ReactorWriteClient;
+  /**
+   * The write half for a host's callers: it signs nothing for them, so an
+   * action they did not sign is refused (`UnsignedWriteError`); a signed
+   * delete's derived work keeps the instance signer. A host whose requests
+   * may delegate a signer builds its own with `client.callerWrite(signer)`.
+   */
+  callerWrite: ReactorWriteClient;
   client: ReactorClient;
   reactor: IReactor;
   eventBus: IEventBus;

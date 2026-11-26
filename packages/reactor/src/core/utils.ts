@@ -12,6 +12,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { v4 as uuidv4 } from "uuid";
 import type { ErrorInfo, JobMeta, PagedResults } from "../shared/types.js";
+import { isCallerSigner } from "../signer/caller-signer.js";
 
 /**
  * Represents a minimal job plan for validation purposes
@@ -277,8 +278,9 @@ export function getSharedActionScope(actions: Action[]): string {
 
 /**
  * Signs an action for `target`, the log it is written to. An action already
- * signed under a key is returned unchanged; one whose signer or last tuple has
- * no key is unsigned, and is signed like any other.
+ * signed under a key is returned unchanged (a caller signer refuses one whose
+ * key names no user); one whose signer or last tuple has no key is unsigned,
+ * and is signed like any other.
  */
 export const signAction = async (
   action: Action,
@@ -288,6 +290,7 @@ export const signAction = async (
 ): Promise<Action> => {
   const existing = action.context?.signer;
   if (existing?.app?.key && existing.signatures.at(-1)?.[1]) {
+    if (isCallerSigner(signer)) signer.admitSigned(action);
     return action;
   }
 

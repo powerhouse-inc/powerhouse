@@ -235,6 +235,14 @@ export {
   verifyActionSignature,
   type VerificationTarget,
 } from "./src/signer/verify-action-signature.js";
+export {
+  CallerSigner,
+  isCallerSigner,
+  UnsignedWriteError,
+  type CallerSignerOptions,
+  type CallerSignerResolver,
+  type UnsignedWriteKind,
+} from "./src/signer/caller-signer.js";
 
 // Subscription Manager
 export { DefaultSubscriptionErrorHandler } from "./src/subs/default-error-handler.js";

@@ -41,6 +41,7 @@ import type {
   OperationFilter,
 } from "../storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
+import { CallerSigner } from "../signer/caller-signer.js";
 import { warnOnce } from "./deprecations.js";
 import { DriveClientFacade } from "./drive-client.js";
 import type { DriveClientOptions } from "./drive-nodes.js";
@@ -115,6 +116,7 @@ export class ReactorClient implements IReactorClient {
 
   private readonly logger: ILogger;
   private readonly reactor: IReactor;
+  private readonly parts: ReactorClientParts;
 
   constructor(
     logger: ILogger,
@@ -152,10 +154,25 @@ export class ReactorClient implements IReactorClient {
     };
     this.logger = logger;
     this.reactor = reactor;
+    this.parts = parts;
     this.read = new ReactorReadClient(parts);
     this.write = new ReactorWriteClient(parts, this.read);
     this.drives = new DriveClientFacade(this.read.drives, this.write.drives);
     this.logger.verbose("ReactorClient initialized");
+  }
+
+  /**
+   * A write half for a host's callers, over the same parts: the actions it is
+   * handed unsigned, or builds, are signed by `signer` (a {@link CallerSigner},
+   * which refuses them unless the request delegated a signer), and the work a
+   * signed delete derives keeps this client's own signer, the instance's.
+   */
+  callerWrite(signer: ISigner = new CallerSigner()): ReactorWriteClient {
+    return new ReactorWriteClient(
+      { ...this.parts, signer },
+      this.read,
+      this.parts.signer,
+    );
   }
 
   getDocumentModelModules(
