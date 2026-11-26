@@ -133,6 +133,15 @@ reactor subgraph its subscription filters. In the scope `isOperator` and the
 admin half of `isSupremeAdmin` answer false (OPEN's policy-wide access stays),
 and MCP's `unrestricted` and `operator` are false.
 
+A host session's document writes are signed by the session: the door readies
+a `RenownCryptoSigner` over the session's key (`app.name` the credential's
+label, `user` the session's user), and the API's `delegatedSigner` hands it to
+the caller-write scope of each Mutation field and each `/mcp` request
+(`HostSessions.signerFor`). Per-model mutations, host-built mutations and the
+host-built delete then sign as "session <label> acting for <user>"; each
+signed action is logged by the session's short id, never its token. Without a
+host session the caller writes stay refused (`UNSIGNED_WRITE`).
+
 `AuthService.authenticate()` (the old Express middleware signature) is kept for
 backwards compatibility but is `@deprecated`. New code uses `authenticateRequest()`.
 

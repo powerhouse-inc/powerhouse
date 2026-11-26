@@ -75,6 +75,7 @@ import {
   type SwitchboardRequestFn,
 } from "@renown/sdk/node";
 import { mountCredentialRoutes } from "./http/credential-routes.js";
+import { runAsCaller } from "./services/host-session-scope.js";
 import { HostSessions } from "./services/host-sessions.js";
 import { OperatorSet, parseOperatorSource } from "./services/operator-set.js";
 import {
@@ -828,6 +829,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   httpRoutes: HttpRouteService;
   attachmentReadsFollowDocumentPolicy: boolean;
   settings: ServerSettings;
+  hostSessions: HostSessions | undefined;
 }> {
   const port = options.port ?? DEFAULT_PORT;
   const { adapter: httpAdapter } = await createHttpAdapter("express");
@@ -1334,6 +1336,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     readiness,
     attachmentReadsFollowDocumentPolicy,
     settings,
+    hostSessions,
   };
 }
 
@@ -1625,11 +1628,15 @@ async function _setupAPI(
         // A tool's write over HTTP is a caller's: nothing is signed for it,
         // but by the signer the request's caller delegated to this host.
         write: clients.callerWrite,
-        callerWrites: (req, grant, run) =>
-          runCallerWrites(
-            options.delegatedSigner?.(mcpCallerContext(req, grant)),
-            run,
-          ),
+        // A host session's tools run in its scope too: they administer nothing.
+        callerWrites: (req, grant, run) => {
+          const caller = mcpCallerContext(req, grant);
+          return runAsCaller(
+            caller.user,
+            () => runCallerWrites(options.delegatedSigner?.(caller), run),
+            "/mcp",
+          );
+        },
         syncManager,
         authorizeRequest: createMcpRequestAuthorizer(
           authService,
@@ -1896,7 +1903,17 @@ export async function initializeAndStartAPI(
     readiness,
     attachmentReadsFollowDocumentPolicy,
     settings,
+    hostSessions,
   } = await _setupCommonInfrastructure(options);
+
+  // A request borne by a host session token writes signed by that session;
+  // any other caller's writes sign with what the host was handed, if anything.
+  const delegatedSigner: DelegatedSignerResolver | undefined = hostSessions
+    ? (context) =>
+        hostSessions.signerFor((context as { user?: unknown }).user) ??
+        options.delegatedSigner?.(context)
+    : options.delegatedSigner;
+  const apiOptions: Options = { ...options, delegatedSigner };
 
   const { documentModels, upgradeManifests, processors, subgraphs } =
     await packages.init();
@@ -1980,7 +1997,7 @@ export async function initializeAndStartAPI(
     documentPermissionService,
     processors,
     subgraphs,
-    options,
+    apiOptions,
     settings,
     processorApp,
     readModels,

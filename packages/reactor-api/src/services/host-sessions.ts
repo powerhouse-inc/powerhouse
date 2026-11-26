@@ -3,6 +3,7 @@ import {
   parsePkhIssuer,
 } from "@powerhousedao/shared/clis/credential-records";
 import {
+  HOST_SESSION_SCOPE,
   hostSessionEnd,
   hostSessionFile,
   hostSessionsDir,
@@ -15,15 +16,30 @@ import {
   writeHostSession,
   type HostSessionFile,
 } from "@powerhousedao/shared/clis/host-sessions";
+import { sessionSignerOf } from "@powerhousedao/shared/clis/sessions";
 import type {
-  CredentialVerifier,
-  PowerhouseVerifiableCredential,
+  Action,
+  ActionSigningTarget,
+  AppActionSigner,
+  ISigner,
+  Signature,
+  UserActionSigner,
+} from "@powerhousedao/shared/document-model";
+import {
+  MemoryKeyStorage,
+  RenownCryptoBuilder,
+  RenownCryptoSigner,
+  type CredentialVerifier,
+  type JwkKeyPair,
+  type PowerhouseVerifiableCredential,
 } from "@renown/sdk/node";
 import { childLogger, type ILogger } from "document-model";
 import fs from "node:fs";
 import type { User } from "./auth.service.js";
 import {
+  currentHostSessionWhere,
   describeHostSession,
+  isHostSessionUser,
   type HostSessionUser,
 } from "./host-session-scope.js";
 
@@ -34,7 +50,9 @@ import {
  * matches the token's hash, checks both ends, and asks the host's credential
  * verifier about the session's credential, so a withdrawal (its tombstone)
  * refuses the token at the next request, as it refuses a self-signed bearer.
- * A session the verifier reports withdrawn is deleted.
+ * A session the verifier reports withdrawn is deleted. A token that passes
+ * readies the session's signer, which the host's caller writes sign with for
+ * that request (`signerFor`, the `delegatedSigner` of the API).
  */
 
 /** Why a host session token was refused. */
@@ -69,6 +87,70 @@ const MAX_REMOVED = 10_000;
 
 type Held = { stamp: string; session: HostSessionFile };
 
+/** Who a session's signer names: rebuilt when any of it changes. */
+function signerFingerprint(user: HostSessionUser): string {
+  return [
+    user.hostSession.id,
+    user.appKey,
+    user.address.toLowerCase(),
+    user.chainId,
+    user.label ?? "",
+  ].join("|");
+}
+
+/**
+ * A host session's signer: the session's key signs as "session <label>
+ * acting for <user>", and each action it signs is logged by the session's
+ * short id and the field or tool that wrote it, never by its token.
+ */
+class HostSessionSigner implements ISigner {
+  readonly #inner: RenownCryptoSigner;
+  readonly #who: string;
+  readonly #logger: ILogger;
+
+  constructor(inner: RenownCryptoSigner, who: string, logger: ILogger) {
+    this.#inner = inner;
+    this.#who = who;
+    this.#logger = logger;
+  }
+
+  get user(): UserActionSigner | undefined {
+    return this.#inner.user;
+  }
+
+  get app(): AppActionSigner {
+    return this.#inner.app;
+  }
+
+  get publicKey(): CryptoKey {
+    return this.#inner.publicKey;
+  }
+
+  sign(data: Uint8Array): Promise<Uint8Array> {
+    return this.#inner.sign(data);
+  }
+
+  verify(data: Uint8Array, signature: Uint8Array): Promise<void> {
+    return this.#inner.verify(data, signature);
+  }
+
+  async signAction(
+    action: Action,
+    target: ActionSigningTarget,
+    abortSignal?: AbortSignal,
+  ): Promise<Signature> {
+    const signature = await this.#inner.signAction(action, target, abortSignal);
+    this.#logger.info(
+      "@session: @where signed @type on @document",
+      this.#who,
+      currentHostSessionWhere() ?? "a write",
+      action.type,
+      target.documentId,
+    );
+    return signature;
+  }
+}
+
 function stampOf(file: string): string | undefined {
   const stat = fs.statSync(file, { throwIfNoEntry: false });
   return stat ? `${stat.mtimeMs}:${stat.size}` : undefined;
@@ -80,6 +162,11 @@ export class HostSessions {
   readonly #logger: ILogger;
   readonly #now: () => number;
   readonly #held = new Map<string, Held>();
+  // The signer of each session a token opened, and who it names.
+  readonly #signers = new Map<
+    string,
+    { fingerprint: string; signer: ISigner }
+  >();
   // Sessions seen here and since removed: their tokens read as withdrawn.
   readonly #removed = new Set<string>();
   readonly #listeners = new Set<(claim: HostSessionClaim) => void>();
@@ -124,8 +211,36 @@ export class HostSessions {
     }
     const checked = await this.#check(session);
     if (!checked.ok) return checked;
+    try {
+      await this.#prepareSigner(session, checked.user);
+    } catch (error) {
+      this.#logger.warn(
+        "@session: its key cannot sign, so its token is refused: @error",
+        describeHostSession(checked.user),
+        String(error),
+      );
+      return { ok: false, reason: "unknown" };
+    }
     this.#touch(session);
     return { ok: true, user: checked.user };
+  }
+
+  /**
+   * The signer a caller's writes sign with, when the caller's token is a host
+   * session's with `documents:write`: the session's key, `app.name` the
+   * credential's label, `user` the session's user, as `openSession` builds
+   * it. Ready once the token passed the door, which builds it, cached per
+   * session; undefined for anyone else, so the host signs nothing for them.
+   */
+  signerFor(user: unknown): ISigner | undefined {
+    if (!isHostSessionUser(user)) return undefined;
+    if (!user.hostSession.scope.split(" ").includes(HOST_SESSION_SCOPE)) {
+      return undefined;
+    }
+    const held = this.#signers.get(user.hostSession.id);
+    return held?.fingerprint === signerFingerprint(user)
+      ? held.signer
+      : undefined;
   }
 
   /**
@@ -186,6 +301,7 @@ export class HostSessions {
   /** Drops a session from memory, remembering that it was here. */
   #forget(id: string): void {
     this.#held.delete(id);
+    this.#signers.delete(id);
     if (this.#removed.size >= MAX_REMOVED) {
       const oldest = this.#removed.values().next().value;
       if (oldest !== undefined) this.#removed.delete(oldest);
@@ -196,6 +312,37 @@ export class HostSessions {
   #ended(session: HostSessionFile): boolean {
     const end = hostSessionEnd(session);
     return end === undefined || end <= this.#now();
+  }
+
+  /** Builds the session's signer once, and again when who it names changes. */
+  async #prepareSigner(
+    session: HostSessionFile,
+    user: HostSessionUser,
+  ): Promise<void> {
+    const fingerprint = signerFingerprint(user);
+    if (this.#signers.get(session.id)?.fingerprint === fingerprint) return;
+    const crypto = await new RenownCryptoBuilder()
+      .withKeyPairStorage(new MemoryKeyStorage(session.key as JwkKeyPair))
+      .build();
+    if (crypto.did !== session.did) {
+      throw new Error("the session's key does not match its did");
+    }
+    const named = sessionSignerOf(
+      { address: user.address as `0x${string}`, chainId: user.chainId },
+      {
+        did: session.did,
+        label: session.label,
+        credential: session.credential,
+      },
+    );
+    this.#signers.set(session.id, {
+      fingerprint,
+      signer: new HostSessionSigner(
+        new RenownCryptoSigner(crypto, named.app.name, { ...named.user }),
+        describeHostSession(user),
+        this.#logger,
+      ),
+    });
   }
 
   /** The session's credential through the host's verifier, and who it acts for. */

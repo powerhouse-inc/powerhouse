@@ -43,11 +43,7 @@ export function isHostSessionUser(user: unknown): user is HostSessionUser {
  * Runs `run` as `user`: in the scope of its host session when its bearer is a
  * host session token, else outside any. `where` names the field or tool.
  */
-export function runAsCaller<T>(
-  user: RouteUser | undefined,
-  run: () => T,
-  where?: string,
-): T {
+export function runAsCaller<T>(user: unknown, run: () => T, where?: string): T {
   if (isHostSessionUser(user)) {
     return scope.run({ user, where, refusalLogged: false }, run);
   }
@@ -57,6 +53,11 @@ export function runAsCaller<T>(
 /** The host session the running request is borne by, if any. */
 export function currentHostSession(): HostSessionUser | undefined {
   return scope.getStore()?.user;
+}
+
+/** The field or tool the running host session's scope runs, if it says. */
+export function currentHostSessionWhere(): string | undefined {
+  return scope.getStore()?.where;
 }
 
 /** `0x1a2b...9f3c`. */
