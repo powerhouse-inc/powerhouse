@@ -60,9 +60,10 @@ function graphqlUrlOf(inst: ServiceInstanceStatus, mcpUrl: string): string {
 }
 
 /**
- * reactor-mcp's tools (reads, createDocument, addActions, deleteDocument) for
- * `ep`, run in this process as Mastra tools, keyed by tool name; undefined
- * when the endpoint's session has no signer.
+ * reactor-mcp's tools (reads, createDocument, addActions, deleteDocument, and
+ * the drive tools addDrive and deleteDrive) for `ep`, run in this process as
+ * Mastra tools, keyed by tool name; undefined when the endpoint's session has
+ * no signer.
  */
 async function inProcessReactorTools(
   ep: McpEndpoint,
@@ -74,7 +75,7 @@ async function inProcessReactorTools(
   if (!signer) return undefined;
   const [
     { createTool },
-    { reactorTools, toMcpTool },
+    { driveTools, reactorTools, toMcpTool },
     { baseDocumentModels, remoteToolClient },
     { GraphQLReactorClient },
   ] = await Promise.all([
@@ -94,7 +95,7 @@ async function inProcessReactorTools(
   });
   const ctx = { client: remoteToolClient(client, { documentModels }) };
   const tools: Record<string, any> = {};
-  for (const definition of reactorTools()) {
+  for (const definition of [...reactorTools(), ...driveTools()]) {
     const record = toMcpTool(definition, ctx);
     tools[definition.name] = createTool({
       id: definition.name,

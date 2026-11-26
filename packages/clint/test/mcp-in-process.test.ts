@@ -93,6 +93,8 @@ describe("in-process MCP discovery", () => {
         "preview-mcp__createDocument",
         "preview-mcp__addActions",
         "preview-mcp__deleteDocument",
+        "preview-mcp__addDrive",
+        "preview-mcp__deleteDrive",
       ]),
     );
 
@@ -118,6 +120,44 @@ describe("in-process MCP discovery", () => {
       expect(signer?.app.key).not.toBe(hostKey);
       expect(signer?.user.address).toBe("0xagent");
     }
+  }, 60_000);
+
+  it("adds and deletes a drive here, every write signed as the agent's session", async () => {
+    const agent = await testSigner("0xagent", { app: "vetra agent x" });
+    const tools = await discoverMcpTools(
+      services,
+      undefined,
+      undefined,
+      undefined,
+      { signer: () => Promise.resolve(agent) },
+    );
+    const added = (await tools["preview-mcp__addDrive"].execute(
+      { name: "Agent's drive" },
+      {},
+    )) as { isError?: boolean; structuredContent?: { driveId: string } };
+    expect(added.isError).toBeFalsy();
+    const driveId = added.structuredContent!.driveId;
+
+    const page = await switchboard!.reactor.getOperations(
+      driveId,
+      undefined,
+      undefined,
+      { cursor: "", limit: 100 },
+    );
+    const operations: Operation[] = page.results;
+    expect(operations.map((op) => op.action.type)).toEqual(
+      expect.arrayContaining(["CREATE_DOCUMENT", "SET_NAME", "SET_DRIVE_NAME"]),
+    );
+    for (const operation of operations) {
+      expect(operation.action.context?.signer?.user.address).toBe("0xagent");
+    }
+
+    const deleted = (await tools["preview-mcp__deleteDrive"].execute(
+      { documentId: driveId },
+      {},
+    )) as { isError?: boolean };
+    expect(deleted.isError).toBeFalsy();
+    await expect(switchboard!.reactor.get(driveId)).rejects.toThrow();
   }, 60_000);
 
   it("leaves the tools on the endpoint for an endpoint whose session has no signer", async () => {
