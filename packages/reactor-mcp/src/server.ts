@@ -26,9 +26,10 @@ import { codegenStatusTool, reactorTools, toMcpTool } from "./tools/index.js";
 export interface CreateServerOptions {
   client: IReactorClient;
   /**
-   * The write half the reactor tools write through; omitted, the client's.
-   * Over HTTP it is the host's caller writes, which sign nothing for the
-   * caller, so a write tool is refused with the host's fix.
+   * The write half the reactor tools and the drive tools write through;
+   * omitted, the client's. Over HTTP it is the host's caller writes, which
+   * sign nothing for the caller, so a write tool is refused with the host's
+   * fix, unless the caller delegated a signer to the host for the request.
    */
   write?: IReactorWriteClient;
   syncManager?: ISyncManager;
@@ -158,6 +159,11 @@ export function createServer(options: CreateServerOptions): Promise<McpServer> {
   const userContext = {
     client: gate ? new HostAccessClient(scoped, gate) : scoped,
   };
+  // The drive tools read as the host and ask the gate themselves; they write
+  // through the same write half as every other tool.
+  const adminContext = {
+    client: new SubjectScopedClient(client, undefined, options.write),
+  };
   const caller = subject?.address
     ? { address: subject.address, ...(label ? { label } : {}) }
     : null;
@@ -174,7 +180,9 @@ export function createServer(options: CreateServerOptions): Promise<McpServer> {
       subject,
       gate,
       caller: { address: subject?.address, label },
-    }).map((tool) => toMcpTool(tool, { client })),
+    }).map((tool) =>
+      toMcpTool(refusingUnsignedWrites(tool, caller), adminContext),
+    ),
   ];
   for (const { name, callback, ...config } of tools) {
     // The records carry zod shapes the SDK accepts; its overloads cannot infer them.

@@ -22,10 +22,41 @@ import {
   ph,
   type DocumentModelModule,
 } from "document-model";
+import { createRequire } from "node:module";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { initializeAndStartAPI } from "../src/server.js";
 
 const MODEL_TYPE = "powerhouse/document-model";
+const DRIVE_TYPE = "powerhouse/document-drive";
+
+// The SDK is reactor-mcp's dependency; reactor-api does not declare it.
+const sdk = createRequire(
+  new URL("../../reactor-mcp/package.json", import.meta.url),
+);
+type ToolResult = {
+  isError?: boolean;
+  content?: unknown;
+  structuredContent?: unknown;
+};
+type McpClient = {
+  connect(transport: unknown): Promise<void>;
+  callTool(request: {
+    name: string;
+    arguments: Record<string, unknown>;
+  }): Promise<ToolResult>;
+  close(): Promise<void>;
+};
+const { Client } = sdk("@modelcontextprotocol/sdk/client/index.js") as {
+  Client: new (info: { name: string; version: string }) => McpClient;
+};
+const { StreamableHTTPClientTransport } = sdk(
+  "@modelcontextprotocol/sdk/client/streamableHttp.js",
+) as {
+  StreamableHTTPClientTransport: new (
+    url: URL,
+    options: { requestInit: RequestInit },
+  ) => unknown;
+};
 
 /** A model of the test's own: the base models get no model subgraph. */
 function counterModel(): DocumentModelModule {
@@ -79,10 +110,13 @@ type GraphqlAnswer = {
 
 let dispose: (() => Promise<void>) | undefined;
 let url = "";
+let mcpUrl = "";
 let host: ISigner;
 let session: ISigner;
 let createDocument: (type?: string) => Promise<string>;
 let operationsOf: (id: string) => Promise<Action[]>;
+let driveCount: () => Promise<number>;
+let documentOf: (id: string) => Promise<unknown>;
 
 beforeAll(async () => {
   host = await testSigner("0x00000000000000000000000000000000000000a1", {
@@ -106,7 +140,7 @@ beforeAll(async () => {
     {
       port: 0,
       dbPath: undefined,
-      mcp: false,
+      mcp: true,
       enableDocumentModelSubgraphs: true,
       // Stands in for a host session: a request with this header delegates
       // its signer to the host (F3e part 2 issues real ones).
@@ -121,6 +155,7 @@ beforeAll(async () => {
   );
   dispose = api.dispose;
   url = `http://127.0.0.1:${api.port}/graphql`;
+  mcpUrl = `http://127.0.0.1:${api.port}/mcp`;
   createDocument = async (type = MODEL_TYPE) => {
     const document = await api.read.newDocument(type);
     await (
@@ -130,6 +165,9 @@ beforeAll(async () => {
   };
   operationsOf = async (id) =>
     (await api.read.getOperations(id)).results.map((op) => op.action);
+  driveCount = async () =>
+    (await api.read.find({ type: DRIVE_TYPE })).results.length;
+  documentOf = (id) => api.read.get(id);
 }, 60_000);
 
 afterAll(async () => {
@@ -351,5 +389,72 @@ describe("a caller's write signed", () => {
     );
     expect(answer.errors).toBeUndefined();
     expect(answer.data?.deleteDocument).toBe(true);
+  });
+});
+
+/** Calls MCP tools over HTTP `/mcp`, sending `headers` with every request. */
+async function withMcp<T>(
+  headers: Record<string, string>,
+  run: (
+    call: (name: string, args: Record<string, unknown>) => Promise<ToolResult>,
+  ) => Promise<T>,
+): Promise<T> {
+  const client = new Client({ name: "unsigned-writes", version: "1.0.0" });
+  await client.connect(
+    new StreamableHTTPClientTransport(new URL(mcpUrl), {
+      requestInit: { headers },
+    }),
+  );
+  try {
+    return await run((name, args) =>
+      client.callTool({ name, arguments: args }),
+    );
+  } finally {
+    await client.close();
+  }
+}
+
+describe("HTTP /mcp's drive tools", () => {
+  it("refuse a write nobody signed for its caller, with the fix naming ph mcp", async () => {
+    const before = await driveCount();
+    const driveId = await createDocument(DRIVE_TYPE);
+    const [added, deleted] = await withMcp({}, async (call) => [
+      await call("addDrive", { name: "Nobody's" }),
+      await call("deleteDrive", { documentId: driveId }),
+    ]);
+    expect(added.isError).toBe(true);
+    const addText = JSON.stringify(added.content);
+    expect(addText).toContain("UNSIGNED_WRITE");
+    expect(addText).toContain(
+      "`addDrive` from an anonymous caller over HTTP /mcp asks the host to sign",
+    );
+    expect(addText).toContain("`ph mcp`");
+    expect(deleted.isError).toBe(true);
+    expect(JSON.stringify(deleted.content)).toContain(
+      "`deleteDrive` from an anonymous caller over HTTP /mcp asks the host to sign DELETE_DOCUMENT",
+    );
+    expect(await driveCount()).toBe(before + 1);
+    await expect(documentOf(driveId)).resolves.toBeDefined();
+  });
+
+  it("sign as the session a request delegated to the host", async () => {
+    const driveId = await withMcp({ "x-test-session": "1" }, async (call) => {
+      const added = await call("addDrive", { name: "Delegated" });
+      expect(added.isError, JSON.stringify(added.content)).toBeFalsy();
+      return (added.structuredContent as { driveId: string }).driveId;
+    });
+    const written = await operationsOf(driveId);
+    expect(written.map((action) => action.type)).toEqual(
+      expect.arrayContaining(["SET_NAME", "SET_DRIVE_NAME"]),
+    );
+    for (const action of written) {
+      expect(action.context?.signer?.user?.address).toBe(session.user?.address);
+    }
+
+    const deleted = await withMcp({ "x-test-session": "1" }, (call) =>
+      call("deleteDrive", { documentId: driveId }),
+    );
+    expect(deleted.isError, JSON.stringify(deleted.content)).toBeFalsy();
+    await expect(documentOf(driveId)).rejects.toThrow();
   });
 });

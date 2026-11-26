@@ -85,6 +85,19 @@ export function createRequestCallerSigner(): CallerSigner {
 }
 
 /**
+ * Runs `run` in a caller-write scope of its own, outside GraphQL (HTTP
+ * `/mcp`): the caller writes in it sign with `signer`, the signer the
+ * request's caller delegated to this host, and refuse every action they would
+ * sign without one.
+ */
+export function runCallerWrites<T>(
+  signer: ISigner | undefined,
+  run: () => T,
+): T {
+  return callerWrites.run({ signer, refused: [] }, run);
+}
+
+/**
  * The delegated signer a request's caller writes sign with, from its context:
  * none (the default) refuses every action the host would build or sign.
  */

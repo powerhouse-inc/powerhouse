@@ -59,9 +59,9 @@ export type McpCallerWriteScope = (
 export interface SetupMcpServerOptions {
   client: IReactorClient;
   /**
-   * The write half the reactor tools write through: the host's caller
-   * writes, which sign no action for an HTTP caller, so a write tool is
-   * refused (`mcp-http-write`) and reads stay. Omitted: `client.write`.
+   * The write half the reactor tools and the drive tools write through: the
+   * host's caller writes, which sign no action for an HTTP caller, so a write
+   * tool is refused (`mcp-http-write`) and reads stay. Omitted: `client.write`.
    */
   write?: IReactorWriteClient;
   /**

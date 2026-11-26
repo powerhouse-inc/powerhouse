@@ -278,7 +278,7 @@ describe("Remote drive sync via CONNECT channel", () => {
     });
   });
 
-  it("refuses MCP write tools over HTTP, and syncs a signed client's writes to a drive MCP made", async () => {
+  it("refuses MCP write tools over HTTP, and syncs a signed client's writes to the drive MCP reads", async () => {
     const MCP_URL =
       process.env.SWITCHBOARD_MCP_URL ??
       SWITCHBOARD_URL.replace(/\/graphql\/?$/, "/mcp");
@@ -292,18 +292,22 @@ describe("Remote drive sync via CONNECT channel", () => {
     await mcpClient.connect(transport);
 
     try {
-      // 2. Create a drive via MCP
+      // 2. A drive tool over HTTP is nobody's to sign: refused, naming ph mcp;
+      // the drive is the signing client's, and MCP reads it
       const addDriveResult = await mcpClient.callTool({
         name: "addDrive",
         arguments: {
           driveInput: { global: { name: "MCP Test Drive" } },
         },
       });
-      const driveId = JSON.parse(
-        (addDriveResult.content as Array<{ text: string }>)[0].text,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      ).driveId as string;
-      createdDocumentIds.push(driveId);
+      expect(addDriveResult.isError).toBe(true);
+      expect(JSON.stringify(addDriveResult.content)).toContain("`ph mcp`");
+      const driveId = await createDriveOnSwitchboard("MCP Test Drive");
+      const getDriveResult = await mcpClient.callTool({
+        name: "getDrive",
+        arguments: { driveId },
+      });
+      expect(getDriveResult.isError).toBeFalsy();
 
       // 3. Create local reactor connected to the drive
       clientModule = await createLocalReactor(driveId);

@@ -432,6 +432,24 @@ describe("Switchboard's /mcp authorizes as its GraphQL API does", () => {
     expect(after.results.length).toBe(before.results.length);
   });
 
+  it("adds and deletes no drive for an MCP caller over HTTP, and says to use ph mcp", async () => {
+    const drives = async () =>
+      (
+        await switchboard!.reactor.read.find({
+          type: "powerhouse/document-drive",
+        })
+      ).results.length;
+    const before = await drives();
+    const [added, deleted] = await withClient(ADMIN, async (call) => [
+      await call("addDrive", { name: "Nobody's" }),
+      await call("deleteDrive", { documentId: open }),
+    ]);
+    expect(unsignedTool(added)).toBe(true);
+    expect(unsignedTool(deleted)).toBe(true);
+    expect(await drives()).toBe(before);
+    await expect(switchboard!.reactor.read.get(open)).resolves.toBeDefined();
+  });
+
   it("refuses a delete the caller may not make, as GraphQL does", async () => {
     const viaGraphql = await graphql(
       READER,

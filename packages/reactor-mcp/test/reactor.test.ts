@@ -5,11 +5,13 @@ import { createServer as createHttpServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import type {
   InProcessReactorClientModule,
+  IReactorWriteClient,
   ISyncManager,
   JobInfo,
   WriteHandle,
 } from "@powerhousedao/reactor";
 import {
+  CallerSigner,
   JobFailedError,
   JobStatus,
   ReactorBuilder,
@@ -54,6 +56,7 @@ import {
   setName,
   withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
+import { testSigner } from "@powerhousedao/shared/testing";
 import {
   documentModelCreateDocument,
   documentModelDocumentModelModule,
@@ -2044,6 +2047,107 @@ describe("reactor tools", () => {
       } finally {
         await mcp.close();
         await server.close();
+      }
+    });
+
+    /** An MCP client of a server over `write`, as `0xcaller` (mcp test). */
+    async function callerServer(write: IReactorWriteClient) {
+      const server = await createServer({
+        client,
+        write,
+        subject: { address: "0xcaller" },
+        label: "mcp test",
+      });
+      const mcp = new Client({ name: "test", version: "1.0.0" });
+      const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+      await Promise.all([server.connect(serverSide), mcp.connect(clientSide)]);
+      return {
+        call: async (name: string, args: Record<string, unknown>) =>
+          (await mcp.callTool({ name, arguments: args })) as CallToolResult,
+        close: async () => {
+          await mcp.close();
+          await server.close();
+        },
+      };
+    }
+
+    it("refuses the drive tools over a host's caller writes with the host's fix", async () => {
+      const before = (await client.find({ type: "powerhouse/document-drive" }))
+        .results.length;
+      const driveId = await newDrive();
+      const { call, close } = await callerServer(reactorModule.callerWrite);
+      try {
+        const added = await call("addDrive", { name: "Nobody's" });
+        expect(added.isError).toBe(true);
+        const addText = JSON.stringify(added.content);
+        expect(addText).toContain("UNSIGNED_WRITE");
+        expect(addText).toContain(
+          "`addDrive` from 0xcaller (mcp test) over HTTP /mcp asks the host to sign",
+        );
+        expect(addText).toContain("`ph mcp`");
+        expect(
+          (await client.find({ type: "powerhouse/document-drive" })).results,
+        ).toHaveLength(before + 1);
+
+        const deleted = await call("deleteDrive", { documentId: driveId });
+        expect(deleted.isError).toBe(true);
+        const deleteText = JSON.stringify(deleted.content);
+        expect(deleteText).toContain(
+          "`deleteDrive` from 0xcaller (mcp test) over HTTP /mcp asks the host to sign DELETE_DOCUMENT",
+        );
+        expect(deleteText).toContain("`ph mcp`");
+        await expect(client.get(driveId)).resolves.toBeDefined();
+      } finally {
+        await close();
+      }
+    });
+
+    it("signs the drive tools with the signer a caller delegated", async () => {
+      const session = await testSigner(
+        "0x00000000000000000000000000000000000000d5",
+        { app: "host session" },
+      );
+      const { call, close } = await callerServer(
+        client.callerWrite(new CallerSigner({ resolve: () => session })),
+      );
+      try {
+        const added = await call("addDrive", {
+          name: "Delegated",
+          icon: "d",
+          preferredEditor: "app",
+        });
+        expect(added.isError, JSON.stringify(added.content)).toBeFalsy();
+        const { driveId } = added.structuredContent as { driveId: string };
+        const drive = await client.get<DocumentDriveDocument>(driveId);
+        expect(drive.header.name).toBe("Delegated");
+        expect(drive.header.meta?.preferredEditor).toBe("app");
+        expect(drive.state.global.icon).toBe("d");
+        const operations = Object.values(
+          await reactorModule.reactor.getOperations(driveId),
+        ).flatMap((page) => page.results);
+        expect(operations.map((op) => op.action.type)).toEqual(
+          expect.arrayContaining([
+            "CREATE_DOCUMENT",
+            "SET_PREFERRED_EDITOR",
+            "SET_NAME",
+            "SET_DRIVE_NAME",
+            "SET_DRIVE_ICON",
+          ]),
+        );
+        for (const operation of operations) {
+          expect(operation.action.context?.signer?.user?.address).toBe(
+            session.user?.address,
+          );
+          expect(operation.action.context?.signer?.app?.name).toBe(
+            "host session",
+          );
+        }
+
+        const deleted = await call("deleteDrive", { documentId: driveId });
+        expect(deleted.isError, JSON.stringify(deleted.content)).toBeFalsy();
+        await expect(client.get(driveId)).rejects.toThrow();
+      } finally {
+        await close();
       }
     });
 

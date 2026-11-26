@@ -93,6 +93,7 @@ import {
 } from "./graphql/graphql-manager.js";
 import {
   createRequestCallerSigner,
+  runCallerWrites,
   type DelegatedSignerResolver,
 } from "./graphql/request-clients.js";
 import {
@@ -145,7 +146,10 @@ import {
   DEFAULT_PERMISSION_CACHE_TTL_MS,
 } from "./services/permission-cache.js";
 import { createGetParentIdsFn } from "./services/get-parent-ids.js";
-import { createMcpRequestAuthorizer } from "./services/mcp-request-authorizer.js";
+import {
+  createMcpRequestAuthorizer,
+  mcpCallerContext,
+} from "./services/mcp-request-authorizer.js";
 import { buildSyncServingGate } from "./services/sync-serving-gate.js";
 import {
   resolveRenownConfig,
@@ -262,7 +266,8 @@ type Options = {
   hostSigner?: { app?: { key: string }; user?: { address: string } };
   /**
    * The signer a request's caller delegated to this host (a host session),
-   * from the GraphQL context; its caller writes sign with it. None: this
+   * from the GraphQL context, or for HTTP `/mcp` from a context of the same
+   * shape (`headers`, `user`); its caller writes sign with it. None: this
    * host signs no write for a caller, and refuses one nobody signed.
    */
   delegatedSigner?: DelegatedSignerResolver;
@@ -1580,8 +1585,14 @@ async function _setupAPI(
     await setupMcpServer(
       {
         client: clients.client,
-        // A tool's write over HTTP is a caller's: nothing is signed for it.
+        // A tool's write over HTTP is a caller's: nothing is signed for it,
+        // but by the signer the request's caller delegated to this host.
         write: clients.callerWrite,
+        callerWrites: (req, grant, run) =>
+          runCallerWrites(
+            options.delegatedSigner?.(mcpCallerContext(req, grant)),
+            run,
+          ),
         syncManager,
         authorizeRequest: createMcpRequestAuthorizer(
           authService,

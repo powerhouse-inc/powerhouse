@@ -1,7 +1,9 @@
 import type {
   McpAccess,
+  McpGrant,
   McpRequestAuthorizer,
 } from "@powerhousedao/reactor-mcp";
+import type { IncomingHttpHeaders, IncomingMessage } from "node:http";
 import type { AuthService, User } from "./auth.service.js";
 import type {
   CanonicalDocumentId,
@@ -53,6 +55,35 @@ export function createMcpRequestAuthorizer(
       // The session's label its credential signs ("mcp claude-code").
       ...(user?.label ? { label: user.label } : {}),
     };
+  };
+}
+
+/**
+ * What a host's `delegatedSigner` reads for an HTTP `/mcp` request: the
+ * request's headers and the user its bearer named, as on the GraphQL context.
+ */
+export type McpCallerContext = {
+  headers: IncomingHttpHeaders;
+  user?: { address: string; appKey?: string; label?: string };
+};
+
+/** The context `delegatedSigner` gets for an authorized `/mcp` request. */
+export function mcpCallerContext(
+  req: IncomingMessage,
+  grant: McpGrant,
+): McpCallerContext {
+  const { address, key } = grant.subject;
+  return {
+    headers: req.headers,
+    ...(address
+      ? {
+          user: {
+            address,
+            ...(key ? { appKey: key } : {}),
+            ...(grant.label ? { label: grant.label } : {}),
+          },
+        }
+      : {}),
   };
 }
 
