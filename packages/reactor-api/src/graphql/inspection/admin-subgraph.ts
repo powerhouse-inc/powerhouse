@@ -140,27 +140,26 @@ export class InspectionAdminSubgraph extends BaseSubgraph {
 
   private createResolvers(admin: IInspectorAdmin): Record<string, unknown> {
     const listed =
-      <A, R>(run: (args: A) => R) =>
+      <A, R>(run: (args: A, ctx: Context) => R) =>
       (_parent: unknown, args: A, ctx: Context): R => {
         if (
           !isListedAdmin(this.authorizationService.config, ctx.user?.address)
         ) {
           throw new ForbiddenError("to pull the reactor's inspection levers");
         }
-        return run(args);
+        return run(args, ctx);
       };
     // A lever pulled is logged with who pulled it, once it was answered.
-    const lever =
-      <A, R>(name: string, run: (args: A) => Promise<R>) =>
-      async (parent: unknown, args: A, ctx: Context): Promise<R> => {
-        const answer = await listed(run)(parent, args, ctx);
+    const lever = <A, R>(name: string, run: (args: A) => Promise<R>) =>
+      listed(async (args: A, ctx: Context): Promise<R> => {
+        const answer = await run(args);
         logAdministration(
           this.logger,
           `pulled inspection lever ${name} ${JSON.stringify(args ?? {})}`,
           ctx.user,
         );
         return answer;
-      };
+      });
     return {
       Query: {
         inspectionAdmin: listed(() => ({
