@@ -108,6 +108,7 @@ export class RemoteDocumentController<
     this.remoteClient = new RemoteClient(
       options.client,
       options.operationsPageSize,
+      options.signer,
     );
 
     this.setupActionInterceptors();

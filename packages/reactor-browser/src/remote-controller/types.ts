@@ -28,7 +28,9 @@ export type RemoteControllerGraphQLClient = Pick<
   | "DeleteDocument"
   | "BatchGetDocumentOperations"
   | "BatchGetDocumentWithOperations"
->;
+> &
+  // A controller with a signer creates and deletes through these.
+  Partial<Pick<ReactorGraphQLClient, "ExecuteBatch" | "DeleteDocumentSigned">>;
 
 export type RemoteDocumentData = PhDocumentFieldsFragment;
 

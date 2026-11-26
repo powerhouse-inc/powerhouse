@@ -10,18 +10,43 @@ import type {
   RemoteOperationResultPage,
 } from "./types.js";
 import type { ActionInput } from "../graphql/gen/schema.js";
+import { addFile } from "@powerhousedao/shared/document-drive";
+import {
+  actionSigningTarget,
+  createVersionsOf,
+  creationActions,
+  toTransportAction,
+  type ISigner,
+  type PHDocument,
+} from "@powerhousedao/shared/document-model";
+import { phDocumentFromGetDocument } from "../graphql-client/adapter.js";
+import { readCreateProtocolVersions } from "../graphql-client/create-defaults.js";
+import {
+  prepareSignedActions,
+  signStampedAction,
+} from "../graphql-client/signing.js";
+import {
+  addRelationshipAction,
+  deleteDocumentAction,
+} from "../graphql-client/system-actions.js";
 
 /**
  * Thin facade over the GraphQL SDK for remote document operations.
  */
 const DEFAULT_PAGE_SIZE = 100;
 
+const DOCUMENT_DRIVE_TYPE = "powerhouse/document-drive";
+const REACTOR_DRIVE_TYPE = "powerhouse/reactor-drive";
+const DRIVE_CHILD_TYPE = "drive/child";
+
 export class RemoteClient implements IRemoteClient {
   private readonly pageSize: number;
 
+  /** With `signer`, the creates and deletes it sends are signed here. */
   constructor(
     private readonly client: RemoteControllerGraphQLClient,
     pageSize?: number,
+    private readonly signer?: ISigner,
   ) {
     this.pageSize = pageSize ?? DEFAULT_PAGE_SIZE;
   }
@@ -339,11 +364,25 @@ export class RemoteClient implements IRemoteClient {
     return result.mutateDocument;
   }
 
-  /** Create a new document on the remote. */
+  /**
+   * Create a new document on the remote. With a signer every action of the
+   * creation is signed here, as the GraphQL client's `create` signs it: the
+   * create with its parent's relationship in one job and, under a document
+   * drive, the drive's ADD_FILE once the create landed. Without one the
+   * remote is asked to build the creation, which a remote that signs no
+   * writes for its callers refuses.
+   */
   async createDocument(
     document: NonNullable<unknown>,
     parentIdentifier?: string,
   ): Promise<RemoteDocumentData> {
+    if (this.signer) {
+      return this.createSigned(
+        document as PHDocument,
+        parentIdentifier,
+        this.signer,
+      );
+    }
     const result = await this.client.CreateDocument({
       document,
       parentIdOrSlug: parentIdentifier ?? null,
@@ -363,14 +402,157 @@ export class RemoteClient implements IRemoteClient {
     return result.createEmptyDocument;
   }
 
-  /** Delete a document on the remote. Returns true if successful. */
+  /**
+   * Delete a document on the remote. Returns true if successful. With a
+   * signer the delete is signed here (`signedDelete`) and the remote
+   * completes it as its own work; without one the remote is asked to build
+   * it.
+   */
   async deleteDocument(
     identifier: string,
     propagate?: PropagationMode,
   ): Promise<boolean> {
+    if (this.signer) {
+      return this.deleteSigned(identifier, propagate, this.signer);
+    }
     const result = await this.client.DeleteDocument({
       idOrSlug: identifier,
       propagate,
+    });
+    return result.deleteDocument;
+  }
+
+  private async createSigned(
+    document: PHDocument,
+    parentIdentifier: string | undefined,
+    signer: ISigner,
+  ): Promise<RemoteDocumentData> {
+    const executeBatch = this.client.ExecuteBatch;
+    if (!executeBatch) {
+      throw new Error(
+        "Cannot create a signed document: this GraphQL client has no ExecuteBatch",
+      );
+    }
+    const documentId = document.header.id;
+    const branch = document.header.branch || "main";
+    const parent =
+      parentIdentifier === undefined
+        ? undefined
+        : await this.getDocument(parentIdentifier);
+    if (parentIdentifier !== undefined && !parent) {
+      throw new Error(
+        `Cannot create under "${parentIdentifier}": no document with that identifier on the remote`,
+      );
+    }
+    const parentId = parent?.document.id;
+    const parentType = parent?.document.documentType;
+    const protocolVersions = await createVersionsOf(
+      document,
+      (options) => readCreateProtocolVersions(this.client, options, []),
+      parentId,
+    );
+    const link =
+      parentId === undefined
+        ? []
+        : parentType === REACTOR_DRIVE_TYPE
+          ? [
+              addRelationshipAction(parentId, documentId, DRIVE_CHILD_TYPE, {
+                kind: "file",
+                parentFolderId: null,
+                documentType: document.header.documentType,
+              }),
+            ]
+          : [addRelationshipAction(parentId, documentId, "child")];
+    const actions = await Promise.all(
+      [...creationActions(document, protocolVersions), ...link].map((action) =>
+        signStampedAction(
+          action,
+          signer,
+          actionSigningTarget(action, documentId, branch),
+        ),
+      ),
+    );
+    const result = await executeBatch({
+      jobs: [
+        {
+          key: "create",
+          documentIdOrSlug: documentId,
+          scope: "document",
+          branch,
+          actions: actions.map(toTransportAction),
+          dependsOn: [],
+        },
+      ],
+    });
+    const job = result.executeBatch.jobs.find(
+      (entry) => entry.key === "create",
+    )?.job;
+    if (!job || job.status === "FAILED") {
+      throw new Error(
+        `The remote did not create ${documentId}: ${job?.error ?? "no job came back"}`,
+      );
+    }
+    if (parent && parentType === DOCUMENT_DRIVE_TYPE) {
+      await this.fileInDrive(parent.document, document, signer);
+    }
+    const created = await this.getDocument(documentId, branch);
+    if (!created) {
+      throw new Error(`The remote does not serve ${documentId} it created`);
+    }
+    return created.document;
+  }
+
+  /** The drive's ADD_FILE of `document`, signed for the drive's log. */
+  private async fileInDrive(
+    drive: RemoteDocumentData,
+    document: PHDocument,
+    signer: ISigner,
+  ): Promise<void> {
+    const [action] = await prepareSignedActions(
+      [
+        addFile({
+          id: document.header.id,
+          name: document.header.name || document.header.id,
+          documentType: document.header.documentType,
+        }),
+      ],
+      phDocumentFromGetDocument(drive),
+      signer,
+    );
+    await this.client.MutateDocument({
+      documentIdOrSlug: drive.id,
+      actions: [toTransportAction(action)],
+    });
+  }
+
+  private async deleteSigned(
+    identifier: string,
+    propagate: PropagationMode | undefined,
+    signer: ISigner,
+  ): Promise<boolean> {
+    const deleteSigned = this.client.DeleteDocumentSigned;
+    if (!deleteSigned) {
+      throw new Error(
+        "Cannot delete as the signer: this GraphQL client has no DeleteDocumentSigned",
+      );
+    }
+    const found = await this.getDocument(identifier);
+    if (!found) {
+      throw new Error(
+        `Cannot delete "${identifier}": no document with that identifier on the remote`,
+      );
+    }
+    const documentId = found.document.id;
+    const action = deleteDocumentAction(documentId);
+    const signed = await signStampedAction(
+      action,
+      signer,
+      actionSigningTarget(action, documentId, "main"),
+    );
+    const result = await deleteSigned({
+      idOrSlug: documentId,
+      propagate,
+      signedDelete: toTransportAction(signed),
     });
     return result.deleteDocument;
   }

@@ -238,9 +238,9 @@ export type GraphQLReactorClientOptions = {
    * first ask whom it signs for).
    *
    * With a signer, `create` builds and signs the document's creation itself
-   * and submits it through `executeBatch`, so no action of it is signed by
-   * the Switchboard. A create under a drive, and `deleteDocument`, still run
-   * the Switchboard's own mutations, which build and sign those actions there.
+   * (filed under a drive as the in-process client files it) and submits it
+   * through `executeBatch`, and `deleteDocument` sends the signer's own
+   * DELETE_DOCUMENT, so the Switchboard signs none of a caller's actions.
    */
   signer?: ISigner | (() => ISigner | undefined | Promise<ISigner | undefined>);
 
@@ -1877,8 +1877,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * DELETE_DOCUMENT and sends it as `signedDelete`, and the Switchboard
    * completes it as its own work (the relationships into the document, its
    * drive's node and, with CASCADE, the orphaned descendants). A Switchboard
-   * from before `signedDelete` builds and signs the delete itself, as one does
-   * for a client without a signer.
+   * from before `signedDelete` cannot delete as the signer, so nothing is
+   * sent ({@link GraphQLOperationNotSupportedError}). Without a signer the
+   * Switchboard is asked to build the delete, which one that signs no writes
+   * for its callers refuses.
    *
    * Pass a document id. A slug the signed path resolves first, and announces
    * the id; otherwise `deleteDocument` returns a boolean - there is no
@@ -1893,23 +1895,25 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   ): Promise<void> {
     const signer = await this.resolveSigner();
     const head = signer ? await this.headOf(identifier, signal) : undefined;
+    if (signer && !head) {
+      throw new Error(
+        `Cannot delete "${identifier}": the Switchboard serves no such document`,
+      );
+    }
     const documentId = head?.id ?? identifier;
     const headers = this.driveIdHeaders({
       method: "deleteDocument",
       documentId,
     });
-    let signedDelete: Action | undefined;
-    if (signer && head) {
+    if (signer) {
       const action = deleteDocumentAction(documentId);
-      signedDelete = await signStampedAction(
+      const signedDelete = await signStampedAction(
         action,
         signer,
         actionSigningTarget(action, documentId, "main"),
         signal,
       );
-    }
-    try {
-      if (signedDelete) {
+      try {
         await this.sdk.DeleteDocumentSigned(
           {
             idOrSlug: documentId,
@@ -1919,12 +1923,14 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
           headers,
           signal,
         );
+      } catch (error) {
+        if (!queriesUnknownArgument(error, "signedDelete")) throw error;
+        throw new GraphQLOperationNotSupportedError(
+          "deleteDocument",
+          "the Switchboard predates signed deletes, so it cannot delete as the signer",
+        );
       }
-    } catch (error) {
-      if (!queriesUnknownArgument(error, "signedDelete")) throw error;
-      signedDelete = undefined;
-    }
-    if (!signedDelete) {
+    } else {
       await this.sdk.DeleteDocument(
         { idOrSlug: documentId, propagate: propagationModeInput(propagate) },
         headers,

@@ -65,6 +65,10 @@ const ALLOWED = new Map<string, string>([
     "heads a new document as newDocument does",
   ],
   [
+    "packages/reactor-browser/src/remote-controller/remote-client.ts",
+    "signs a create; a versionless legacy header",
+  ],
+  [
     "packages/reactor-browser/src/graphql-client/switchboard-backend.ts",
     "delegates to the light client",
   ],

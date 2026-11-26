@@ -9,6 +9,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, it, vi } from "vitest";
 import type {
+  ActionInput,
   GetDocumentOperationsQuery,
   GetDocumentQuery,
   PagingInput,
@@ -170,16 +171,53 @@ function createMockClient(
     DeleteDocument: vi.fn().mockResolvedValue({
       deleteDocument: true,
     }),
+    DeleteDocumentSigned: vi.fn().mockResolvedValue({
+      deleteDocument: true,
+    }),
+    // A signed create's one job, settled.
+    ExecuteBatch: vi
+      .fn()
+      .mockImplementation(({ jobs }: { jobs: { key: string }[] }) =>
+        Promise.resolve({
+          executeBatch: {
+            jobs: jobs.map((job) => ({
+              key: job.key,
+              job: { status: "READ_READY" },
+            })),
+          },
+        }),
+      ),
     BatchGetDocumentOperations: overrides.BatchGetDocumentOperations,
     BatchGetDocumentWithOperations: batchGetDocWithOps,
     ...overrides,
   } as unknown as RemoteControllerGraphQLClient;
 }
 
-/** The document the controller created the remote from. */
+/**
+ * The document the controller created the remote from: the one it asked the
+ * remote to create, or the creation it signed itself (with a signer).
+ */
 function createdDocument(client: RemoteControllerGraphQLClient): PHDocument {
-  return vi.mocked(client.CreateDocument).mock.calls[0][0]
-    .document as PHDocument;
+  const asked = vi.mocked(client.CreateDocument).mock.calls.at(0)?.[0];
+  if (asked) return asked.document as PHDocument;
+  const [{ jobs }] = vi.mocked(client.ExecuteBatch!).mock.calls[0];
+  const actions = (jobs as readonly { actions: readonly ActionInput[] }[])[0]
+    .actions;
+  const input = (type: string) =>
+    actions.find((action) => action.type === type)!.input as Record<
+      string,
+      unknown
+    >;
+  const create = input("CREATE_DOCUMENT");
+  return {
+    header: {
+      id: create.documentId,
+      documentType: create.model,
+      protocolVersions: create.protocolVersions,
+    },
+    state: input("UPGRADE_DOCUMENT").initialState,
+    operations: {},
+  } as unknown as PHDocument;
 }
 
 describe("RemoteDocumentController", () => {

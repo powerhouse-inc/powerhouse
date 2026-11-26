@@ -1,3 +1,6 @@
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import { testSigner } from "@powerhousedao/shared/testing";
+import { documentModelDocumentModelModule } from "document-model";
 import { describe, expect, it, vi } from "vitest";
 import { RemoteClient } from "../../src/remote-controller/remote-client.js";
 import type { RemoteControllerGraphQLClient } from "../../src/remote-controller/types.js";
@@ -224,6 +227,112 @@ describe("RemoteClient", () => {
         documentType: "test/type",
         parentIdOrSlug: "parent-1",
       });
+    });
+  });
+
+  describe("with a signer", () => {
+    type SentAction = {
+      type: string;
+      input: Record<string, unknown>;
+      context?: { signer?: { user?: { address?: string } } };
+    };
+
+    function served(documents: Record<string, ReturnType<typeof makeDocData>>) {
+      return vi.fn(({ idOrSlug }: { idOrSlug: string }) =>
+        Promise.resolve({
+          document: documents[idOrSlug]
+            ? { document: documents[idOrSlug], childIds: [] }
+            : null,
+        }),
+      );
+    }
+
+    it("signs the creation in one job and files it in a document drive", async () => {
+      const signer = await testSigner("0xcaller");
+      const document = documentModelDocumentModelModule.utils.createDocument();
+      document.header.protocolVersions = { "base-reducer": 2 };
+      const id = document.header.id;
+      const drive = {
+        ...makeDocData("drive-1"),
+        documentType: "powerhouse/document-drive",
+        state: driveDocumentModelModule.utils.createState(),
+      };
+      const mock = createMockClient({
+        GetDocument: served({ "drive-1": drive, [id]: makeDocData(id) }),
+        ExecuteBatch: vi.fn().mockResolvedValue({
+          executeBatch: {
+            jobs: [{ key: "create", job: { status: "READ_READY" } }],
+          },
+        }),
+      } as Partial<RemoteControllerGraphQLClient>);
+      const client = new RemoteClient(mock, undefined, signer);
+
+      const created = await client.createDocument(document, "drive-1");
+
+      expect(created.id).toBe(id);
+      expect(mock.CreateDocument).not.toHaveBeenCalled();
+      const [{ jobs }] = vi.mocked(mock.ExecuteBatch!).mock.calls[0];
+      const jobList = jobs as readonly {
+        documentIdOrSlug: string;
+        actions: readonly SentAction[];
+      }[];
+      expect(jobList).toHaveLength(1);
+      expect(jobList[0].documentIdOrSlug).toBe(id);
+      expect(jobList[0].actions.map((action) => action.type)).toEqual([
+        "CREATE_DOCUMENT",
+        "UPGRADE_DOCUMENT",
+        "ADD_RELATIONSHIP",
+      ]);
+      expect(jobList[0].actions[2].input).toMatchObject({
+        sourceId: "drive-1",
+        targetId: id,
+        relationshipType: "child",
+      });
+      for (const action of jobList[0].actions) {
+        expect(action.context?.signer?.user?.address).toBe("0xcaller");
+      }
+      const [filed] = vi.mocked(mock.MutateDocument).mock.calls[0];
+      expect(filed.documentIdOrSlug).toBe("drive-1");
+      const [addFile] = filed.actions as readonly SentAction[];
+      expect(addFile.type).toBe("ADD_FILE");
+      expect(addFile.input).toMatchObject({ id });
+      expect(addFile.context?.signer?.user?.address).toBe("0xcaller");
+    });
+
+    it("refuses a parent the remote does not serve", async () => {
+      const signer = await testSigner("0xcaller");
+      const document = documentModelDocumentModelModule.utils.createDocument();
+      const mock = createMockClient({
+        ExecuteBatch: vi.fn(),
+      } as Partial<RemoteControllerGraphQLClient>);
+      const client = new RemoteClient(mock, undefined, signer);
+
+      await expect(client.createDocument(document, "missing")).rejects.toThrow(
+        /no document with that identifier/,
+      );
+      expect(mock.ExecuteBatch).not.toHaveBeenCalled();
+      expect(mock.CreateDocument).not.toHaveBeenCalled();
+    });
+
+    it("deletes with the signer's own DELETE_DOCUMENT", async () => {
+      const signer = await testSigner("0xcaller");
+      const mock = createMockClient({
+        GetDocument: served({ "my-slug": makeDocData("doc-9") }),
+        DeleteDocumentSigned: vi
+          .fn()
+          .mockResolvedValue({ deleteDocument: true }),
+      } as Partial<RemoteControllerGraphQLClient>);
+      const client = new RemoteClient(mock, undefined, signer);
+
+      expect(await client.deleteDocument("my-slug")).toBe(true);
+
+      expect(mock.DeleteDocument).not.toHaveBeenCalled();
+      const [variables] = vi.mocked(mock.DeleteDocumentSigned!).mock.calls[0];
+      expect(variables.idOrSlug).toBe("doc-9");
+      const signed = variables.signedDelete as SentAction;
+      expect(signed.type).toBe("DELETE_DOCUMENT");
+      expect(signed.input).toEqual({ documentId: "doc-9" });
+      expect(signed.context?.signer?.user?.address).toBe("0xcaller");
     });
   });
 });

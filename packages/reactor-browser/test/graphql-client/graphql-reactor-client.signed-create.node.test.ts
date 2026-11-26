@@ -6,6 +6,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { GraphQLOperationNotSupportedError } from "../../src/graphql-client/errors.js";
 import { GraphQLReactorClient } from "../../src/graphql-client/graphql-reactor-client.js";
 import {
   DRIVE_TYPE,
@@ -301,7 +302,7 @@ describe("a delete with a signer", () => {
     });
   });
 
-  it("lets a Switchboard from before signedDelete build the delete", async () => {
+  it("sends no unsigned delete to a Switchboard from before signedDelete", async () => {
     stub = await serve(
       switchboard({ "doc-1": MODEL_TYPE }, (received) =>
         received.body.operationName === "DeleteDocumentSigned"
@@ -326,9 +327,28 @@ describe("a delete with a signer", () => {
       realtime: false,
     });
 
-    await client.deleteDocument("doc-1");
+    await expect(client.deleteDocument("doc-1")).rejects.toSatisfy(
+      (error: unknown) => GraphQLOperationNotSupportedError.isError(error),
+    );
 
-    expect(sent(stub.received, "DeleteDocument")).toHaveLength(1);
+    expect(sent(stub.received, "DeleteDocument")).toHaveLength(0);
+  });
+
+  it("deletes nothing it cannot find, sending no unsigned delete", async () => {
+    stub = await serve(switchboard({}));
+    const { signer } = testSigner();
+    const client = new GraphQLReactorClient({
+      url: stub.url,
+      signer,
+      realtime: false,
+    });
+
+    await expect(client.deleteDocument("missing")).rejects.toThrow(
+      /serves no such document/,
+    );
+
+    expect(sent(stub.received, "DeleteDocument")).toHaveLength(0);
+    expect(sent(stub.received, "DeleteDocumentSigned")).toHaveLength(0);
   });
 
   it("runs the Switchboard's own delete without a signer, as before", async () => {
