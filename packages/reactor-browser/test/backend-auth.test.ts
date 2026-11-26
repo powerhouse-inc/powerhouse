@@ -1,9 +1,11 @@
+import { ORIGIN_PLACEHOLDER } from "@powerhousedao/shared/connect/origin-placeholder";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { setCredentialRefusalHandler } from "../src/graphql-client/auth.js";
 import {
   addBackendAuthEventHandler,
   backendAuthStatusOf,
   handleSyncRefusal,
+  isOwnBackend,
   isBackendAuthError,
   recordBackendAuthError,
   setBackendAuth,
@@ -106,18 +108,19 @@ describe("handleSyncRefusal", () => {
       answered.push(refusal);
       return Promise.resolve("anonymous");
     });
-    handleSyncRefusal("http://sb.test/graphql", {
-      status: 401,
-      reason: "expired",
-    });
+    handleSyncRefusal(
+      "http://sb.test/graphql/r",
+      { status: 401, reason: "expired" },
+      "http://sb.test/d/powerhouse",
+    );
     await Promise.resolve();
     expect(answered).toEqual([
-      { reason: "expired", url: "http://sb.test/graphql" },
+      { reason: "expired", url: "http://sb.test/graphql/r" },
     ]);
     expect(getPHStore()?.backendAuth).toMatchObject({
       requiresAuth: true,
       status: 401,
-      backend: "http://sb.test/graphql",
+      backend: "http://sb.test/graphql/r",
     });
   });
 
@@ -127,9 +130,55 @@ describe("handleSyncRefusal", () => {
       answered.push(refusal);
       return Promise.resolve(undefined);
     });
-    handleSyncRefusal("http://sb.test/graphql", { status: 403 });
+    handleSyncRefusal(
+      "http://sb.test/graphql/r",
+      { status: 403 },
+      "http://sb.test/graphql",
+    );
     expect(answered).toEqual([]);
     expect(getPHStore()?.backendAuth).toMatchObject({ status: 403 });
+  });
+
+  it("opens the gate only for the app's own backend", async () => {
+    const answered: unknown[] = [];
+    setCredentialRefusalHandler((refusal) => {
+      answered.push(refusal);
+      return Promise.resolve("anonymous");
+    });
+    handleSyncRefusal(
+      "http://other.test/graphql/r",
+      { status: 401, reason: "expired" },
+      "http://sb.test/d/powerhouse",
+    );
+    handleSyncRefusal("http://sb.test/graphql/r", { status: 403 });
+    await Promise.resolve();
+    // The credential is still answered for the other switchboard.
+    expect(answered).toEqual([
+      { reason: "expired", url: "http://other.test/graphql/r" },
+    ]);
+    expect(getPHStore()?.backendAuth).toBeUndefined();
+  });
+
+  it("knows the own backend by its drive address, endpoint or page origin", () => {
+    expect(
+      isOwnBackend(
+        "http://sb.test/api/graphql/r",
+        "http://SB.test/api/d/powerhouse",
+      ),
+    ).toBe(true);
+    expect(
+      isOwnBackend("http://sb.test/graphql/r", "http://sb.test/graphql/"),
+    ).toBe(true);
+    expect(
+      isOwnBackend(
+        `${location.origin}/graphql/r`,
+        `${ORIGIN_PLACEHOLDER}/d/powerhouse`,
+      ),
+    ).toBe(true);
+    expect(
+      isOwnBackend("http://sb.test:4002/graphql/r", "http://sb.test/d/x"),
+    ).toBe(false);
+    expect(isOwnBackend("http://sb.test/graphql/r", undefined)).toBe(false);
   });
 });
 

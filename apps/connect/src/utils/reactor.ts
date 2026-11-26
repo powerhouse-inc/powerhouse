@@ -68,6 +68,7 @@ export async function createBrowserReactor(
   renownEndpoints: RenownTrustEndpoints = {},
   unsupportedStoredDocuments?: UnsupportedStoredDocuments,
   multiReactor = false,
+  ownBackend?: string,
 ): Promise<BrowserReactorClientModule> {
   const signerConfig = await createConnectSignerConfig(
     renown.signer,
@@ -91,7 +92,10 @@ export async function createBrowserReactor(
     .withUpgradeManifests(upgradeManifests)
     .withExecutorConfig({ featureFlags })
     .withJwtHandler(jwtHandler)
-    .withSyncRefusalHandler(handleSyncRefusal)
+    // Only the app's own backend's refusal opens the full-page gate.
+    .withSyncRefusalHandler((url, refusal) =>
+      handleSyncRefusal(url, refusal, ownBackend),
+    )
     .withGroupCommitPGlite({
       pg: pg as unknown as GroupCommitPGliteInstance,
       // A poisoned session's unflushed writes, and every position built on

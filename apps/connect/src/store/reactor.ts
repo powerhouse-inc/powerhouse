@@ -515,6 +515,7 @@ export async function createReactor(
         renownEndpoints,
         unsupportedStoredDocuments,
         multiReactor,
+        remoteDriveUrl,
       );
     }
     const packageSpecs = packageManager
@@ -584,6 +585,7 @@ export async function createReactor(
       createSignaturePolicy,
       unsupportedStoredDocuments,
       renownEndpoints,
+      ownBackend: remoteDriveUrl,
       documentModelModules,
       upgradeManifests,
       documentModelLoader,

@@ -1,4 +1,7 @@
+import { ORIGIN_PLACEHOLDER } from "@powerhousedao/shared/connect/origin-placeholder";
+import { switchboardOfDrive } from "@powerhousedao/shared/host-tokens";
 import { answerCredentialRefusal } from "../graphql-client/auth.js";
+import { GQL_CHANNEL_SUFFIX } from "../utils/gql-channel.js";
 import type {
   BackendAuthState,
   SetPHGlobalValue,
@@ -80,19 +83,48 @@ export function isBackendAuthError(error: unknown): boolean {
   return backendAuthStatusOf(error) !== null;
 }
 
+/** A switchboard's base, `${origin}` resolved against the page, without a trailing slash. */
+function switchboardBaseOf(url: string): string {
+  const drive = switchboardOfDrive(url);
+  let base = drive
+    ? drive.base
+    : url.endsWith(GQL_CHANNEL_SUFFIX)
+      ? url.slice(0, -GQL_CHANNEL_SUFFIX.length)
+      : url.replace(/\/graphql\/?$/, "");
+  if (base.startsWith(ORIGIN_PLACEHOLDER) && typeof location !== "undefined") {
+    base = location.origin + base.slice(ORIGIN_PLACEHOLDER.length);
+  }
+  return base.replace(/\/+$/, "").toLowerCase();
+}
+
+/**
+ * Whether the sync channel `url` is one of `backend`'s: the app's own
+ * switchboard, named by a drive address or its GraphQL endpoint.
+ */
+export function isOwnBackend(
+  url: string,
+  backend: string | undefined,
+): boolean {
+  if (!backend) return false;
+  return switchboardBaseOf(url) === switchboardBaseOf(backend);
+}
+
 /**
  * The app's answer to a sync channel's refusal (`withSyncRefusalHandler`):
  * a refused credential goes to the app's credential refusal handler (dropped
- * or enrolled, as a GraphQL request's would), and the refusal is recorded for
- * the sign-in gate, naming the switchboard that refused.
+ * or enrolled, as a GraphQL request's would). A refusal by the app's own
+ * backend (`ownBackend`) is recorded for the full-page sign-in gate, naming
+ * it; one by another switchboard, a drive the person added, is not.
  */
 export function handleSyncRefusal(
   url: string,
   refusal: { status: 401 | 403; reason?: string },
+  ownBackend?: string,
 ): void {
   if (refusal.reason) {
     void answerCredentialRefusal({ reason: refusal.reason, url });
   }
+  if (!isOwnBackend(url, ownBackend)) return;
   setBackendAuth({
     requiresAuth: true,
     status: refusal.status,

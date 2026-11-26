@@ -76,6 +76,8 @@ export type WorkerReactorClientArgs = {
   unsupportedStoredDocuments?: UnsupportedStoredDocuments;
   /** Where the worker's trust policy verifies signers under authEnforcement. */
   renownEndpoints?: RenownTrustEndpoints;
+  /** The app's own backend: only its sync refusals open the full-page gate. */
+  ownBackend?: string;
   documentModelModules: DocumentModelModule[];
   upgradeManifests: UpgradeManifest<readonly number[]>[];
   documentModelLoader: IDocumentModelLoader;
@@ -252,7 +254,11 @@ export function createWorkerReactorClientModule(
       status: 401 | 403;
       reason?: string;
     };
-    handleSyncRefusal(url, { status, ...(reason ? { reason } : {}) });
+    handleSyncRefusal(
+      url,
+      { status, ...(reason ? { reason } : {}) },
+      args.ownBackend,
+    );
   });
   // The answer is the identity, null included, so the worker stops waiting.
   busProxy.subscribe(SIGNING_IDENTITY_NEEDED_EVENT, () => {
