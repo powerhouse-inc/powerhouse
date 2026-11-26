@@ -194,6 +194,17 @@ const authSchema = z.object({
   /** Renown unreachable: refuse a credential with no record and no answer. */
   refuseUnseenOffline: z.boolean().default(false),
   access: accessSchema.prefault({}),
+  /**
+   * Sessions callers delegate to the host (`phs_` tokens): unset is on
+   * wherever the host's own credential check runs; `HOST_SESSIONS=false`
+   * turns it off. `maxDays` caps a session below the 30 days it has at most.
+   */
+  hostSessions: z
+    .object({
+      enabled: z.boolean().optional(),
+      maxDays: z.number().int().min(1).max(30).optional(),
+    })
+    .prefault({}),
   renown: z
     .object({
       /** No longer read (warned): records, then Renown, decide. */

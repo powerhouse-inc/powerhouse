@@ -1,4 +1,7 @@
-import type { AuthService } from "@powerhousedao/reactor-api";
+import {
+  currentHostSession,
+  type AuthService,
+} from "@powerhousedao/reactor-api";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { describe, expect, it, vi } from "vitest";
 import { requireAuth, type NodeHandler } from "../../src/attachments/auth.js";
@@ -272,7 +275,36 @@ describe("requireAuth", () => {
     );
 
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy).toHaveBeenCalledWith("Bearer t");
+    // Attachments take a host session token, as GraphQL does.
+    expect(spy).toHaveBeenCalledWith("Bearer t", { hostSessions: true });
+  });
+
+  it("runs a host session's request in its scope, where it administers nothing", async () => {
+    const user = {
+      address: "0x1",
+      chainId: 1,
+      networkId: "eip155",
+      appKey: "did:key:zSession",
+      label: "billing",
+      via: "host-session",
+      hostSession: {
+        id: "a".repeat(32),
+        scope: "documents:write",
+        grant: "device",
+      },
+    };
+    const { service } = makeAuthService(() =>
+      Promise.resolve({ user, admins: [], auth_enabled: true }),
+    );
+    let inScope: unknown;
+    const wrapped = requireAuth(service, () => {
+      inScope = currentHostSession();
+    });
+    await wrapped(
+      makeReq({ headers: { authorization: "Bearer phs_x" } }),
+      makeRes(),
+    );
+    expect(inScope).toBe(user);
   });
 
   describe("allowAnonymous", () => {
@@ -440,6 +472,6 @@ describe("requireAuth", () => {
     await wrapped(makeReq({ headers: {} }), makeRes());
 
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy).toHaveBeenCalledWith(undefined);
+    expect(spy).toHaveBeenCalledWith(undefined, { hostSessions: true });
   });
 });

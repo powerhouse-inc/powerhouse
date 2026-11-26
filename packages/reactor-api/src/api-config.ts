@@ -44,6 +44,8 @@ export type ReactorApiConfig = {
     refuseUnseenOffline?: boolean;
     /** Who may use the host beyond its admins; see {@link ReactorApiAccessConfig}. */
     access?: ReactorApiAccessConfig;
+    /** Sessions callers delegate to the host (`phs_` tokens); see {@link ReactorApiHostSessionsConfig}. */
+    hostSessions?: ReactorApiHostSessionsConfig;
   };
   inspection?: { admin?: boolean };
   attachments?: { storage?: AttachmentStorageConfig };
@@ -67,6 +69,18 @@ export type ReactorApiAccessConfig = {
   appId?: string;
   /** How long Vetra's last yes still admits while Vetra is unreachable. */
   graceMs?: number;
+};
+
+/**
+ * Host sessions: a caller delegates a session to the host (OAuth device
+ * grant), and the host signs that caller's document writes with it for a
+ * `phs_` token. On wherever the host's own credential check runs; `enabled:
+ * false` (`HOST_SESSIONS=false`) turns it off. `maxDays` caps a session's
+ * life below the 30 days it may have at most.
+ */
+export type ReactorApiHostSessionsConfig = {
+  enabled?: boolean;
+  maxDays?: number;
 };
 
 const defaultLogger = childLogger(["reactor-api", "config"]);
@@ -133,6 +147,7 @@ export function reactorApiConfigFromEnv(
         appId: env.VETRA_APP_ID?.trim() || undefined,
         graceMs: parseAccessGateGraceMs(env.ACCESS_GATE_GRACE_MS, logger),
       }),
+      hostSessions: pruned({ enabled: onUnlessOff(env.HOST_SESSIONS) }),
     }),
     inspection: pruned({ admin: exactlyTrue(env.INSPECTION_ADMIN_ENABLED) }),
     attachments: pruned({
@@ -172,6 +187,12 @@ function isWsRecheckMs(raw: string): boolean {
 
 function exactlyTrue(value: string | undefined): boolean | undefined {
   return value === undefined ? undefined : value === "true";
+}
+
+/** A switch that is on by default: `false`, `0`, `off` or `no` turn it off. */
+function onUnlessOff(value: string | undefined): boolean | undefined {
+  if (value === undefined || value.trim() === "") return undefined;
+  return !["false", "0", "off", "no"].includes(value.trim().toLowerCase());
 }
 
 function parseAccessGateGraceMs(

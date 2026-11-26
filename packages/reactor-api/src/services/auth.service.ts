@@ -1,3 +1,4 @@
+import { isHostSessionToken } from "@powerhousedao/shared/clis/host-sessions";
 import type { RouteUser } from "@powerhousedao/shared/processors";
 import {
   carriedCredentialOf,
@@ -5,6 +6,79 @@ import {
   type PowerhouseVerifiableCredential,
 } from "@renown/sdk";
 import type { AccessGate } from "./access-gate.js";
+import {
+  isHostSessionUser,
+  type HostSessionUser,
+} from "./host-session-scope.js";
+
+/**
+ * The door for a host session token (`phs_`): which session it names and
+ * whether it still holds. The host's `HostSessions`.
+ */
+export interface HostSessionDoor {
+  verify(
+    token: string,
+  ): Promise<
+    | { ok: true; user: HostSessionUser }
+    | { ok: false; reason: "unknown" | "expired" | "withdrawn" }
+  >;
+  recheck(user: User): Promise<boolean>;
+}
+
+/** What a door that reads a bearer takes. */
+export type BearerOptions = {
+  /**
+   * Whether this surface takes a host session token: GraphQL, its WebSocket,
+   * HTTP `/mcp` and the attachment routes do. Elsewhere (package HTTP routes,
+   * the AI gateway, the credential routes) one is refused with
+   * {@link hostSessionNotAccepted}.
+   */
+  hostSessions?: boolean;
+};
+
+/** The error a surface that takes no host session token answers one with. */
+export const HOST_SESSION_NOT_ACCEPTED = "host-session-not-accepted";
+
+/** 401 for a host session token sent where none is taken. */
+export function hostSessionNotAccepted(): Response {
+  return new Response(
+    JSON.stringify({
+      error: HOST_SESSION_NOT_ACCEPTED,
+      error_description:
+        "A host session token (phs_) is not taken here: it opens GraphQL, HTTP /mcp and attachments only. Sign this request yourself.",
+    }),
+    {
+      status: 401,
+      headers: {
+        "content-type": "application/json",
+        "www-authenticate": `Bearer error="invalid_token", error_description="${HOST_SESSION_NOT_ACCEPTED}"`,
+      },
+    },
+  );
+}
+
+/** 401 for a host session token that is unknown, expired or withdrawn. */
+function hostSessionRefused(
+  reason: "unknown" | "expired" | "withdrawn",
+): Response {
+  return new Response(
+    JSON.stringify({
+      error: "invalid_token",
+      reason,
+      error_description:
+        reason === "unknown"
+          ? "This host knows no such host session token."
+          : `The host session of this token is ${reason}.`,
+    }),
+    {
+      status: 401,
+      headers: {
+        "content-type": "application/json",
+        "www-authenticate": 'Bearer error="invalid_token"',
+      },
+    },
+  );
+}
 
 type VerifiedCredential =
   Awaited<ReturnType<typeof verifyAuthBearerToken>> extends false | (infer T)
@@ -63,6 +137,8 @@ export interface AuthConfig {
   accessGate?: AccessGate;
   /** Who operates the instance besides `admins`; they pass the access gate as admins do. */
   operators?: { has(address: string): boolean };
+  /** The door for host session tokens; absent, every one is refused. */
+  hostSessions?: HostSessionDoor;
 }
 
 /** What a caller the access gate refused is told. */
@@ -174,6 +250,7 @@ export class AuthService implements ICredentialInvalidator {
 
   async authenticateRequest(
     request: globalThis.Request,
+    options: BearerOptions = {},
   ): Promise<AuthContext | globalThis.Response> {
     if (!this.resolvesIdentity) {
       return this.anonymousContext();
@@ -190,15 +267,21 @@ export class AuthService implements ICredentialInvalidator {
         auth_enabled: this.config.enabled,
       };
     }
-    return this.verifyBearer(request.headers.get("authorization") ?? undefined);
+    return this.verifyBearer(
+      request.headers.get("authorization") ?? undefined,
+      options,
+    );
   }
 
   /**
    * Verify a Bearer token regardless of HTTP method. Use this from non-GraphQL
-   * middleware that must enforce authentication on every request.
+   * middleware that must enforce authentication on every request. A host
+   * session token is taken only with `hostSessions`; its context lists no
+   * admins, as a host session administers nothing.
    */
   async verifyBearer(
     authorization: string | undefined,
+    options: BearerOptions = {},
   ): Promise<AuthContext | globalThis.Response> {
     if (!this.resolvesIdentity) {
       return this.anonymousContext();
@@ -210,6 +293,9 @@ export class AuthService implements ICredentialInvalidator {
         admins: this.config.admins,
         auth_enabled: this.config.enabled,
       };
+    }
+    if (isHostSessionToken(token)) {
+      return this.verifyHostSessionToken(token, options);
     }
     try {
       const verified = await this.verifyToken(token);
@@ -255,6 +341,33 @@ export class AuthService implements ICredentialInvalidator {
     }
   }
 
+  /** The third kind of bearer: a token of a session delegated to this host. */
+  private async verifyHostSessionToken(
+    token: string,
+    options: BearerOptions,
+  ): Promise<AuthContext | globalThis.Response> {
+    const door = this.config.hostSessions;
+    if (!options.hostSessions || !door) return hostSessionNotAccepted();
+    let verdict: Awaited<ReturnType<HostSessionDoor["verify"]>>;
+    try {
+      verdict = await door.verify(token);
+    } catch {
+      return new Response(JSON.stringify({ error: "Authentication failed" }), {
+        status: 401,
+      });
+    }
+    if (!verdict.ok) return hostSessionRefused(verdict.reason);
+    const { user } = verdict;
+    if (!(await this.admitted(user))) {
+      return new Response(JSON.stringify({ error: NO_LICENCE_MESSAGE }), {
+        status: 403,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    this.config.onVerified?.(user);
+    return { user, admins: [], auth_enabled: this.config.enabled };
+  }
+
   // `null` when there is nobody to resolve: resolution off, or no bearer sent.
 
   /** Throws only for a bearer that is present and unusable, as HTTP 401s it. */
@@ -278,6 +391,21 @@ export class AuthService implements ICredentialInvalidator {
     const token = authHeader.split(" ")[1];
     if (!token) {
       throw new Error("Invalid authorization format");
+    }
+
+    // The WebSocket of GraphQL takes a host session token, as GraphQL does.
+    if (isHostSessionToken(token)) {
+      const door = this.config.hostSessions;
+      if (!door) throw new Error("This host takes no host session token");
+      const verdict = await door.verify(token);
+      if (!verdict.ok) {
+        throw new Error(`Host session token refused (${verdict.reason})`);
+      }
+      if (!(await this.admitted(verdict.user))) {
+        throw new Error(NO_LICENCE_MESSAGE);
+      }
+      this.config.onVerified?.(verdict.user);
+      return verdict.user;
     }
 
     const verified = await this.verifyToken(token);
@@ -358,6 +486,14 @@ export class AuthService implements ICredentialInvalidator {
    * admission, so it costs at most one verifier call per identity per TTL.
    */
   async isCredentialValid(user: User): Promise<boolean> {
+    if (isHostSessionUser(user)) {
+      const door = this.config.hostSessions;
+      return (
+        door !== undefined &&
+        (await door.recheck(user)) &&
+        (await this.admitted(user))
+      );
+    }
     const credentialHolds =
       this.config.skipCredentialVerification ||
       (
@@ -393,11 +529,15 @@ export class AuthService implements ICredentialInvalidator {
     return check;
   }
 
-  /** ACCESS=licensed: admins pass; everyone else needs the gate's yes (or its grace). */
+  /**
+   * ACCESS=licensed: admins pass; everyone else needs the gate's yes (or its
+   * grace). A host session is never an admin: its user's licence decides.
+   */
   private async admitted(user: User): Promise<boolean> {
     const gate = this.config.accessGate;
     if (!gate) return true;
     const address = user.address.toLowerCase();
+    if (isHostSessionUser(user)) return (await gate.check(address)).allowed;
     if (this.config.admins.some((admin) => admin.toLowerCase() === address)) {
       return true;
     }

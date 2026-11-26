@@ -1,5 +1,9 @@
 import { PURGE_DOCUMENT } from "@powerhousedao/shared/document-model";
 import type { DocumentPermissionLevel } from "../utils/db.js";
+import {
+  currentHostSession,
+  refusesAdministration,
+} from "./host-session-scope.js";
 import type { OperatorSet } from "./operator-set.js";
 import type {
   DocumentPermissionService,
@@ -70,13 +74,21 @@ export interface AuthorizationConfig {
 
 /**
  * Whether `address` operates this instance: an admin, or named by its
- * launcher. Whatever the policy; anonymous never is.
+ * launcher. Whatever the policy; anonymous never is, and neither is a request
+ * borne by a host session, whoever its user is.
  */
 export function isConfiguredOperator(
   config: Pick<AuthorizationConfig, "admins" | "operators">,
   address: string | undefined,
 ): boolean {
-  if (!address) return false;
+  if (!address || currentHostSession()) return false;
+  return namedOperator(config, address);
+}
+
+function namedOperator(
+  config: Pick<AuthorizationConfig, "admins" | "operators">,
+  address: string,
+): boolean {
   if (config.operators) return config.operators.has(address);
   return config.admins.includes(address.toLowerCase());
 }
@@ -157,6 +169,14 @@ abstract class BaseAuthorizationService implements IAuthorizationService {
   }
 
   isOperator(userAddress?: string): boolean {
+    // An operator's host session is refused here, and the refusal logged.
+    if (
+      userAddress &&
+      namedOperator(this.config, userAddress) &&
+      refusesAdministration()
+    ) {
+      return false;
+    }
     return isConfiguredOperator(this.config, userAddress);
   }
 

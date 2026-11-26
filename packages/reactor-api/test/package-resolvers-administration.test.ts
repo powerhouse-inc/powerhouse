@@ -8,6 +8,7 @@ import {
 import type { Context } from "../src/graphql/types.js";
 
 const info = vi.hoisted(() => vi.fn());
+const warn = vi.hoisted(() => vi.fn());
 
 vi.mock("document-model", async (importOriginal) => {
   const actual = await importOriginal<typeof DocumentModel>();
@@ -15,7 +16,7 @@ vi.mock("document-model", async (importOriginal) => {
     info,
     debug: vi.fn(),
     verbose: vi.fn(),
-    warn: vi.fn(),
+    warn,
     error: vi.fn(),
   };
   return { ...actual, childLogger: () => logger };
@@ -23,6 +24,7 @@ vi.mock("document-model", async (importOriginal) => {
 
 const { installPackage, uninstallPackage } =
   await import("../src/graphql/packages/resolvers.js");
+const { runAsCaller } = await import("../src/services/host-session-scope.js");
 
 const ADMIN = "0x00000000000000000000000000000000000000ad";
 
@@ -92,5 +94,39 @@ describe("package administration", () => {
       } as unknown as Context),
     ).rejects.toThrow("Admin access required");
     expect(info).not.toHaveBeenCalled();
+  });
+
+  it("refuses an admin's host session, and logs the refusal", async () => {
+    info.mockClear();
+    warn.mockClear();
+    const user = {
+      address: ADMIN,
+      chainId: 1,
+      networkId: "eip155",
+      appKey: "did:key:zSession",
+      label: "billing",
+      via: "host-session",
+      hostSession: {
+        id: "3f9c1a2b".padEnd(32, "0"),
+        scope: "documents:write",
+        grant: "device",
+      },
+    };
+    await expect(
+      runAsCaller(
+        user,
+        () =>
+          installPackage(service(), authorization, { name: "@scope/pkg" }, {
+            user,
+          } as unknown as Context),
+        "PackagesMutations.installPackage",
+      ),
+    ).rejects.toThrow("Admin access required");
+    expect(info).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      "@session: administrative call refused@where (a host session administers nothing)",
+      `Host session 3f9c1a2b "billing" for ${ADMIN.slice(0, 6)}...${ADMIN.slice(-4)}`,
+      " (PackagesMutations.installPackage)",
+    );
   });
 });

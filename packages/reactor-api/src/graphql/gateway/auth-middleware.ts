@@ -1,4 +1,5 @@
 import type { AuthContext, AuthService } from "../../services/auth.service.js";
+import { runAsCaller } from "../../services/host-session-scope.js";
 import type { FetchHandler } from "./types.js";
 
 export type AuthFetchMiddleware = (handler: FetchHandler) => FetchHandler;
@@ -25,14 +26,20 @@ export function setAuthContext(
   authContextMap.set(request, context);
 }
 
+/**
+ * GraphQL's door: it takes a host session token too, and runs the request in
+ * the scope of that session, so no administration answers yes for it.
+ */
 export function createAuthFetchMiddleware(
   authService: AuthService,
 ): AuthFetchMiddleware {
   return (next: FetchHandler): FetchHandler =>
     async (request: globalThis.Request): Promise<globalThis.Response> => {
-      const result = await authService.authenticateRequest(request);
+      const result = await authService.authenticateRequest(request, {
+        hostSessions: true,
+      });
       if (result instanceof globalThis.Response) return result;
       authContextMap.set(request, result);
-      return next(request);
+      return runAsCaller(result.user, () => next(request));
     };
 }

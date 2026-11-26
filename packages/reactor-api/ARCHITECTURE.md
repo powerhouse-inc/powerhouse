@@ -107,6 +107,32 @@ Incoming HTTP request
 `getAuthContext` is intentionally not exported from the package index. It is an
 internal coupling point between `auth-middleware.ts` and `graphql-manager.ts`.
 
+### Bearer kinds
+
+`AuthService.verifyBearer(header, options)` reads three kinds of bearer:
+
+| Bearer | Verified by | `ctx.user.via` |
+| ------ | ----------- | -------------- |
+| none | nothing: the caller is anonymous | (no user) |
+| a self-signed JWT of a session key, carrying or naming its credential | the token's signature, then the credential verifier (the store's records, then Renown) | `record`, `renown`, `last-answer`, `signature` |
+| `phs_<id>_<secret>`, a token of a session the caller delegated to this host | `HostSessions` (`src/services/host-sessions.ts`): the session file in `<dataDir>/.ph/host-sessions`, the hash of the secret, both ends, then the same credential verifier | `host-session` |
+
+A host session token is taken only where `options.hostSessions` is set: the
+GraphQL middleware, the WebSocket (`authenticateWebSocketConnection`), HTTP
+`/mcp` (`mcp-request-authorizer.ts`) and the switchboard's attachment routes.
+Every other surface answers 401 `host-session-not-accepted`: package HTTP
+routes, the AI gateway, the credential routes (`HttpRouteService` refuses it
+before any route's own auth runs).
+
+A host session administers nothing. Its `AuthContext.admins` is `[]`, and the
+request runs in the host-session scope (`src/services/host-session-scope.ts`,
+an `AsyncLocalStorage` entered by `runAsCaller(user, run)`): the GraphQL
+middleware runs the handler in it, the resolver binder each field, the `/mcp`
+authorizer each access decision, the attachment routes their handler and the
+reactor subgraph its subscription filters. In the scope `isOperator` and the
+admin half of `isSupremeAdmin` answer false (OPEN's policy-wide access stays),
+and MCP's `unrestricted` and `operator` are false.
+
 `AuthService.authenticate()` (the old Express middleware signature) is kept for
 backwards compatibility but is `@deprecated`. New code uses `authenticateRequest()`.
 

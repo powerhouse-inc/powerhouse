@@ -227,7 +227,9 @@ describe("authenticated S3 reservation production path", () => {
         method: "PUT",
         url: "https://signed.example.test/x",
       });
-      expect(verifyBearer).toHaveBeenCalledWith("Bearer valid-token");
+      expect(verifyBearer).toHaveBeenCalledWith("Bearer valid-token", {
+        hostSessions: true,
+      });
       expect(presign).toHaveBeenCalledOnce();
       expect(send).not.toHaveBeenCalled();
 

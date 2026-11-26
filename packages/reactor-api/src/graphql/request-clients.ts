@@ -4,8 +4,10 @@ import type {
 } from "@powerhousedao/reactor";
 import { CallerSigner, UnsignedWriteError } from "@powerhousedao/reactor";
 import type { ISigner } from "@powerhousedao/shared/document-model";
+import type { RouteUser } from "@powerhousedao/shared/processors";
 import type { GraphQLError, GraphQLResolveInfo } from "graphql";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { runAsCaller } from "../services/host-session-scope.js";
 import { unsignedWriteRefusal } from "./errors.js";
 
 /**
@@ -438,17 +440,25 @@ export class RequestClientBinder {
       );
       const field = `${info.parentType.name}.${info.fieldName}`;
       const run = () => resolver(parent, args, derived, info);
+      // A field of a request borne by a host session runs in its scope, over
+      // HTTP and WebSocket alike: it administers nothing.
+      const caller = (derived as { user?: RouteUser }).user;
       if (operation !== "mutation") {
-        return executingField.run(field, run);
+        return runAsCaller(caller, () => executingField.run(field, run), field);
       }
       const scope: CallerWriteScope = {
         signer: this.#delegatedSigner(derived),
         refused: [],
       };
-      return executingField.run(field, () =>
-        callerWrites.run(scope, () =>
-          refusingUnsignedWrites(scope, field, derived, run),
-        ),
+      return runAsCaller(
+        caller,
+        () =>
+          executingField.run(field, () =>
+            callerWrites.run(scope, () =>
+              refusingUnsignedWrites(scope, field, derived, run),
+            ),
+          ),
+        field,
       );
     };
   }
@@ -458,13 +468,12 @@ export class RequestClientBinder {
       if (!info?.operation) {
         return resolver(value, context, info);
       }
-      return resolver(
-        value,
-        this.contextFor(
-          (context ?? {}) as object,
-          info.operation.operation as ClientOperation,
-        ),
-        info,
+      const derived = this.contextFor(
+        (context ?? {}) as object,
+        info.operation.operation as ClientOperation,
+      );
+      return runAsCaller((derived as { user?: RouteUser }).user, () =>
+        resolver(value, derived, info),
       );
     };
   }

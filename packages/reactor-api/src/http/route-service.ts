@@ -6,7 +6,11 @@ import type {
   AdapterRouteHandle as AdapterHandle,
   IHttpAdapter,
 } from "../graphql/gateway/types.js";
-import type { AuthService } from "../services/auth.service.js";
+import { hostSessionTokenOf } from "@powerhousedao/shared/clis/host-sessions";
+import {
+  hostSessionNotAccepted,
+  type AuthService,
+} from "../services/auth.service.js";
 import {
   readPublicOrigin,
   type PublicOrigin,
@@ -419,6 +423,14 @@ class HttpScope implements IHttpScope {
     req: IncomingMessage,
     res: ServerResponse,
   ): Promise<RouteActor | undefined | typeof REJECTED> {
+    // A host session token opens GraphQL, `/mcp` and attachments only: no
+    // package route, the AI gateway or the credential routes, whatever their
+    // auth mode.
+    if (hostSessionTokenOf(req.headers.authorization)) {
+      await writeResponse(res, hostSessionNotAccepted(), req.method ?? "GET");
+      return REJECTED;
+    }
+
     if (auth === "public") return undefined;
 
     if (typeof auth === "function") {

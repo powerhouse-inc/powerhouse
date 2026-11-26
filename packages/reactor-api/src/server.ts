@@ -52,7 +52,11 @@ import {
   type ProcessorFactory,
 } from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
-import type { ReactorApiAccessConfig, ReactorApiConfig } from "./api-config.js";
+import type {
+  ReactorApiAccessConfig,
+  ReactorApiConfig,
+  ReactorApiHostSessionsConfig,
+} from "./api-config.js";
 import { coreSubgraphClasses } from "./config.js";
 import { createStartupAttachmentBackend } from "./attachment-backend.js";
 import {
@@ -71,6 +75,7 @@ import {
   type SwitchboardRequestFn,
 } from "@renown/sdk/node";
 import { mountCredentialRoutes } from "./http/credential-routes.js";
+import { HostSessions } from "./services/host-sessions.js";
 import { OperatorSet, parseOperatorSource } from "./services/operator-set.js";
 import {
   createAuthFetchMiddleware,
@@ -242,6 +247,9 @@ type Options = {
     /** `ACCESS=licensed`: admit only admins and holders of a live licence,
      *  as Vetra's gate answers. See {@link assertAccessConfig}. */
     access?: ReactorApiAccessConfig;
+    /** Sessions callers delegate to this host (`phs_` tokens): on wherever
+     *  the built-in credential check runs, unless `enabled: false`. */
+    hostSessions?: ReactorApiHostSessionsConfig;
   };
   /** Renown coordinates the host already resolved, used verbatim instead of
    * resolving the config file's `auth.renown` again (which would warn twice). */
@@ -1058,6 +1066,25 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   } else {
     logger.info("Renown credentials will be verified by the host's verifier");
   }
+  // Sessions callers delegate to this host: their door asks the same verifier.
+  let hostSessions: HostSessions | undefined;
+  if (credentialVerifier && optionAuth.hostSessions?.enabled !== false) {
+    hostSessions = new HostSessions({
+      dataDir: path.dirname(stateDir),
+      verifier: credentialVerifier,
+      logger: logger.child(["host-sessions"]),
+    });
+    // A restored backup brings withdrawn sessions back: the count says so.
+    logger.info(
+      "Host sessions: @count live in @dir",
+      hostSessions.liveCount(),
+      path.join(stateDir, "host-sessions"),
+    );
+  } else if (optionAuth.hostSessions?.enabled === true) {
+    logger.warn(
+      "auth.hostSessions is on, but this host checks credentials with its own verifier: host session tokens are refused.",
+    );
+  }
   let accessGate: AccessGate | undefined;
   if (licensed && optionAuth.access?.gateUrl && optionAuth.access.gateToken) {
     accessGate = createVetraAccessGate({
@@ -1085,7 +1112,16 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       : optionAuth.credentialCacheTtlMs,
     verifyCredential,
     operators,
+    ...(hostSessions ? { hostSessions } : {}),
   });
+  // A removed session file closes the sockets its tokens hold open.
+  hostSessions?.onGone((claim) =>
+    authService.invalidateCredential(
+      claim.address,
+      claim.chainId,
+      claim.sessionDid,
+    ),
+  );
   if (credentialVerifier) {
     const verifier = credentialVerifier;
     // A removed record closes the sockets it admitted; a package's
@@ -1138,6 +1174,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     const verifier = credentialVerifier;
     dbClosers.push(() => {
       verifier.close();
+      hostSessions?.close();
       return Promise.resolve();
     });
   }

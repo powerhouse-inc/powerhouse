@@ -41,6 +41,19 @@ export * from "./src/services/attachment-access.service.js";
 export * from "./src/services/authorized-attachment.service.js";
 export * from "./src/services/access-gate.js";
 export * from "./src/services/auth.service.js";
+export {
+  currentHostSession,
+  isHostSessionUser,
+  runAsCaller,
+  type HostSessionUser,
+} from "./src/services/host-session-scope.js";
+export {
+  HostSessions,
+  type HostSessionClaim,
+  type HostSessionRefusal,
+  type HostSessionsOptions,
+  type HostSessionVerdict,
+} from "./src/services/host-sessions.js";
 export * from "./src/services/canonical-document-id.js";
 export * from "./src/services/renown-config.js";
 export * from "./src/services/document-permission.service.js";

@@ -1,4 +1,8 @@
-import type { AuthContext, AuthService } from "@powerhousedao/reactor-api";
+import {
+  runAsCaller,
+  type AuthContext,
+  type AuthService,
+} from "@powerhousedao/reactor-api";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 /**
@@ -74,7 +78,10 @@ export function requireAuth(
   return async (req, res, body) => {
     let result;
     try {
-      result = await authService.verifyBearer(req.headers.authorization);
+      // Attachments take a host session token, as GraphQL does.
+      result = await authService.verifyBearer(req.headers.authorization, {
+        hostSessions: true,
+      });
     } catch {
       res.statusCode = 500;
       res.setHeader("Content-Type", "application/json");
@@ -103,9 +110,12 @@ export function requireAuth(
       }
     }
 
-    await handler(req, res, body, {
-      user: result.user,
-      authEnabled: result.auth_enabled,
-    });
+    // A host session's request runs in its scope: it administers nothing.
+    await runAsCaller(result.user, () =>
+      handler(req, res, body, {
+        user: result.user,
+        authEnabled: result.auth_enabled,
+      }),
+    );
   };
 }

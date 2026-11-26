@@ -41,6 +41,19 @@ import {
   type JobChangesPayload,
 } from "./pubsub.js";
 import * as resolvers from "./resolvers.js";
+import { runAsCaller } from "../../services/host-session-scope.js";
+
+/**
+ * A subscription filter decided as its subscriber: it runs when an event is
+ * published, outside the subscriber's request, so a host session's scope is
+ * entered here.
+ */
+function asSubscriber<P, A>(
+  filter: (payload: P, args: A, ctx: Context | undefined) => Promise<boolean>,
+): (payload: P, args: A, ctx: Context | undefined) => Promise<boolean> {
+  return (payload, args, ctx) =>
+    runAsCaller(ctx?.user, () => filter(payload, args, ctx));
+}
 
 export class ReactorSubgraph extends BaseSubgraph {
   // temp
@@ -1626,7 +1639,8 @@ export class ReactorSubgraph extends BaseSubgraph {
             Context
           >(
             () => this.documentChanges.subscribe(this.viewSubject(ctx)),
-            async (payload, filterArgs, filterCtx) => {
+            // Decided as the subscriber: a host session's in its scope.
+            asSubscriber(async (payload, filterArgs, filterCtx) => {
               if (!payload) return false;
 
               const search = {
@@ -1657,7 +1671,7 @@ export class ReactorSubgraph extends BaseSubgraph {
                 if (!canRead) return false;
               }
               return true;
-            },
+            }),
           );
           return filtered(rootValue as DocumentChangesPayload, args, ctx, info);
         },
@@ -1686,7 +1700,7 @@ export class ReactorSubgraph extends BaseSubgraph {
                 SUBSCRIPTION_TRIGGERS.JOB_CHANGES,
               );
             },
-            async (payload, filterArgs, filterCtx) => {
+            asSubscriber(async (payload, filterArgs, filterCtx) => {
               if (!payload || !filterArgs) return false;
               if (!matchesJobFilter(payload, filterArgs)) return false;
               if (
@@ -1711,7 +1725,7 @@ export class ReactorSubgraph extends BaseSubgraph {
                 payload.documentId as CanonicalDocumentId,
                 filterCtx as Context,
               );
-            },
+            }),
           );
           return filtered(rootValue as JobChangesPayload, args, ctx, info);
         },

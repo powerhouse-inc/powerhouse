@@ -264,6 +264,32 @@ describe("the gateway on a signed-in host", () => {
     }
   });
 
+  it("refuses a host session token: a host session administers nothing", async () => {
+    // Shaped as an admin's host session token would be; the gateway refuses
+    // every one before asking whose it is.
+    const token = `phs_${"ab".repeat(16)}_${randomBytes(32).toString("base64url")}`;
+    for (const [method, path] of [
+      ["GET", "/status"],
+      ["PUT", "/key"],
+    ]) {
+      const response = await fetch(
+        `http://127.0.0.1:${switchboard!.port}${GATEWAY}${path}`,
+        {
+          method,
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${token}`,
+          },
+          ...(method === "GET" ? {} : { body: "{}" }),
+        },
+      );
+      expect([path, response.status]).toEqual([path, 401]);
+      expect(((await response.json()) as { error: string }).error).toBe(
+        "host-session-not-accepted",
+      );
+    }
+  });
+
   it("reports not configured, and the chat refuses until a key is set", async () => {
     const status = await call(ADMIN, "/status");
     expect(status.status).toBe(200);
