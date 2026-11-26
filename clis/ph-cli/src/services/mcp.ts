@@ -267,11 +267,16 @@ async function forwardToolCall(
   }
 }
 
-/** The tools that write: they run here, signed and borne as the MCP client's session. */
+/**
+ * The tools that write: they run here, signed and borne as the MCP client's
+ * session. The Switchboard's HTTP `/mcp` signs none of them.
+ */
 export const SIGNED_TOOLS: ReadonlySet<string> = new Set([
   "createDocument",
   "addActions",
   "deleteDocument",
+  "addDrive",
+  "deleteDrive",
 ]);
 
 /** What an MCP client's session is called, and its credential signs. */

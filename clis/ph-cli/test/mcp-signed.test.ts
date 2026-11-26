@@ -258,6 +258,37 @@ describe("ph mcp", () => {
     await expect(switchboard!.reactor.get(documentId)).rejects.toThrow();
   }, 120_000);
 
+  it("adds a drive with every write signed by the client's session", async () => {
+    const added = await call("addDrive", {
+      name: "Signed Drive",
+      icon: "s",
+      preferredEditor: "app",
+    });
+    const { driveId } = added.structuredContent as { driveId: string };
+    const drive = await switchboard!.reactor.get(driveId);
+    expect(drive.header.name).toBe("Signed Drive");
+    expect(drive.header.meta?.preferredEditor).toBe("app");
+    const operations = await operationsOf(driveId);
+    expect(operations.map((op) => op.action.type)).toEqual(
+      expect.arrayContaining([
+        "CREATE_DOCUMENT",
+        "SET_PREFERRED_EDITOR",
+        "SET_NAME",
+        "SET_DRIVE_NAME",
+        "SET_DRIVE_ICON",
+      ]),
+    );
+    await expectSignedByClient(operations);
+  }, 120_000);
+
+  it("deletes a drive by its own signed DELETE_DOCUMENT", async () => {
+    const added = await call("addDrive", { name: "Deleted Drive" });
+    const { driveId } = added.structuredContent as { driveId: string };
+    const deleted = await call("deleteDrive", { documentId: driveId });
+    expect(deleted.structuredContent).toEqual({ driveId });
+    await expect(switchboard!.reactor.get(driveId)).rejects.toThrow();
+  }, 120_000);
+
   it("creates a document of a model a package of the project's config provides", async () => {
     const created = await call("createDocument", {
       documentType: "powerhouse/package",
