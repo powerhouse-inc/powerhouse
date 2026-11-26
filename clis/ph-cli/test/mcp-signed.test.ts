@@ -29,6 +29,8 @@ import { writeVetraRuntime } from "../src/utils/vetra-runtime.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PH_CLI = path.resolve(here, "../dist/cli.mjs");
+// A package of models neither `ph mcp` nor the switchboard has by itself.
+const MODELS_PACKAGE = path.resolve(here, "../../../packages/vetra");
 const PROJECT_NAME = "mcp-signed-test";
 const LABEL = "mcp test-client";
 
@@ -47,14 +49,19 @@ beforeAll(async () => {
     path.join(project, "package.json"),
     JSON.stringify({ name: PROJECT_NAME, private: true }),
   );
-  fs.writeFileSync(path.join(project, "powerhouse.config.json"), "{}");
+  fs.writeFileSync(
+    path.join(project, "powerhouse.config.json"),
+    JSON.stringify({
+      packages: [{ packageName: MODELS_PACKAGE, provider: "local" }],
+    }),
+  );
 
   const started = await startSwitchboard(
     {
       server: { port: 0, host: "127.0.0.1" },
       storage: { inMemory: true, userDataDir: project },
       features: { workflows: false, mcp: true },
-      packages: { disableLocal: true, list: [] },
+      packages: { disableLocal: true, list: [MODELS_PACKAGE] },
       identity: {
         keypairPath: path.join(root, "switchboard", ".keypair.json"),
         storagePath: path.join(root, "switchboard", ".renown.json"),
@@ -249,5 +256,25 @@ describe("ph mcp", () => {
     // Derived from the signed delete's id, not generated.
     expect(removal.action.id).toMatch(/^[0-9a-f]{32}$/);
     await expect(switchboard!.reactor.get(documentId)).rejects.toThrow();
+  }, 120_000);
+
+  it("creates a document of a model a package of the project's config provides", async () => {
+    const created = await call("createDocument", {
+      documentType: "powerhouse/package",
+      name: "Packaged",
+    });
+    const { documentId } = created.structuredContent as { documentId: string };
+    await expectSignedByClient(await operationsOf(documentId));
+  }, 120_000);
+
+  it("answers a model nothing provides with a tool error naming it, writing nothing", async () => {
+    const result = (await client!.callTool({
+      name: "createDocument",
+      arguments: { documentType: "test/nobody-provides-this", name: "None" },
+    })) as CallToolResult;
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result.content)).toContain(
+      "holds no document model test/nobody-provides-this",
+    );
   }, 120_000);
 });

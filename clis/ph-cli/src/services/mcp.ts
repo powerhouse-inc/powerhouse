@@ -23,6 +23,7 @@ import { createServer } from "@powerhousedao/reactor-mcp";
 import type { LocalDocumentModels } from "@powerhousedao/reactor-mcp/remote";
 import { resolveSwitchboardPortDefault } from "@powerhousedao/shared/clis/args";
 import { identityDataDir } from "@powerhousedao/shared/clis/identity";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type * as RenownIdentity from "@renown/sdk/identity";
 import fs from "node:fs";
 import path from "node:path";
@@ -281,19 +282,68 @@ export function mcpSessionLabel(clientName: string | undefined): string {
 /** How long a Renown approval of a session is waited for. */
 const APPROVAL_WAIT_MS = 10 * 60_000;
 
-type Answer = { result: CallToolResult } | { forward: true };
+/** What a writing tool answers when this process holds no model of the type. */
+export function missingModelError(documentType: string): CallToolResult {
+  return toolError(
+    `This MCP server holds no document model ${documentType}: neither the project's document-models folder nor a package powerhouse.config.json names provides it. ` +
+      "Add the package that provides it (`ph install <package>`), or build the project's own models, then call the tool again.",
+  );
+}
+
+/** The package names powerhouse.config.json lists, in its order. */
+function configPackageNames(projectDir: string): string[] {
+  try {
+    const config = JSON.parse(
+      fs.readFileSync(path.join(projectDir, CONFIG_FILE), "utf8"),
+    ) as { packages?: { packageName?: unknown }[] };
+    return (config.packages ?? [])
+      .map((entry) => entry.packageName)
+      .filter((name): name is string => typeof name === "string" && !!name);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The document models of the packages powerhouse.config.json lists, loaded
+ * from node_modules by the loader the project's Switchboard loads them with.
+ * A package that is not installed, or ships no models, adds none.
+ */
+async function configPackageModels(
+  projectDir: string,
+): Promise<DocumentModelModule[]> {
+  const names = configPackageNames(projectDir);
+  if (names.length === 0) return [];
+  const { ImportPackageLoader, isExpectedLoaderMiss } =
+    await import("@powerhousedao/reactor-api");
+  const loader = new ImportPackageLoader(projectDir);
+  const models: DocumentModelModule[] = [];
+  for (const name of names) {
+    try {
+      models.push(...(await loader.loadDocumentModels(name)));
+    } catch (error) {
+      if (isExpectedLoaderMiss(error, name, "document-models")) continue;
+      console.error(
+        `[ph mcp] the document models of ${name} did not load: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  return models;
+}
 
 /**
  * The writing tools, run in this process over the project's Switchboard,
  * every action signed and every request borne as the MCP client's own
  * session (`mcp <client>`), kept in the project's data folder with its
  * credential's record: the pseudonym's, issued at the first write, or one a
- * Renown login approves once at Renown's console. A call that needs a model
- * this process does not hold, before it wrote anything, goes to the host's
- * `/mcp` instead, which signs its writes itself.
+ * Renown login approves once at Renown's console. The models are the base
+ * ones, the project's own and those of the packages its config lists; a call
+ * that needs one this process still lacks is answered with a tool error
+ * naming it, and nothing is written.
  */
 class SignedTools {
   #models: Promise<LocalDocumentModels> | undefined;
+  #packageModels: Promise<DocumentModelModule[]> | undefined;
   /** The console approvals waited for, by session label. */
   #approvals = new Map<string, string>();
 
@@ -312,12 +362,24 @@ class SignedTools {
     return this.#models;
   }
 
+  #configPackageModels(): Promise<DocumentModelModule[]> {
+    this.#packageModels ??= configPackageModels(this.projectDir).catch(
+      (error: unknown) => {
+        console.error(
+          `[ph mcp] the packages of ${CONFIG_FILE} did not load: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return [];
+      },
+    );
+    return this.#packageModels;
+  }
+
   async call(
     params: CallToolRequest["params"],
     label: string,
     graphqlUrl: string,
     signal: AbortSignal,
-  ): Promise<Answer> {
+  ): Promise<CallToolResult> {
     const identity = await import("@renown/sdk/identity");
     const dataDir = identityDataDir(this.projectDir);
     let session: Awaited<ReturnType<typeof identity.openSession>>;
@@ -333,29 +395,35 @@ class SignedTools {
       });
     } catch (error) {
       if (error instanceof identity.SessionApprovalRequiredError) {
-        return { result: toolError(this.#approve(identity, label, dataDir)) };
+        return toolError(this.#approve(identity, label, dataDir));
       }
       throw error;
     }
-    const [{ createRemoteServer }, { GraphQLReactorClient }, models] =
-      await Promise.all([
-        import("@powerhousedao/reactor-mcp/remote"),
-        import("@powerhousedao/reactor-browser/graphql-client"),
-        this.#localModels(),
-      ]);
+    const [
+      { createRemoteServer },
+      { GraphQLReactorClient },
+      project,
+      packaged,
+    ] = await Promise.all([
+      import("@powerhousedao/reactor-mcp/remote"),
+      import("@powerhousedao/reactor-browser/graphql-client"),
+      this.#localModels(),
+      this.#configPackageModels(),
+    ]);
+    const models = () => [...project.current(), ...packaged];
     const client = new GraphQLReactorClient({
       url: graphqlUrl,
-      documentModels: () => models.current(),
+      documentModels: models,
       signer: session.actionSigner,
       tokenProvider: () => session.bearer(),
       realtime: false,
     });
-    const seen = { missing: false, wrote: false };
+    const seen: { missing?: string; wrote: boolean } = { wrote: false };
     const server = createRemoteServer({
       client,
-      documentModels: () => models.current(),
-      onMissingModel: () => {
-        seen.missing = true;
+      documentModels: models,
+      onMissingModel: (documentType) => {
+        seen.missing ??= documentType;
       },
       onWrite: () => {
         seen.wrote = true;
@@ -372,9 +440,9 @@ class SignedTools {
         { signal, timeout: CALL_TIMEOUT_MS },
       )) as CallToolResult;
       if (result.isError && seen.missing && !seen.wrote) {
-        return { forward: true };
+        return missingModelError(seen.missing);
       }
-      return { result };
+      return result;
     } finally {
       client.dispose();
       await local.close().catch(() => {});
@@ -486,13 +554,12 @@ export async function startMcpLauncher(options: McpLauncherOptions) {
         };
       }
       if (signed && SIGNED_TOOLS.has(request.params.name)) {
-        const answer = await signed.call(
+        return await signed.call(
           request.params,
           mcpSessionLabel(server.getClientVersion()?.name),
           await upstream.switchboard(onProgress),
           extra.signal,
         );
-        if ("result" in answer) return answer.result;
       }
       return await forwardToolCall(
         upstream,
