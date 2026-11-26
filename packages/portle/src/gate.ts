@@ -3,7 +3,8 @@
  *
  * Publishing a project through Portle puts its switchboard on the internet,
  * so the plugin refuses to bring the tunnel up unless the host is locked
- * down and the person asking is one of its admins. The gate is expressed in
+ * down and the person asking operates it (`ADMINS`, or whom its launcher
+ * named with `PH_OPERATOR`). The gate is expressed in
  * terms of the RESOLVED authorization settings, never the environment
  * variables that produced them: `DEFAULT_PROTECTION` is inert under
  * `ADMIN_ONLY`, and the env can be contradicted by the config file.
@@ -20,8 +21,15 @@ export type PortlePolicy = "OPEN" | "ADMIN_ONLY" | "DOCUMENT_PERMISSIONS";
 /** What the gate judges: read off the switchboard's `API` object. */
 export interface GateFacts {
   policy: PortlePolicy;
-  /** Lower-cased addresses of the host's supreme admins. */
-  admins: readonly string[];
+  /**
+   * Whether anyone operates the host: an address in `ADMINS`, or whom its
+   * launcher named (`PH_OPERATOR`).
+   */
+  operatorsConfigured: boolean;
+  /** Who operates the host, as its authorization settings name them. */
+  operators: string;
+  /** Whether `address` operates the host (its authorization service's `isOperator`). */
+  isOperator: (address: string | undefined) => boolean;
   /** Documents without a permission row count as protected. */
   defaultProtection: boolean;
   /** The bearer is verified and `ctx.user` is populated. */
@@ -56,16 +64,6 @@ export interface GateReport {
   warnings: GateCheck[];
 }
 
-/** One of the host's listed admins, whatever the policy. */
-export function isListedAdmin(
-  admins: readonly string[],
-  address: string | undefined,
-): boolean {
-  if (!address) return false;
-  const caller = address.toLowerCase();
-  return admins.some((admin) => admin.toLowerCase() === caller);
-}
-
 const POLICY_FIX =
   "Set AUTH_ENABLED=true (or auth.enabled in powerhouse.config.json). ADMIN_ONLY is enough; DOCUMENT_PERMISSIONS_ENABLED=true with DEFAULT_PROTECTION=true also passes.";
 
@@ -76,6 +74,7 @@ export function evaluateGate(
   const policyOk =
     facts.policy === "ADMIN_ONLY" ||
     (facts.policy === "DOCUMENT_PERMISSIONS" && facts.defaultProtection);
+  const callerOperates = facts.isOperator(caller?.address);
 
   const checks: GateCheck[] = [
     {
@@ -120,27 +119,25 @@ export function evaluateGate(
     },
     {
       id: "admins",
-      ok: facts.admins.length > 0,
-      detail:
-        facts.admins.length > 0
-          ? `${facts.admins.length} admin address(es) listed.`
-          : "No admin address is listed; nobody could administer the published host.",
-      fix:
-        facts.admins.length > 0
-          ? undefined
-          : "Set ADMINS to the comma-separated addresses that may publish.",
+      ok: facts.operatorsConfigured,
+      detail: facts.operatorsConfigured
+        ? `An operator is configured: ${facts.operators}.`
+        : "No operator is configured: neither ADMINS nor the launcher (PH_OPERATOR) names one, so nobody could administer the published host.",
+      fix: facts.operatorsConfigured
+        ? undefined
+        : "Set ADMINS to the comma-separated addresses that may publish, or start the host with a launcher that sets PH_OPERATOR (ph run, ph vetra).",
     },
     {
       id: "caller",
-      ok: isListedAdmin(facts.admins, caller?.address),
+      ok: callerOperates,
       detail: caller?.address
-        ? isListedAdmin(facts.admins, caller.address)
-          ? "You are one of the listed admins."
-          : "You are signed in, but not one of the listed admins."
+        ? callerOperates
+          ? "You operate this host."
+          : "You are signed in, but you do not operate this host (ADMINS, PH_OPERATOR)."
         : "You are not signed in.",
-      fix: isListedAdmin(facts.admins, caller?.address)
+      fix: callerOperates
         ? undefined
-        : "Sign in with Renown as one of the ADMINS addresses.",
+        : "Sign in as one of the ADMINS addresses, or as the person the launcher names (PH_OPERATOR).",
     },
   ];
 
@@ -176,7 +173,7 @@ function describePolicy(facts: GateFacts): string {
     case "OPEN":
       return "OPEN: everyone, anonymous included, may read and write everything.";
     case "ADMIN_ONLY":
-      return "ADMIN_ONLY: only the listed admins may read or write anything.";
+      return "ADMIN_ONLY: only the host's operators (ADMINS, and whom its launcher named) may read or write anything.";
     case "DOCUMENT_PERMISSIONS":
       return facts.defaultProtection
         ? "DOCUMENT_PERMISSIONS with default protection: grants decide, unprotected documents do not exist."

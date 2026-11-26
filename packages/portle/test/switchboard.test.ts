@@ -88,10 +88,12 @@ describe("portle switchboard plugin", () => {
         },
       });
 
+    // The environment of these runs is their own, so a PORTLE_AUTOSTART the
+    // suite runs under does not decide them.
     it("starts the tunnel when the operator asked and the host passes the gate", async () => {
       const ctx = hostContext();
       const runner = fakeRunner(enrolledWantingStart());
-      const p = createPortlePlugin(() => runner);
+      const p = createPortlePlugin(() => runner, {});
       await p.hooks!.onSubgraphsRegistering!(ctx);
       await p.hooks!.onDrivesReady!(ctx);
       expect(runner.calls).toEqual(["start"]);
@@ -130,7 +132,7 @@ describe("portle switchboard plugin", () => {
     it("stays down, with a warning, when the host no longer passes the gate", async () => {
       const ctx = hostContext("OPEN");
       const runner = fakeRunner(enrolledWantingStart());
-      const p = createPortlePlugin(() => runner);
+      const p = createPortlePlugin(() => runner, {});
       await p.hooks!.onSubgraphsRegistering!(ctx);
       await p.hooks!.onDrivesReady!(ctx);
       expect(runner.calls).toEqual([]);
@@ -165,7 +167,7 @@ describe("portle switchboard plugin", () => {
       const runner = fakeRunner(enrolledWantingStart());
       runner.start = () =>
         Promise.reject(new Error("frpc and caddy not found"));
-      const p = createPortlePlugin(() => runner);
+      const p = createPortlePlugin(() => runner, {});
       await p.hooks!.onSubgraphsRegistering!(ctx);
       await expect(p.hooks!.onDrivesReady!(ctx)).resolves.toBeUndefined();
       expect(ctx.warnings.at(-1)).toMatch(

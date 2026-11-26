@@ -7,7 +7,6 @@ export {
 export {
   bootGatePasses,
   evaluateGate,
-  isListedAdmin,
   type GateCheck,
   type GateCheckId,
   type GateFacts,

@@ -5,6 +5,8 @@ import type { PortleApi } from "../src/subgraph.js";
 
 export const ADMIN = "0xabc0000000000000000000000000000000000001";
 export const STRANGER = "0x0000000000000000000000000000000000000002";
+/** The OS user a launcher named (`PH_OPERATOR=os-user`), in no `ADMINS`. */
+export const LAUNCHER_OPERATOR = "0x0000000000000000000000000000000000000003";
 
 export const enrollment: EnrollmentResponse = {
   siteId: "s1aaaaaaaa",
@@ -45,6 +47,11 @@ export const enrollment: EnrollmentResponse = {
 export type Facts = {
   policy: "OPEN" | "ADMIN_ONLY" | "DOCUMENT_PERMISSIONS";
   admins: string[];
+  /**
+   * Whom the launcher named (`PH_OPERATOR`), as the host's operator set
+   * holds them; undefined, the host passed no operator set (`ADMINS` alone).
+   */
+  launcher?: string[];
   defaultProtection: boolean;
   identityResolved: boolean;
   requireAuthenticatedCaller: boolean;
@@ -59,13 +66,34 @@ export function apiOf(overrides: Partial<Facts> = {}): PortleApi {
     requireAuthenticatedCaller: true,
     ...overrides,
   };
+  const launcher = facts.launcher;
+  const operators = [...facts.admins, ...(launcher ?? [])].map((address) =>
+    address.toLowerCase(),
+  );
   return {
     authorizationService: {
       config: {
         policy: facts.policy,
         admins: facts.admins,
         defaultProtection: facts.defaultProtection,
+        // The operator set the host passes, as reactor-api's describes itself.
+        ...(launcher
+          ? {
+              operators: {
+                configured: operators.length > 0,
+                describe: () =>
+                  [
+                    ...(facts.admins.length > 0
+                      ? [`ADMINS (${facts.admins.length})`]
+                      : []),
+                    ...(launcher.length > 0 ? ["the OS user running it"] : []),
+                  ].join(", ") || "nobody",
+              },
+            }
+          : {}),
       },
+      isOperator: (address?: string) =>
+        !!address && operators.includes(address.toLowerCase()),
     } as unknown as PortleApi["authorizationService"],
     authService: facts.identityResolved ? {} : undefined,
     requireAuthenticatedCaller: facts.requireAuthenticatedCaller,

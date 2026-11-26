@@ -12,6 +12,7 @@ import {
 } from "../src/subgraph.js";
 import {
   ADMIN,
+  LAUNCHER_OPERATOR,
   STRANGER,
   apiOf,
   ctxOf,
@@ -31,9 +32,12 @@ function resolversOf(subgraph: ReturnType<typeof createPortleSubgraph>) {
 
 describe("gateFactsOf", () => {
   it("reads the resolved settings, with identity resolution as the auth service's presence", () => {
-    expect(gateFactsOf(apiOf())).toEqual({
+    const { isOperator, ...facts } = gateFactsOf(apiOf());
+    expect(typeof isOperator).toBe("function");
+    expect(facts).toEqual({
       policy: "ADMIN_ONLY",
-      admins: [ADMIN],
+      operatorsConfigured: true,
+      operators: "ADMINS (1)",
       defaultProtection: false,
       identityResolved: true,
       requireAuthenticatedCaller: true,
@@ -41,6 +45,24 @@ describe("gateFactsOf", () => {
     expect(
       gateFactsOf(apiOf({ identityResolved: false })).identityResolved,
     ).toBe(false);
+  });
+
+  it("asks the authorization service who operates the host", () => {
+    const facts = gateFactsOf(apiOf({ launcher: [LAUNCHER_OPERATOR] }));
+    expect(facts.operators).toBe("ADMINS (1), the OS user running it");
+    expect(facts.isOperator(LAUNCHER_OPERATOR)).toBe(true);
+    expect(facts.isOperator(ADMIN)).toBe(true);
+    expect(facts.isOperator(STRANGER)).toBe(false);
+
+    const launcherOnly = gateFactsOf(
+      apiOf({ admins: [], launcher: [LAUNCHER_OPERATOR] }),
+    );
+    expect(launcherOnly.operatorsConfigured).toBe(true);
+    expect(launcherOnly.operators).toBe("the OS user running it");
+
+    const nobody = gateFactsOf(apiOf({ admins: [] }));
+    expect(nobody.operatorsConfigured).toBe(false);
+    expect(nobody.operators).toBe("nobody");
   });
 });
 
@@ -78,7 +100,7 @@ describe("portle subgraph", () => {
 
     it("refuses anyone but a listed admin under a non-OPEN policy", () => {
       expect(() => readiness(apiOf(), ctxOf())).toThrow(GraphQLError);
-      expect(() => readiness(apiOf(), ctxOf(STRANGER))).toThrow(/admins/);
+      expect(() => readiness(apiOf(), ctxOf(STRANGER))).toThrow(/operators/);
       try {
         readiness(apiOf(), ctxOf());
       } catch (error) {
@@ -104,9 +126,23 @@ describe("portle subgraph", () => {
       expect(() =>
         requireAdmin(apiOf({ policy: "OPEN" }), ctxOf(ADMIN)),
       ).toThrow(/OPEN/);
-      expect(() => requireAdmin(apiOf(), ctxOf(STRANGER))).toThrow(/admins/);
-      expect(() => requireAdmin(apiOf(), ctxOf())).toThrow(/admins/);
+      expect(() => requireAdmin(apiOf(), ctxOf(STRANGER))).toThrow(/operators/);
+      expect(() => requireAdmin(apiOf(), ctxOf())).toThrow(/operators/);
       expect(requireAdmin(apiOf(), ctxOf(ADMIN)).policy).toBe("ADMIN_ONLY");
+    });
+
+    it("admits an operator the launcher named, in no ADMINS, and names both in its refusal", () => {
+      const api = apiOf({ launcher: [LAUNCHER_OPERATOR] });
+      expect(requireAdmin(api, ctxOf(LAUNCHER_OPERATOR)).policy).toBe(
+        "ADMIN_ONLY",
+      );
+      expect(readiness(api, ctxOf(LAUNCHER_OPERATOR)).me).toEqual({
+        address: LAUNCHER_OPERATOR,
+        isAdmin: true,
+      });
+      expect(() => requireAdmin(api, ctxOf(STRANGER))).toThrow(
+        "Portle is for the host's operators (ADMINS, or whom its launcher named with PH_OPERATOR).",
+      );
     });
   });
 
@@ -159,10 +195,10 @@ describe("portle subgraph", () => {
       });
       expect(status.tunnel.caddy).toBeNull();
       expect(() => Query.portleStatus(undefined, {}, ctxOf(STRANGER))).toThrow(
-        /admins/,
+        /operators/,
       );
       expect(() => Query.portleStatus(undefined, {}, ctxOf())).toThrow(
-        /admins/,
+        /operators/,
       );
     });
 
@@ -196,9 +232,9 @@ describe("portle subgraph", () => {
           { controlPlaneUrl: "https://cp", token: "t" },
           ctxOf(STRANGER),
         ),
-      ).toThrow(/admins/);
+      ).toThrow(/operators/);
       expect(() => Mutation.portleConfigure(undefined, {}, ctxOf())).toThrow(
-        /admins/,
+        /operators/,
       );
       expect(runner.calls).toHaveLength(2);
     });
@@ -240,7 +276,7 @@ describe("portle subgraph", () => {
       expect(runner.calls).toEqual(["start", "stop"]);
       expect(() =>
         noFloor.Mutation.portleStop(undefined, {}, ctxOf(STRANGER)),
-      ).toThrow(/admins/);
+      ).toThrow(/operators/);
     });
   });
 });

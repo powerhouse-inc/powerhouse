@@ -28,7 +28,9 @@ relay's DNS) and terminates TLS locally, forwarding `app.<zone>` to Connect and
 ## The publication gate
 
 The plugin brings the tunnel up only for a host that is locked down, and only
-for one of its admins. `portleReadiness` reports the gate check by check:
+for one of its operators: the addresses in `ADMINS`, and whom the launcher
+names with `PH_OPERATOR` (`ph run` and `ph vetra` name the OS user that runs
+the host). `portleReadiness` reports the gate check by check:
 
 | Check | Passes when |
 |---|---|
@@ -36,8 +38,8 @@ for one of its admins. `portleReadiness` reports the gate check by check:
 | `floor` | anonymous callers are refused (`REQUIRE_AUTHENTICATED_CALLER`) |
 | `policy` | the policy is `ADMIN_ONLY`, or `DOCUMENT_PERMISSIONS` with default protection |
 | `protection` | under `DOCUMENT_PERMISSIONS`, `DEFAULT_PROTECTION` is on |
-| `admins` | `ADMINS` lists at least one address |
-| `caller` | the caller is one of those addresses |
+| `admins` | an operator is configured: `ADMINS` lists an address, or the launcher names one (`PH_OPERATOR`) |
+| `caller` | the caller operates the host |
 
 Every failing check carries the setting to change. The report also carries
 warnings no setting can clear, such as the project's own subgraphs having to
@@ -54,7 +56,7 @@ operator left it running **and** the host still passes the gate.
 
 Under an `OPEN` policy `portleReadiness` answers everyone (there is no admin to
 tell apart) and everything else is refused. Under any other policy every field
-is for listed admins only.
+is for the host's operators only; `me.isAdmin` says whether the caller is one.
 
 ```graphql
 query { portleReadiness { publishable checks { id ok detail fix } me { address isAdmin } } }

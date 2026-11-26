@@ -2,7 +2,6 @@ import type { API, Context, ISubgraph } from "@powerhousedao/reactor-api";
 import { GraphQLError, parse } from "graphql";
 import {
   evaluateGate,
-  isListedAdmin,
   type GateFacts,
   type GateReport,
   type PortlePolicy,
@@ -30,6 +29,9 @@ export const portleTypeDefs = parse(/* GraphQL */ `
 
   type PortleCaller {
     address: String
+    """
+    Whether the caller operates the host: ADMINS, or whom its launcher named.
+    """
     isAdmin: Boolean!
   }
 
@@ -120,11 +122,12 @@ export const portleTypeDefs = parse(/* GraphQL */ `
     """
     Whether this host may be published through Portle, check by check.
     Under an OPEN policy it answers everyone, since there is no admin to
-    distinguish; under any other policy only a listed admin may ask.
+    distinguish; under any other policy only an operator of the host
+    (ADMINS, or whom its launcher named with PH_OPERATOR) may ask.
     """
     portleReadiness: PortleReadiness!
     """
-    The site's enrolment, settings, binaries and tunnel. Admins only.
+    The site's enrolment, settings, binaries and tunnel. Operators only.
     """
     portleStatus: PortleStatus!
   }
@@ -162,12 +165,27 @@ export const portleTypeDefs = parse(/* GraphQL */ `
   }
 `);
 
-/** The host's authorization facts, read off the API object. */
+/**
+ * The host's authorization facts, read off the API object. Who operates it
+ * is the authorization service's operator rule: `ADMINS` plus whom the
+ * launcher named (`PH_OPERATOR`); a host that passed no operator set has its
+ * `ADMINS` alone.
+ */
 export function gateFactsOf(api: PortleApi): GateFacts {
-  const config = api.authorizationService.config;
+  const service = api.authorizationService;
+  const config = service.config;
+  const operators = config.operators;
   return {
     policy: config.policy as PortlePolicy,
-    admins: config.admins,
+    operatorsConfigured: operators
+      ? operators.configured
+      : config.admins.length > 0,
+    operators: operators
+      ? operators.describe()
+      : config.admins.length > 0
+        ? `ADMINS (${config.admins.length})`
+        : "nobody",
+    isOperator: (address) => service.isOperator(address),
     defaultProtection: config.defaultProtection,
     identityResolved: api.authService !== undefined,
     requireAuthenticatedCaller: api.requireAuthenticatedCaller,
@@ -175,6 +193,7 @@ export function gateFactsOf(api: PortleApi): GateFacts {
 }
 
 export type PortleReadiness = GateReport & {
+  /** `isAdmin`: whether the caller operates the host. */
   me: { address: string | null; isAdmin: boolean };
 };
 
@@ -182,12 +201,15 @@ function forbidden(message: string): GraphQLError {
   return new GraphQLError(message, { extensions: { code: "FORBIDDEN" } });
 }
 
+const FOR_OPERATORS =
+  "the host's operators (ADMINS, or whom its launcher named with PH_OPERATOR)";
+
 export function readiness(api: PortleApi, ctx: Context): PortleReadiness {
   const facts = gateFactsOf(api);
   const address = ctx.user?.address;
-  const isAdmin = isListedAdmin(facts.admins, address);
+  const isAdmin = facts.isOperator(address);
   if (facts.policy !== "OPEN" && !isAdmin) {
-    throw forbidden("Portle readiness is for the host's admins.");
+    throw forbidden(`Portle readiness is for ${FOR_OPERATORS}.`);
   }
   return {
     ...evaluateGate(facts, ctx.user),
@@ -195,7 +217,7 @@ export function readiness(api: PortleApi, ctx: Context): PortleReadiness {
   };
 }
 
-/** Every other field: a listed admin on a host that is not OPEN. */
+/** Every other field: an operator of a host that is not OPEN. */
 export function requireAdmin(api: PortleApi, ctx: Context): GateFacts {
   const facts = gateFactsOf(api);
   if (facts.policy === "OPEN") {
@@ -203,8 +225,8 @@ export function requireAdmin(api: PortleApi, ctx: Context): GateFacts {
       "Portle is disabled while the host's authorization policy is OPEN; lock the host down first (see portleReadiness).",
     );
   }
-  if (!isListedAdmin(facts.admins, ctx.user?.address)) {
-    throw forbidden("Portle is for the host's admins.");
+  if (!facts.isOperator(ctx.user?.address)) {
+    throw forbidden(`Portle is for ${FOR_OPERATORS}.`);
   }
   return facts;
 }

@@ -1,37 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { evaluateGate, isListedAdmin, type GateFacts } from "../src/gate.js";
+import { evaluateGate, type GateFacts } from "../src/gate.js";
 
 const ADMIN = "0xAbC0000000000000000000000000000000000001";
 
 const locked: GateFacts = {
   policy: "ADMIN_ONLY",
-  admins: [ADMIN.toLowerCase()],
+  operatorsConfigured: true,
+  operators: "ADMINS (1)",
+  isOperator: (address) => address?.toLowerCase() === ADMIN.toLowerCase(),
   defaultProtection: false,
   identityResolved: true,
   requireAuthenticatedCaller: true,
+};
+
+/** A host with no operator: no `ADMINS`, and no launcher named one. */
+const unoperated: Partial<GateFacts> = {
+  operatorsConfigured: false,
+  operators: "nobody",
+  isOperator: () => false,
 };
 
 function ids(report: ReturnType<typeof evaluateGate>, ok: boolean) {
   return report.checks.filter((c) => c.ok === ok).map((c) => c.id);
 }
 
-describe("isListedAdmin", () => {
-  it("compares addresses case-insensitively", () => {
-    expect(isListedAdmin([ADMIN.toLowerCase()], ADMIN)).toBe(true);
-    expect(isListedAdmin([ADMIN], ADMIN.toLowerCase())).toBe(true);
-  });
-
-  it("refuses an anonymous or unlisted caller", () => {
-    expect(isListedAdmin([ADMIN], undefined)).toBe(false);
-    expect(
-      isListedAdmin([ADMIN], "0x0000000000000000000000000000000000000002"),
-    ).toBe(false);
-    expect(isListedAdmin([], ADMIN)).toBe(false);
-  });
-});
-
 describe("evaluateGate", () => {
-  it("passes a locked ADMIN_ONLY host for a listed admin", () => {
+  it("passes a locked ADMIN_ONLY host for an operator", () => {
     const report = evaluateGate(locked, { address: ADMIN });
     expect(report.publishable).toBe(true);
     expect(ids(report, false)).toEqual([]);
@@ -43,6 +37,9 @@ describe("evaluateGate", () => {
       "admins",
       "caller",
     ]);
+    expect(report.checks.find((c) => c.id === "admins")?.detail).toBe(
+      "An operator is configured: ADMINS (1).",
+    );
   });
 
   it("does not consult default protection under ADMIN_ONLY", () => {
@@ -107,13 +104,38 @@ describe("evaluateGate", () => {
     ).toEqual(["floor"]);
   });
 
-  it("fails when no admin is listed, and names the caller check too", () => {
-    const report = evaluateGate({ ...locked, admins: [] }, { address: ADMIN });
+  it("fails when no operator is configured, naming ADMINS and PH_OPERATOR, and the caller check too", () => {
+    const report = evaluateGate(
+      { ...locked, ...unoperated },
+      { address: ADMIN },
+    );
     expect(report.publishable).toBe(false);
     expect(ids(report, false)).toEqual(["admins", "caller"]);
+    const check = report.checks.find((c) => c.id === "admins")!;
+    expect(check.detail).toContain("No operator is configured");
+    for (const text of [check.detail, check.fix]) {
+      expect(text).toContain("ADMINS");
+      expect(text).toContain("PH_OPERATOR");
+    }
   });
 
-  it("fails the caller check for an anonymous or unlisted caller", () => {
+  it("passes an operator the launcher named, in no ADMINS", () => {
+    const launched = "0x0000000000000000000000000000000000000003";
+    const report = evaluateGate(
+      {
+        ...locked,
+        operators: "the OS user running it",
+        isOperator: (address) => address === launched,
+      },
+      { address: launched },
+    );
+    expect(report.publishable).toBe(true);
+    expect(report.checks.find((c) => c.id === "caller")?.detail).toBe(
+      "You operate this host.",
+    );
+  });
+
+  it("fails the caller check for an anonymous caller or one who does not operate the host", () => {
     const anonymous = evaluateGate(locked, undefined);
     expect(anonymous.publishable).toBe(false);
     expect(ids(anonymous, false)).toEqual(["caller"]);
@@ -125,9 +147,10 @@ describe("evaluateGate", () => {
       address: "0x0000000000000000000000000000000000000002",
     });
     expect(ids(stranger, false)).toEqual(["caller"]);
-    expect(stranger.checks.find((c) => c.id === "caller")?.detail).toMatch(
-      /not one of the listed admins/,
-    );
+    const caller = stranger.checks.find((c) => c.id === "caller")!;
+    expect(caller.detail).toMatch(/do not operate this host/);
+    expect(caller.fix).toContain("ADMINS");
+    expect(caller.fix).toContain("PH_OPERATOR");
   });
 
   it("always carries the custom-subgraphs warning, which never blocks", () => {
@@ -140,10 +163,10 @@ describe("evaluateGate", () => {
     const report = evaluateGate(
       {
         ...locked,
+        ...unoperated,
         policy: "OPEN",
         identityResolved: false,
         requireAuthenticatedCaller: false,
-        admins: [],
       },
       undefined,
     );
