@@ -201,6 +201,11 @@ const operationValidators: OperationValidators = {
       // Returns a boolean
     }
   },
+  DeleteDocumentSigned: (data) => {
+    if (data.deleteDocument !== undefined) {
+      // Returns a boolean
+    }
+  },
   DeleteDocuments: (data) => {
     if (data.deleteDocuments !== undefined) {
       // Returns a boolean
