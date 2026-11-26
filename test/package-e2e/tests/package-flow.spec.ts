@@ -2,16 +2,14 @@ import { expect, test } from "@powerhousedao/coverage-baseline/playwright";
 import { CONNECT_URL, SWITCHBOARD_URL } from "../playwright.config.js";
 import {
   createRemoteDrive,
+  createTodo,
   getDocumentOperations,
   graphql,
+  signedWriter,
+  todoAction,
 } from "./lib/graphql.js";
 
 test.describe.configure({ mode: "serial" });
-
-interface CreatedDoc {
-  id: string;
-  name: string;
-}
 
 test("package-flow: drive + document + edits propagate via switchboard", async ({
   page,
@@ -42,91 +40,50 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
     `switchboard should have loaded the test/todo model from the published package`,
   ).toBeDefined();
 
+  // The Switchboard signs no write for its callers: the spec writes as a
+  // signer of its own, as a Powerhouse client does.
+  const writer = await signedWriter();
+
   // ---- 2. Create a remote drive on Switchboard. ----
   const driveName = `E2E Drive ${Date.now()}`;
-  const drive = await createRemoteDrive(driveName);
+  const drive = await createRemoteDrive(writer, driveName);
   console.log(`[test] created drive ${drive.id} → ${drive.url}`);
 
-  // ---- 4. Create a Todo document on the drive via GraphQL. ----
-  const created = await graphql<{
-    Todo: { createDocument: CreatedDoc };
-  }>(
-    "/graphql/todo",
-    `
-      mutation CreateTodo($name: String!, $parent: String!) {
-        Todo {
-          createDocument(name: $name, parentIdOrSlug: $parent) {
-            id
-            name
-          }
-        }
-      }
-    `,
-    { name: "Groceries", parent: drive.id },
-  );
-  const docId = created.Todo.createDocument.id;
+  // ---- 4. Create a Todo document on the drive, signed. ----
+  const created = await createTodo(writer, "Groceries", drive.id);
+  const docId = created.id;
   console.log(`[test] created todo document ${docId}`);
 
-  // ---- 5. Dispatch a few action edits via the Todo subgraph. ----
+  // ---- 5. Dispatch a few signed action edits, one at a time. ----
   const todoIds = ["todo-1", "todo-2", "todo-3"];
   for (const [i, id] of todoIds.entries()) {
-    await graphql(
-      "/graphql/todo",
-      `
-        mutation Add($docId: String!, $input: Todo_AddTodoInput!) {
-          Todo {
-            addTodo(documentIdOrSlug: $docId, input: $input) {
-              id
-            }
-          }
-        }
-      `,
-      { docId, input: { id, title: `Item ${i + 1}`, completed: false } },
-    );
+    await writer.execute(docId, "main", [
+      todoAction("ADD_TODO", { id, title: `Item ${i + 1}`, completed: false }),
+    ]);
   }
   // NOTE: omit `title` (don't send `null`) — the codegen-emitted reducer on
   // this branch uses `!== undefined` instead of `!= null`, so passing null
   // overwrites the title with null and breaks the zod state validator that
   // Connect's editor runs in the browser.
-  await graphql(
-    "/graphql/todo",
-    `
-      mutation Update($docId: String!, $input: Todo_UpdateTodoInput!) {
-        Todo {
-          updateTodo(documentIdOrSlug: $docId, input: $input) {
-            id
-          }
-        }
-      }
-    `,
-    {
-      docId,
-      input: { id: "todo-2", completed: true },
-    },
-  );
-  await graphql(
-    "/graphql/todo",
-    `
-      mutation Remove($docId: String!, $input: Todo_RemoveTodoInput!) {
-        Todo {
-          removeTodo(documentIdOrSlug: $docId, input: $input) {
-            id
-          }
-        }
-      }
-    `,
-    { docId, input: { id: "todo-3" } },
-  );
+  await writer.execute(docId, "main", [
+    todoAction("UPDATE_TODO", { id: "todo-2", completed: true }),
+  ]);
+  await writer.execute(docId, "main", [
+    todoAction("REMOVE_TODO", { id: "todo-3" }),
+  ]);
 
-  // ---- 6. Verify GraphQL-dispatched operations propagated to Switchboard. ----
-  // This is the "control" half: actions dispatched directly to Switchboard's
-  // /graphql/todo subgraph must be readable via the operations query.
+  // ---- 6. Verify the signed operations propagated to Switchboard. ----
+  // This is the "control" half: actions written straight to Switchboard
+  // must be readable via the operations query.
   const baselineOps = await getDocumentOperations(docId);
   const baselineTypes = baselineOps.map((o) => o.action.type);
-  expect(
-    baselineTypes,
-    "GraphQL-dispatched ops should be recorded in order",
-  ).toEqual(["ADD_TODO", "ADD_TODO", "ADD_TODO", "UPDATE_TODO", "REMOVE_TODO"]);
+  expect(baselineTypes, "the signed ops should be recorded in order").toEqual([
+    "ADD_TODO",
+    "ADD_TODO",
+    "ADD_TODO",
+    "UPDATE_TODO",
+    "REMOVE_TODO",
+  ]);
 
   // Spot-check one input round-trips intact.
   const firstAdd = baselineOps[0].action.input as {
@@ -139,7 +96,7 @@ test("package-flow: drive + document + edits propagate via switchboard", async (
   expect(firstAdd.completed).toBe(false);
 
   console.log(
-    `[test] verified ${baselineOps.length} GraphQL-dispatched operations on ${docId}`,
+    `[test] verified ${baselineOps.length} signed operations on ${docId}`,
   );
 
   // ---- 7. UI half: add the remote drive in Connect, edit via the todo

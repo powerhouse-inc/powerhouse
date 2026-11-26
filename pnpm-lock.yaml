@@ -4227,9 +4227,15 @@ importers:
       '@powerhousedao/ph-cli':
         specifier: workspace:*
         version: link:../../clis/ph-cli
+      '@powerhousedao/reactor-browser':
+        specifier: workspace:*
+        version: link:../../packages/reactor-browser
       '@powerhousedao/registry':
         specifier: workspace:*
         version: link:../../packages/registry
+      '@powerhousedao/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3

@@ -12,8 +12,20 @@
     "playwright.studio.config.ts"
   ],
   "references": [
-    { "path": "../../clis/ph-cli" },
-    { "path": "../../packages/registry" },
-    { "path": "../e2e-utils" }
+    {
+      "path": "../../clis/ph-cli"
+    },
+    {
+      "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/registry"
+    },
+    {
+      "path": "../../packages/shared"
+    },
+    {
+      "path": "../e2e-utils"
+    }
   ]
 }

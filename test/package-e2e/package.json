@@ -17,7 +17,9 @@
     "@powerhousedao/coverage-baseline": "workspace:*",
     "@powerhousedao/e2e-utils": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/registry": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "@types/node": "catalog:",
     "tsx": "catalog:",
     "typescript": "^5.9.3"
