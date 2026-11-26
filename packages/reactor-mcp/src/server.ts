@@ -21,6 +21,8 @@ export interface CreateServerOptions {
   subject?: AuthSubject;
   /** The host's ACL for the caller, in front of every tool; omitted, none. */
   access?: McpAccess;
+  /** The label of the caller's session, for the log of its administration. */
+  label?: string;
   /** URLs `addRemoteDrive` may fetch; omitted, the tool is not mounted. */
   remoteDriveUrls?: RemoteDriveAllowlist;
   /** Vetra's codegen status; the process's registry by default. */
@@ -46,7 +48,8 @@ Examples:
 `;
 
 export function createServer(options: CreateServerOptions): Promise<McpServer> {
-  const { client, syncManager, subject, access, remoteDriveUrls } = options;
+  const { client, syncManager, subject, access, remoteDriveUrls, label } =
+    options;
   const codegenStatus = options.codegenStatus ?? getCodegenStatusRegistry();
   const server = new McpServer(
     {
@@ -96,9 +99,13 @@ export function createServer(options: CreateServerOptions): Promise<McpServer> {
       ...reactorTools({ codegenStatus }),
       codegenStatusTool(codegenStatus),
     ].map((tool) => toMcpTool(tool, userContext)),
-    ...reactorAdminTools({ syncManager, remoteDriveUrls, subject, gate }).map(
-      (tool) => toMcpTool(tool, { client }),
-    ),
+    ...reactorAdminTools({
+      syncManager,
+      remoteDriveUrls,
+      subject,
+      gate,
+      caller: { address: subject?.address, label },
+    }).map((tool) => toMcpTool(tool, { client })),
   ];
   for (const { name, callback, ...config } of tools) {
     // The records carry zod shapes the SDK accepts; its overloads cannot infer them.

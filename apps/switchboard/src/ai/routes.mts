@@ -1,6 +1,7 @@
-import type {
-  IHttpScope,
-  RouteContext,
+import {
+  logAdministration,
+  type IHttpScope,
+  type RouteContext,
 } from "@powerhousedao/shared/processors";
 import type { ILogger } from "document-model";
 import {
@@ -209,7 +210,7 @@ export function registerAiRoutes(http: IHttpScope, deps: AiRoutesDeps): void {
     }
     await check.body?.cancel();
     await writeKey(store, value, ctx.user?.address);
-    logger.info("The AI gateway key was set by @actor", ctx.user?.address);
+    logAdministration(logger, "set the AI gateway key", ctx.user);
     return status(store);
   };
 
@@ -254,7 +255,7 @@ export function registerAiRoutes(http: IHttpScope, deps: AiRoutesDeps): void {
       const gated = await gate(ctx);
       if ("refused" in gated) return gated.refused;
       await deleteKey(gated.store);
-      logger.info("The AI gateway key was reset by @actor", ctx.user?.address);
+      logAdministration(logger, "reset the AI gateway key", ctx.user);
       return status(gated.store);
     },
   });
@@ -290,6 +291,11 @@ export function registerAiRoutes(http: IHttpScope, deps: AiRoutesDeps): void {
         );
       }
       await writeModel(gated.store, model, ctx.user?.address);
+      logAdministration(
+        logger,
+        `set the AI gateway model to ${model}`,
+        ctx.user,
+      );
       return status(gated.store);
     },
   });

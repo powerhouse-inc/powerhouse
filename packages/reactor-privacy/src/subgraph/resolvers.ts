@@ -1,3 +1,7 @@
+import {
+  logAdministration,
+  type AdministrationLogger,
+} from "@powerhousedao/shared/processors";
 import { GraphQLError } from "graphql";
 import type { Disclosure } from "../disclosure/disclosure-service.js";
 import type { ErasureRequest, IErasureService } from "../erasure/types.js";
@@ -12,13 +16,19 @@ export interface IDisclosureService {
   disclose(identifier: string): Promise<Disclosure>;
 }
 
-export type PrivacySubgraphContext = { user?: { address?: string } };
+export type PrivacySubgraphContext = {
+  user?: { address?: string; label?: string };
+};
 
 export type PrivacyResolverDeps = {
   authorizationService: PrivacyAuthorization;
   erasure: IErasureService;
   disclosure: IDisclosureService;
+  /** Where each disclosure and erasure request is logged, with who asked. */
+  logger?: AdministrationLogger;
 };
+
+const SILENT: AdministrationLogger = { info() {} };
 
 function requireAdmin(
   authorizationService: PrivacyAuthorization,
@@ -66,9 +76,13 @@ function shapeRequest(request: ErasureRequest) {
   };
 }
 
-/** Every field refuses a caller that is not a supreme admin, before any work. */
+/**
+ * Every field refuses a caller that is not a supreme admin, before any work.
+ * A disclosure and an erasure request are logged with who asked.
+ */
 export function createPrivacyResolvers(deps: PrivacyResolverDeps) {
   const { authorizationService, erasure, disclosure } = deps;
+  const logger = deps.logger ?? SILENT;
   return {
     Query: {
       async disclose(
@@ -77,7 +91,16 @@ export function createPrivacyResolvers(deps: PrivacyResolverDeps) {
         ctx: PrivacySubgraphContext,
       ) {
         requireAdmin(authorizationService, ctx);
-        return shapeDisclosure(await disclosure.disclose(args.identifier));
+        const disclosed = shapeDisclosure(
+          await disclosure.disclose(args.identifier),
+        );
+        // The subject is not named: the log outlives an erasure.
+        logAdministration(
+          logger,
+          "disclosed what is held of a subject",
+          ctx.user,
+        );
+        return disclosed;
       },
       async erasurePlan(
         _root: unknown,
@@ -112,6 +135,11 @@ export function createPrivacyResolvers(deps: PrivacyResolverDeps) {
           deadline: parseDeadline(args.deadline),
           allowLarge: args.allowLarge ?? undefined,
         });
+        logAdministration(
+          logger,
+          `requested erasure ${request.requestId} (${args.ids.length} id${args.ids.length === 1 ? "" : "s"})`,
+          ctx.user,
+        );
         return shapeRequest(request);
       },
     },

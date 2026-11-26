@@ -24,8 +24,8 @@ import {
   it,
   vi,
 } from "vitest";
-import { maskKey } from "../src/ai/key-store.mjs";
-import { redactSecrets } from "../src/ai/routes.mjs";
+import { maskKey, type AiSecretStore } from "../src/ai/key-store.mjs";
+import { redactSecrets, registerAiRoutes } from "../src/ai/routes.mjs";
 import { createAiPlugin } from "../src/plugins/ai.mjs";
 import { workflowsPlugin } from "../src/plugins/workflows.mjs";
 import type { SwitchboardReactor } from "../src/types.js";
@@ -584,6 +584,113 @@ describe("the plugin's mount", () => {
   it("requires a default model and rejects a typo'd key", () => {
     expect(() => createAiPlugin({})).toThrow();
     expect(() => createAiPlugin({ defaultModel: "m", modle: "x" })).toThrow();
+  });
+});
+
+describe("the gateway's administration log", () => {
+  /** A secret store in memory, as the workflow runtime's answers it. */
+  function memoryStore(): AiSecretStore {
+    const rows: {
+      ref: string;
+      label: string;
+      value: string;
+      status: string;
+    }[] = [];
+    return {
+      list: () =>
+        Promise.resolve(
+          rows.map((row) => ({
+            ref: row.ref,
+            label: row.label,
+            ownerId: null,
+            status: row.status,
+            createdBy: null,
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          })),
+        ),
+      get: (ref: string) =>
+        Promise.resolve(rows.find((row) => row.ref === ref)!.value),
+      create: (input: { value: string; label: string }) => {
+        rows.push({
+          ref: `ref-${rows.length}`,
+          label: input.label,
+          value: input.value,
+          status: "ACTIVE",
+        });
+        return Promise.resolve({});
+      },
+      rotate: (ref: string, value: string) => {
+        rows.find((row) => row.ref === ref)!.value = value;
+        return Promise.resolve({});
+      },
+      delete: (ref: string) => {
+        rows.find((row) => row.ref === ref)!.status = "DELETED";
+        return Promise.resolve({});
+      },
+    } as unknown as AiSecretStore;
+  }
+
+  it("logs who set and reset the key and chose the model, with the session's label", async () => {
+    type Route = {
+      method: string;
+      path: string;
+      handler: (request: Request, ctx: unknown) => Promise<Response>;
+    };
+    const routes: Route[] = [];
+    const info = vi.fn();
+    const store = memoryStore();
+    registerAiRoutes({ route: (route: Route) => routes.push(route) } as never, {
+      isAdmin: () => true,
+      secrets: () => Promise.resolve(store),
+      upstreamUrl: "http://upstream.test",
+      defaultModel: DEFAULT_MODEL,
+      maxOutputTokens: 10,
+      appTitle: "test",
+      appUrl: "http://app.test",
+      logger: { info, warn: vi.fn(), error: vi.fn() } as never,
+      fetchImpl: (input) =>
+        Promise.resolve(
+          String(input).endsWith("/models")
+            ? Response.json(MODELS)
+            : Response.json({}),
+        ),
+    });
+    const ctx = { user: { address: ADMIN, label: "vetra agent x" } };
+    const call = (method: string, path: string, body?: unknown) =>
+      routes
+        .find((route) => route.method === method && route.path === path)!
+        .handler(
+          new Request("http://localhost/x", {
+            method,
+            ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+          }),
+          ctx,
+        );
+
+    expect((await call("PUT", "ai/key", { value: KEY })).status).toBe(200);
+    expect(
+      (await call("PUT", "ai/model", { model: "qwen/other" })).status,
+    ).toBe(200);
+    expect((await call("DELETE", "ai/key")).status).toBe(200);
+
+    expect(info.mock.calls).toEqual([
+      [
+        "Administration: @action by @administrator",
+        "set the AI gateway key",
+        `${ADMIN} (vetra agent x)`,
+      ],
+      [
+        "Administration: @action by @administrator",
+        "set the AI gateway model to qwen/other",
+        `${ADMIN} (vetra agent x)`,
+      ],
+      [
+        "Administration: @action by @administrator",
+        "reset the AI gateway key",
+        `${ADMIN} (vetra agent x)`,
+      ],
+    ]);
+    expect(JSON.stringify(info.mock.calls)).not.toContain(KEY);
   });
 });
 

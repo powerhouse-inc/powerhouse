@@ -168,6 +168,7 @@ export async function startPrivacy(deps: {
       authorizationService,
       erasure: service,
       disclosure,
+      logger: deps.logger,
     });
   } catch (error) {
     throw new PrivacyBootError(

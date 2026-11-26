@@ -140,6 +140,7 @@ export function setupMcpServer(
           syncManager: options.syncManager,
           subject: grant.subject,
           access: grant.access,
+          ...(grant.label ? { label: grant.label } : {}),
           remoteDriveUrls: options.remoteDriveUrls,
         });
         const transport = createTransport({ sessionIdGenerator: undefined });

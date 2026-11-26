@@ -14,7 +14,9 @@ import type {
   AuthSubject,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { logAdministration } from "@powerhousedao/shared/processors";
 import { z } from "zod";
+import { logger } from "./logger.js";
 import {
   aliasParam,
   DRIVE_DOCUMENT_TYPE,
@@ -53,6 +55,8 @@ export type ReactorAdminToolsOptions = {
   subject?: AuthSubject;
   /** The host's ACL for the caller; omitted, none. */
   gate?: HostAccessGate;
+  /** Who calls, for the log of what it administers. */
+  caller?: { address?: string; label?: string };
 };
 
 function parseUrl(value: string): URL {
@@ -384,6 +388,11 @@ function addRemoteDriveTool(options: ReactorAdminToolsOptions) {
             type: "gql",
             parameters: { url: endpoint.href },
           },
+        );
+        logAdministration(
+          logger,
+          `connected remote drive ${info.id} from ${endpoint.href}`,
+          options.caller,
         );
       }
       return { driveId: info.id };

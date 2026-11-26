@@ -3,6 +3,7 @@ import type {
   KeyframeCleanupRun,
   KeyframeReclaim,
 } from "@powerhousedao/reactor";
+import type { ConsoleLogger } from "document-model";
 import type * as GraphQL from "graphql";
 import type { GraphQLSchema } from "graphql";
 import { createRequire } from "node:module";
@@ -146,6 +147,47 @@ describe("inspection-admin memory telemetry", () => {
       intervalMs: 5000,
       outputs: ["file"],
     });
+  });
+
+  it("logs each lever pulled with who pulled it, and none it refused", async () => {
+    const admin = levers();
+    const subgraph = new QuickAnswer({
+      authorizationService: createAuthorizationService({
+        admins: [OPERATOR.toLowerCase()],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.OPEN,
+      }),
+      inspection: { admin } as unknown as IReactorInspectionSource,
+    } as unknown as SubgraphArgs);
+    const info = vi
+      .spyOn((subgraph as unknown as { logger: ConsoleLogger }).logger, "info")
+      .mockImplementation(() => undefined);
+    try {
+      const schema = createSchema([], subgraph.resolvers, subgraph.typeDefs);
+      await graphql({
+        schema,
+        source: SET,
+        contextValue: operator,
+        variableValues: { enabled: false },
+      });
+      await graphql({
+        schema,
+        source: `mutation { inspectionWriteHeapSnapshot }`,
+        contextValue: outsider,
+      });
+      const logged = info.mock.calls.filter(([message]) =>
+        String(message).startsWith("Administration:"),
+      );
+      expect(logged).toEqual([
+        [
+          "Administration: @action by @administrator",
+          'pulled inspection lever setMemoryTelemetry {"enabled":false}',
+          OPERATOR.toLowerCase(),
+        ],
+      ]);
+    } finally {
+      info.mockRestore();
+    }
   });
 
   it("refuses an unknown output as bad input", async () => {

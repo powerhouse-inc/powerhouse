@@ -1,8 +1,12 @@
+import { logAdministration } from "@powerhousedao/shared/processors";
+import { childLogger } from "document-model";
 import { GraphQLError } from "graphql";
 import type { IAuthorizationService } from "../../services/authorization.service.js";
 import type { PackageManagementService } from "../../services/package-management.service.js";
 import type { InstalledPackageInfo } from "../../services/package-storage.js";
 import type { Context } from "../types.js";
+
+const logger = childLogger(["reactor-api", "administration"]);
 
 function requireAdmin(
   authorizationService: IAuthorizationService,
@@ -53,6 +57,11 @@ export async function installPackage(
     args.name,
     args.registryUrl ?? undefined,
   );
+  logAdministration(
+    logger,
+    `installed package ${args.name}${args.registryUrl ? ` from ${args.registryUrl}` : ""}`,
+    ctx.user,
+  );
 
   return {
     package: formatPackageInfo(result.package),
@@ -68,5 +77,9 @@ export async function uninstallPackage(
 ): Promise<boolean> {
   requireAdmin(authorizationService, ctx);
 
-  return service.uninstallPackage(args.name);
+  const removed = await service.uninstallPackage(args.name);
+  if (removed) {
+    logAdministration(logger, `uninstalled package ${args.name}`, ctx.user);
+  }
+  return removed;
 }

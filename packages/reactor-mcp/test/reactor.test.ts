@@ -58,6 +58,7 @@ import {
   documentModelDocumentModelModule,
 } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { logger as mcpLogger } from "../src/logger.js";
 import { createP256Signer } from "./utils/p256-signer.js";
 
 type ReactorClient = InProcessReactorClientModule["client"];
@@ -1763,7 +1764,7 @@ describe("reactor tools", () => {
 
       afterEach(() => close());
 
-      function remoteTool() {
+      function remoteTool(caller?: { address?: string; label?: string }) {
         const added: unknown[] = [];
         const syncManager = {
           list: () => [],
@@ -1775,9 +1776,25 @@ describe("reactor tools", () => {
         const tool = reactorAdminTools({
           syncManager,
           remoteDriveUrls: [origin],
+          ...(caller ? { caller } : {}),
         }).find((t) => t.name === "addRemoteDrive")!;
         return { added, tool: toMcpTool(tool, { client }) };
       }
+
+      it("logs the drive it connected with the caller's address and session", async () => {
+        const info = vi.spyOn(mcpLogger, "info").mockImplementation(() => {});
+        try {
+          const { tool } = remoteTool({ address: "0xabc", label: "mcp x" });
+          await tool.callback({ url: `${origin}/d/info` } as never);
+          expect(info).toHaveBeenCalledWith(
+            "Administration: @action by @administrator",
+            `connected remote drive remote-drive from ${origin}/graphql`,
+            "0xabc (mcp x)",
+          );
+        } finally {
+          info.mockRestore();
+        }
+      });
 
       it("syncs with an allowed endpoint resolved against the info URL", async () => {
         const { added, tool } = remoteTool();

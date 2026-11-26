@@ -5,6 +5,7 @@ import {
   type IInspectorAdmin,
   type MemoryTelemetryChange,
 } from "@powerhousedao/reactor";
+import { logAdministration } from "@powerhousedao/shared/processors";
 import { ConsoleLogger } from "document-model";
 import { GraphQLError, type DocumentNode } from "graphql";
 import { BaseSubgraph } from "../base-subgraph.js";
@@ -148,6 +149,18 @@ export class InspectionAdminSubgraph extends BaseSubgraph {
         }
         return run(args);
       };
+    // A lever pulled is logged with who pulled it, once it was answered.
+    const lever =
+      <A, R>(name: string, run: (args: A) => Promise<R>) =>
+      async (parent: unknown, args: A, ctx: Context): Promise<R> => {
+        const answer = await listed(run)(parent, args, ctx);
+        logAdministration(
+          this.logger,
+          `pulled inspection lever ${name} ${JSON.stringify(args ?? {})}`,
+          ctx.user,
+        );
+        return answer;
+      };
     return {
       Query: {
         inspectionAdmin: listed(() => ({
@@ -160,14 +173,17 @@ export class InspectionAdminSubgraph extends BaseSubgraph {
         inspectionKeyframeReclaim: listed(() => admin.getKeyframeReclaim()),
       },
       Mutation: {
-        inspectionRetryProcessor: listed(({ processorId }: RerunArgs) =>
-          pulled(
-            () => admin.retryProcessor(processorId),
-            (error) => this.leverFailed("Retry", processorId, error),
-            this.answerWindowMs,
-          ),
+        inspectionRetryProcessor: lever(
+          "retryProcessor",
+          ({ processorId }: RerunArgs) =>
+            pulled(
+              () => admin.retryProcessor(processorId),
+              (error) => this.leverFailed("Retry", processorId, error),
+              this.answerWindowMs,
+            ),
         ),
-        inspectionRerunProcessor: listed(
+        inspectionRerunProcessor: lever(
+          "rerunProcessor",
           ({ processorId, clear, fromOrdinal }: RerunArgs) =>
             pulled(
               () => admin.rerunProcessor(processorId, { clear, fromOrdinal }),
@@ -175,16 +191,20 @@ export class InspectionAdminSubgraph extends BaseSubgraph {
               this.answerWindowMs,
             ),
         ),
-        inspectionSetCatchUpPriority: listed(async (args: PriorityArgs) => {
-          const setting = catchUpPrioritySettingOf(args);
-          try {
-            await admin.setCatchUpPriority(setting);
-          } catch (error) {
-            throw refused(error);
-          }
-          return true;
-        }),
-        inspectionSetMemoryTelemetry: listed(
+        inspectionSetCatchUpPriority: lever(
+          "setCatchUpPriority",
+          async (args: PriorityArgs) => {
+            const setting = catchUpPrioritySettingOf(args);
+            try {
+              await admin.setCatchUpPriority(setting);
+            } catch (error) {
+              throw refused(error);
+            }
+            return true;
+          },
+        ),
+        inspectionSetMemoryTelemetry: lever(
+          "setMemoryTelemetry",
           async (args: MemoryTelemetryArgs) => {
             const change = memoryTelemetryChangeOf(args);
             try {
@@ -195,7 +215,8 @@ export class InspectionAdminSubgraph extends BaseSubgraph {
             return true;
           },
         ),
-        inspectionWriteHeapSnapshot: listed(
+        inspectionWriteHeapSnapshot: lever(
+          "writeHeapSnapshot",
           async ({ force }: { force?: boolean | null }) => {
             try {
               return await admin.writeHeapSnapshot(force ?? false);
@@ -204,15 +225,19 @@ export class InspectionAdminSubgraph extends BaseSubgraph {
             }
           },
         ),
-        inspectionStartKeyframeCleanup: listed(
+        inspectionStartKeyframeCleanup: lever(
+          "startKeyframeCleanup",
           ({ dryRun }: { dryRun: boolean }) =>
             refusable(() => admin.startKeyframeCleanup({ dryRun })),
         ),
-        inspectionCancelKeyframeCleanup: listed(async () => {
-          await admin.cancelKeyframeCleanup();
-          return true;
-        }),
-        inspectionReclaimKeyframeSpace: listed(() =>
+        inspectionCancelKeyframeCleanup: lever(
+          "cancelKeyframeCleanup",
+          async () => {
+            await admin.cancelKeyframeCleanup();
+            return true;
+          },
+        ),
+        inspectionReclaimKeyframeSpace: lever("reclaimKeyframeSpace", () =>
           refusable(() => admin.reclaimKeyframeSpace()),
         ),
       },
