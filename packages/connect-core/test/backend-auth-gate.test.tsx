@@ -226,6 +226,24 @@ describe("the gate for a sign-in by link", () => {
     ).toBeTruthy();
   });
 
+  it("points a page opened without its link to the link, and lets the person go on", () => {
+    const dismiss = vi.fn();
+    setLocalSignIn({ status: "needs-link", dismiss });
+    render(<Probe />);
+    expect(screen.getByRole("status").textContent).toBe("local-sign-in");
+
+    render(<BackendAuthGate mode="local-sign-in" />);
+    const text = screen.getByRole("dialog").textContent;
+    expect(text).toContain("Open this page by its sign-in link");
+    expect(text).toContain(
+      "Run `ph dev` (or `ph vetra`) in the project again: it prints a fresh link.",
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Continue without signing in" }),
+    );
+    expect(dismiss).toHaveBeenCalledOnce();
+  });
+
   it("leaves an ended sign-in to the backend's answer", () => {
     setLocalSignIn({ status: "ended", reason: "expired" });
     render(<Probe />);

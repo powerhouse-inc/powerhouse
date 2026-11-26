@@ -132,10 +132,20 @@ export type BackendAuthState = {
 
 /**
  * Sign-in by link to this computer's identity (`#ph-sign-in=`, F3d), when it
- * needs the person: the key's password, a link the server refused, or a
- * sign-in that ended. Unset while there is nothing to say.
+ * needs the person: the key's password, a link the server refused, a
+ * sign-in that ended, or a page opened without its link that is about to
+ * sign. Unset while there is nothing to say.
  */
 export type LocalSignInState =
+  | {
+      /**
+       * A page this computer serves, opened without its sign-in link, is
+       * about to sign with nobody signed in: it writes as the person only
+       * once it is opened by the link `ph dev` (or `ph vetra`) prints.
+       */
+      status: "needs-link";
+      dismiss: () => void;
+    }
   | {
       status: "password";
       /** Wrong passwords left before the link is used up. */

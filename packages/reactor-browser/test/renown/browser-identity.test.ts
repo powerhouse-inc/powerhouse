@@ -10,6 +10,8 @@ import {
   verifyCredentialSignature,
 } from "@renown/sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { addLocalSignInEventHandler } from "../../src/hooks/local-sign-in.js";
+import { getPHStore } from "../../src/hooks/ph-store.js";
 import {
   createBrowserIdentity,
   switchboardBaseOf,
@@ -138,7 +140,9 @@ describe("the browser's pseudonym", () => {
     expect(addresses[0]).toBe(addresses[1]);
   });
 
-  it("keeps a page a local server signs in by link to its link", async () => {
+  it("keeps a page a local server signs in by link to its link, and points to it once", async () => {
+    addLocalSignInEventHandler();
+    window.ph = {};
     const renown = await newRenown();
     const store = await BrowserKeyStorage.create(dbName);
     const local = vi.fn(() => Promise.resolve(true));
@@ -151,11 +155,17 @@ describe("the browser's pseudonym", () => {
     });
 
     await identity.ensure();
+    const notice = getPHStore()?.localSignIn;
+    expect(notice?.status).toBe("needs-link");
+    (notice as { dismiss: () => void }).dismiss();
+    expect(getPHStore()?.localSignIn).toBeUndefined();
     await identity.ensure();
 
     expect(renown.user).toBeUndefined();
     expect(await store.loadPseudonym()).toBeUndefined();
     expect(local).toHaveBeenCalledOnce();
+    expect(getPHStore()?.localSignIn).toBeUndefined();
+    window.ph = {};
   });
 
   it("signs in even where a switchboard is away, which its refusal enrols later", async () => {

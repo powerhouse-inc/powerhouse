@@ -122,6 +122,22 @@ export function LocalSignInPrompt({
   state: Exclude<LocalSignInState, { status: "ended" }>;
 }) {
   if (state.status === "password") return <PasswordPrompt state={state} />;
+  if (state.status === "needs-link") {
+    return (
+      <>
+        <h1 id="backend-auth-gate-title" className="text-lg font-semibold">
+          Open this page by its sign-in link
+        </h1>
+        <p className="text-sm text-core-muted">
+          This page is served on this computer, and writes as you only once it
+          is opened by its sign-in link. {FRESH_LINK}
+        </p>
+        <button type="button" className={buttonClass} onClick={state.dismiss}>
+          Continue without signing in
+        </button>
+      </>
+    );
+  }
   if (state.reason === "renown-login") {
     return (
       <>

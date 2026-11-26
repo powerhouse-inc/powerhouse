@@ -9,6 +9,7 @@ import {
   type PseudonymStore,
 } from "@renown/sdk";
 import { logger } from "document-model";
+import { setLocalSignIn } from "../hooks/local-sign-in.js";
 import {
   credentialEndsWithin,
   LOCAL_SIGN_IN_RENEW_DAYS,
@@ -21,7 +22,8 @@ import { notifyReactorClientCredentialsChanged } from "./session.js";
  * IndexedDB) signs a credential for the tab's session key, the tab signs in
  * with it (`localIdentity: "browser"`), and the switchboards it writes to are
  * asked to keep its record. A page a local server signs in by link is left to
- * its link, so one person does not get two pseudonyms.
+ * its link, so one person does not get two pseudonyms, and the page shows
+ * where that link is (`localSignIn` "needs-link").
  */
 
 const RENEW_EVERY_MS = 6 * 60 * 60_000;
@@ -142,7 +144,12 @@ export function createBrowserIdentity(
       if (renown.user || leftToLink) return Promise.resolve();
       pending ??= (async () => {
         if (await o.localSignInAvailable()) {
+          // Once: the page says where its link is, and is left to it.
           leftToLink = true;
+          setLocalSignIn({
+            status: "needs-link",
+            dismiss: () => setLocalSignIn(undefined),
+          });
           return;
         }
         await signIn(await ensureBrowserPseudonym(await o.store(), now));
