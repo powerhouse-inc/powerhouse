@@ -44,6 +44,7 @@ export default defineConfig({
       "clis/local-sign-in.test.ts",
       "clis/real-paths.test.ts",
       "clis/retired-flags.test.ts",
+      "clis/unsigned-writes.test.ts",
       "clis/deprecations.test.ts",
       "clis/args/vetra-ports.test.ts",
       "clis/file-system/dependencies.test.ts",

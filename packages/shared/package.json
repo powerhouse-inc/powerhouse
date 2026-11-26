@@ -151,6 +151,10 @@
       "source": "./clis/retired-flags.ts",
       "import": "./dist/clis/retired-flags.mjs"
     },
+    "./clis/unsigned-writes": {
+      "source": "./clis/unsigned-writes.ts",
+      "import": "./dist/clis/unsigned-writes.mjs"
+    },
     "./clis/deprecations": {
       "source": "./clis/deprecations.ts",
       "import": "./dist/clis/deprecations.mjs"

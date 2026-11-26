@@ -100,6 +100,7 @@ await build({
     "clis/utils.ts",
     "clis/command-names.ts",
     "clis/retired-flags.ts",
+    "clis/unsigned-writes.ts",
     "clis/deprecations.ts",
     "clis/services/telemetry.ts",
     "clis/build-config.mts",
