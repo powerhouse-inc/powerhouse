@@ -319,7 +319,8 @@ export class ReactorSubgraph extends BaseSubgraph {
       __resolveType: (node) => driveNodeTypeName(node),
     },
 
-    // Field resolver for PHDocument.operations - fetches operations on demand
+    // Field resolver for PHDocument.operations - fetches operations on demand,
+    // pinned to the write when a mutation returned the document
     PHDocument: {
       operations: async (parent, args, ctx: Context) => {
         this.logger.debug(
@@ -349,6 +350,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.clientsOf(ctx).read,
             { filter, paging: args.paging },
             this.viewSubject(ctx),
+            resolvers.readBackOf(parent)?.token,
           );
         } catch (error) {
           this.logFailure("Error in PHDocument.operations: @Error", error);

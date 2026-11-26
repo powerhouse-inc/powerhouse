@@ -126,6 +126,29 @@ async function removeNodeFromDrive(
 }
 
 /**
+ * The write each returned document was read back for, keyed by the GraphQL
+ * object a mutation hands out. Its `operations` field reads pinned to that
+ * write (see `IReactorReadClient.getOperations`): a later write to the
+ * document, such as a processor deleting it in reaction, would otherwise fail
+ * the response of a write that succeeded.
+ */
+const readBacks = new WeakMap<object, ReadBackTarget>();
+
+/** Marks `document`, a mutation's result, as the read-back of `target`. */
+export function asReadBackOf<TDocument extends object>(
+  document: TDocument,
+  target: ReadBackTarget,
+): TDocument {
+  readBacks.set(document, target);
+  return document;
+}
+
+/** The write `document` was read back for, when a mutation returned it. */
+export function readBackOf(document: object): ReadBackTarget | undefined {
+  return readBacks.get(document);
+}
+
+/**
  * A mutation's document read back on the read half, as the caller, bounded by
  * the write's token: `read.get(receipt.documentId, { subject, branch },
  * undefined, receipt.token)`. A caller who may write but not read gets it
@@ -778,6 +801,7 @@ export async function documentOperations(
     } | null;
   },
   subject?: AuthSubject,
+  consistencyToken?: ConsistencyToken,
 ): Promise<ReactorOperationResultPage> {
   let view: ViewFilter | undefined = subject ? { subject } : undefined;
   const branch = fromInputMaybe(args.filter.branch);
@@ -826,6 +850,8 @@ export async function documentOperations(
       view,
       operationFilter,
       paging,
+      undefined,
+      consistencyToken,
     );
   } catch (error) {
     throw new GraphQLError(
@@ -995,7 +1021,7 @@ export async function createDocument(
   const result = await readAsCaller(clients.read, receipt, subject);
 
   try {
-    return toGqlPhDocument(result);
+    return asReadBackOf(toGqlPhDocument(result), receipt);
   } catch (error) {
     throw new GraphQLError(
       `Failed to convert created document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -1047,7 +1073,7 @@ export async function createEmptyDocument(
   const result = await readAsCaller(clients.read, receipt, subject);
 
   try {
-    return toGqlPhDocument(result);
+    return asReadBackOf(toGqlPhDocument(result), receipt);
   } catch (error) {
     throw new GraphQLError(
       `Failed to convert created document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -1151,7 +1177,7 @@ export async function createDocumentWithInitialState(
   const result = await readAsCaller(clients.read, receipt, subject);
 
   try {
-    return toGqlPhDocument(result);
+    return asReadBackOf(toGqlPhDocument(result), receipt);
   } catch (error) {
     throw new GraphQLError(
       `Failed to convert created document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -1196,7 +1222,7 @@ export async function execute(
   const result = await readAsCaller(clients.read, receipt, subject, branch);
 
   try {
-    return toGqlPhDocument(result);
+    return asReadBackOf(toGqlPhDocument(result), receipt);
   } catch (error) {
     throw new GraphQLError(
       `Failed to convert executed document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -1452,7 +1478,7 @@ export async function mutateDocument(
   const result = await readAsCaller(clients.read, receipt, subject, branch);
 
   try {
-    return toGqlPhDocument(result);
+    return asReadBackOf(toGqlPhDocument(result), receipt);
   } catch (error) {
     throw new GraphQLError(
       `Failed to convert mutated document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -1531,7 +1557,7 @@ export async function renameDocument(
   const result = await readAsCaller(clients.read, receipt, subject, branch);
 
   try {
-    return toGqlPhDocument(result);
+    return asReadBackOf(toGqlPhDocument(result), receipt);
   } catch (error) {
     throw new GraphQLError(
       `Failed to convert renamed document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -1570,7 +1596,7 @@ export async function setPreferredEditor(
   const result = await readAsCaller(clients.read, receipt, subject, branch);
 
   try {
-    return toGqlPhDocument(result);
+    return asReadBackOf(toGqlPhDocument(result), receipt);
   } catch (error) {
     throw new GraphQLError(
       `Failed to convert updated document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -1611,7 +1637,7 @@ export async function addRelationship(
   const result = await readAsCaller(clients.read, receipt, subject, branch);
 
   try {
-    return toGqlPhDocument(result);
+    return asReadBackOf(toGqlPhDocument(result), receipt);
   } catch (error) {
     throw new GraphQLError(
       `Failed to convert document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -1653,7 +1679,7 @@ export async function updateRelationship(
   const result = await readAsCaller(clients.read, receipt, subject, branch);
 
   try {
-    return toGqlPhDocument(result);
+    return asReadBackOf(toGqlPhDocument(result), receipt);
   } catch (error) {
     throw new GraphQLError(
       `Failed to convert document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -1691,7 +1717,7 @@ export async function removeRelationship(
   const result = await readAsCaller(clients.read, receipt, subject, branch);
 
   try {
-    return toGqlPhDocument(result);
+    return asReadBackOf(toGqlPhDocument(result), receipt);
   } catch (error) {
     throw new GraphQLError(
       `Failed to convert document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -1742,8 +1768,8 @@ export async function moveRelationship(
 
   try {
     return {
-      source: toGqlPhDocument(result.source),
-      target: toGqlPhDocument(result.target),
+      source: asReadBackOf(toGqlPhDocument(result.source), removed),
+      target: asReadBackOf(toGqlPhDocument(result.target), added),
     };
   } catch (error) {
     throw new GraphQLError(

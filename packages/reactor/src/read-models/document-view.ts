@@ -525,90 +525,28 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    if (consistencyToken) {
-      await this.waitForConsistency(consistencyToken, undefined, signal);
-    }
-
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
-
-    const branch = view?.branch || "main";
-
-    let scopesToQuery: string[];
-    if (view?.scopes && view.scopes.length > 0) {
-      scopesToQuery = [...new Set(["header", "document", ...view.scopes])];
-    } else {
-      scopesToQuery = [];
-    }
-
-    let query = this._db
-      .selectFrom("DocumentSnapshot")
-      .selectAll()
-      .where("documentId", "=", documentId)
-      .where("branch", "=", branch);
-
-    if (this.deletedDocumentRead === DeletedDocumentRead.NotFound) {
-      query = query.where("isDeleted", "=", false);
-    }
-
-    if (scopesToQuery.length > 0) {
-      query = query.where("scope", "in", scopesToQuery);
-    }
-
-    const snapshots = await query.execute();
-
-    if (snapshots.length === 0) {
-      throw new DocumentNotFoundError(
-        documentId,
-        `Document not found: ${documentId}`,
-      );
-    }
-
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
-
-    const headerSnapshot = snapshots.find((s) => s.scope === "header");
-    if (!headerSnapshot) {
-      throw new Error(`Document header not found: ${documentId}`);
-    }
-
-    const header = headerSnapshot.content as PHDocumentHeader;
-
-    const revisions = await this.operationStore.getRevisions(
+    return this.readDocument<TDocument>(
       documentId,
-      branch,
+      view,
+      this.deletedDocumentRead,
+      consistencyToken,
       signal,
     );
-    header.revision = revisions.revision;
-    header.lastModifiedAtUtcIso = revisions.latestTimestamp;
+  }
 
-    const state: Record<string, unknown> = {};
-    for (const snapshot of snapshots) {
-      if (snapshot.scope === "header") {
-        continue;
-      }
-
-      // snapshot rows written before PHAuthState had a version carry auth: {}
-      state[snapshot.scope] =
-        snapshot.scope === "auth"
-          ? createAuthState(snapshot.content as Partial<PHAuthState>)
-          : snapshot.content;
-    }
-    header.revision = withScopeRevisions(header.revision, state);
-
-    const document: PHDocument = {
-      header,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      state: state as any,
-      operations: emptyOperations(state, header),
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      initialState: state as any,
-      clipboard: [],
-    };
-
-    return document as TDocument;
+  async getIncludingDeleted<TDocument extends PHDocument>(
+    documentId: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.readDocument<TDocument>(
+      documentId,
+      view,
+      DeletedDocumentRead.StateAtDeletion,
+      consistencyToken,
+      signal,
+    );
   }
 
   async getMany<TDocument extends PHDocument>(
@@ -947,6 +885,100 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     }
 
     return resolvedDocumentId;
+  }
+
+  /** One document from its snapshot rows; `deleted` says what a deleted one reads as. */
+  private async readDocument<TDocument extends PHDocument>(
+    documentId: string,
+    view: ViewFilter | undefined,
+    deleted: DeletedDocumentRead,
+    consistencyToken: ConsistencyToken | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<TDocument> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const branch = view?.branch || "main";
+
+    let scopesToQuery: string[];
+    if (view?.scopes && view.scopes.length > 0) {
+      scopesToQuery = [...new Set(["header", "document", ...view.scopes])];
+    } else {
+      scopesToQuery = [];
+    }
+
+    let query = this._db
+      .selectFrom("DocumentSnapshot")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .where("branch", "=", branch);
+
+    if (deleted === DeletedDocumentRead.NotFound) {
+      query = query.where("isDeleted", "=", false);
+    }
+
+    if (scopesToQuery.length > 0) {
+      query = query.where("scope", "in", scopesToQuery);
+    }
+
+    const snapshots = await query.execute();
+
+    if (snapshots.length === 0) {
+      throw new DocumentNotFoundError(
+        documentId,
+        `Document not found: ${documentId}`,
+      );
+    }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const headerSnapshot = snapshots.find((s) => s.scope === "header");
+    if (!headerSnapshot) {
+      throw new Error(`Document header not found: ${documentId}`);
+    }
+
+    const header = headerSnapshot.content as PHDocumentHeader;
+
+    const revisions = await this.operationStore.getRevisions(
+      documentId,
+      branch,
+      signal,
+    );
+    header.revision = revisions.revision;
+    header.lastModifiedAtUtcIso = revisions.latestTimestamp;
+
+    const state: Record<string, unknown> = {};
+    for (const snapshot of snapshots) {
+      if (snapshot.scope === "header") {
+        continue;
+      }
+
+      // snapshot rows written before PHAuthState had a version carry auth: {}
+      state[snapshot.scope] =
+        snapshot.scope === "auth"
+          ? createAuthState(snapshot.content as Partial<PHAuthState>)
+          : snapshot.content;
+    }
+    header.revision = withScopeRevisions(header.revision, state);
+
+    const document: PHDocument = {
+      header,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      state: state as any,
+      operations: emptyOperations(state, header),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      initialState: state as any,
+      clipboard: [],
+    };
+
+    return document as TDocument;
   }
 
   /**

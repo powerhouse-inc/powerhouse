@@ -239,6 +239,7 @@ export class ReactorReadClient implements IReactorReadClient {
     filter?: OperationFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<Operation>> {
     this.logger.verbose(
       "getOperations(@documentIdentifier, @view, @filter, @paging)",
@@ -248,23 +249,33 @@ export class ReactorReadClient implements IReactorReadClient {
       paging,
     );
 
-    const documentId = await this.documentView.resolveIdOrSlug(
-      documentIdentifier,
-      view,
-      undefined,
-      signal,
-    );
+    const pinned = namesDocument(consistencyToken, documentIdentifier);
+    const documentId = pinned
+      ? documentIdentifier
+      : await this.documentView.resolveIdOrSlug(
+          documentIdentifier,
+          view,
+          consistencyToken,
+          signal,
+        );
 
     // Read gate: exclude operations in scopes the subject may not read. The
     // fetch carries the scopes about to be paged, not the policy alone, because
     // a conditional read grant reads the state of the scope it gates; a
     // condition can name no other scope, so the scopes not paged are not owed.
-    const gated = await this.reactor.getByIdOrSlug<PHDocument>(
-      documentId,
-      withAuthScope(view),
-      undefined,
-      signal,
-    );
+    const gated = pinned
+      ? await this.documentView.getIncludingDeleted<PHDocument>(
+          documentId,
+          withAuthScope(view),
+          consistencyToken,
+          signal,
+        )
+      : await this.reactor.getByIdOrSlug<PHDocument>(
+          documentId,
+          withAuthScope(view),
+          undefined,
+          signal,
+        );
     const canRead = await this.gating.readableScopes(gated, view, signal);
 
     if (paging?.cursor && isCompositeCursor(paging.cursor)) {
@@ -771,4 +782,19 @@ export class ReactorReadClient implements IReactorReadClient {
 
     return { results: allOperations, options: paging, nextCursor };
   }
+}
+
+/**
+ * Whether the token names the document. A coordinate carries the canonical
+ * id, so an identifier it names is that id and never a slug.
+ */
+function namesDocument(
+  token: ConsistencyToken | undefined,
+  identifier: string,
+): boolean {
+  return (
+    token?.coordinates.some(
+      (coordinate) => coordinate.documentId === identifier,
+    ) ?? false
+  );
 }

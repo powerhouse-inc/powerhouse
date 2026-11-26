@@ -1011,9 +1011,12 @@ describe("ReactorSubgraph Permission Checks", () => {
         hasPreviousPage: false,
         items: [operation],
       });
+      // No token: no mutation returned this document.
       expect(mockReactorClient.getOperations).toHaveBeenCalledExactlyOnceWith(
         "doc-123",
         { subject: { address: "0xreader", key: "did:key:zCallerApp" } },
+        undefined,
+        undefined,
         undefined,
         undefined,
       );

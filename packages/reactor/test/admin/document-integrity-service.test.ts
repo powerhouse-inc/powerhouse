@@ -39,6 +39,7 @@ function createMockDocumentView(
       : (vi
           .fn()
           .mockRejectedValue(new Error("Not found")) as IDocumentView["get"]),
+    getIncludingDeleted: vi.fn().mockRejectedValue(new Error("Not found")),
     getMany: vi.fn().mockResolvedValue([]),
     getByIdOrSlug: vi.fn().mockRejectedValue(new Error("Not found")),
     findByType: vi.fn().mockResolvedValue({

@@ -621,6 +621,28 @@ export interface IDocumentView extends IReadModel {
   ): Promise<TDocument>;
 
   /**
+   * Returns the document with the given id as {@link get} does, except that a
+   * deleted document reads as its deletion left it, with
+   * `state.document.isDeleted` set, on every host: what `get` serves on a host
+   * whose deleted documents read `StateAtDeletion`. A read pinned to a write
+   * reads through this, so a later delete does not withdraw what the write
+   * left readable.
+   *
+   * @param documentId - The id of the document to get.
+   * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   * @throws {DocumentNotFoundError} If the view holds no row for the document:
+   *   never written, or purged
+   */
+  getIncludingDeleted<TDocument extends PHDocument>(
+    documentId: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
    * Returns the documents with the given ids.
    *
    * @param documentIds - The list of document ids to get.

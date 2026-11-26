@@ -858,11 +858,20 @@ export interface IReactorReadClient {
   /**
    * Retrieves operations for a document.
    *
+   * A token that names the document pins the read to it, as a write's receipt
+   * does for the document it wrote: the identifier is read as that canonical
+   * id, and a delete after the write does not withdraw the operations. They
+   * are gated on the document as the view holds it, deleted or not, so the
+   * write's response cannot fail on a later write such as a processor
+   * deleting the document in reaction.
+   *
    * @param documentIdentifier - Required, this is either a document "id" field or a "slug"
    * @param view - Optional filter containing branch and scopes information
    * @param filter - Optional filter for actionTypes, timestamps, and revision
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for, and pinned to
+   *   the document when the token names it
    * @returns Paginated list of operations
    */
   getOperations(
@@ -871,6 +880,7 @@ export interface IReactorReadClient {
     filter?: OperationFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<Operation>>;
 
   /**

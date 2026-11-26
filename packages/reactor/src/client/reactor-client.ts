@@ -245,6 +245,7 @@ export class ReactorClient implements IReactorClient {
     filter?: OperationFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<Operation>> {
     return this.read.getOperations(
       documentIdentifier,
@@ -252,6 +253,7 @@ export class ReactorClient implements IReactorClient {
       filter,
       paging,
       signal,
+      consistencyToken,
     );
   }
 

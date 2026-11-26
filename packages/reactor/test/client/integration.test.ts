@@ -10,6 +10,7 @@ import {
 import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { ReactorClient } from "../../src/client/reactor-client.js";
 import type { IReactorClient } from "../../src/client/types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
@@ -390,6 +391,36 @@ describe("ReactorClient Integration Tests", () => {
 
         expect(secondPage.results.length).toBe(1);
         expect(secondPage.results.map((op) => op.index)).toEqual([2]);
+      });
+
+      it("reads a write's operations with its token after a later delete", async () => {
+        const doc = createDocModelDocument({ id: "ops-pinned" });
+        await client.create(doc);
+        const { write } = client as unknown as ReactorClient;
+        const receipt = await (
+          await write.execute("ops-pinned", "main", [actions.setName("Kept")])
+        ).readable;
+        // A later write deletes the document, as a processor reacting to the
+        // first one can, before the writer reads what it wrote.
+        await (
+          await write.deleteDocument("ops-pinned")
+        ).readable;
+
+        await expect(
+          client.getOperations("ops-pinned", { scopes: ["global"] }),
+        ).rejects.toThrow("Document not found");
+
+        const pinned = await client.getOperations(
+          "ops-pinned",
+          { scopes: ["global"] },
+          undefined,
+          undefined,
+          undefined,
+          receipt.token,
+        );
+        expect(pinned.results.map((op) => op.action.type)).toEqual([
+          "SET_NAME",
+        ]);
       });
     });
   });

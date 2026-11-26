@@ -2541,6 +2541,28 @@ describe("KyselyDocumentView", () => {
       await expect(read).rejects.toThrow(`Document not found: ${documentId}`);
     });
 
+    it("getIncludingDeleted() should read a deleted document as its deletion left it", async () => {
+      const documentId = generateId();
+      await createDocumentInView(documentId);
+      await deleteDocumentInView(documentId);
+
+      const document = await view.getIncludingDeleted(documentId);
+
+      expect(document.header.id).toBe(documentId);
+      expect(
+        (document.state as { document: { isDeleted?: boolean } }).document
+          .isDeleted,
+      ).toBe(true);
+    });
+
+    it("getIncludingDeleted() should throw for a document never written", async () => {
+      const documentId = generateId();
+
+      await expect(view.getIncludingDeleted(documentId)).rejects.toThrow(
+        DocumentNotFoundError,
+      );
+    });
+
     /**
      * A refused delete occupies its index and changes nothing, so it must not
      * hide the document or destroy its slug. Nothing puts either back.
