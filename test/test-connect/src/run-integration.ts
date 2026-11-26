@@ -10,8 +10,8 @@ import {
   GraphQLClient,
   DOCUMENT_MODEL_TYPE,
 } from "@powerhousedao/load-test-client";
-import type { Action } from "@powerhousedao/shared/document-model";
-import { generateActionId } from "@powerhousedao/shared/document-model";
+import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLI_PATH = path.resolve(__dirname, "cli.ts");
@@ -56,24 +56,6 @@ interface ChildState {
   proc: ChildProcess;
   exited: boolean;
   exitCode: number | null;
-}
-
-function createAddFileAction(
-  documentId: string,
-  documentName: string,
-  documentType: string,
-): Action {
-  return {
-    id: generateActionId(),
-    type: "ADD_FILE",
-    timestampUtcMs: new Date().toISOString(),
-    input: {
-      id: documentId,
-      name: documentName,
-      documentType,
-    },
-    scope: "global",
-  };
 }
 
 function createLogStreams(runDir: string): {
@@ -178,17 +160,14 @@ async function createDocument(
     driveId = drives[0].id;
   }
 
-  const doc = await client.createEmptyDocument(DOCUMENT_MODEL_TYPE, driveId);
-  const documentName =
-    doc.name ||
-    `TestDoc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-
-  const addFileAction = createAddFileAction(
-    doc.id,
-    documentName,
+  // Created and filed in the drive (its `child` link and, in a document
+  // drive, its ADD_FILE), every action signed: the switchboard signs no write
+  // for its callers.
+  const doc = await client.createEmptyDocument(
     DOCUMENT_MODEL_TYPE,
+    driveId,
+    `TestDoc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
   );
-  await client.mutateDocument(driveId, [addFileAction]);
 
   return { driveId, documentId: doc.id };
 }
@@ -297,7 +276,11 @@ async function main(): Promise<void> {
   // Step 3: Create shared document
   process.stdout.write(blue("Creating document...") + " ");
 
-  const gqlClient = new GraphQLClient(url);
+  const gqlClient = new GraphQLClient(url, {
+    documentModels: [
+      reactorDriveDocumentModelModule as unknown as DocumentModelModule,
+    ],
+  });
   let driveId: string;
   let documentId: string;
 
