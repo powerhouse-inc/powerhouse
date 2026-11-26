@@ -119,9 +119,35 @@ async function isCacheBypassOperation(
 }
 
 /**
+ * Whether `executeBatch`'s `jobs` are the signed creation of the drive the
+ * Drive-Id names, with no parent: one job on that id whose first action is
+ * its CREATE_DOCUMENT of a drive type, and no relationship from a parent.
+ */
+function batchCreatesTheNamedDrive(jobs: unknown, driveId: string): boolean {
+  if (!Array.isArray(jobs) || jobs.length !== 1 || !isRecord(jobs[0])) {
+    return false;
+  }
+  const [job] = jobs as Record<string, unknown>[];
+  const actions = Array.isArray(job.actions) ? job.actions : [];
+  const [first] = actions as unknown[];
+  if (job.documentIdOrSlug !== driveId || !isRecord(first)) return false;
+  const input = isRecord(first.input) ? first.input : {};
+  return (
+    first.type === "CREATE_DOCUMENT" &&
+    input.documentId === driveId &&
+    typeof input.model === "string" &&
+    DEFAULT_DRIVE_CONTAINER_TYPES.has(input.model) &&
+    !actions.some(
+      (action) => isRecord(action) && action.type === "ADD_RELATIONSHIP",
+    )
+  );
+}
+
+/**
  * Whether the operation does nothing but create, with no parent, the drive the
  * Drive-Id names: whatever the client named it (reactor-browser sends
- * `CreateDocument`), and with the document resolved through its variables.
+ * `CreateDocument`, or an `executeBatch` its signer signed), and with the
+ * document resolved through its variables.
  */
 function createsTheNamedDrive(
   query: string,
@@ -147,13 +173,15 @@ function createsTheNamedDrive(
     return false;
   }
   const [field] = operation.selectionSet.selections;
-  if (field.kind !== Kind.FIELD || field.name.value !== "createDocument") {
-    return false;
-  }
+  if (field.kind !== Kind.FIELD) return false;
   const argument = (name: string): unknown => {
     const node = field.arguments?.find((arg) => arg.name.value === name);
     return node ? valueFromASTUntyped(node.value, variables) : undefined;
   };
+  if (field.name.value === "executeBatch") {
+    return batchCreatesTheNamedDrive(argument("jobs"), driveId);
+  }
+  if (field.name.value !== "createDocument") return false;
   if (
     PARENT_ARGUMENTS.some((name) => {
       const parent = argument(name);

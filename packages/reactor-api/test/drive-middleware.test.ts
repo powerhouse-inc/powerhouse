@@ -205,6 +205,65 @@ describe("createDriveFetchMiddleware", () => {
     expect(nextCalls).toHaveLength(0);
   });
 
+  const EXECUTE_BATCH =
+    "mutation ExecuteBatch($jobs: [ExecutionJobInput!]!) { executeBatch(jobs: $jobs) { jobs { key } } }";
+
+  const batchRequest = (driveId: string, job: Record<string, unknown>) =>
+    makeRequest({
+      driveId,
+      body: {
+        operationName: "ExecuteBatch",
+        query: EXECUTE_BATCH,
+        variables: { jobs: [job] },
+      },
+    });
+
+  const signedDriveCreate = (
+    id: string,
+    model = "powerhouse/document-drive",
+    more: unknown[] = [],
+  ) => ({
+    key: "create",
+    documentIdOrSlug: id,
+    actions: [
+      { type: "CREATE_DOCUMENT", input: { documentId: id, model } },
+      { type: "UPGRADE_DOCUMENT", input: { documentId: id } },
+      ...more,
+    ],
+  });
+
+  it("passes through the signed creation of the drive the Drive-Id names", async () => {
+    const handler = createDriveFetchMiddleware(makeCache([]))(next);
+
+    const res = await handler(
+      batchRequest("new-drive", signedDriveCreate("new-drive")),
+    );
+
+    expect(res.status).toBe(200);
+    expect(nextCalls).toHaveLength(1);
+  });
+
+  it.each([
+    ["a different drive", signedDriveCreate("other-drive")],
+    [
+      "a document that is not a drive",
+      signedDriveCreate("new-drive", "powerhouse/document-model"),
+    ],
+    [
+      "the drive under a parent",
+      signedDriveCreate("new-drive", "powerhouse/document-drive", [
+        { type: "ADD_RELATIONSHIP", input: { sourceId: "parent" } },
+      ]),
+    ],
+  ])("returns 421 for a cache-miss signed creation of %s", async (_, job) => {
+    const handler = createDriveFetchMiddleware(makeCache([]))(next);
+
+    const res = await handler(batchRequest("new-drive", job));
+
+    expect(res.status).toBe(421);
+    expect(nextCalls).toHaveLength(0);
+  });
+
   it("returns 421 for a child create that names its parent by the deprecated argument", async () => {
     const handler = createDriveFetchMiddleware(makeCache([]))(next);
 
