@@ -240,4 +240,67 @@ describe("discoverMcpTools", () => {
 
     expect(createdClients[0].disconnected).toBe(true);
   });
+
+  it("runs the reactor tools here with a signer, and takes only the host's own tools from the endpoint", async () => {
+    function HostToolsClient(config: { servers: Record<string, unknown> }) {
+      const serverKey = Object.keys(config.servers)[0];
+      return {
+        listTools: async () => ({
+          [`${serverKey}_getDocument`]: { from: "endpoint" },
+          [`${serverKey}_getCodegenStatus`]: { from: "endpoint" },
+        }),
+        disconnect: async () => {},
+      };
+    }
+    const services = mockServices([
+      readyInstance({
+        serviceId: "reactor-project",
+        instanceId: "reactor-project:abc123",
+        mcpUrl: "http://localhost:4001/mcp",
+      }),
+    ]);
+    const signer = { user: { address: "0xagent" } };
+    const tools = await discoverMcpTools(
+      services,
+      undefined,
+      HostToolsClient,
+      undefined,
+      { signer: async () => signer },
+    );
+
+    expect(tools["reactor-project-mcp__getCodegenStatus"]).toEqual({
+      from: "endpoint",
+    });
+    expect(tools["reactor-project-mcp__getDocument"]).not.toEqual({
+      from: "endpoint",
+    });
+    expect(Object.keys(tools)).toEqual(
+      expect.arrayContaining([
+        "reactor-project-mcp__createDocument",
+        "reactor-project-mcp__addActions",
+        "reactor-project-mcp__deleteDocument",
+      ]),
+    );
+  });
+
+  it("needs no MCPClient for the tools it runs here", async () => {
+    const services = mockServices([
+      readyInstance({
+        serviceId: "reactor-project",
+        instanceId: "reactor-project:abc123",
+        mcpUrl: "http://localhost:4001/mcp",
+      }),
+    ]);
+    const tools = await discoverMcpTools(
+      services,
+      undefined,
+      undefined,
+      undefined,
+      {
+        signer: async () => ({ user: { address: "0xagent" } }),
+      },
+    );
+    expect(Object.keys(tools)).toContain("reactor-project-mcp__getDocument");
+    expect(createdClients).toHaveLength(0);
+  });
 });

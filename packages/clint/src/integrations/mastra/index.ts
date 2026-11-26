@@ -32,7 +32,7 @@ export { getMastraPaths } from "./paths.js";
 export { mapMastraStream } from "./stream.js";
 export { commandsToMastraTools } from "./tools.js";
 export { discoverMcpTools, disconnectAllMcp } from "./mcp.js";
-export type { McpBearer } from "./mcp.js";
+export type { McpBearer, McpInProcessTools, McpSigner } from "./mcp.js";
 export { MarkdownConversationLogger, loggedStream } from "./logging.js";
 
 /** RequestContext key holding the chat thread id of an agent stream. */
@@ -84,6 +84,14 @@ export function createMastraHelpers(ctx: AgentSetupContext): MastraHelpers {
             log,
             options?.MCPClient,
             options?.mcpBearer,
+            options?.mcpSigner
+              ? {
+                  signer: options.mcpSigner,
+                  ...(options.mcpDocumentModels
+                    ? { documentModels: options.mcpDocumentModels }
+                    : {}),
+                }
+              : undefined,
           );
           log?.debug(
             `[getTools] CLI tools: ${Object.keys(cliTools).length}, MCP tools: ${Object.keys(mcpTools).length}`,

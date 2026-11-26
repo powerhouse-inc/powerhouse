@@ -22,6 +22,23 @@ export interface GetToolsOptions {
     serviceId: string;
   }) => Promise<string | undefined>;
   /**
+   * The session each discovered endpoint's reactor tools sign as: the
+   * agent's. With it those tools (reads, `createDocument`, `addActions`,
+   * `deleteDocument`) run in this process over the endpoint's switchboard
+   * GraphQL API, every action signed by it and every request borne by
+   * `mcpBearer`; only the endpoint's host-only tools still come from its
+   * `/mcp`. Omitted, or undefined for an endpoint: every tool runs there and
+   * its host signs the writes.
+   */
+  mcpSigner?: (endpoint: {
+    url: string;
+    serviceId: string;
+  }) => Promise<
+    import("@powerhousedao/shared/document-model").ISigner | undefined
+  >;
+  /** The models the in-process reactor tools build and check documents with; default the base ones. */
+  mcpDocumentModels?: () => readonly import("@powerhousedao/shared/document-model").DocumentModelModule[];
+  /**
    * Glob-style patterns matched against the final tool names (CLI + MCP).
    *
    * Pattern syntax: `*` matches any run of characters, `?` matches one char,

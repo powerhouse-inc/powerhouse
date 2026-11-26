@@ -1526,6 +1526,9 @@ importers:
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../reactor-browser
+      '@powerhousedao/reactor-mcp':
+        specifier: workspace:*
+        version: link:../reactor-mcp
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
