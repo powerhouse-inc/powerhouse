@@ -121,8 +121,8 @@ A host session token is taken only where `options.hostSessions` is set: the
 GraphQL middleware, the WebSocket (`authenticateWebSocketConnection`), HTTP
 `/mcp` (`mcp-request-authorizer.ts`) and the switchboard's attachment routes.
 Every other surface answers 401 `host-session-not-accepted`: package HTTP
-routes, the AI gateway, the credential routes (`HttpRouteService` refuses it
-before any route's own auth runs).
+routes, the AI gateway, the credential and OAuth routes (`HttpRouteService`
+refuses it before any route's own auth runs).
 
 A host session administers nothing. Its `AuthContext.admins` is `[]`, and the
 request runs in the host-session scope (`src/services/host-session-scope.ts`,
@@ -141,6 +141,30 @@ the caller-write scope of each Mutation field and each `/mcp` request
 host-built delete then sign as "session <label> acting for <user>"; each
 signed action is logged by the session's short id, never its token. Without a
 host session the caller writes stay refused (`UNSIGNED_WRITE`).
+
+### Issuing host session tokens
+
+```
+src/http/oauth-routes.ts     the routes, in the host scope `oauth` (<base>/oauth)
+src/http/oauth-grants.ts     pending grants, <dataDir>/.ph/oauth/grants/
+src/http/oauth-metadata.ts   the issuer, RFC 8414 and RFC 9728 documents
+src/http/oauth-pages.ts      the consent page (plain HTML, no script)
+```
+
+The OAuth device grant (RFC 8628) issues them. `device_authorization` makes
+the session's key (its file, approved by nobody) and a pending grant;
+`device/approve` takes the person's credential for that key (a pseudonym
+signs it, `ph token approve`), or `device/renown` sends a Renown login to
+Renown's console and polls it (`pollConsoleCredential`). Either way the same
+checks run (the grant pending, the credential for the grant's key and no
+longer than asked, the asked label, no tombstone, 50 sessions per address),
+then the session file gets the credential, its record is written
+(`source: "host-session"`), and the client's next `token` poll is issued the
+token once. `revoke` (RFC 7009) and `sessions/<id>/withdraw` (a self-signed
+bearer) write the tombstone. Every route is public: the caller has no token
+yet. The metadata documents are mounted at the origin's root. The issuer is
+the configured public URL plus the base path, else a loopback request's own
+origin; without either the routes answer 503.
 
 `AuthService.authenticate()` (the old Express middleware signature) is kept for
 backwards compatibility but is `@deprecated`. New code uses `authenticateRequest()`.

@@ -54,7 +54,8 @@ function json(res: ServerResponse, status: number, body: unknown): void {
   res.end(text);
 }
 
-function clientOf(req: IncomingMessage): string {
+/** The requesting address: the first forwarded for, else the socket's. */
+export function clientOf(req: IncomingMessage): string {
   const forwarded = req.headers["x-forwarded-for"];
   const first = (Array.isArray(forwarded) ? forwarded[0] : forwarded)
     ?.split(",")[0]

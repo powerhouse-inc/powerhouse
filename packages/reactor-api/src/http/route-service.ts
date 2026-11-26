@@ -424,8 +424,8 @@ class HttpScope implements IHttpScope {
     res: ServerResponse,
   ): Promise<RouteActor | undefined | typeof REJECTED> {
     // A host session token opens GraphQL, `/mcp` and attachments only: no
-    // package route, the AI gateway or the credential routes, whatever their
-    // auth mode.
+    // package route, the AI gateway, the credential or the OAuth routes,
+    // whatever their auth mode.
     if (hostSessionTokenOf(req.headers.authorization)) {
       await writeResponse(res, hostSessionNotAccepted(), req.method ?? "GET");
       return REJECTED;

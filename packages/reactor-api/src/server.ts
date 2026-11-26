@@ -74,7 +74,10 @@ import {
   type CredentialVerifier as HostCredentialVerifier,
   type SwitchboardRequestFn,
 } from "@renown/sdk/node";
+import { DEFAULT_RENOWN_URL } from "@powerhousedao/shared/constants";
 import { mountCredentialRoutes } from "./http/credential-routes.js";
+import { mountOAuthMetadata } from "./http/oauth-metadata.js";
+import { mountOAuthRoutes } from "./http/oauth-routes.js";
 import { runAsCaller } from "./services/host-session-scope.js";
 import { HostSessions } from "./services/host-sessions.js";
 import { OperatorSet, parseOperatorSource } from "./services/operator-set.js";
@@ -1315,6 +1318,52 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       },
     );
   }
+  // The OAuth routes that issue host session tokens, and their discovery.
+  if (hostSessions) {
+    const configured = options.server?.publicUrl
+      ? withScheme(options.server.publicUrl)
+      : undefined;
+    const oauth = mountOAuthRoutes(
+      httpRoutes.hostScope(
+        "oauth",
+        path.posix.join("/", settings.basePath, "oauth"),
+      ),
+      {
+        dataDir: path.dirname(stateDir),
+        publicOrigin: configured,
+        basePath: settings.basePath,
+        renownUrl: renown.url ?? DEFAULT_RENOWN_URL,
+        hostDid: () => options.hostSigner?.app?.key,
+        maxDays: optionAuth.hostSessions?.maxDays,
+        onWithdrawn: (binding) =>
+          authService.invalidateCredential(
+            binding.address,
+            binding.chainId,
+            binding.sessionDid,
+          ),
+        logger: logger.child(["oauth"]),
+      },
+    );
+    const metadata = mountOAuthMetadata(httpAdapter, {
+      publicOrigin: configured,
+      basePath: settings.basePath,
+    });
+    dbClosers.push(() => {
+      oauth.dispose();
+      metadata.dispose();
+      return Promise.resolve();
+    });
+    if (!configured) {
+      logger.info(
+        "Host session tokens are issued over loopback only: set PUBLIC_URL to issue them on a network.",
+      );
+    } else if (insecureOffLoopback(configured)) {
+      logger.warn(
+        "SECURITY: PUBLIC_URL @url is plain HTTP off loopback: host session tokens and their approvals would travel in clear. Serve it over HTTPS.",
+        configured,
+      );
+    }
+  }
 
   return {
     listenPort,
@@ -2060,4 +2109,18 @@ function resolvePublicOrigin(
 function withScheme(origin: string): string {
   const trimmed = origin.replace(/\/+$/, "");
   return /^https?:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+/** Whether an origin is plain HTTP to a name other than this computer's. */
+function insecureOffLoopback(origin: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(origin);
+  } catch {
+    return false;
+  }
+  return (
+    url.protocol === "http:" &&
+    !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
+  );
 }

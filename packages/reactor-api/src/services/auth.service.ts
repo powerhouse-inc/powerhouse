@@ -30,7 +30,7 @@ export type BearerOptions = {
   /**
    * Whether this surface takes a host session token: GraphQL, its WebSocket,
    * HTTP `/mcp` and the attachment routes do. Elsewhere (package HTTP routes,
-   * the AI gateway, the credential routes) one is refused with
+   * the AI gateway, the credential and OAuth routes) one is refused with
    * {@link hostSessionNotAccepted}.
    */
   hostSessions?: boolean;

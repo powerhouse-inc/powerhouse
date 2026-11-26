@@ -1,0 +1,681 @@
+// The OAuth routes that issue host session tokens (F3e part 2): discovery,
+// the device grant with its consent page and approvals, the token endpoint,
+// revocation, and a person's own sessions. A real route service over Express,
+// real files in a temp data folder, Renown out of reach.
+import {
+  credentialRecordId,
+  readCredentialRecord,
+  readCredentialWithdrawal,
+  writeCredentialRecord,
+  writeCredentialWithdrawal,
+} from "@powerhousedao/shared/clis/credential-records";
+import {
+  readHostSession,
+  type HostSessionFile,
+} from "@powerhousedao/shared/clis/host-sessions";
+import {
+  buildAndSignCredential,
+  createCredentialVerifier,
+  MemoryKeyStorage,
+  RenownCryptoBuilder,
+  type CredentialVerifier,
+  type PowerhouseVerifiableCredential,
+} from "@renown/sdk/node";
+import { mkdtempSync, rmSync } from "node:fs";
+import { request, type Server } from "node:http";
+import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ExpressHttpAdapter } from "../src/graphql/gateway/adapter-http-express.js";
+import { HttpRouteService } from "../src/http/index.js";
+import { mountOAuthMetadata } from "../src/http/oauth-metadata.js";
+import {
+  mountOAuthRoutes,
+  RENOWN_APP_LABEL,
+} from "../src/http/oauth-routes.js";
+import { AuthService } from "../src/services/auth.service.js";
+import { HostSessions } from "../src/services/host-sessions.js";
+
+// viem is the SDK's own dependency; reactor-api does not declare it.
+type Account = {
+  address: `0x${string}`;
+  signTypedData(args: unknown): Promise<`0x${string}`>;
+};
+const { privateKeyToAccount } = createRequire(
+  import.meta.resolve("@renown/sdk/node"),
+)("viem/accounts") as {
+  privateKeyToAccount: (key: `0x${string}`) => Account;
+};
+
+// Well-known Anvil dev keys; never used for anything real.
+const PERSON = privateKeyToAccount(
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+);
+const STRANGER = privateKeyToAccount(
+  "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+);
+const DEVICE_CODE = "urn:ietf:params:oauth:grant-type:device_code";
+const fetchOriginal = globalThis.fetch;
+
+let dataDir: string;
+let verifier: CredentialVerifier;
+let sessions: HostSessions;
+let server: Server;
+let url: string;
+let issuer: string;
+let clock: number | undefined;
+let disposeRoutes: () => void;
+let withdrawn: string[];
+
+const now = () => clock ?? Date.now();
+
+beforeEach(async () => {
+  clock = undefined;
+  withdrawn = [];
+  dataDir = mkdtempSync(join(tmpdir(), "oauth-routes-"));
+  verifier = createCredentialVerifier({ dataDir, watch: false });
+  sessions = new HostSessions({ dataDir, verifier, watch: false });
+  const authService = new AuthService({
+    enabled: false,
+    resolveIdentity: true,
+    admins: [],
+    credentialVerificationCacheTtlMs: 0,
+    verifyCredential: (p) =>
+      verifier.check(
+        {
+          address: p.address,
+          chainId: p.chainId,
+          networkId: p.networkId ?? "eip155",
+          sessionDid: p.appId,
+        },
+        p.credential,
+      ),
+    hostSessions: sessions,
+  });
+  const adapter = new ExpressHttpAdapter();
+  adapter.setupMiddleware({});
+  server = await adapter.listen(0, undefined, "127.0.0.1");
+  const port = (server.address() as { port: number }).port;
+  url = `http://127.0.0.1:${port}`;
+  issuer = url;
+  const routes = new HttpRouteService({ httpAdapter: adapter, authService });
+  const mounted = mountOAuthRoutes(routes.hostScope("oauth", "/oauth"), {
+    dataDir,
+    publicOrigin: undefined,
+    basePath: "/",
+    renownUrl: "https://renown.test",
+    hostDid: () => "did:key:zHostKey",
+    onWithdrawn: (binding) => withdrawn.push(binding.sessionDid),
+    now,
+  });
+  mountOAuthMetadata(adapter, { publicOrigin: undefined, basePath: "/" });
+  disposeRoutes = () => mounted.dispose();
+});
+
+afterEach(async () => {
+  disposeRoutes();
+  sessions.close();
+  verifier.close();
+  vi.restoreAllMocks();
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+function form(path: string, fields: Record<string, string>, headers = {}) {
+  return fetch(`${url}${path}`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      ...headers,
+    },
+    body: new URLSearchParams(fields).toString(),
+  });
+}
+
+function post(path: string, body: unknown, headers = {}) {
+  return fetch(`${url}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...headers },
+    body: JSON.stringify(body),
+  });
+}
+
+type Started = {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  verification_uri_complete: string;
+  expires_in: number;
+  interval: number;
+};
+
+async function start(fields: Record<string, string> = {}): Promise<Started> {
+  const response = await form("/oauth/device_authorization", {
+    client_id: "curl",
+    ph_label: "billing",
+    ...fields,
+  });
+  expect(response.status, await response.clone().text()).toBe(200);
+  return (await response.json()) as Started;
+}
+
+type Pending = {
+  session_did: string;
+  label: string;
+  nonce: string;
+  days: number;
+  client_id: string;
+  warning: string;
+  may: string;
+};
+
+async function pendingOf(userCode: string): Promise<Pending> {
+  const response = await fetch(
+    `${url}/oauth/device/pending?user_code=${encodeURIComponent(userCode)}`,
+  );
+  expect(response.status).toBe(200);
+  return (await response.json()) as Pending;
+}
+
+const credentialFor = (
+  account: Account,
+  sessionDid: string,
+  o: { label?: string; days?: number } = {},
+): Promise<PowerhouseVerifiableCredential> =>
+  buildAndSignCredential({
+    signTypedData: (args) => account.signTypedData(args),
+    address: account.address,
+    chainId: 1,
+    app: o.label ?? "billing",
+    appId: sessionDid,
+    expiresInDays: o.days ?? 30,
+  });
+
+async function approve(
+  started: Started,
+  o: { label?: string; days?: number; account?: Account; did?: string } = {},
+) {
+  const pending = await pendingOf(started.user_code);
+  const credential = await credentialFor(
+    o.account ?? PERSON,
+    o.did ?? pending.session_did,
+    o,
+  );
+  return post("/oauth/device/approve", {
+    user_code: started.user_code,
+    credential,
+    nonce: pending.nonce,
+  });
+}
+
+async function poll(started: Started, clientId = "curl") {
+  const response = await form("/oauth/token", {
+    grant_type: DEVICE_CODE,
+    device_code: started.device_code,
+    client_id: clientId,
+  });
+  return {
+    status: response.status,
+    headers: response.headers,
+    body: (await response.json()) as Record<string, unknown>,
+  };
+}
+
+describe("discovery", () => {
+  it("lists the device grant and its endpoints, and nothing it does not serve", async () => {
+    const response = await fetch(
+      `${url}/.well-known/oauth-authorization-server`,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      issuer,
+      device_authorization_endpoint: `${issuer}/oauth/device_authorization`,
+      token_endpoint: `${issuer}/oauth/token`,
+      revocation_endpoint: `${issuer}/oauth/revoke`,
+      grant_types_supported: [DEVICE_CODE],
+      response_types_supported: [],
+      token_endpoint_auth_methods_supported: ["none"],
+      revocation_endpoint_auth_methods_supported: ["none"],
+      scopes_supported: ["documents:write"],
+    });
+    const resource = await fetch(`${url}/.well-known/oauth-protected-resource`);
+    expect(await resource.json()).toEqual({
+      resource: issuer,
+      authorization_servers: [issuer],
+      bearer_methods_supported: ["header"],
+      scopes_supported: ["documents:write"],
+    });
+  });
+
+  it("names no issuer for a request off loopback without a public URL", async () => {
+    // fetch sends no Host of the caller's choosing; node:http does.
+    const status = (method: string, path: string, body?: string) =>
+      new Promise<number>((resolve, reject) => {
+        const req = request(
+          `${url}${path}`,
+          {
+            method,
+            headers: {
+              host: "switchboard.example",
+              ...(body
+                ? { "content-type": "application/x-www-form-urlencoded" }
+                : {}),
+            },
+          },
+          (res) => {
+            res.resume();
+            resolve(res.statusCode ?? 0);
+          },
+        );
+        req.on("error", reject);
+        req.end(body);
+      });
+    expect(await status("GET", "/.well-known/oauth-authorization-server")).toBe(
+      404,
+    );
+    expect(
+      await status("POST", "/oauth/device_authorization", "client_id=curl"),
+    ).toBe(503);
+  });
+});
+
+describe("the device grant", () => {
+  it("starts with a code to type, and keeps a session key nobody approved", async () => {
+    const started = await start({ ph_days: "7" });
+    expect(started.user_code).toMatch(
+      /^[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}$/,
+    );
+    expect(started.device_code).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(started).toMatchObject({
+      verification_uri: `${issuer}/oauth/device`,
+      verification_uri_complete: `${issuer}/oauth/device?user_code=${started.user_code}`,
+      expires_in: 600,
+      interval: 5,
+    });
+    const pending = await pendingOf(started.user_code.toLowerCase());
+    expect(pending).toMatchObject({
+      label: "billing",
+      days: 7,
+      client_id: "curl",
+      may: "sign document changes as you; no administration",
+      warning:
+        "Approve only a code you started yourself in the last 10 minutes.",
+    });
+    expect(pending.session_did).toMatch(/^did:key:z/);
+  });
+
+  it("refuses what it cannot grant", async () => {
+    const refusal = async (fields: Record<string, string>) => {
+      const response = await form("/oauth/device_authorization", fields);
+      return [
+        response.status,
+        ((await response.json()) as { error: string }).error,
+      ];
+    };
+    expect(await refusal({})).toEqual([400, "invalid_request"]);
+    expect(await refusal({ client_id: "c", scope: "documents:read" })).toEqual([
+      400,
+      "invalid_scope",
+    ]);
+    expect(await refusal({ client_id: "c", ph_days: "31" })).toEqual([
+      400,
+      "invalid_request",
+    ]);
+    expect(await refusal({ client_id: "c", ph_days: "0" })).toEqual([
+      400,
+      "invalid_request",
+    ]);
+    expect(await refusal({ client_id: "c", ph_label: "did:key:zX" })).toEqual([
+      400,
+      "invalid_request",
+    ]);
+  });
+
+  it("answers a poll before approval as pending, and one too soon with slow_down", async () => {
+    const started = await start();
+    expect((await poll(started)).body.error).toBe("authorization_pending");
+    const fast = await poll(started);
+    expect(fast.body).toMatchObject({ error: "slow_down", interval: 10 });
+    expect(fast.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("issues one token after approval, then no more", async () => {
+    const started = await start();
+    const approved = await approve(started);
+    expect(approved.status, await approved.clone().text()).toBe(200);
+    const issued = await poll(started);
+    expect(issued.status).toBe(200);
+    expect(issued.headers.get("cache-control")).toBe("no-store");
+    expect(issued.body).toMatchObject({
+      token_type: "Bearer",
+      scope: "documents:write",
+      ph_label: "billing",
+      ph_address: PERSON.address,
+    });
+    const token = issued.body.access_token as string;
+    expect(token).toMatch(/^phs_[0-9a-f]{32}_[A-Za-z0-9_-]{43}$/);
+    expect(issued.body.expires_in).toBeGreaterThan(29 * 86_400);
+    const verdict = await sessions.verify(token);
+    expect(verdict).toMatchObject({
+      ok: true,
+      user: { address: PERSON.address, via: "host-session", label: "billing" },
+    });
+    // The record is the host's, beside the others.
+    const session = readHostSession({
+      dataDir,
+      id: issued.body.ph_session as string,
+    }) as HostSessionFile;
+    expect(
+      readCredentialRecord({
+        dataDir,
+        id: credentialRecordId({
+          address: PERSON.address,
+          chainId: 1,
+          sessionDid: session.did,
+        }),
+      })?.source,
+    ).toBe("host-session");
+    // Shown once.
+    expect((await poll(started)).body.error).toBe("invalid_grant");
+  });
+
+  it("refuses a poll by another client, and a code that expired", async () => {
+    const started = await start();
+    expect((await poll(started, "someone-else")).body.error).toBe(
+      "invalid_grant",
+    );
+    clock = Date.now() + 11 * 60_000;
+    expect((await poll(started)).body.error).toBe("expired_token");
+  });
+
+  it("tells a client the person denied it", async () => {
+    const started = await start();
+    const pending = await pendingOf(started.user_code);
+    const denied = await post("/oauth/device/deny", {
+      user_code: started.user_code,
+      nonce: pending.nonce,
+    });
+    expect(denied.status).toBe(200);
+    expect((await poll(started)).body.error).toBe("access_denied");
+  });
+});
+
+describe("an approval", () => {
+  it("is refused for a credential naming another key", async () => {
+    const started = await start();
+    const other = await new RenownCryptoBuilder()
+      .withKeyPairStorage(new MemoryKeyStorage())
+      .build();
+    const response = await approve(started, { did: other.did });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: "invalid_request" });
+  });
+
+  it("is refused for a credential longer than asked, or than 30 days", async () => {
+    const week = await start({ ph_days: "7" });
+    expect((await approve(week, { days: 30 })).status).toBe(400);
+    const month = await start();
+    expect((await approve(month, { days: 31 })).status).toBe(400);
+    expect((await approve(month, { days: 30 })).status).toBe(200);
+  });
+
+  it("is refused for another label, and takes Renown's until it signs labels", async () => {
+    const started = await start();
+    const wrong = await approve(started, { label: "something else" });
+    expect(await wrong.json()).toMatchObject({
+      error: "invalid_request",
+      error_description: expect.stringContaining('"something else"') as unknown,
+    });
+    expect((await approve(started, { label: RENOWN_APP_LABEL })).status).toBe(
+      200,
+    );
+  });
+
+  it("is refused for a credential withdrawn here", async () => {
+    const started = await start();
+    const pending = await pendingOf(started.user_code);
+    const credential = await credentialFor(PERSON, pending.session_did);
+    writeCredentialWithdrawal({
+      dataDir,
+      binding: {
+        address: PERSON.address,
+        chainId: 1,
+        sessionDid: pending.session_did,
+      },
+      by: "command",
+      now: new Date(Date.now() + 1000),
+    });
+    const response = await post("/oauth/device/approve", {
+      user_code: started.user_code,
+      credential,
+      nonce: pending.nonce,
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: "access_denied" });
+  });
+
+  it("is refused for a grant already approved", async () => {
+    const started = await start();
+    expect((await approve(started)).status).toBe(200);
+    const again = await approve(started, { account: STRANGER });
+    expect(again.status).toBe(400);
+    expect(await again.json()).toMatchObject({ error: "invalid_grant" });
+  });
+
+  it("needs a nonce of the grant's page", async () => {
+    const started = await start();
+    const pending = await pendingOf(started.user_code);
+    const credential = await credentialFor(PERSON, pending.session_did);
+    for (const nonce of [undefined, "1.x", `${Date.now() + 60_000}.forged`]) {
+      const response = await post("/oauth/device/approve", {
+        user_code: started.user_code,
+        credential,
+        ...(nonce ? { nonce } : {}),
+      });
+      expect(response.status).toBe(403);
+    }
+  });
+});
+
+describe("the consent page", () => {
+  it("shows what would be allowed and approves nothing by being opened", async () => {
+    const started = await start();
+    const response = await fetch(started.verification_uri_complete);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-security-policy")).toContain(
+      "frame-ancestors 'none'",
+    );
+    expect(response.headers.get("x-frame-options")).toBe("DENY");
+    const page = await response.text();
+    for (const shown of [
+      "billing",
+      "curl",
+      "may sign document changes as you on this host; no administration",
+      "Approve only a code you started yourself in the last 10 minutes.",
+      `ph token approve ${started.user_code} --url ${issuer}`,
+      "127.0.0.1",
+    ]) {
+      expect(page, shown).toContain(shown);
+    }
+    expect((await poll(started)).body.error).toBe("authorization_pending");
+  });
+
+  it("asks for a code without one, and says so for an unknown one", async () => {
+    const blank = await fetch(`${url}/oauth/device`);
+    expect(blank.status).toBe(200);
+    expect(await blank.text()).toContain('name="user_code"');
+    const unknown = await fetch(`${url}/oauth/device?user_code=BBBB-BBBB`);
+    expect(unknown.status).toBe(404);
+  });
+
+  it("takes its buttons only from this host's own pages", async () => {
+    const started = await start();
+    const pending = await pendingOf(started.user_code);
+    const fields = { user_code: started.user_code, nonce: pending.nonce };
+    const crossSite = await form("/oauth/device/deny", fields, {
+      origin: "https://elsewhere.example",
+    });
+    expect(crossSite.status).toBe(403);
+    const fetchedCrossSite = await form("/oauth/device/renown", fields, {
+      origin: issuer,
+      "sec-fetch-site": "cross-site",
+    });
+    expect(fetchedCrossSite.status).toBe(403);
+    expect((await poll(started)).body.error).toBe("authorization_pending");
+
+    const denied = await form("/oauth/device/deny", fields, { origin: issuer });
+    expect(denied.status).toBe(200);
+    expect(await denied.text()).toContain("Denied");
+  });
+
+  it("sends a Renown login to Renown's console for the session's key", async () => {
+    const started = await start({ ph_days: "14" });
+    const pending = await pendingOf(started.user_code);
+    // Renown answers nothing: the poll the button starts waits.
+    vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      const target = String(input instanceof Request ? input.url : input);
+      return target.startsWith("https://renown.test")
+        ? Promise.resolve(Response.json({ status: "pending" }))
+        : fetchOriginal(input, init);
+    });
+    const response = await fetchOriginal(`${url}/oauth/device/renown`, {
+      method: "POST",
+      redirect: "manual",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        origin: issuer,
+      },
+      body: new URLSearchParams({
+        user_code: started.user_code,
+        nonce: pending.nonce,
+      }).toString(),
+    });
+    expect(response.status).toBe(303);
+    const location = new URL(response.headers.get("location")!);
+    expect(location.origin + location.pathname).toBe(
+      "https://renown.test/console",
+    );
+    expect(Object.fromEntries(location.searchParams)).toMatchObject({
+      connect: pending.session_did,
+      app: "billing",
+      host: issuer,
+      expiresInDays: "14",
+    });
+  });
+});
+
+describe("revocation", () => {
+  it("answers 200 for a token it does not know", async () => {
+    for (const token of [
+      "nonsense",
+      `phs_${"a".repeat(32)}_${"b".repeat(43)}`,
+    ]) {
+      expect((await form("/oauth/revoke", { token })).status).toBe(200);
+    }
+    expect((await form("/oauth/revoke", {})).status).toBe(400);
+  });
+
+  it("withdraws the session a token names, as `ph credentials withdraw` would", async () => {
+    const started = await start();
+    await approve(started);
+    const { body } = await poll(started);
+    const token = body.access_token as string;
+    const session = readHostSession({
+      dataDir,
+      id: body.ph_session as string,
+    })!;
+    expect((await form("/oauth/revoke", { token })).status).toBe(200);
+    expect((await sessions.verify(token)).ok).toBe(false);
+    expect(
+      readCredentialWithdrawal({
+        dataDir,
+        id: credentialRecordId({
+          address: PERSON.address,
+          chainId: 1,
+          sessionDid: session.did,
+        }),
+      })?.by,
+    ).toBe("request");
+    expect(readHostSession({ dataDir, id: session.id })).toBeUndefined();
+    expect(withdrawn).toEqual([session.did]);
+  });
+});
+
+describe("a person's sessions", () => {
+  async function selfSignedBearer(account: Account) {
+    const key = await new RenownCryptoBuilder()
+      .withKeyPairStorage(new MemoryKeyStorage())
+      .build();
+    const credential = await credentialFor(account, key.did, {
+      label: "ph-cli",
+    });
+    writeCredentialRecord({ dataDir, credential, source: "cli" });
+    return key.getBearerToken(account.address, { expiresIn: 60 });
+  }
+
+  it("lists and withdraws them for their own bearer only", async () => {
+    const started = await start();
+    await approve(started);
+    const { body } = await poll(started);
+    const id = body.ph_session as string;
+    const mine = await selfSignedBearer(PERSON);
+    const listed = await fetch(`${url}/oauth/sessions`, {
+      headers: { authorization: `Bearer ${mine}` },
+    });
+    expect(listed.status).toBe(200);
+    expect(await listed.json()).toMatchObject({
+      sessions: [{ id, label: "billing", grant: "device", client_id: "curl" }],
+    });
+
+    const theirs = await selfSignedBearer(STRANGER);
+    expect(
+      (
+        await fetch(`${url}/oauth/sessions/${id}/withdraw`, {
+          method: "POST",
+          headers: { authorization: `Bearer ${theirs}` },
+        })
+      ).status,
+    ).toBe(404);
+    // Not with a host session token, nor anonymously.
+    for (const authorization of [
+      `Bearer ${body.access_token as string}`,
+      undefined,
+    ]) {
+      const response = await fetch(`${url}/oauth/sessions`, {
+        headers: authorization ? { authorization } : {},
+      });
+      expect(response.status).toBe(401);
+    }
+    const out = await fetch(`${url}/oauth/sessions/${id}/withdraw`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${mine}` },
+    });
+    expect(out.status).toBe(200);
+    expect((await sessions.verify(body.access_token as string)).ok).toBe(false);
+  });
+});
+
+describe("limits", () => {
+  it("lets one address start 10 grants a minute", async () => {
+    const statuses: number[] = [];
+    for (let i = 0; i < 11; i++) {
+      statuses.push(
+        (await form("/oauth/device_authorization", { client_id: "c" })).status,
+      );
+    }
+    expect(statuses.slice(0, 10).every((s) => s === 200)).toBe(true);
+    expect(statuses[10]).toBe(429);
+  });
+
+  it("lets one address miss a code 10 times a minute", async () => {
+    const statuses: number[] = [];
+    for (let i = 0; i < 11; i++) {
+      statuses.push(
+        (await fetch(`${url}/oauth/device/pending?user_code=BBBB-BBBB`)).status,
+      );
+    }
+    expect(statuses.slice(0, 10).every((s) => s === 404)).toBe(true);
+    expect(statuses[10]).toBe(429);
+  });
+});

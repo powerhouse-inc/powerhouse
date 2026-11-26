@@ -47,6 +47,10 @@ export const UNSIGNED_WRITE_CASES: Record<UnsignedWriteReason, string> = {
 const SIGN_AS_YOURSELF =
   "Sign it as yourself: a Powerhouse client (reactor-browser, clint, `ph mcp`) does it for you";
 
+/** A client that signs nothing itself: the host signs for a session it was delegated. */
+const HOST_SESSION_TOKEN =
+  "or send a host session token (`Authorization: Bearer phs_...`, from this host's OAuth device grant at `/oauth`)";
+
 /** The caller as a refusal names it. */
 export function describeUnsignedWriteCaller(
   caller: UnsignedWriteCaller,
@@ -96,13 +100,11 @@ function fixFor(write: UnsignedWrite): string {
   switch (write.reason) {
     case "unsigned-actions":
     case "host-built":
-      // F3e part 2 (host sessions) adds: ", or send a host session token".
-      return `${SIGN_AS_YOURSELF}, or run \`${phMutateFix(write.actions)}\`.`;
+      return `${SIGN_AS_YOURSELF}, or run \`${phMutateFix(write.actions)}\`, ${HOST_SESSION_TOKEN}.`;
     case "no-identity":
       return "Sign as a user: open the page by the sign-in link `ph dev` prints, or use a Powerhouse client with an identity (`ph login`, or the pseudonym it makes for you).";
     case "mcp-http-write":
-      // F3e part 2 (host sessions) adds: ", or send a host session token".
-      return "Reads stay open over HTTP /mcp. For writes run `ph mcp`, which signs as your session, or use a Powerhouse client.";
+      return `Reads stay open over HTTP /mcp. For writes run \`ph mcp\`, which signs as your session, use a Powerhouse client, ${HOST_SESSION_TOKEN}.`;
   }
 }
 

@@ -19,8 +19,19 @@ describe("unsigned writes", () => {
         actions: ["SET_NAME"],
       }),
     ).toBe(
-      "Refused: this host signs no writes for its callers (Powerhouse 6.4). `Mutation.renameDocument` from an anonymous caller asks the host to build and sign SET_NAME. Sign it as yourself: a Powerhouse client (reactor-browser, clint, `ph mcp`) does it for you, or run `ph mutate <document> SET_NAME --input '<json>'`.",
+      "Refused: this host signs no writes for its callers (Powerhouse 6.4). `Mutation.renameDocument` from an anonymous caller asks the host to build and sign SET_NAME. Sign it as yourself: a Powerhouse client (reactor-browser, clint, `ph mcp`) does it for you, or run `ph mutate <document> SET_NAME --input '<json>'`, or send a host session token (`Authorization: Bearer phs_...`, from this host's OAuth device grant at `/oauth`).",
     );
+  });
+
+  it("names a host session token as a fix for HTTP /mcp's writes", () => {
+    expect(
+      unsignedWriteMessage({
+        reason: "mcp-http-write",
+        field: "addDrive",
+        caller: null,
+        actions: ["CREATE_DOCUMENT"],
+      }),
+    ).toContain("or send a host session token");
   });
 
   it("names the session of a known caller", () => {
