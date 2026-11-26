@@ -18,6 +18,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { readRunRecord } from "@powerhousedao/host-core";
 import type { IAttachmentService } from "@powerhousedao/reactor-attachments";
 import { packageJsonExports } from "@powerhousedao/shared/clis/constants";
+import { testSigner } from "@powerhousedao/shared/testing";
 import type * as SwitchboardServer from "@powerhousedao/switchboard/server";
 import { documentModelDocumentModelModule, type ILogger } from "document-model";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -560,13 +561,16 @@ describe("cli-runner", () => {
     }, 60_000);
 
     it("finds or creates the drives the Cli asks for, through the client", async () => {
+      const signer = await testSigner();
       const first = await attachDefaultReactor(setup(), {
         url,
         drives: [{ name: "Inbox", role: "personal" }],
+        signer,
       });
       const again = await attachDefaultReactor(setup(), {
         url,
         drive: { name: "Inbox" },
+        signer,
       });
       expect(first.personalDriveId).toBeTruthy();
       expect(first.driveId).toBe(first.personalDriveId);
@@ -761,6 +765,7 @@ describe("cli-runner", () => {
         url,
         drive: { name: "Folders" },
         documentModels: [documentModelDocumentModelModule],
+        signer: await testSigner(),
       });
       const driveId = reactor.personalDriveId!;
       const folders = createFolderOperations(reactor.client, driveId);
