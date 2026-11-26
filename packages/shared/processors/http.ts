@@ -26,7 +26,24 @@ export interface RouteUser {
   label?: string;
   // What admitted the credential: this host's record, Renown, Renown's last
   // answer while it cannot be reached, or the credential's signature alone.
-  via?: "record" | "renown" | "last-answer" | "signature";
+  // `host-session`: the bearer is a token of a session the caller delegated
+  // to this host, which signs the caller's document writes with the session's
+  // key (`appKey`) and administers nothing for it.
+  via?: "record" | "renown" | "last-answer" | "signature" | "host-session";
+  // Set when `via` is `host-session`: which session, what it may do, and how
+  // it was granted. A package that keeps its own admin list on `address`
+  // checks `via` too: a host session administers nothing.
+  hostSession?: RouteHostSession;
+}
+
+/** The host session a request's token names (`RouteUser.hostSession`). */
+export interface RouteHostSession {
+  /** The session's id (32 hex); logs name its first 8. */
+  id: string;
+  /** What the session may do: `documents:write`. */
+  scope: string;
+  /** How it was granted: `device` (RFC 8628). */
+  grant: string;
 }
 
 // The resolution the scope performs before a handler runs. `RouteContext`

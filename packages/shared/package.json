@@ -131,6 +131,10 @@
       "source": "./clis/sessions.ts",
       "import": "./dist/clis/sessions.mjs"
     },
+    "./clis/host-sessions": {
+      "source": "./clis/host-sessions.ts",
+      "import": "./dist/clis/host-sessions.mjs"
+    },
     "./clis/local-sign-in": {
       "source": "./clis/local-sign-in.ts",
       "import": "./dist/clis/local-sign-in.mjs"

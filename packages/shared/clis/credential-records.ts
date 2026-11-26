@@ -27,8 +27,13 @@ export type CredentialLike = {
   proof: unknown;
 };
 
-/** Who wrote a record. */
-export type CredentialRecordSource = "cli" | "browser" | "enrolled" | "desktop";
+/** Who wrote a record; `host-session` is a host's own, for a session a caller delegated to it. */
+export type CredentialRecordSource =
+  | "cli"
+  | "browser"
+  | "enrolled"
+  | "desktop"
+  | "host-session";
 
 /** An address, on a chain, delegating to a session key. */
 export type CredentialBinding = {
