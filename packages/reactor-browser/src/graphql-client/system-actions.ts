@@ -1,6 +1,7 @@
 import type {
   Action,
   AddRelationshipActionInput,
+  DeleteDocumentActionInput,
   RemoveRelationshipActionInput,
 } from "@powerhousedao/shared/document-model";
 import { generateActionId } from "@powerhousedao/shared/document-model";
@@ -32,6 +33,18 @@ export function addRelationshipAction(
   return {
     id: generateActionId(),
     type: "ADD_RELATIONSHIP",
+    scope: "document",
+    timestampUtcMs: new Date().toISOString(),
+    input,
+  };
+}
+
+/** The DELETE_DOCUMENT of `documentId`, written to its own log. */
+export function deleteDocumentAction(documentId: string): Action {
+  const input: DeleteDocumentActionInput = { documentId };
+  return {
+    id: generateActionId(),
+    type: "DELETE_DOCUMENT",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
     input,

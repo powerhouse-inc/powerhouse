@@ -213,4 +213,41 @@ describe("ph mcp", () => {
     ]);
     await expectSignedByClient(filing);
   }, 120_000);
+
+  it("deletes a filed document by its own signed DELETE_DOCUMENT, which the switchboard completes", async () => {
+    const created = await call("createDocument", {
+      documentType: "powerhouse/document-model",
+      name: "Deleted Model",
+      driveId: "vetra",
+    });
+    const { documentId } = created.structuredContent as { documentId: string };
+    await call("deleteDocument", { documentId });
+
+    const drive = await switchboard!.reactor.get("vetra");
+    const driveOperations = await operationsOf(drive.header.id);
+    const unfiled = driveOperations.filter(
+      (op) =>
+        (op.action.type === "DELETE_NODE" &&
+          (op.action.input as { id?: string }).id === documentId) ||
+        (op.action.type === "REMOVE_RELATIONSHIP" &&
+          (op.action.input as { targetId?: string }).targetId === documentId),
+    );
+    expect(unfiled.map((op) => op.action.type).sort()).toEqual([
+      "DELETE_NODE",
+      "REMOVE_RELATIONSHIP",
+    ]);
+    // The tool unfiles the node itself; the link into the document is the
+    // switchboard's own work, under an id derived from the signed delete.
+    await expectSignedByClient(
+      unfiled.filter((op) => op.action.type === "DELETE_NODE"),
+    );
+    const removal = unfiled.find(
+      (op) => op.action.type === "REMOVE_RELATIONSHIP",
+    )!;
+    const switchboardKey = switchboard!.renown?.signer.app?.key;
+    expect(removal.action.context?.signer?.app.key).toBe(switchboardKey);
+    // Derived from the signed delete's id, not generated.
+    expect(removal.action.id).toMatch(/^[0-9a-f]{32}$/);
+    await expect(switchboard!.reactor.get(documentId)).rejects.toThrow();
+  }, 120_000);
 });

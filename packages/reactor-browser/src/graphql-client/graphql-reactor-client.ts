@@ -1,5 +1,8 @@
 import { getPHStore } from "../hooks/ph-store.js";
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  addFile,
+  driveDocumentModelModule,
+} from "@powerhousedao/shared/document-drive";
 import type {
   BatchExecutionRequest,
   BatchExecutionResult,
@@ -12,6 +15,7 @@ import type {
   ExecutionJobPlan,
   IDriveNodeSource,
   IDriveReadClient,
+  IDriveWriteClient,
   IReactorWriteClient,
   JobInfo,
   JobResultSummary,
@@ -106,6 +110,7 @@ import {
   BatchJobFailedError,
   GraphQLOperationNotSupportedError,
   GraphQLWrongBackendError,
+  queriesUnknownArgument,
   queriesUnknownField,
 } from "./errors.js";
 import {
@@ -120,6 +125,7 @@ import { prepareSignedActions, signStampedAction } from "./signing.js";
 import { resolveDocumentModelModule } from "./static-package-manager.js";
 import {
   addRelationshipAction,
+  deleteDocumentAction,
   removeRelationshipAction,
 } from "./system-actions.js";
 import {
@@ -268,6 +274,10 @@ const BUILT_IN_MODELS = [
   driveDocumentModelModule as unknown as DocumentModelModule,
 ];
 
+/** reactor-drive's document type and file relationship, as it names them. */
+const REACTOR_DRIVE_TYPE = "powerhouse/reactor-drive";
+const DRIVE_CHILD_TYPE = "drive/child";
+
 /** Paging defaults, matching the reactor's own client. */
 const defaultPaging: PagingOptions = { cursor: "0", limit: 100 };
 
@@ -308,7 +318,7 @@ export interface GraphQLReactorReadClient extends IReactorBrowserReadClient {
 /**
  * The write half of {@link GraphQLReactorClient}: the hooks' writes plus
  * `rename` and the relationship writes, each a client-signed action over
- * `executeAsync`.
+ * `executeAsync`, and filing a new document in a drive (`drives.addFile`).
  */
 export interface GraphQLReactorWriteClient
   extends
@@ -316,7 +326,9 @@ export interface GraphQLReactorWriteClient
     Pick<
       IReactorWriteClient,
       "rename" | "addRelationship" | "removeRelationship"
-    > {}
+    > {
+  readonly drives: Pick<IDriveWriteClient, "addFile">;
+}
 
 /**
  * A light implementation of {@link IReactorBrowserClient} that talks plain
@@ -436,6 +448,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         this.submitCreate(document, parentIdentifier, signal),
       deleteDocument: (identifier, propagate, signal) =>
         this.submitDeleteDocument(identifier, propagate, signal),
+      drives: {
+        addFile: (driveIdentifier, document, parentFolder, signal) =>
+          this.addFileToDrive(driveIdentifier, document, parentFolder, signal),
+      },
       rename: (documentIdentifier, name, branch = "main", signal) =>
         this.submitExecute(
           documentIdentifier,
@@ -895,10 +911,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    *
    * With a signer the creation is built and signed here, as the in-process
    * client builds it, and submitted through `executeBatch`; the Switchboard
-   * signs none of it. A create under a drive still runs the Switchboard's
-   * `createDocument`, which files the document in the drive and signs that
-   * itself, as do a create under a parent it does not find and a create
-   * without a signer.
+   * signs none of it. Under a drive it is filed there as the in-process
+   * client's `drives.addFile` files it (see {@link createInDrive}). A create
+   * under a parent the Switchboard does not find, and a create without a
+   * signer, run the Switchboard's `createDocument`, which signs itself.
    */
   async create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
@@ -910,13 +926,19 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       const parent =
         parentIdentifier === undefined
           ? undefined
-          : await this.parentOf(parentIdentifier, signal);
+          : await this.headOf(parentIdentifier, signal);
       // A parent the Switchboard does not hold is left to its
       // `createDocument`, which refuses it: a 421 for a drive served elsewhere.
-      if (
-        parentIdentifier === undefined ||
-        (parent && !isDriveType(parent.documentType))
-      ) {
+      if (parent && isDriveType(parent.documentType)) {
+        return this.createInDrive<TDocument>(
+          document,
+          parent,
+          undefined,
+          signer,
+          signal,
+        );
+      }
+      if (parentIdentifier === undefined || parent) {
         return this.createSigned<TDocument>(
           document,
           parentIdentifier,
@@ -953,9 +975,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
   /**
    * The signed creation of `document`: its CREATE_DOCUMENT and
-   * UPGRADE_DOCUMENT, then the parent's ADD_RELATIONSHIP, one batch, as the
-   * in-process client's `buildCreateJobs` makes it. The slug is checked as the
-   * Switchboard's `createDocument` checks it.
+   * UPGRADE_DOCUMENT and, under a parent, the parent's ADD_RELATIONSHIP (it
+   * lands in the parent's log, and is signed for it), in the one job the
+   * Switchboard takes for a create. The slug is checked as the Switchboard's
+   * `createDocument` checks it.
    */
   private async createSigned<TDocument extends PHDocument>(
     document: PHDocument,
@@ -972,28 +995,24 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       (options) => this.getCreateProtocolVersions(options, signal),
       parentIdentifier,
     );
-    const jobs: ExecutionJobPlan[] = [
-      {
-        key: "create",
-        documentId,
-        scope: "document",
-        branch,
-        actions: creationActions(document, protocolVersions),
-        dependsOn: [],
-      },
-    ];
-    if (parentId) {
-      jobs.push({
-        key: "parent",
-        documentId: parentId,
-        scope: "document",
-        branch: "main",
-        actions: [addRelationshipAction(parentId, documentId, "child")],
-        dependsOn: ["create"],
-      });
-    }
     const { jobs: settled } = await this.executeBatchAs(
-      { jobs },
+      {
+        jobs: [
+          {
+            key: "create",
+            documentId,
+            scope: "document",
+            branch,
+            actions: [
+              ...creationActions(document, protocolVersions),
+              ...(parentId
+                ? [addRelationshipAction(parentId, documentId, "child")]
+                : []),
+            ],
+            dependsOn: [],
+          },
+        ],
+      },
       signer,
       signal,
       // A new top-level drive is pinned to the backend its own id routes to.
@@ -1010,10 +1029,115 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   }
 
   /**
-   * The id and type of the document a create names as its parent, or
-   * `undefined` when the Switchboard does not find it.
+   * Files a new document in a drive, every action signed here, as the
+   * in-process client's `drives.addFile` files it. A document drive: the
+   * create with the drive's `child` relationship, then, once it landed, the
+   * drive's ADD_FILE, so the drive never names a file whose create failed. A
+   * reactor drive: the create with its `drive/child` relationship, which
+   * carries the parent folder. Every request names the drive's backend.
    */
-  private async parentOf(
+  private async createInDrive<TDocument extends PHDocument>(
+    document: PHDocument,
+    drive: { id: string; documentType: string },
+    parentFolder: string | undefined,
+    signer: ISigner | undefined,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const documentId = document.header.id;
+    const branch = document.header.branch || "main";
+    await this.assertSlugAvailable(document.header.slug, documentId, signal);
+    const protocolVersions = await createVersionsOf(
+      document,
+      (options) => this.getCreateProtocolVersions(options, signal),
+      drive.id,
+    );
+    const link =
+      drive.documentType === REACTOR_DRIVE_TYPE
+        ? addRelationshipAction(drive.id, documentId, DRIVE_CHILD_TYPE, {
+            kind: "file",
+            parentFolderId: parentFolder ?? null,
+            documentType: document.header.documentType,
+          })
+        : addRelationshipAction(drive.id, documentId, "child");
+    const { jobs: settled } = await this.executeBatchAs(
+      {
+        jobs: [
+          {
+            key: "create",
+            documentId,
+            scope: "document",
+            branch,
+            actions: [...creationActions(document, protocolVersions), link],
+            dependsOn: [],
+          },
+        ],
+      },
+      signer,
+      signal,
+      drive.id,
+    );
+    if (drive.documentType !== REACTOR_DRIVE_TYPE) {
+      const filed = await this.submitExecute(
+        drive.id,
+        "main",
+        [
+          addFile({
+            id: documentId,
+            name: document.header.name || documentId,
+            documentType: document.header.documentType,
+            ...(parentFolder ? { parentFolder } : {}),
+          }),
+        ],
+        signal,
+      );
+      await filed.readable;
+    }
+    return this.get<TDocument>(
+      documentId,
+      { branch },
+      signal,
+      settled.create?.consistencyToken,
+    );
+  }
+
+  /**
+   * Files `document`, which this creates, in the drive `driveIdentifier`
+   * names, under `parentFolder` when given, as {@link create} files one at a
+   * drive's root; its actions are signed as every other write of this client
+   * is. The handle's document is the new file. An identifier that names no
+   * drive the Switchboard holds is left to its `createDocument`, which refuses
+   * it.
+   */
+  async addFileToDrive(
+    driveIdentifier: string,
+    document: PHDocument,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    const drive = await this.headOf(driveIdentifier, signal);
+    if (!drive || !isDriveType(drive.documentType)) {
+      return this.submitCreate(document, driveIdentifier, signal);
+    }
+    const signer = await this.resolveSigner();
+    const created = await this.createInDrive(
+      document,
+      drive,
+      parentFolder,
+      signer,
+      signal,
+    );
+    return new GraphQLSettledWriteHandle(
+      created.header.id,
+      created.header.branch || "main",
+      this.handleReader(created.header.id),
+    );
+  }
+
+  /**
+   * The id and type of the document `identifier` names, read from its
+   * `document` scope, or `undefined` when the Switchboard does not find it.
+   */
+  private async headOf(
     identifier: string,
     signal: AbortSignal | undefined,
   ): Promise<{ id: string; documentType: string } | undefined> {
@@ -1749,27 +1873,69 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   /**
    * Deletes a document and announces it as a `Deleted` event.
    *
-   * Pass a document id. The server resolves a slug just as happily, but
-   * `deleteDocument` returns a boolean - there is no document left to read an
-   * id off - so the identifier is announced verbatim on `context.childId`. A
-   * subscriber keyed by id, `DocumentCache` included, therefore only reacts to
-   * a delete by id.
+   * With a signer the delete is this client's own: it signs the document's
+   * DELETE_DOCUMENT and sends it as `signedDelete`, and the Switchboard
+   * completes it as its own work (the relationships into the document, its
+   * drive's node and, with CASCADE, the orphaned descendants). A Switchboard
+   * from before `signedDelete` builds and signs the delete itself, as one does
+   * for a client without a signer.
+   *
+   * Pass a document id. A slug the signed path resolves first, and announces
+   * the id; otherwise `deleteDocument` returns a boolean - there is no
+   * document left to read an id off - so the identifier is announced verbatim
+   * on `context.childId`. A subscriber keyed by id, `DocumentCache` included,
+   * therefore only reacts to a delete by id.
    */
   async deleteDocument(
     identifier: string,
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
-    await this.sdk.DeleteDocument(
-      { idOrSlug: identifier, propagate: propagationModeInput(propagate) },
-      this.driveIdHeaders({ method: "deleteDocument", documentId: identifier }),
-      signal,
-    );
+    const signer = await this.resolveSigner();
+    const head = signer ? await this.headOf(identifier, signal) : undefined;
+    const documentId = head?.id ?? identifier;
+    const headers = this.driveIdHeaders({
+      method: "deleteDocument",
+      documentId,
+    });
+    let signedDelete: Action | undefined;
+    if (signer && head) {
+      const action = deleteDocumentAction(documentId);
+      signedDelete = await signStampedAction(
+        action,
+        signer,
+        actionSigningTarget(action, documentId, "main"),
+        signal,
+      );
+    }
+    try {
+      if (signedDelete) {
+        await this.sdk.DeleteDocumentSigned(
+          {
+            idOrSlug: documentId,
+            propagate: propagationModeInput(propagate),
+            signedDelete: toTransportAction(signedDelete),
+          },
+          headers,
+          signal,
+        );
+      }
+    } catch (error) {
+      if (!queriesUnknownArgument(error, "signedDelete")) throw error;
+      signedDelete = undefined;
+    }
+    if (!signedDelete) {
+      await this.sdk.DeleteDocument(
+        { idOrSlug: documentId, propagate: propagationModeInput(propagate) },
+        headers,
+        signal,
+      );
+    }
 
     this.emitChange({
       type: DOCUMENT_CHANGE_TYPE.Deleted,
       documents: [],
-      context: { childId: identifier },
+      context: { childId: documentId },
     });
   }
 

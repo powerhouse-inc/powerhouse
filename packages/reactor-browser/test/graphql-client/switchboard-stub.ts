@@ -170,6 +170,9 @@ export function switchboard(
         return data({
           mutateDocumentAsync: settledJob(variables.documentIdOrSlug as string),
         });
+      case "DeleteDocument":
+      case "DeleteDocumentSigned":
+        return data({ deleteDocument: true });
       case "ExecuteBatch":
         return data({
           executeBatch: {

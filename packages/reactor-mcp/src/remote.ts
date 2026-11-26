@@ -8,17 +8,14 @@
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type {
+  IDriveWriteClient,
   IReactorClient,
   IReactorWriteClient,
   PagingOptions,
-  WriteHandle,
 } from "@powerhousedao/reactor";
 import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
 import { ReactorGroupV1 } from "@powerhousedao/reactor-group";
-import {
-  addFile,
-  driveDocumentModelModule,
-} from "@powerhousedao/shared/document-drive";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
   PHDocument,
@@ -47,8 +44,11 @@ export type RemoteReactorClient = Pick<
 > & {
   readonly write: Pick<
     IReactorWriteClient,
-    "create" | "execute" | "deleteDocument" | "addRelationship"
-  >;
+    "create" | "execute" | "deleteDocument"
+  > & {
+    /** Files a new document in a drive of either kind, signing every action. */
+    readonly drives: Pick<IDriveWriteClient, "addFile">;
+  };
 };
 
 export interface RemoteToolClientOptions {
@@ -80,9 +80,10 @@ function documentVersionOf(document: PHDocument): number {
 
 /**
  * The tool client over `client`: reads pass through, models come from
- * `documentModels`, and a document filed in a drive is created, filed and
- * related in three signed writes, since the switchboard's own create under a
- * drive would sign them itself.
+ * `documentModels`, and every write is the client's, signed by it: a
+ * document filed in a drive is filed by the client's `drives.addFile`, and a
+ * delete is the client's signed DELETE_DOCUMENT, which the switchboard
+ * completes (a rolled-back create included).
  */
 export function remoteToolClient(
   client: RemoteReactorClient,
@@ -173,42 +174,11 @@ export function remoteToolClient(
       drives: {
         addFile: (driveId, document, parentFolder, signal) =>
           writing(() =>
-            fileInDrive(write, driveId, document, parentFolder, signal),
+            write.drives.addFile(driveId, document, parentFolder, signal),
           ),
       },
     },
   };
-}
-
-/** What a drive's `addFile` does, each write signed by the caller. */
-async function fileInDrive(
-  write: RemoteReactorClient["write"],
-  driveId: string,
-  document: PHDocument,
-  parentFolder: string | undefined,
-  signal?: AbortSignal,
-): Promise<WriteHandle> {
-  const id = document.header.id;
-  // The document first, so the drive never names a file whose create failed.
-  await (
-    await write.create(document, undefined, signal)
-  ).readable;
-  await (
-    await write.execute(
-      driveId,
-      "main",
-      [
-        addFile({
-          id,
-          name: document.header.name || id,
-          documentType: document.header.documentType,
-          ...(parentFolder ? { parentFolder } : {}),
-        }),
-      ],
-      signal,
-    )
-  ).readable;
-  return write.addRelationship(driveId, id, "child", undefined, "main", signal);
 }
 
 export interface CreateRemoteServerOptions extends RemoteToolClientOptions {

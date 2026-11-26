@@ -109,7 +109,7 @@ describe("a create with a signer", () => {
     });
   });
 
-  it("adds the parent's relationship, signed for the parent, after the create", async () => {
+  it("adds the parent's relationship, signed for the parent, in the one job the Switchboard takes for a create", async () => {
     const { url, received } = await serveStore({ "doc-new": MODEL_TYPE });
     const { signer, signAction } = testSigner();
     const client = new GraphQLReactorClient({ url, signer, realtime: false });
@@ -119,10 +119,10 @@ describe("a create with a signer", () => {
     const jobs = batchJobs(received);
     expect(jobs.map((job) => [job.key, job.documentIdOrSlug])).toEqual([
       ["create", "doc-new"],
-      ["parent", "doc-1"],
     ]);
-    expect(jobs[1]!.dependsOn).toEqual(["create"]);
-    expect(jobs[1]!.actions.map((action) => action.type)).toEqual([
+    expect(jobs[0]!.actions.map((action) => action.type)).toEqual([
+      "CREATE_DOCUMENT",
+      "UPGRADE_DOCUMENT",
       "ADD_RELATIONSHIP",
     ]);
     expect(signAction.mock.calls.at(-1)![1]).toEqual({
@@ -131,16 +131,94 @@ describe("a create with a signer", () => {
     });
   });
 
-  it("leaves a create under a drive to the Switchboard, which files it", async () => {
-    const { url, received } = await serveStore({});
+  it("files a create under a document drive itself: the create with the drive's link, then the drive's ADD_FILE", async () => {
+    const { url, received } = await serveStore({ "doc-new": MODEL_TYPE });
     const { signer, signAction } = testSigner();
     const client = new GraphQLReactorClient({ url, signer, realtime: false });
 
     await client.create(modelDocument("doc-new"), "drive-1");
 
-    expect(sent(received, "CreateDocument")).toHaveLength(1);
-    expect(sent(received, "ExecuteBatch")).toHaveLength(0);
-    expect(signAction).not.toHaveBeenCalled();
+    expect(sent(received, "CreateDocument")).toHaveLength(0);
+    const [job] = batchJobs(received);
+    expect(job!.documentIdOrSlug).toBe("doc-new");
+    expect(job!.actions.map((action) => action.type)).toEqual([
+      "CREATE_DOCUMENT",
+      "UPGRADE_DOCUMENT",
+      "ADD_RELATIONSHIP",
+    ]);
+    expect(sent(received, "ExecuteBatch")[0]!.headers["drive-id"]).toBe(
+      "drive-1",
+    );
+    const [filed] = sent(received, "MutateDocumentAsync");
+    const variables = filed!.body.variables as {
+      documentIdOrSlug: string;
+      actions: { type: string; input: Record<string, unknown> }[];
+    };
+    expect(variables.documentIdOrSlug).toBe("drive-1");
+    expect(variables.actions).toMatchObject([
+      {
+        type: "ADD_FILE",
+        input: { id: "doc-new", documentType: MODEL_TYPE },
+      },
+    ]);
+    // Every action is the client's: three for the document, one for the drive.
+    expect(signAction).toHaveBeenCalledTimes(4);
+    expect(signAction.mock.calls.at(-1)![1]).toEqual({
+      documentId: "drive-1",
+      branch: "main",
+    });
+  });
+
+  it("files a create under a reactor drive by its drive/child link, which names the file", async () => {
+    const { url, received } = await serveStore({
+      "doc-new": MODEL_TYPE,
+      "rdrive-1": "powerhouse/reactor-drive",
+    });
+    const { signer } = testSigner();
+    const client = new GraphQLReactorClient({ url, signer, realtime: false });
+
+    await client.create(modelDocument("doc-new"), "rdrive-1");
+
+    const [job] = batchJobs(received);
+    const link = job!.actions.at(-1) as unknown as {
+      type: string;
+      input: Record<string, unknown>;
+    };
+    expect(link).toMatchObject({
+      type: "ADD_RELATIONSHIP",
+      input: {
+        sourceId: "rdrive-1",
+        targetId: "doc-new",
+        relationshipType: "drive/child",
+        metadata: {
+          kind: "file",
+          parentFolderId: null,
+          documentType: MODEL_TYPE,
+        },
+      },
+    });
+    expect(sent(received, "MutateDocumentAsync")).toHaveLength(0);
+    expect(sent(received, "CreateDocument")).toHaveLength(0);
+  });
+
+  it("files a document under a drive's folder through drives.addFile", async () => {
+    const { url, received } = await serveStore({ "doc-new": MODEL_TYPE });
+    const { signer } = testSigner();
+    const client = new GraphQLReactorClient({ url, signer, realtime: false });
+
+    const handle = await client.write.drives.addFile(
+      "drive-1",
+      modelDocument("doc-new"),
+      "folder-1",
+    );
+
+    expect(handle.documentId).toBe("doc-new");
+    const variables = sent(received, "MutateDocumentAsync")[0]!.body
+      .variables as { actions: { input: Record<string, unknown> }[] };
+    expect(variables.actions[0]!.input).toMatchObject({
+      id: "doc-new",
+      parentFolder: "folder-1",
+    });
   });
 
   it("leaves a create under a parent the Switchboard does not find to its createDocument", async () => {
@@ -189,6 +267,82 @@ describe("a create with a signer", () => {
     expect(sent(received, "ExecuteBatch")[0]!.headers["drive-id"]).toBe(
       "drive-new",
     );
+  });
+});
+
+describe("a delete with a signer", () => {
+  it("signs the document's DELETE_DOCUMENT itself and sends it as signedDelete", async () => {
+    const { url, received } = await serveStore({});
+    const { signer, signAction } = testSigner();
+    const client = new GraphQLReactorClient({ url, signer, realtime: false });
+
+    await client.deleteDocument("doc-1");
+
+    expect(sent(received, "DeleteDocument")).toHaveLength(0);
+    const [request] = sent(received, "DeleteDocumentSigned");
+    const variables = request!.body.variables as {
+      idOrSlug: string;
+      signedDelete: {
+        type: string;
+        input: unknown;
+        context?: { signer?: { app?: { key: string } } };
+      };
+    };
+    expect(variables.idOrSlug).toBe("doc-1");
+    expect(variables.signedDelete).toMatchObject({
+      type: "DELETE_DOCUMENT",
+      input: { documentId: "doc-1" },
+      context: { signer: { app: { key: "did:key:caller" } } },
+    });
+    expect(signAction).toHaveBeenCalledOnce();
+    expect(signAction.mock.calls[0]![1]).toEqual({
+      documentId: "doc-1",
+      branch: "main",
+    });
+  });
+
+  it("lets a Switchboard from before signedDelete build the delete", async () => {
+    stub = await serve(
+      switchboard({ "doc-1": MODEL_TYPE }, (received) =>
+        received.body.operationName === "DeleteDocumentSigned"
+          ? {
+              status: 400,
+              body: JSON.stringify({
+                errors: [
+                  {
+                    message:
+                      'Unknown argument "signedDelete" on field "Mutation.deleteDocument".',
+                  },
+                ],
+              }),
+            }
+          : undefined,
+      ),
+    );
+    const { signer } = testSigner();
+    const client = new GraphQLReactorClient({
+      url: stub.url,
+      signer,
+      realtime: false,
+    });
+
+    await client.deleteDocument("doc-1");
+
+    expect(sent(stub.received, "DeleteDocument")).toHaveLength(1);
+  });
+
+  it("runs the Switchboard's own delete without a signer, as before", async () => {
+    const { url, received } = await serveStore({});
+    const client = new GraphQLReactorClient({
+      url,
+      signer: () => undefined,
+      realtime: false,
+    });
+
+    await client.deleteDocument("doc-1");
+
+    expect(sent(received, "DeleteDocument")).toHaveLength(1);
+    expect(sent(received, "DeleteDocumentSigned")).toHaveLength(0);
   });
 });
 

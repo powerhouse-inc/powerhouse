@@ -454,12 +454,14 @@ export type MutationDeleteDocumentArgs = {
   idOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   identifier?: InputMaybe<Scalars["String"]["input"]>;
   propagate?: InputMaybe<PropagationMode>;
+  signedDelete?: InputMaybe<ActionInput>;
 };
 
 export type MutationDeleteDocumentsArgs = {
   identifiers?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   idsOrSlugs?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   propagate?: InputMaybe<PropagationMode>;
+  signedDeletes?: InputMaybe<ReadonlyArray<ActionInput>>;
 };
 
 export type MutationExecuteArgs = {
@@ -1874,6 +1876,14 @@ export type DeleteDocumentMutationVariables = Exact<{
 
 export type DeleteDocumentMutation = { readonly deleteDocument: boolean };
 
+export type DeleteDocumentSignedMutationVariables = Exact<{
+  idOrSlug: Scalars["String"]["input"];
+  propagate?: InputMaybe<PropagationMode>;
+  signedDelete: ActionInput;
+}>;
+
+export type DeleteDocumentSignedMutation = { readonly deleteDocument: boolean };
+
 export type DeleteDocumentsMutationVariables = Exact<{
   idsOrSlugs: ReadonlyArray<Scalars["String"]["input"]>;
   propagate?: InputMaybe<PropagationMode>;
@@ -2628,6 +2638,19 @@ export const DeleteDocumentDocument = gql`
     deleteDocument(idOrSlug: $idOrSlug, propagate: $propagate)
   }
 `;
+export const DeleteDocumentSignedDocument = gql`
+  mutation DeleteDocumentSigned(
+    $idOrSlug: String!
+    $propagate: PropagationMode
+    $signedDelete: ActionInput!
+  ) {
+    deleteDocument(
+      idOrSlug: $idOrSlug
+      propagate: $propagate
+      signedDelete: $signedDelete
+    )
+  }
+`;
 export const DeleteDocumentsDocument = gql`
   mutation DeleteDocuments(
     $idsOrSlugs: [String!]!
@@ -3318,6 +3341,24 @@ export function getSdk(
             signal,
           }),
         "DeleteDocument",
+        "mutation",
+        variables,
+      );
+    },
+    DeleteDocumentSigned(
+      variables: DeleteDocumentSignedMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DeleteDocumentSignedMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeleteDocumentSignedMutation>({
+            document: DeleteDocumentSignedDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "DeleteDocumentSigned",
         "mutation",
         variables,
       );
