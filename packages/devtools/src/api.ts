@@ -9,6 +9,7 @@ export const DEVTOOLS_TOKEN_HEADER = "x-ph-devtools-token";
 export type {
   DevStackInfo,
   ProjectApp,
+  ProjectAuthoring,
   ProjectCheck,
   ProjectCheckId,
   ProjectDiagnostic,

@@ -22,6 +22,8 @@ import {
 } from "../../project/focus.js";
 import { MODULE_KINDS } from "../../project/kinds.js";
 import { ChecksTag } from "../../project/checks.js";
+import { legacyOf } from "../../project/legacy.js";
+import { LegacyNotice, LegacyTag } from "../../project/legacy-notice.js";
 import {
   EmptyKind,
   SectionError,
@@ -81,6 +83,7 @@ function Model({
   const { navigate } = useShell();
   const detail = useDocumentModelDetail(model.documentType);
 
+  const legacy = legacyOf({ kind: "document-model", module: model });
   const latest = model.versions.at(-1);
   const version =
     selection.version !== undefined &&
@@ -102,38 +105,42 @@ function Model({
       data-document-type={model.documentType}
       className="grid min-w-0 grid-cols-1 gap-x-6 @4xl/main:grid-cols-[minmax(0,1fr)_15rem]"
     >
-      <PageHeader
-        title={
-          models.length > 1 ? (
-            <ModelSwitcher
-              models={models}
-              selected={model}
-              onSelect={(documentType) => select({ documentType })}
-            />
-          ) : (
-            <span data-testid="ph-model-name" className="min-w-0 break-words">
-              {model.name}
-            </span>
-          )
-        }
-        description={
-          model.description && (
-            <span data-testid="ph-model-about">{model.description}</span>
-          )
-        }
-      >
-        {version !== undefined &&
-          (model.versions.length > 1 ? (
-            <VersionSwitcher
-              versions={model.versions}
-              selected={version}
-              onSelect={selectVersion}
-            />
-          ) : (
-            <Tag data-testid="ph-model-version">v{version}</Tag>
-          ))}
-        <ChecksTag checks={model.checks} />
-      </PageHeader>
+      <div className="min-w-0">
+        <PageHeader
+          title={
+            models.length > 1 ? (
+              <ModelSwitcher
+                models={models}
+                selected={model}
+                onSelect={(documentType) => select({ documentType })}
+              />
+            ) : (
+              <span data-testid="ph-model-name" className="min-w-0 break-words">
+                {model.name}
+              </span>
+            )
+          }
+          description={
+            model.description && (
+              <span data-testid="ph-model-about">{model.description}</span>
+            )
+          }
+        >
+          {version !== undefined &&
+            (model.versions.length > 1 ? (
+              <VersionSwitcher
+                versions={model.versions}
+                selected={version}
+                onSelect={selectVersion}
+              />
+            ) : (
+              <Tag data-testid="ph-model-version">v{version}</Tag>
+            ))}
+          <ChecksTag checks={model.checks} />
+          {legacy && <LegacyTag legacy={legacy} />}
+        </PageHeader>
+        {legacy && <LegacyNotice legacy={legacy} className="mt-3" />}
+      </div>
       <ModelMeta
         model={model}
         className="mt-3 @4xl/main:col-start-2 @4xl/main:row-span-2 @4xl/main:row-start-1 @4xl/main:mt-0"

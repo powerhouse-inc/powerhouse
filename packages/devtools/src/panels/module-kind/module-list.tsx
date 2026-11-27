@@ -14,6 +14,8 @@ import { checksTone, problemsOf, worstCheck } from "../../project/checks.js";
 import { Row, Rows } from "../../components/rows.js";
 import { Switcher } from "../../components/switcher.js";
 import { includesSearch } from "../../lib/search.js";
+import { legacyOf } from "../../project/legacy.js";
+import { LegacyTag } from "../../project/legacy-notice.js";
 import { subline, type PageModule } from "./page-module.js";
 
 function ProblemCount({
@@ -49,6 +51,7 @@ function ModuleRow({
 }) {
   const { checks } = entry.module;
   const second = subline(entry);
+  const legacy = legacyOf(entry);
   const row = useScrollIntoView<HTMLDivElement>(linked);
   return (
     <Row
@@ -75,7 +78,10 @@ function ModuleRow({
           </Mono>
         )}
       </span>
-      <ProblemCount checks={checks} className="mt-0.5" />
+      <span className="mt-0.5 flex items-center gap-1">
+        {legacy && <LegacyTag legacy={legacy} short />}
+        <ProblemCount checks={checks} />
+      </span>
     </Row>
   );
 }
@@ -217,6 +223,7 @@ export function ModuleSwitcher({
       className={className}
       renderItem={(entry) => {
         const second = subline(entry);
+        const legacy = legacyOf(entry);
         return (
           <>
             <span className="flex h-4 items-center">
@@ -233,6 +240,7 @@ export function ModuleSwitcher({
                 </Mono>
               )}
             </span>
+            {legacy && <LegacyTag legacy={legacy} short />}
             <ProblemCount checks={entry.module.checks} />
           </>
         );

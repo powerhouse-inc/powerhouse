@@ -121,7 +121,7 @@ function projectModel(model: {
       description: model.global.description,
       author: model.global.author.name,
       authorWebsite: model.global.author.website || null,
-      layout: stored ? "stored" : "code-first",
+      authoring: stored ? "legacy" : "current",
       source,
       folder,
       versions: [

@@ -292,8 +292,8 @@ describe("Build › Document models", () => {
     click(screen.getByTestId("ph-model-name"));
     const options = await screen.findAllByTestId("ph-model-option");
     expect(options.map((option) => option.textContent)).toEqual([
-      "Invoiceacme/invoice",
-      "Customeracme/customer",
+      "Invoiceacme/invoiceLegacy",
+      "Customeracme/customerLegacy",
     ]);
 
     click(options[1]);
@@ -600,5 +600,81 @@ describe("Build › Document models › schema view", () => {
     await open();
     expect(screen.queryByTestId("ph-schema-view")).toBeNull();
     expect(text("ph-state-schema")).toBe("No schema.");
+  });
+});
+
+describe("Build › Document models › a legacy document model", () => {
+  const notice = () => screen.getByTestId("ph-legacy-notice");
+  const way = (id: string) =>
+    screen
+      .getAllByTestId("ph-legacy-way")
+      .find((candidate) => candidate.dataset.way === id)!;
+  const clipboard = () => {
+    const writeText = vi.fn((_text: string) => Promise.resolve());
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    return writeText;
+  };
+
+  it("is marked beside its name, with the command that converts it", async () => {
+    await open();
+    expect(text("ph-legacy-tag")).toBe("Legacy document model");
+    expect(notice().textContent).toContain(
+      "Powerhouse 6.4 is planned to stop loading packages that have one.",
+    );
+    expect(within(notice()).getByTestId("ph-command").textContent).toContain(
+      "ph migrate --document-model invoice",
+    );
+    expect(text("ph-model-source")).toBe("invoice.json");
+  });
+
+  it("copies the command, with --dry-run to preview first", async () => {
+    const writeText = clipboard();
+    await open();
+
+    click(within(notice()).getByTestId("ph-copy"));
+    expect(writeText).toHaveBeenLastCalledWith(
+      "ph migrate --document-model invoice",
+    );
+
+    click(screen.getByTestId("ph-legacy-dry-run"));
+    click(within(notice()).getByTestId("ph-copy"));
+    expect(writeText).toHaveBeenLastCalledWith(
+      "ph migrate --document-model invoice --dry-run",
+    );
+  });
+
+  it("copies a prompt that has an agent run the command and check the result", async () => {
+    const writeText = clipboard();
+    await open();
+
+    click(way("agent"));
+    expect(screen.queryByTestId("ph-legacy-dry-run")).toBeNull();
+    expect(text("ph-legacy-prompt")).toContain(
+      "convert the legacy document model in document-models/invoice/ (document type acme/invoice)",
+    );
+
+    click(screen.getByTestId("ph-legacy-copy-prompt"));
+    const prompt = writeText.mock.lastCall?.[0];
+    expect(prompt).toContain("Run `ph migrate --document-model invoice`.");
+    expect(prompt).toContain("`document-models/invoice/compat/v<N>/`");
+  });
+
+  it("says nothing about legacy for a model that is not", async () => {
+    server.snapshot = snapshot({
+      documentModels: {
+        ok: true,
+        items: [
+          {
+            ...INVOICE,
+            authoring: "current",
+            source: "document-models/invoice/index.ts",
+          },
+        ],
+      },
+    });
+    await open();
+    expect(screen.queryByTestId("ph-legacy-tag")).toBeNull();
+    expect(screen.queryByTestId("ph-legacy-notice")).toBeNull();
+    expect(text("ph-model-source")).toBe("index.ts");
   });
 });

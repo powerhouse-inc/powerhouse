@@ -18,6 +18,8 @@ import {
   loadedRow,
   type CheckRow,
 } from "../../project/checks.js";
+import { legacyOf, type Legacy } from "../../project/legacy.js";
+import { LegacyNotice, LegacyTag } from "../../project/legacy-notice.js";
 import { FileLink } from "../../project/open-in-editor.js";
 import { useShell } from "../../shell/state.js";
 import { moduleFacts } from "./module-facts.js";
@@ -81,15 +83,18 @@ function Overview({
   entry,
   snapshot,
   checks,
+  legacy,
   onTab,
 }: {
   entry: PageModule;
   snapshot: ProjectSnapshot;
   checks: readonly CheckRow[];
+  legacy: Legacy | undefined;
   onTab: (tab: ModuleTab) => void;
 }) {
   return (
     <>
+      {legacy && <LegacyNotice legacy={legacy} className="mb-3" />}
       <CheckSummary rows={checks} onSeeAll={() => onTab("checks")} />
       <div data-testid="ph-module-facts" className="mt-4">
         <DescriptionList rows={moduleFacts(entry, snapshot)} />
@@ -175,6 +180,7 @@ export function ModuleDetail({
   const { files } = useModuleFiles(entry.module.folder);
   const { module } = entry;
   const checks = checkRows(module.checks);
+  const legacy = legacyOf(entry);
   if (loadedModules && (entry.kind === "editor" || entry.kind === "app")) {
     const loaded =
       entry.kind === "editor" ? loadedModules.editors : loadedModules.apps;
@@ -229,7 +235,9 @@ export function ModuleDetail({
       data-tab={shown}
       className="flex min-w-0 flex-1 flex-col pb-2 @3xl:min-h-0"
     >
-      <PageHeader title={title} actions={actions} className="pb-2.5" />
+      <PageHeader title={title} actions={actions} className="pb-2.5">
+        {legacy && <LegacyTag legacy={legacy} />}
+      </PageHeader>
       <Tabs
         label={`${entry.name}: what to show`}
         tabs={tabs}
@@ -242,6 +250,7 @@ export function ModuleDetail({
             entry={entry}
             snapshot={snapshot}
             checks={checks}
+            legacy={legacy}
             onTab={onTab}
           />
         )}

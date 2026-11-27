@@ -344,7 +344,7 @@ test("Drive Apps is empty until an app's code exists", async ({ page }) => {
   });
 });
 
-test("the pages have no field but the list's filter, and no control that creates, renames or deletes", async ({
+test("the pages have no field but the list's filter and a legacy notice's dry-run box, and no control that creates, renames or deletes", async ({
   page,
 }) => {
   const { panel } = devtools(page);
@@ -357,10 +357,11 @@ test("the pages have no field but the list's filter, and no control that creates
     await expect(
       panel.getByTestId("ph-model").or(panel.getByTestId("ph-module-detail")),
     ).toBeVisible({ timeout: SHOWN_TIMEOUT });
-    // The filter narrows the list, and "New" copies the command to run.
+    // The filter narrows the list, "New" copies the command to run, and the
+    // dry-run box of a legacy module's notice changes only the command shown.
     await expect(
       panel.locator(
-        'input:not([data-testid="ph-module-filter"]), textarea, select, [contenteditable]',
+        'input:not([data-testid="ph-module-filter"]):not([data-testid="ph-legacy-dry-run"] input), textarea, select, [contenteditable]',
       ),
     ).toHaveCount(0);
     await expect(

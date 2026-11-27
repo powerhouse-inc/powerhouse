@@ -42,6 +42,15 @@ function facts(model: ProjectDocumentModel): Fact[] {
         ]
       : []),
     {
+      label: "Source",
+      testId: "ph-model-source",
+      value: (
+        <Mono className="break-all">
+          {model.source.slice(model.folder.length + 1)}
+        </Mono>
+      ),
+    },
+    {
       label: "Folder",
       testId: "ph-model-folder",
       value: <Mono className="break-all">{model.folder}/</Mono>,

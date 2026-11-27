@@ -2,6 +2,7 @@ import { AppWindow, Cpu, FileCode2, SquarePen, Waypoints } from "lucide-react";
 import type { ProjectModuleKind } from "../api.js";
 import type { NavGroup, PanelDef, PanelProps } from "../shell/registry.js";
 import { MODULE_KINDS } from "../project/kinds.js";
+import { useLegacyMark } from "../project/legacy-notice.js";
 import { useModuleKindBadge } from "../project/provider.js";
 import { ModelsPage } from "./models/models-page.js";
 import { ModuleKindPage } from "./module-kind/module-kind-page.js";
@@ -27,6 +28,7 @@ const kindPanel = (
     group: BUILD_GROUP.id,
     tabs: [{ id: panel, title, component, fill: kind !== "document-model" }],
     useBadge: () => useModuleKindBadge(kind),
+    useMark: () => useLegacyMark(kind),
   };
 };
 
