@@ -1,6 +1,10 @@
 // Who a public route's limits are charged to, and the counters.
 import { describe, expect, it } from "vitest";
-import { clientAddress, perMinuteLimit } from "../../src/http/client-limits.js";
+import {
+  clientAddress,
+  limitKey,
+  perMinuteLimit,
+} from "../../src/http/client-limits.js";
 
 const request = (remoteAddress: string, forwardedFor?: string | string[]) => ({
   socket: { remoteAddress } as never,
@@ -50,7 +54,35 @@ describe("clientAddress", () => {
   });
 });
 
+describe("limitKey", () => {
+  it("counts an IPv6 client by its /64, and an IPv4 one by its address", () => {
+    for (const [address, key] of [
+      ["2001:db8:1:2:aaaa::1", "2001:db8:1:2::/64"],
+      ["2001:0db8:0001:0002:ffff:ffff:ffff:ffff", "2001:db8:1:2::/64"],
+      ["2001:db8::1", "2001:db8:0:0::/64"],
+      ["2001:db8:0:0:1::", "2001:db8:0:0::/64"],
+      ["::1", "0:0:0:0::/64"],
+      ["fe80::1%eth0", "fe80:0:0:0::/64"],
+      ["64:ff9b::198.51.100.7", "64:ff9b:0:0::/64"],
+      ["198.51.100.7", "198.51.100.7"],
+      ["unknown", "unknown"],
+    ] as const) {
+      expect(limitKey(address), address).toBe(key);
+    }
+  });
+});
+
 describe("perMinuteLimit", () => {
+  it("charges every address of an IPv6 /64 as one client", () => {
+    const limited = perMinuteLimit(2, () => 0);
+    expect([
+      limited("2001:db8:1:2::1"),
+      limited("2001:db8:1:2::2"),
+      limited("2001:db8:1:2:ffff::3"),
+    ]).toEqual([false, false, true]);
+    expect(limited("2001:db8:1:3::1")).toBe(false);
+  });
+
   it("counts per client and minute, and forgets ended windows only", () => {
     let at = 0;
     const limited = perMinuteLimit(2, () => at, 2);

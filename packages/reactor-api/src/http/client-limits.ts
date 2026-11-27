@@ -4,9 +4,11 @@ import { isIP } from "node:net";
 /**
  * Who a public route's limits are charged to, and the counters that charge
  * them. The client is the socket's address, unless the host says a proxy it
- * trusts is in front (`trustProxy`): then it is the right-most hop of
- * `X-Forwarded-For` that is no proxy of the deployment's own (loopback,
- * private or link-local), as entries left of it are the caller's to write.
+ * trusts is in front (`trustProxy`, which the host sets only with a
+ * configured PUBLIC_URL): then it is the right-most hop of `X-Forwarded-For`
+ * that is no proxy of the deployment's own (loopback, private or
+ * link-local), as entries left of it are the caller's to write. An IPv6
+ * client is counted by its /64 ({@link limitKey}).
  */
 
 /** `::ffff:1.2.3.4` as `1.2.3.4`; a port or brackets dropped; undefined for no address. */
@@ -69,14 +71,49 @@ export function clientAddress(
   return hops[0];
 }
 
+/** The first 64 bits of an IPv6 address, as four hextets without leading zeros. */
+function prefix64(address: string): string {
+  const bare = withoutZone(address);
+  const [head, tail] = bare.split("::", 2);
+  const groupsOf = (part: string | undefined) => (part ? part.split(":") : []);
+  const left = groupsOf(head);
+  const right = groupsOf(tail);
+  // A dotted IPv4 tail holds two hextets' worth.
+  const width = (parts: string[]) =>
+    parts.reduce((n, part) => n + (part.includes(".") ? 2 : 1), 0);
+  const zeros = tail === undefined ? 0 : 8 - width(left) - width(right);
+  return [...left, ...Array<string>(Math.max(0, zeros)).fill("0"), ...right]
+    .slice(0, 4)
+    .map((group) => parseInt(group, 16).toString(16))
+    .join(":");
+}
+
+/**
+ * What a client's limits are counted under: its address, or an IPv6
+ * address's /64. One subscriber or host holds a whole /64 and may write any
+ * of its addresses, so counting each would make every limit endless.
+ */
+export function limitKey(client: string): string {
+  return isIP(withoutZone(client)) === 6
+    ? `${prefix64(client.toLowerCase())}::/64`
+    : client;
+}
+
+/** `fe80::1%eth0` as `fe80::1`. */
+function withoutZone(address: string): string {
+  const at = address.indexOf("%");
+  return at === -1 ? address : address.slice(0, at);
+}
+
 /** How many clients a counter keeps at most: past it, a new client is refused. */
 const MAX_CLIENTS = 10_000;
 const WINDOW_MS = 60_000;
 
 /**
- * Counts per client and minute; the returned check is true once a client is
- * over `limit`. Ended windows are dropped as they go; a full table refuses a
- * client it holds no count for rather than forget the others' counts.
+ * Counts per client ({@link limitKey}) and minute; the returned check is
+ * true once a client is over `limit`. Ended windows are dropped as they go; a
+ * full table refuses a client it holds no count for rather than forget the
+ * others' counts.
  */
 export function perMinuteLimit(
   limit: number,
@@ -91,13 +128,14 @@ export function perMinuteLimit(
       if (at - held.start < WINDOW_MS) break;
       counts.delete(key);
     }
-    const held = counts.get(client);
+    const key = limitKey(client);
+    const held = counts.get(key);
     if (held) {
       held.count++;
       return held.count > limit;
     }
     if (counts.size >= maxClients) return true;
-    counts.set(client, { start: at, count: 1 });
+    counts.set(key, { start: at, count: 1 });
     return false;
   };
 }

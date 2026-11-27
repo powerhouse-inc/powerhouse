@@ -37,7 +37,11 @@ export interface CredentialRoutesOptions {
   hostDid: () => string | undefined;
   /** A record was withdrawn: close what holds it. */
   onWithdrawn: (binding: CredentialBinding) => void;
-  /** Whether a proxy the host trusts is in front: limits then go by `X-Forwarded-For`. */
+  /**
+   * Whether a proxy of the deployment's own is in front (the host sets it
+   * only with a configured PUBLIC_URL): limits then go by `X-Forwarded-For`
+   * from a peer inside the deployment.
+   */
   trustProxy?: boolean;
   now?: () => number;
 }

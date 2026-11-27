@@ -3,6 +3,10 @@
 // and consent, the code's token request with PKCE, and the refusals. A real
 // route service over Express, real files in a temp data folder, Renown out of
 // reach.
+import {
+  credentialRecordId,
+  readCredentialWithdrawal,
+} from "@powerhousedao/shared/clis/credential-records";
 import { readHostSession } from "@powerhousedao/shared/clis/host-sessions";
 import {
   buildAndSignCredential,
@@ -10,7 +14,13 @@ import {
   type CredentialVerifier,
 } from "@renown/sdk/node";
 import { createHash, randomBytes } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import type { Server } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -18,7 +28,16 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ExpressHttpAdapter } from "../src/graphql/gateway/adapter-http-express.js";
 import { HttpRouteService } from "../src/http/index.js";
-import { listDeviceGrants } from "../src/http/oauth-grants.js";
+import {
+  listOAuthClients,
+  newOAuthClient,
+  readOAuthClient,
+} from "../src/http/oauth-clients.js";
+import {
+  grantIdOf,
+  listDeviceGrants,
+  readDeviceGrant,
+} from "../src/http/oauth-grants.js";
 import { mountOAuthMetadata } from "../src/http/oauth-metadata.js";
 import {
   mountOAuthRoutes,
@@ -263,12 +282,22 @@ describe("registration", () => {
     });
   });
 
-  it("takes https, or http on loopback, and nothing else", async () => {
+  it("takes https, http on loopback, or an app's own scheme, and nothing else", async () => {
+    clock = Date.now();
     for (const uri of [
       "http://app.example/cb",
-      "cursor://callback",
+      "javascript:alert(1)",
+      "data:text/html,<p>x</p>",
+      "file:///etc/passwd",
+      "vbscript:msgbox",
+      "blob:https://app.example/1",
+      "about:blank",
+      "ws://127.0.0.1:3000/cb",
+      "wss://app.example/cb",
+      "ftp://app.example/cb",
       "https://app.example/cb#frag",
       "https://user:pass@app.example/cb",
+      "cursor://user:pass@callback",
       "not a url",
     ]) {
       const response = await register({ redirect_uris: [uri] });
@@ -276,15 +305,72 @@ describe("registration", () => {
       expect(((await response.json()) as { error: string }).error).toBe(
         "invalid_redirect_uri",
       );
+      // Under the ten registrations a minute one address may make.
+      clock += 7_000;
     }
     for (const uri of [
       "http://localhost:3000/cb",
       "http://[::1]:3000/cb",
       "https://app.example/cb",
+      // RFC 8252 7.1: an app's own scheme, an editor's, say.
+      "cursor://anysphere.cursor-mcp/oauth/callback",
+      "com.example.app:/oauth2redirect",
     ]) {
       expect((await register({ redirect_uris: [uri] })).status, uri).toBe(201);
+      clock += 7_000;
     }
     expect((await register({})).status).toBe(400);
+  });
+
+  it("drops a client no grant was approved for after an hour, and keeps one in use", async () => {
+    clock = Date.now();
+    const unused = await client("Unused");
+    const used = await client("Used");
+    const { code } = await consent(authorizeOf(used));
+    await approveAs(code);
+    clock += 61 * 60_000;
+    expect(readOAuthClient(dataDir, unused, now())).toBeUndefined();
+    expect(readOAuthClient(dataDir, used, now())).toMatchObject({
+      clientName: "Used",
+      approvedAt: expect.any(String) as unknown,
+    });
+    const refused = await open(authorizeOf(unused));
+    expect(refused.status).toBe(400);
+    expect(await refused.text()).toContain("not registered here");
+    expect((await open(authorizeOf(used))).status).toBe(200);
+  });
+
+  it("in a full table, makes room by dropping the oldest client nobody approved a grant for", async () => {
+    // 1,000 held (written as files: registering them would take an hour of
+    // rate limits). The oldest is in use; the next oldest is not.
+    const dir = join(dataDir, ".ph", "oauth", "clients");
+    mkdirSync(dir, { recursive: true });
+    const base = Date.now() - 30 * 60_000;
+    const filled = Array.from({ length: 1000 }, (_, i) => {
+      const held = newOAuthClient({
+        redirectUris: [REDIRECT],
+        registeredFrom: "203.0.113.9",
+        now: base + i,
+      });
+      const client =
+        i === 0
+          ? {
+              ...held,
+              approvedAt: new Date(base).toISOString(),
+              expiresAt: new Date(base + 30 * 86_400_000).toISOString(),
+            }
+          : held;
+      writeFileSync(
+        join(dir, `${client.clientId}.json`),
+        JSON.stringify(client),
+      );
+      return client;
+    });
+    const fresh = await client("Fresh");
+    expect(readOAuthClient(dataDir, fresh, now())).toBeDefined();
+    expect(existsSync(join(dir, `${filled[0]!.clientId}.json`))).toBe(true);
+    expect(existsSync(join(dir, `${filled[1]!.clientId}.json`))).toBe(false);
+    expect(listOAuthClients(dataDir, now())).toHaveLength(1000);
   });
 
   it("refuses a confidential client, and a client of another grant", async () => {
@@ -468,6 +554,111 @@ describe("authorize", () => {
     expect(listDeviceGrants(dataDir)).toEqual([]);
   });
 
+  it("takes a loopback redirect URI at any port, and only its own host and path", async () => {
+    const clientId = await client();
+    const { verifier: codeVerifier, challenge } = pkce();
+    const atPort = "http://127.0.0.1:50123/callback";
+    const {
+      code: userCode,
+      next,
+      headers,
+    } = await consent(
+      authorizeOf(clientId, {
+        redirect_uri: atPort,
+        code_challenge: challenge,
+      }),
+    );
+    expect(headers.get("content-security-policy")).toContain(
+      "http://127.0.0.1:50123;",
+    );
+    await approveAs(userCode);
+    const response = await open(next);
+    expect(response.status).toBe(302);
+    const location = new URL(response.headers.get("location")!);
+    expect(location.origin + location.pathname).toBe(atPort);
+    // The token request names the port the code went to.
+    const issued = await exchange({
+      grant_type: "authorization_code",
+      code: location.searchParams.get("code")!,
+      client_id: clientId,
+      redirect_uri: atPort,
+      code_verifier: codeVerifier,
+    });
+    expect(issued.status, await issued.clone().text()).toBe(200);
+    for (const other of [
+      "http://127.0.0.1:50123/other",
+      "http://localhost:50123/callback",
+      "http://127.0.0.1:50123/callback?x=1",
+    ]) {
+      const refused = await open(
+        authorizeOf(clientId, { redirect_uri: other }),
+      );
+      expect(refused.status, other).toBe(400);
+      expect(refused.headers.get("location")).toBeNull();
+    }
+  });
+
+  it("takes an https redirect URI at its own port only", async () => {
+    const registered = await register({
+      redirect_uris: ["https://app.example/cb"],
+    });
+    const clientId = ((await registered.json()) as { client_id: string })
+      .client_id;
+    const refused = await open(
+      authorizeOf(clientId, { redirect_uri: "https://app.example:8443/cb" }),
+    );
+    expect(refused.status).toBe(400);
+  });
+
+  it("shows an app's own scheme and its target in full, and lets its Deny reach it", async () => {
+    const target = "cursor://anysphere.cursor-mcp/oauth/callback";
+    const registered = await register({
+      client_name: "Cursor",
+      redirect_uris: [target],
+    });
+    const clientId = ((await registered.json()) as { client_id: string })
+      .client_id;
+    const { page, code, headers } = await consent(
+      authorizeOf(clientId, { redirect_uri: target, state: "c1" }),
+    );
+    expect(page).toContain(`<dd>${target}</dd>`);
+    expect(headers.get("content-security-policy")).toContain(
+      "form-action 'self' https://renown.test cursor:;",
+    );
+    const pending = (await (
+      await fetch(`${url}/oauth/device/pending?user_code=${code}`)
+    ).json()) as { returns_to: string };
+    expect(pending.returns_to).toBe(target);
+    // Not loopback: a refusal before the person acts is a page here.
+    const refused = await open(
+      authorizeOf(clientId, { redirect_uri: target, scope: "documents:read" }),
+    );
+    expect(refused.status).toBe(400);
+    expect(refused.headers.get("location")).toBeNull();
+  });
+
+  it("counts a plain GET toward its app's cap of waiting sign-ins before it makes a grant", async () => {
+    clock = Date.now();
+    const clientId = await client();
+    for (let i = 0; i < 10; i++) {
+      expect((await open(authorizeOf(clientId))).status).toBe(200);
+      // Under the ten sign-ins a minute one address may start.
+      clock += 7_000;
+    }
+    // The eleventh is turned back (its redirect URI is loopback) and makes none.
+    expect(await sentBack(authorizeOf(clientId, { state: "s" }))).toMatchObject(
+      {
+        error: "temporarily_unavailable",
+        state: "s",
+      },
+    );
+    expect(
+      listDeviceGrants(dataDir).filter(
+        (grant) => grant.code?.clientId === clientId,
+      ),
+    ).toHaveLength(10);
+  });
+
   it("is refused where a session could do nothing", async () => {
     remount({ sessionsUseless: () => "ADMIN_ONLY here." });
     const clientId = await client();
@@ -543,6 +734,7 @@ describe("the code", () => {
       [{ resource: "https://elsewhere.example/mcp" }, "invalid_target"],
     ] as const) {
       const { clientId, codeVerifier, code } = await approvedCode();
+      const grant = readDeviceGrant(dataDir, grantIdOf(code))!;
       const fields = {
         grant_type: "authorization_code",
         code,
@@ -563,6 +755,19 @@ describe("the code", () => {
         resource: undefined,
       });
       expect(after.status).toBe(400);
+      // And its session, approved but never issued a token, is withdrawn.
+      expect(readHostSession({ dataDir, id: grant.sessionId })).toBeUndefined();
+      expect(
+        readCredentialWithdrawal({
+          dataDir,
+          id: credentialRecordId({
+            address: PERSON.address,
+            chainId: 1,
+            sessionDid: grant.sessionDid,
+          }),
+        })?.by,
+        JSON.stringify(wrong),
+      ).toBe("host");
     }
   });
 

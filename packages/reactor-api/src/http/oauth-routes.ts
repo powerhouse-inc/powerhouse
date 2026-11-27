@@ -44,15 +44,18 @@ import {
   describeHostSession,
   shortAddress,
 } from "../services/host-session-scope.js";
-import { clientAddress, perMinuteLimit } from "./client-limits.js";
+import { clientAddress, limitKey, perMinuteLimit } from "./client-limits.js";
 import { BodyTooLargeError, readBody } from "./node-response.js";
 import {
   clientNameOf,
+  evictOldestUnusedClient,
   isLoopbackRedirectUri,
   listOAuthClients,
+  markOAuthClientApproved,
   MAX_REDIRECT_URIS,
   newOAuthClient,
   readOAuthClient,
+  redirectUriFor,
   redirectUriRefusal,
   writeOAuthClient,
   type OAuthClient,
@@ -140,22 +143,33 @@ export interface OAuthRoutesOptions {
    * administers nothing). A grant is then refused, saying so.
    */
   sessionsUseless?: () => string | undefined;
-  /** Whether a proxy the host trusts is in front: limits then go by `X-Forwarded-For`. */
+  /**
+   * Whether a proxy of the deployment's own is in front: limits then go by
+   * `X-Forwarded-For` from a peer inside the deployment. Taken only with a
+   * `publicOrigin`: a host without PUBLIC_URL charges every client as its
+   * socket (a dev host's Vite proxy forwards the header a client wrote).
+   */
   trustProxy?: boolean;
   logger?: ILogger;
   now?: () => number;
   /** @internal The credential check of an approval; tests slow it down. */
   checkCredential?: typeof checkCredentialFor;
+  /** @internal How often the sweep runs by itself; tests shorten it. */
+  sweepTimerMs?: number;
 }
 
 const MAX_BODY_BYTES = 16 * 1024;
 const STARTS_PER_MINUTE = 10;
 const MISSES_PER_MINUTE = 10;
 const MAX_PENDING_GRANTS = 1000;
+/** Pending grants per client address, and per registered client (an app). */
 const PENDING_PER_CLIENT = 20;
+const PENDING_PER_APP = 10;
 const SESSIONS_PER_ADDRESS = 50;
 /** Expired grants and unapproved sessions are swept at most this often. */
 const SWEEP_EVERY_MS = 30_000;
+/** The sweep also runs by itself this often, not only when a grant starts. */
+const SWEEP_TIMER_MS = 60_000;
 /** Renown console polls running at once, in all and per client. */
 const RENOWN_POLLS = 50;
 const RENOWN_POLLS_PER_CLIENT = 3;
@@ -292,8 +306,12 @@ export function mountOAuthRoutes(
   const startsLimited = perMinuteLimit(STARTS_PER_MINUTE, now);
   const missesLimited = perMinuteLimit(MISSES_PER_MINUTE, now);
   const registrationsLimited = perMinuteLimit(REGISTRATIONS_PER_MINUTE, now);
+  const forwardedForCounts =
+    options.trustProxy === true && options.publicOrigin !== undefined;
   const clientOf = (req: IncomingMessage) =>
-    clientAddress(req, options.trustProxy ?? false);
+    clientAddress(req, forwardedForCounts);
+  /** Whether two client addresses are counted as one (an IPv6 /64). */
+  const sameClient = (a: string, b: string) => limitKey(a) === limitKey(b);
   // When each grant was last polled, and its interval (slow_down raises it).
   const polls = new Map<string, { at: number; interval: number }>();
   // The Renown console polls running, per grant, and who started each.
@@ -322,11 +340,16 @@ export function mountOAuthRoutes(
 
   // ---------------------------------------------------------- the files
 
-  /** Grants and unapproved sessions past their time go; at most every 30 s. */
+  /**
+   * Grants, unapproved sessions and registrations past their time go; at
+   * most every 30 s, when a grant starts and by itself every minute.
+   */
   const sweep = () => {
     const at = now();
     if (at - sweptAt < SWEEP_EVERY_MS) return;
     sweptAt = at;
+    // Listing removes the registrations that expired.
+    listOAuthClients(dataDir, at);
     for (const grant of listDeviceGrants(dataDir)) {
       // Kept a while past its end, so a polling client hears `expired_token`.
       if (Date.parse(grant.expiresAt) + DEVICE_GRANT_TTL_MS <= at) {
@@ -559,6 +582,8 @@ export function mountOAuthRoutes(
       address: approved.address,
     });
     if (through !== "renown") stopRenownPoll(grant.id);
+    // An app a grant was approved for is in use: its registration stays.
+    if (grant.code) markOAuthClientApproved(dataDir, grant.code.clientId, at);
     logger.info(
       "@session: approved by its user for @days days (client @client)",
       describe(approved),
@@ -783,7 +808,9 @@ export function mountOAuthRoutes(
   /**
    * Starts a grant, either kind: the session's key (its file, approved by
    * nobody) and the pending grant, within the host's and the client's caps
-   * of pending grants. One path for the device grant and the code grant.
+   * of pending grants, and a registered app's: a plain `GET authorize` from
+   * anyone's browser counts toward its app's cap before it makes a grant.
+   * One path for the device grant and the code grant.
    */
   const startGrant = (o: {
     client: string;
@@ -809,12 +836,23 @@ export function mountOAuthRoutes(
       };
     }
     if (
-      waiting.filter((grant) => grant.requestedFrom === o.client).length >=
-      PENDING_PER_CLIENT
+      waiting.filter((grant) => sameClient(grant.requestedFrom, o.client))
+        .length >= PENDING_PER_CLIENT
     ) {
       return {
         ok: false,
         description: `This address holds ${PENDING_PER_CLIENT} pending grants: approve, deny or let them expire first.`,
+      };
+    }
+    const app = o.code?.clientId;
+    if (
+      app !== undefined &&
+      waiting.filter((grant) => grant.code?.clientId === app).length >=
+        PENDING_PER_APP
+    ) {
+      return {
+        ok: false,
+        description: `This app has ${PENDING_PER_APP} sign-ins waiting here: finish one, or let them expire first.`,
       };
     }
     const taken = new Set(waiting.map((grant) => grant.userCode));
@@ -1222,7 +1260,7 @@ export function mountOAuthRoutes(
     const others = [...renownPolls].filter(([id]) => id !== grant.id);
     if (
       others.length >= RENOWN_POLLS ||
-      others.filter(([, poll]) => poll.client === client).length >=
+      others.filter(([, poll]) => sameClient(poll.client, client)).length >=
         RENOWN_POLLS_PER_CLIENT
     ) {
       oauthError(
@@ -1382,11 +1420,12 @@ export function mountOAuthRoutes(
       );
       return;
     }
-    const asked = query.get("redirect_uri");
-    const redirectUri =
-      asked ??
-      (client.redirectUris.length === 1 ? client.redirectUris[0] : undefined);
-    if (!redirectUri || !client.redirectUris.includes(redirectUri)) {
+    // Exactly as registered, or a loopback one at any port (RFC 8252 7.3).
+    const redirectUri = redirectUriFor(
+      client.redirectUris,
+      query.get("redirect_uri"),
+    );
+    if (!redirectUri) {
       authorizePage(
         res,
         400,
@@ -1575,7 +1614,11 @@ export function mountOAuthRoutes(
     redirectCode(res, taken.code, issuer, { code });
   };
 
-  /** Dynamic client registration (RFC 7591): public clients, loopback or https redirects. */
+  /**
+   * Dynamic client registration (RFC 7591): public clients; https, loopback
+   * http or an app's own scheme for redirects. A client no grant is
+   * approved for is dropped after an hour.
+   */
   const register = async (req: IncomingMessage, res: ServerResponse) => {
     const issuer = issuerFor(req, res);
     if (!issuer) return;
@@ -1636,9 +1679,8 @@ export function mountOAuthRoutes(
     const at = now();
     const clients = listOAuthClients(dataDir, at);
     if (
-      clients.length >= MAX_CLIENTS ||
-      clients.filter((client) => client.registeredFrom === from).length >=
-        CLIENTS_PER_ADDRESS
+      clients.filter((client) => sameClient(client.registeredFrom, from))
+        .length >= CLIENTS_PER_ADDRESS
     ) {
       oauthError(
         res,
@@ -1647,6 +1689,23 @@ export function mountOAuthRoutes(
         429,
       );
       return;
+    }
+    // A full table makes room: the oldest app nobody approved a grant for goes.
+    if (clients.length >= MAX_CLIENTS) {
+      const evicted = evictOldestUnusedClient(dataDir, clients);
+      if (!evicted) {
+        oauthError(
+          res,
+          "temporarily_unavailable",
+          "This host keeps no more registrations: try again later.",
+          429,
+        );
+        return;
+      }
+      logger.info(
+        "OAuth client @client, never approved, dropped for a new registration",
+        evicted.clientId,
+      );
     }
     const name = clientNameOf(metadata.client_name);
     const client: OAuthClient = newOAuthClient({
@@ -1700,6 +1759,17 @@ export function mountOAuthRoutes(
     }
     return user;
   };
+
+  // Ended grants go without waiting for the next one to start: an
+  // approved grant nobody collected withdraws its session in time.
+  const sweepTimer = setInterval(() => {
+    try {
+      sweep();
+    } catch (error) {
+      logger.warn("OAuth sweep failed: @error", String(error));
+    }
+  }, options.sweepTimerMs ?? SWEEP_TIMER_MS);
+  sweepTimer.unref();
 
   const handles = [
     scope.nodeRoute({
@@ -1810,6 +1880,7 @@ export function mountOAuthRoutes(
 
   return {
     dispose() {
+      clearInterval(sweepTimer);
       for (const handle of handles) handle.dispose();
       for (const poll of renownPolls.values()) poll.abort.abort();
       renownPolls.clear();

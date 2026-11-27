@@ -18,7 +18,9 @@ import path from "node:path";
 
 const FORMAT = "ph-oauth-client";
 
-/** How long a registration holds; a client registers again after. */
+/** How long a registration holds that no grant was ever approved for. */
+export const UNUSED_CLIENT_TTL_MS = 60 * 60_000;
+/** How long a registration holds after a grant of it was last approved; a client registers again after. */
 export const OAUTH_CLIENT_TTL_MS = 30 * 24 * 60 * 60_000;
 /** Redirect URIs one client may register. */
 export const MAX_REDIRECT_URIS = 10;
@@ -27,6 +29,22 @@ const MAX_NAME_LENGTH = 100;
 
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
+/**
+ * Schemes no redirect URI takes: the browser runs, reads or serves them
+ * itself, or they carry no answer back to an app.
+ */
+const REFUSED_SCHEMES = new Set([
+  "javascript:",
+  "data:",
+  "file:",
+  "vbscript:",
+  "blob:",
+  "about:",
+  "ws:",
+  "wss:",
+  "ftp:",
+]);
+
 export type OAuthClient = {
   format: typeof FORMAT;
   version: 1;
@@ -34,11 +52,13 @@ export type OAuthClient = {
   clientId: string;
   /** As the client named itself, shown on the consent page. */
   clientName?: string;
-  /** The redirect URIs a code may go to, matched exactly. */
+  /** The redirect URIs a code may go to: exactly, a loopback one at any port. */
   redirectUris: string[];
   /** Who registered it: the requesting address. */
   registeredFrom: string;
   registeredAt: string;
+  /** When a grant of it was last approved; never, for an unused client. */
+  approvedAt?: string;
   expiresAt: string;
 };
 
@@ -56,8 +76,10 @@ function clientFile(dataDir: string, id: string): string {
 
 /**
  * Why `uri` cannot be a redirect URI here; undefined when it can: https on
- * any host, or http on loopback (a native app's listener, RFC 8252 7.3), no
- * fragment and no user info.
+ * any host, http on loopback (a native app's listener, RFC 8252 7.3), or an
+ * app's own scheme (RFC 8252 7.1, an editor's, say) but none of
+ * {@link REFUSED_SCHEMES}; no fragment and no user info. The consent page
+ * shows an app's own scheme and its target in full.
  */
 export function redirectUriRefusal(uri: unknown): string | undefined {
   if (typeof uri !== "string" || uri === "" || uri.length > MAX_URI_LENGTH) {
@@ -76,8 +98,44 @@ export function redirectUriRefusal(uri: unknown): string | undefined {
     return `${uri} carries user info`;
   }
   if (url.protocol === "https:") return undefined;
-  if (url.protocol === "http:" && LOOPBACK.has(url.hostname)) return undefined;
-  return `${uri} is neither https nor http on loopback (localhost, 127.0.0.1, [::1])`;
+  if (url.protocol === "http:") {
+    return LOOPBACK.has(url.hostname)
+      ? undefined
+      : `${uri} is plain http off loopback (localhost, 127.0.0.1, [::1])`;
+  }
+  if (REFUSED_SCHEMES.has(url.protocol)) {
+    return `${uri}: a ${url.protocol} URI takes no redirect`;
+  }
+  return undefined;
+}
+
+/**
+ * The redirect URI a request names, when its client registered it: exactly,
+ * or for a loopback one at any port (RFC 8252 7.3: a native app's listener
+ * takes the port it is given). Without one asked, the client's only one.
+ */
+export function redirectUriFor(
+  registered: readonly string[],
+  asked: string | null,
+): string | undefined {
+  if (asked === null) {
+    return registered.length === 1 ? registered[0] : undefined;
+  }
+  if (registered.includes(asked)) return asked;
+  if (!isLoopbackRedirectUri(asked) || redirectUriRefusal(asked)) {
+    return undefined;
+  }
+  const url = new URL(asked);
+  const held = registered.some((uri) => {
+    if (!isLoopbackRedirectUri(uri)) return false;
+    const own = new URL(uri);
+    return (
+      own.hostname === url.hostname &&
+      own.pathname === url.pathname &&
+      own.search === url.search
+    );
+  });
+  return held ? asked : undefined;
 }
 
 /**
@@ -116,8 +174,47 @@ export function newOAuthClient(o: {
     redirectUris: o.redirectUris,
     registeredFrom: o.registeredFrom,
     registeredAt: new Date(o.now).toISOString(),
-    expiresAt: new Date(o.now + OAUTH_CLIENT_TTL_MS).toISOString(),
+    // Unused until a grant of it is approved: then kept 30 days.
+    expiresAt: new Date(o.now + UNUSED_CLIENT_TTL_MS).toISOString(),
   };
+}
+
+/** A grant of client `id` was approved: it is kept 30 days from now. */
+export function markOAuthClientApproved(
+  dataDir: string,
+  id: string,
+  now: number,
+): void {
+  if (!isOAuthClientId(id)) return;
+  const client = readClientFile(dataDir, id);
+  if (!client) return;
+  writeOAuthClient(dataDir, {
+    ...client,
+    approvedAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + OAUTH_CLIENT_TTL_MS).toISOString(),
+  });
+}
+
+/**
+ * Makes room in a full table: removes the oldest client no grant was
+ * approved for, and returns it; undefined when every client is in use.
+ */
+export function evictOldestUnusedClient(
+  dataDir: string,
+  clients: readonly OAuthClient[],
+): OAuthClient | undefined {
+  let oldest: OAuthClient | undefined;
+  for (const client of clients) {
+    if (client.approvedAt) continue;
+    if (
+      !oldest ||
+      Date.parse(client.registeredAt) < Date.parse(oldest.registeredAt)
+    ) {
+      oldest = client;
+    }
+  }
+  if (oldest) fs.rmSync(clientFile(dataDir, oldest.clientId), { force: true });
+  return oldest;
 }
 
 function isClient(value: unknown): value is OAuthClient {

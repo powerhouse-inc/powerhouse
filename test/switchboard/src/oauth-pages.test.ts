@@ -11,8 +11,9 @@ import { SWITCHBOARD_COMMAND } from "./switchboard-bin.js";
 // The OAuth consent pages in a real browser (F3e part 2, the review of job B):
 // headless Chromium opens a real switchboard's pages and presses their own
 // buttons, as a person does. Renown is a stub on loopback, and so is the MCP
-// client's redirect listener. A temporary data folder and identity home:
-// never the person's.
+// client's redirect listener. Then, without the browser, how the public
+// routes charge a client on this computer. A temporary data folder and
+// identity home: never the person's.
 
 const PORT = 4026;
 const ORIGIN = `http://localhost:${PORT}`;
@@ -243,4 +244,27 @@ describe("the code grant's consent page in a browser", () => {
       iss: ORIGIN,
     });
   }, 60_000);
+});
+
+describe("limits on a host without PUBLIC_URL", () => {
+  it("charge a client on this computer as its socket, whatever X-Forwarded-For says", async () => {
+    // A peer on loopback is inside the deployment; were its header read, a
+    // fresh one per request would escape every limit (a dev host's Vite
+    // proxy forwards the one its client wrote).
+    const statuses: number[] = [];
+    for (let i = 1; i <= 31; i++) {
+      const response = await fetch(`${ORIGIN}/credentials/enrol`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-forwarded-for": `198.51.100.${i}`,
+        },
+        body: "{}",
+      });
+      statuses.push(response.status);
+    }
+    // 30 enrolments a minute: each refused for its empty body, then the limit.
+    expect(statuses.slice(0, 30).every((s) => s === 400)).toBe(true);
+    expect(statuses[30]).toBe(429);
+  });
 });

@@ -169,11 +169,16 @@ src/http/oauth-pages.ts      the consent page (plain HTML, no script)
 
 MCP clients sign in with the authorization code grant (RFC 6749 4.1) on the
 same grant object and consent. `register` (RFC 7591) keeps public clients
-only (`none` at the token endpoint), with https or loopback http redirect
-URIs, 10 registrations a minute and 20 held per address, 1,000 in all, each
-for 30 days. `authorize` is rate limited before any work (the device
-starts' limit), then takes a registered client and redirect URI (else it
-answers with a page and sends nothing), PKCE S256 only, `documents:write`,
+only (`none` at the token endpoint), with https, loopback http or an app's
+own scheme (RFC 8252 7.1; not `javascript`, `data`, `file`, `vbscript`,
+`blob`, `about`, `ws`, `wss`, `ftp`, the page shows it in full) for
+redirect URIs; 10 registrations a minute and 20 held per address, 1,000 in
+all. A client no grant was approved for is dropped after an hour, one in use
+30 days after its last approval; a full table drops its oldest unused client
+for a new one. `authorize` is rate limited before any work (the device
+starts' limit), then takes a registered client and redirect URI, a loopback
+one at any port (RFC 8252 7.3; else it answers with a page and sends
+nothing), PKCE S256 only, `documents:write`,
 and a `resource` on this host (else `invalid_target`). Its other refusals
 come before the person acts: they go back to the client at once (with
 `state` and `iss`, RFC 9207) only for a loopback redirect URI, and are
@@ -181,7 +186,8 @@ otherwise a page on this host naming the error, so open registration makes
 no open redirect (RFC 9700 4.11.2). After the person acts (Approve, Deny)
 the browser goes back to any registered URI. It starts the grant as
 `device_authorization` does (the same limits and caps, `grant: "code"`, the
-label the client's name) and shows the consent page, which names where the
+label the client's name; at most 10 waiting per app, counted before a plain
+GET makes one) and shows the consent page, which names where the
 browser returns and checks back every 5 s (`authorize/continue`, no
 script); the person approves it as any grant (`ph token approve`, or Renown
 in a tab of its own). The continue link carries a key made at `authorize`
@@ -238,11 +244,17 @@ issuer.
 
 Limits are charged per client (`src/http/client-limits.ts`): the socket's
 address, or with `trustProxy` the right-most `X-Forwarded-For` hop that is no
-loopback, private or link-local address. Counters drop ended windows; a full
-table refuses a client it holds no count for. Per client: 10 device starts
-and 10 unknown codes a minute, 20 pending grants, 3 Renown polls; in all,
-1,000 pending grants and 50 Renown polls. The sweep of ended grants runs at
-most every 30 s.
+loopback, private or link-local address, read only from a peer that is one.
+The host sets `trustProxy` on the credential and OAuth routes only with a
+configured `PUBLIC_URL` (a deployment with its own proxy in front); without
+it every client is charged as its socket (on a dev host, all behind Connect's
+Vite proxy share its loopback address). An IPv6 client is counted by its
+/64. Counters drop ended windows; a full table refuses a client it holds no
+count for. Per client: 10 device starts and 10 unknown codes a minute, 20
+pending grants, 3 Renown polls; in all, 1,000 pending grants and 50 Renown
+polls. The sweep of ended grants, unapproved sessions and expired
+registrations runs at most every 30 s, when a grant starts and by itself
+every minute.
 
 The consent page's buttons (`device/deny`, `device/renown`) are taken only
 from the host's own pages: an Origin naming the issuer's origin, and

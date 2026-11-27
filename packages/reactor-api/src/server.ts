@@ -1308,6 +1308,15 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       path.posix.join("/", settings.basePath, WEBHOOK_SEGMENT),
     ),
   );
+  // The configured public URL, if any: a deployment with a proxy of its own
+  // in front. Only then do the public routes' limits read X-Forwarded-For
+  // (from a peer inside the deployment); without it a client on the LAN, on
+  // Tailscale or behind Connect's Vite proxy (which forwards the header a
+  // client wrote) is charged as its socket.
+  const configured = options.server?.publicUrl
+    ? withScheme(options.server.publicUrl)
+    : undefined;
+  const limitsTrustProxy = configured !== undefined;
   // Enrolment by a signed request, for a caller with no file access here.
   if (credentialVerifier) {
     mountCredentialRoutes(
@@ -1324,16 +1333,13 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
             binding.chainId,
             binding.sessionDid,
           ),
-        trustProxy,
+        trustProxy: limitsTrustProxy,
       },
     );
   }
   // The OAuth routes that issue host session tokens, and their discovery.
   let mcpOAuth: McpRequestAuthorizerOptions["oauth"];
   if (hostSessions) {
-    const configured = options.server?.publicUrl
-      ? withScheme(options.server.publicUrl)
-      : undefined;
     // `/mcp` challenges a caller to sign in where a session could act.
     if (policy !== AuthorizationPolicy.ADMIN_ONLY) {
       mcpOAuth = {
@@ -1369,7 +1375,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
         ...(policy === AuthorizationPolicy.ADMIN_ONLY
           ? { sessionsUseless: () => HOST_SESSIONS_USELESS_UNDER_ADMIN_ONLY }
           : {}),
-        trustProxy,
+        trustProxy: limitsTrustProxy,
         logger: logger.child(["oauth"]),
       },
     );

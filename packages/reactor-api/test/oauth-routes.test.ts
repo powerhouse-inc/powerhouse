@@ -799,6 +799,24 @@ describe("limits", () => {
     ).toHaveLength(10);
   });
 
+  it("behind a trusted proxy, counts an IPv6 client by its /64", async () => {
+    remount({ publicOrigin: url, trustProxy: true });
+    const start = (forwardedFor: string) =>
+      form(
+        "/oauth/device_authorization",
+        { client_id: "c" },
+        { "x-forwarded-for": forwardedFor },
+      );
+    const statuses: number[] = [];
+    for (let i = 1; i <= 11; i++) {
+      statuses.push((await start(`2001:db8:1:2::${i.toString(16)}`)).status);
+    }
+    expect(statuses.slice(0, 10).every((s) => s === 200)).toBe(true);
+    expect(statuses[10]).toBe(429);
+    // Another /64 is another client.
+    expect((await start("2001:db8:1:3::1")).status).toBe(200);
+  });
+
   it("holds at most 20 pending grants per address", async () => {
     remount({ publicOrigin: url });
     clock = Date.now();
@@ -835,6 +853,24 @@ describe("a session nobody collected", () => {
         }),
       })?.by,
     ).toBe("host");
+    expect(withdrawn).toEqual([pending.sessionDid]);
+  });
+
+  it("is withdrawn by the sweep running by itself, with no request coming", async () => {
+    remount({ sweepTimerMs: 25 });
+    const started = await start();
+    expect((await approve(started)).status).toBe(200);
+    const pending = listDeviceGrants(dataDir)[0]!;
+    clock = Date.now() + 25 * 60_000;
+    await vi.waitFor(
+      () => {
+        expect(
+          readHostSession({ dataDir, id: pending.sessionId }),
+        ).toBeUndefined();
+      },
+      { timeout: 5_000, interval: 25 },
+    );
+    expect(listDeviceGrants(dataDir)).toEqual([]);
     expect(withdrawn).toEqual([pending.sessionDid]);
   });
 
