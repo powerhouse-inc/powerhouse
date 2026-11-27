@@ -29,7 +29,9 @@ import type { PowerhouseVerifiableCredential } from "./types.js";
  * withdrawn at once); then Renown (registered: valid until withdrawn there);
  * else refused. With Renown unreachable a known credential keeps its last
  * answer, and an unseen one is accepted on its signature unless
- * `refuseUnseenOffline`. A credential past its date is refused on every path.
+ * `refuseUnseenOffline`; Renown is asked again for that credential after a
+ * minute, not at every check. A credential past its date is refused on every
+ * path.
  */
 
 /** What a bearer claims: an address, on a chain, delegating to a session key. */
@@ -110,8 +112,9 @@ export interface CredentialVerifier {
 
 const DEFAULT_ANSWER_TTL_MS = 60_000;
 /**
- * How long "Renown cannot be reached" holds for a credential Renown signed:
- * an outage costs a request the timeout once a minute, not every time.
+ * How long "Renown cannot be reached" holds for a credential, with a record
+ * here or without one: an outage costs a request the timeout once a minute
+ * per credential, not every time.
  */
 const UNREACHABLE_TTL_MS = 60_000;
 /**
@@ -454,6 +457,19 @@ export function createCredentialVerifier(
     expiresAt: credential.expirationDate ?? "",
   });
 
+  // At most MAX_ANSWERS entries; the oldest goes first.
+  const keepBounded = <V>(map: Map<string, V>, key: string, value: V) => {
+    map.delete(key);
+    if (map.size >= MAX_ANSWERS) {
+      const oldest = map.keys().next().value;
+      if (oldest !== undefined) map.delete(oldest);
+    }
+    map.set(key, value);
+  };
+
+  const remember = (key: string, answer: Answer) =>
+    keepBounded(answers, key, answer);
+
   const lastAnswer = async (
     key: string,
     claim: CredentialClaim,
@@ -469,14 +485,9 @@ export function createCredentialVerifier(
     return accepted("last-answer", credential);
   };
 
-  const remember = (key: string, answer: Answer) => {
-    answers.delete(key);
-    if (answers.size >= MAX_ANSWERS) {
-      const oldest = answers.keys().next().value;
-      if (oldest !== undefined) answers.delete(oldest);
-    }
-    answers.set(key, answer);
-  };
+  // Since when Renown could not be reached for a credential with no record:
+  // apart from `answers`, so an outage keeps the last answer it had.
+  const unreachable = new Map<string, number>();
 
   const fromRenown = async (
     claim: CredentialClaim,
@@ -495,8 +506,17 @@ export function createCredentialVerifier(
     ) {
       return accepted("renown", answer.credential);
     }
-    const check = await ask(key, claim);
+    const missedAt = unreachable.get(key);
+    const stillUnreachable =
+      !inProcess &&
+      missedAt !== undefined &&
+      now() - missedAt < UNREACHABLE_TTL_MS;
+    const check: DelegationCredentialCheck = stillUnreachable
+      ? { status: "unknown" }
+      : await ask(key, claim);
     const at = now();
+    if (check.status !== "unknown") unreachable.delete(key);
+    else if (!stillUnreachable) keepBounded(unreachable, key, at);
     const refuse = (reason: CredentialRefusal): CredentialVerdict => {
       remember(key, { status: "refused", reason, at });
       return { ok: false, reason };
@@ -541,14 +561,7 @@ export function createCredentialVerifier(
   };
   const words = new Map<string, Word>();
 
-  const keepWord = (key: string, word: Word) => {
-    words.delete(key);
-    if (words.size >= MAX_ANSWERS) {
-      const oldest = words.keys().next().value;
-      if (oldest !== undefined) words.delete(oldest);
-    }
-    words.set(key, word);
-  };
+  const keepWord = (key: string, word: Word) => keepBounded(words, key, word);
 
   // Renown signed this credential, so it held it: asked with the credential's
   // date, a credential Renown no longer serves reads as withdrawn (over REST
@@ -630,17 +643,24 @@ export function createCredentialVerifier(
 
     forget(address, chainId, sessionDid) {
       const lower = address.toLowerCase();
-      let dropped = 0;
-      for (const key of answers.keys()) {
+      const matches = (key: string) => {
         const [a, c, d] = key.split("|");
-        if (
+        return (
           a === lower &&
           (chainId === undefined || c === String(chainId)) &&
           (sessionDid === undefined || d === sessionDid)
-        ) {
+        );
+      };
+      let dropped = 0;
+      for (const key of answers.keys()) {
+        if (matches(key)) {
           answers.delete(key);
           dropped++;
         }
+      }
+      // Asked again at the next check, outage or not.
+      for (const key of unreachable.keys()) {
+        if (matches(key)) unreachable.delete(key);
       }
       return dropped;
     },

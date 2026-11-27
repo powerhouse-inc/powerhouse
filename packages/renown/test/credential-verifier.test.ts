@@ -355,6 +355,53 @@ describe("createCredentialVerifier: Renown", () => {
     expect(Date.now() - started).toBeLessThan(2_000);
   });
 
+  it("asks an unreachable Renown once a minute for a credential with no record", async () => {
+    const credential = await issue();
+    fetchSpy.mockImplementation(
+      (_url, init) =>
+        new Promise<Response>((_resolve, reject) =>
+          init?.signal?.addEventListener("abort", () =>
+            reject(new Error("aborted")),
+          ),
+        ),
+    );
+    let clock = Date.now();
+    const v = verifier({ timeoutMs: 200, now: () => clock });
+    for (let i = 0; i < 3; i++) {
+      const started = Date.now();
+      expect(await v.check(claim(), credential)).toMatchObject({
+        ok: true,
+        via: "signature",
+      });
+      // Only the first check waits Renown's timeout.
+      if (i > 0) expect(Date.now() - started).toBeLessThan(150);
+    }
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    // A minute on, Renown is back and asked again.
+    clock += 61_000;
+    fetchSpy.mockImplementation(reply(404, { error: "not found" }));
+    expect(await v.check(claim(), credential)).toEqual({
+      ok: false,
+      reason: "not-registered",
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks again at once after forget, outage or not", async () => {
+    const credential = await issue();
+    const v = verifier();
+    expect((await v.check(claim(), credential)).ok).toBe(true);
+    expect((await v.check(claim(), credential)).ok).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    v.forget(person.address);
+    fetchSpy.mockImplementation(reply(200, { credential }));
+    expect(await v.check(claim(), credential)).toMatchObject({
+      ok: true,
+      via: "renown",
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps Renown's last answer while it cannot be reached, across a restart", async () => {
     const credential = await issue();
     fetchSpy.mockImplementation(reply(200, { credential }));

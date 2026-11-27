@@ -31,7 +31,9 @@ const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 /**
  * Schemes no redirect URI takes: the browser runs, reads or serves them
- * itself, or they carry no answer back to an app.
+ * itself, they carry no answer back to an app, or they hand the code to
+ * whatever the device opens for them (a mail, a call, a message, an
+ * Android intent).
  */
 const REFUSED_SCHEMES = new Set([
   "javascript:",
@@ -43,6 +45,10 @@ const REFUSED_SCHEMES = new Set([
   "ws:",
   "wss:",
   "ftp:",
+  "mailto:",
+  "tel:",
+  "sms:",
+  "intent:",
 ]);
 
 export type OAuthClient = {

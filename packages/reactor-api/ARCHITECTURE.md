@@ -173,7 +173,8 @@ MCP clients sign in with the authorization code grant (RFC 6749 4.1) on the
 same grant object and consent. `register` (RFC 7591) keeps public clients
 only (`none` at the token endpoint), with https, loopback http or an app's
 own scheme (RFC 8252 7.1; not `javascript`, `data`, `file`, `vbscript`,
-`blob`, `about`, `ws`, `wss`, `ftp`, the page shows it in full) for
+`blob`, `about`, `ws`, `wss`, `ftp`, `mailto`, `tel`, `sms`, `intent`, the
+page shows it in full) for
 redirect URIs; 10 registrations a minute and 20 held per address, 1,000 in
 all. A client no grant was approved for is dropped after an hour, one in use
 30 days after its last approval; a full table drops its oldest unused client
