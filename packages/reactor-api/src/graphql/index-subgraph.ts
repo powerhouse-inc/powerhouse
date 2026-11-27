@@ -5,6 +5,7 @@ import {
   type FieldDefinitionNode,
   type TypeNode,
 } from "graphql";
+import { INDEX_SUBGRAPH } from "../packages/legacy-authoring.js";
 import {
   applyReadableFilter,
   type ApplyReadableFilterOptions,
@@ -178,6 +179,7 @@ export function defineIndexSubgraph<QB>(
 ): new (args: ConstructorParameters<typeof BaseSubgraph>[0]) => BaseSubgraph {
   assertIndexAccessComplete(definition);
   return class IndexSubgraph extends BaseSubgraph {
+    static readonly [INDEX_SUBGRAPH] = true;
     override name = definition.name;
     override typeDefs = definition.typeDefs;
     override resolvers: Record<string, Record<string, unknown>> =

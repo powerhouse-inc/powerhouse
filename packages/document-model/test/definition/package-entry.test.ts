@@ -37,6 +37,7 @@ describe("the package entry", () => {
       "defineDocumentModelFamily",
       "hostScalars",
       "inspectDocumentModelDefinition",
+      "isLegacyDocumentModelModule",
       "materialize",
       "operationsByActionType",
       "ph",

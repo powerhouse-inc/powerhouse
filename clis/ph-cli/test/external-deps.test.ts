@@ -1,12 +1,14 @@
 // External dependency detection on real @vercel/nft traces of tiny installed
 // packages; a binary only has to exist for nft to follow a require to it.
 
+import { constants } from "node:buffer";
 import {
   mkdirSync,
   mkdtempSync,
   realpathSync,
   rmSync,
   symlinkSync,
+  truncateSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -20,6 +22,8 @@ const modules = () => join(root, "node_modules");
 const entryOf = (name: string) => join(modules(), name, "index.js");
 // nft reports real paths; macOS's tmpdir sits behind the /var symlink.
 const realModules = () => join(realpathSync(root), "node_modules");
+const workspaceEntry = () =>
+  join(realpathSync(root), "packages", "asks-for-a-program", "index.js");
 
 function write(file: string, content: string | Buffer) {
   mkdirSync(dirname(file), { recursive: true });
@@ -164,6 +168,18 @@ beforeAll(() => {
     join(modules(), "linked-native"),
     linkType,
   );
+
+  // A workspace package asks whether a program of the machine is installed,
+  // as @powerhousedao/pieces-framework asks for /usr/bin/chromium. nft follows
+  // such a path only from code outside node_modules. The program is one byte
+  // longer than a string can hold.
+  const program = join(realpathSync(root), "bin", "chromium");
+  write(program, "");
+  truncateSync(program, constants.MAX_STRING_LENGTH + 1);
+  write(
+    workspaceEntry(),
+    `const fs = require("fs");\nmodule.exports = () => fs.existsSync(${JSON.stringify(program)});\n`,
+  );
 });
 
 afterAll(() => {
@@ -251,6 +267,12 @@ describe("findRequiredFile with nft", () => {
 
   it("finds nothing in pure JavaScript", async () => {
     expect(await findRequiredFile(entryOf("pure-js"), traceFiles)).toBe(
+      undefined,
+    );
+  });
+
+  it("does not read a program a workspace package only asks about", async () => {
+    expect(await findRequiredFile(workspaceEntry(), traceFiles)).toBe(
       undefined,
     );
   });

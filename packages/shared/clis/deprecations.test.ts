@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { migrateArgs } from "./args/migrate.js";
 import {
   checkDeprecatedFlags,
   connectChromeConfigKeys,
@@ -6,6 +7,7 @@ import {
   deprecationWarned,
   DEPRECATIONS_WARNED_ENV,
   findDeprecatedFlags,
+  legacyAuthoringText,
   markDeprecationWarned,
   MIGRATION_GUIDE_URL,
   presentConfigKeys,
@@ -35,6 +37,22 @@ describe("deprecations: one warning per id and invocation", () => {
     warnDeprecations([first], {}, (text) => warnings.push(text));
     expect(warnings).toEqual([
       `Warning: A goes in 6.4. See ${MIGRATION_GUIDE_URL}`,
+    ]);
+  });
+
+  it("ends with the deprecation's own link, or with none for null", () => {
+    const warnings: string[] = [];
+    warnDeprecations(
+      [
+        { id: "c", text: "C goes in 6.4.", link: "https://example.com/c" },
+        { id: "d", text: "D goes in 6.4.", link: null },
+      ],
+      {},
+      (text) => warnings.push(text),
+    );
+    expect(warnings).toEqual([
+      "Warning: C goes in 6.4. See https://example.com/c",
+      "Warning: D goes in 6.4.",
     ]);
   });
 
@@ -135,6 +153,87 @@ describe("deprecated flags: FEATURE_PLUGIN_HOST_ENABLED in 6.3", () => {
       },
     ]);
     expect(findDeprecatedFlags({ FEATURE_GOING: "" }, [any])).toEqual([]);
+  });
+});
+
+describe("legacy authoring: the text of the development warning", () => {
+  it("names the legacy document models and the legacy subgraphs", () => {
+    expect(
+      legacyAuthoringText({
+        documentModels: ["acme/todo"],
+        subgraphs: ["SearchSubgraph"],
+      }),
+    ).toBe(
+      "This project has legacy document models (acme/todo) and legacy subgraphs (SearchSubgraph). " +
+        "6.4 removes support for them. " +
+        "Run `ph migrate --document-models --subgraphs` to convert them, " +
+        "or write document models with defineDocumentModel (`ph generate document-model --name <name>`) " +
+        "and subgraphs with the Subgraph class (`ph generate subgraph --name <name>`).",
+    );
+  });
+
+  it("covers a project with legacy document models only", () => {
+    expect(
+      legacyAuthoringText({
+        documentModels: ["acme/todo", "acme/invoice"],
+        subgraphs: [],
+      }),
+    ).toBe(
+      "This project has legacy document models (acme/todo, acme/invoice). " +
+        "6.4 removes support for them. " +
+        "Run `ph migrate --document-models` to convert them, " +
+        "or write document models with defineDocumentModel (`ph generate document-model --name <name>`).",
+    );
+  });
+
+  it("covers a project with legacy subgraphs only", () => {
+    expect(
+      legacyAuthoringText({
+        documentModels: [],
+        subgraphs: ["SearchSubgraph"],
+      }),
+    ).toBe(
+      "This project has legacy subgraphs (SearchSubgraph). " +
+        "6.4 removes support for them. " +
+        "Run `ph migrate --subgraphs` to convert them, " +
+        "or write subgraphs with the Subgraph class (`ph generate subgraph --name <name>`).",
+    );
+  });
+
+  it("names flags that ph migrate has", () => {
+    const text = legacyAuthoringText({
+      documentModels: ["acme/todo"],
+      subgraphs: ["SearchSubgraph"],
+    });
+    const flags = [migrateArgs.documentModels, migrateArgs.subgraphs].map(
+      (arg) => arg.helpTopics()[0]?.usage,
+    );
+    expect(flags).toEqual(["--document-models", "--subgraphs"]);
+    expect(text).toContain(`\`ph migrate ${flags.join(" ")}\``);
+  });
+
+  it("is undefined for a project with neither", () => {
+    expect(
+      legacyAuthoringText({ documentModels: [], subgraphs: [] }),
+    ).toBeUndefined();
+  });
+
+  it("lists a name once, and five names of a longer list", () => {
+    const text = legacyAuthoringText({
+      documentModels: ["a", "a", "b", "c", "d", "e", "f", "g"],
+      subgraphs: ["A", "B", "C", "D", "E"],
+    });
+    expect(text).toContain("legacy document models (a, b, c, d, e and 2 more)");
+    expect(text).toContain("legacy subgraphs (A, B, C, D, E).");
+  });
+
+  it("says legacy only of a document model or a subgraph, and names no other form", () => {
+    const text = legacyAuthoringText({
+      documentModels: ["acme/todo"],
+      subgraphs: ["SearchSubgraph"],
+    });
+    expect(text).not.toMatch(/legacy(?! (document models|subgraphs) \()/);
+    expect(text).not.toMatch(/code-first|schema-first/i);
   });
 });
 

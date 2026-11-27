@@ -1,9 +1,9 @@
 /**
  * Things that still work in this release and stop working in the next one:
- * the classic commands, their flags, and the configuration the host files
- * replace. Each one warns once per invocation, on stderr, and changes nothing
- * else. Retired environment variables (no effect any more) are in
- * `retired-flags.ts`.
+ * the classic commands, their flags, the configuration the host files
+ * replace, and legacy document models and legacy subgraphs. Each one warns
+ * once per invocation, on stderr, and changes nothing else. Retired
+ * environment variables (no effect any more) are in `retired-flags.ts`.
  */
 
 import { FALSE_VALUES } from "./retired-flags.js";
@@ -11,7 +11,7 @@ import { FALSE_VALUES } from "./retired-flags.js";
 /** The first release without the deprecated behaviour. */
 export const DEPRECATIONS_REMOVED_IN = "6.4";
 
-/** The migration page every deprecation warning links to. */
+/** The migration page a deprecation warning links to unless it sets its own `link`. */
 export const MIGRATION_GUIDE_URL =
   "https://academy.vetra.io/academy/Reference/HostsAndRunners/MigratingToHosts";
 
@@ -26,6 +26,8 @@ export interface Deprecation {
   id: string;
   /** What is deprecated, what replaces it and when it goes, as sentences. */
   text: string;
+  /** The page the warning ends with: `MIGRATION_GUIDE_URL` when unset, none when `null`. */
+  link?: string | null;
 }
 
 type Env = Record<string, string | undefined>;
@@ -49,9 +51,12 @@ export function markDeprecationWarned(
   env[DEPRECATIONS_WARNED_ENV] = [...ids, id].join(",");
 }
 
-/** The line a deprecation prints: its text and the migration link. */
-export function formatDeprecation(text: string): string {
-  return `Warning: ${text} See ${MIGRATION_GUIDE_URL}`;
+/** The line a deprecation prints: its text and its link, when it has one. */
+export function formatDeprecation(
+  text: string,
+  link: string | null = MIGRATION_GUIDE_URL,
+): string {
+  return link === null ? `Warning: ${text}` : `Warning: ${text} See ${link}`;
 }
 
 /**
@@ -66,11 +71,58 @@ export function warnDeprecations(
   const printed: Deprecation[] = [];
   for (const deprecation of deprecations) {
     if (deprecationWarned(deprecation.id, env)) continue;
-    warn(formatDeprecation(deprecation.text));
+    warn(formatDeprecation(deprecation.text, deprecation.link));
     markDeprecationWarned(deprecation.id, env);
     printed.push(deprecation);
   }
   return printed;
+}
+
+const LISTED_LEGACY_NAMES = 5;
+
+function listLegacyNames(names: readonly string[]): string {
+  const unique = [...new Set(names)];
+  const listed = unique.slice(0, LISTED_LEGACY_NAMES).join(", ");
+  const more = unique.length - LISTED_LEGACY_NAMES;
+  return more > 0 ? `${listed} and ${more} more` : listed;
+}
+
+/**
+ * The text of the warning a project run in development gets for its legacy
+ * document models and legacy subgraphs, given by name: the same for the
+ * host's terminal and the browser console. Undefined when the project has
+ * neither.
+ */
+export function legacyAuthoringText(legacy: {
+  documentModels: readonly string[];
+  subgraphs: readonly string[];
+}): string | undefined {
+  const found: string[] = [];
+  const migrateFlags: string[] = [];
+  const replacements: string[] = [];
+  if (legacy.documentModels.length > 0) {
+    found.push(
+      `legacy document models (${listLegacyNames(legacy.documentModels)})`,
+    );
+    migrateFlags.push("--document-models");
+    replacements.push(
+      "document models with defineDocumentModel (`ph generate document-model --name <name>`)",
+    );
+  }
+  if (legacy.subgraphs.length > 0) {
+    found.push(`legacy subgraphs (${listLegacyNames(legacy.subgraphs)})`);
+    migrateFlags.push("--subgraphs");
+    replacements.push(
+      "subgraphs with the Subgraph class (`ph generate subgraph --name <name>`)",
+    );
+  }
+  if (found.length === 0) return undefined;
+  return (
+    `This project has ${found.join(" and ")}. ` +
+    `${DEPRECATIONS_REMOVED_IN} removes support for them. ` +
+    `Run \`ph migrate ${migrateFlags.join(" ")}\` to convert them, ` +
+    `or write ${replacements.join(" and ")}.`
+  );
 }
 
 export interface DeprecatedFlag {

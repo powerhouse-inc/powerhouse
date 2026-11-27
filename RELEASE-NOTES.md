@@ -1,5 +1,23 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — a project run in development warns about its legacy document models and legacy subgraphs
+
+### ⚠️ One warning in development, in the terminal and in the browser console
+
+A host that runs your project in development (`ph vetra`, `ph run vetra`, `ph switchboard --dev`, `ph run switchboard dev`) logs one warning when the project has legacy document models or legacy subgraphs, and names them:
+
+```
+Warning: This project has legacy document models (powerhouse/todo) and legacy subgraphs (SearchSubgraph). 6.4 removes support for them. Run `ph migrate --document-models --subgraphs` to convert them, or write document models with defineDocumentModel (`ph generate document-model --name <name>`) and subgraphs with the Subgraph class (`ph generate subgraph --name <name>`).
+```
+
+Connect's development server prints the same warning once per page load in the browser console, for the project's legacy document models.
+
+Nothing else changes in 6.3: legacy document models and legacy subgraphs load and run as before. A production host, a production build of Connect, an installed package and the CLI commands print no such warning, and neither does a subgraph made with `defineIndexSubgraph`. A host built on `@powerhousedao/reactor-api` turns the warning on with the new `devProject` option.
+
+✅ **What to do:** write new document models and subgraphs with `ph generate document-model --name <name>` and `ph generate subgraph --name <name>`. Before you move to 6.4, convert the ones the warning names with `ph migrate --document-models` and `ph migrate --subgraphs` (add `--dry-run` to see the changes first), or rewrite them.
+
+---
+
 ## 🚀 **Unreleased** — the authoring API is no longer experimental
 
 ### ✨ `defineDocumentModel` and the `Subgraph` class lose the `@experimental` tag

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   inspectDocumentModelDefinition,
+  isLegacyDocumentModelModule,
   operationsByActionType,
 } from "../../../src/definition/index.js";
 import { TaskFamily } from "../fixtures/family-model.js";
@@ -277,5 +278,30 @@ describe("operationsByActionType", () => {
     ["an invalid definition", { ...codeFirstParity, definition: [] }],
   ])("is empty for %s, served from its stored model", (_, module) => {
     expect(operationsByActionType(module).size).toBe(0);
+  });
+});
+
+describe("isLegacyDocumentModelModule", () => {
+  it("is true for a module that carries no definition", () => {
+    expect(isLegacyDocumentModelModule(schemaFirstParity)).toBe(true);
+  });
+
+  it.each([
+    ["a module with its definition", codeFirstParity],
+    [
+      "a definition that cannot be served",
+      { ...codeFirstParity, definition: [] },
+    ],
+    [
+      "a definition that cannot be read",
+      {
+        ...schemaFirstParity,
+        get definition(): unknown {
+          throw new Error("unreadable");
+        },
+      },
+    ],
+  ])("is false for %s", (_, module) => {
+    expect(isLegacyDocumentModelModule(module)).toBe(false);
   });
 });

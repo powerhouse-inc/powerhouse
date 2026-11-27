@@ -100,9 +100,9 @@ Do this in the third-position release that starts the deprecation.
 8. Add a test for the warning: its text, and that it prints once.
 
 For the CLI, the deprecations of the current release live in
-`packages/shared/clis/deprecations.ts`. Every warning from that file ends with
-the link in `MIGRATION_GUIDE_URL`. `DEPRECATIONS_REMOVED_IN` names the release
-that removes them.
+`packages/shared/clis/deprecations.ts`. A warning from that file ends with the
+link in `MIGRATION_GUIDE_URL`, unless its deprecation sets another `link`, or
+`null` for none. `DEPRECATIONS_REMOVED_IN` names the release that removes them.
 
 ## Removing
 
