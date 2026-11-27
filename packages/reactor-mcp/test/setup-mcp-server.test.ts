@@ -594,4 +594,109 @@ describe("setupMcpServer", () => {
       }
     });
   });
+
+  // A host that issues tokens (OAuth) challenges a caller to sign in.
+  describe("challenges", () => {
+    const challenge = {
+      "WWW-Authenticate":
+        'Bearer resource_metadata="http://host/.well-known/oauth-protected-resource/mcp", scope="documents:write"',
+    };
+    const call = (name: string, id = 7) => ({
+      jsonrpc: "2.0",
+      id,
+      method: "tools/call",
+      params: { name, arguments: {} },
+    });
+
+    async function post(
+      authorizeRequest: McpRequestAuthorizer,
+      body: unknown,
+      signsWrites?: () => boolean,
+    ) {
+      const { Transport, handleRequest } = makeTransportMock();
+      const { adapter, routes } = makeMockAdapter();
+      await setupMcpServer(
+        {
+          client: mockClient,
+          authorizeRequest,
+          ...(signsWrites ? { signsWrites } : {}),
+        },
+        adapter,
+        Transport,
+      );
+      const { res, written } = makeMockResponse();
+      await routes
+        .find((r) => r.method === "POST")!
+        .handler({} as IncomingMessage, res, body);
+      return { written, handleRequest };
+    }
+
+    it("sends a refusal's WWW-Authenticate", async () => {
+      const { written } = await post(
+        () =>
+          Promise.resolve({
+            authorized: false,
+            status: 401,
+            message: "Authentication failed",
+            headers: challenge,
+          }),
+        call("getDrives"),
+      );
+      expect(written.status).toBe(401);
+      expect(written.headers).toMatchObject(challenge);
+    });
+
+    it("answers a document write nothing here would sign with the grant's challenge, before any tool runs", async () => {
+      const grant: McpRequestAuthorizer = () =>
+        Promise.resolve({
+          authorized: true,
+          subject: {},
+          writeChallenge: { status: 401, headers: challenge },
+        });
+      for (const tool of [
+        "createDocument",
+        "addActions",
+        "deleteDocument",
+        "addDrive",
+        "deleteDrive",
+      ]) {
+        const { written, handleRequest } = await post(grant, call(tool, 9));
+        expect(written.status, tool).toBe(401);
+        expect(written.headers).toMatchObject(challenge);
+        const body = JSON.parse(written.body) as {
+          id: number;
+          error: { message: string };
+        };
+        expect(body.id).toBe(9);
+        expect(body.error.message).toContain("UNSIGNED_WRITE");
+        expect(body.error.message).toContain(`\`${tool}\``);
+        expect(body.error.message).toContain("host session token");
+        expect(handleRequest).not.toHaveBeenCalled();
+      }
+      // In a batch too.
+      expect(
+        (await post(grant, [call("getDrives", 1), call("addActions", 2)]))
+          .written.status,
+      ).toBe(401);
+    });
+
+    it("lets reads, and a write the request's delegated signer signs, through", async () => {
+      const grant: McpRequestAuthorizer = () =>
+        Promise.resolve({
+          authorized: true,
+          subject: {},
+          writeChallenge: { status: 403, headers: challenge },
+        });
+      for (const body of [
+        call("getDrives"),
+        call("addRemoteDrive"),
+        { jsonrpc: "2.0", id: 1, method: "initialize" },
+      ]) {
+        expect((await post(grant, body)).handleRequest).toHaveBeenCalledOnce();
+      }
+      expect(
+        (await post(grant, call("addActions"), () => true)).handleRequest,
+      ).toHaveBeenCalledOnce();
+    });
+  });
 });

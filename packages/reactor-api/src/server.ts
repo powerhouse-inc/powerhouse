@@ -77,7 +77,11 @@ import {
 import { DEFAULT_RENOWN_URL } from "@powerhousedao/shared/constants";
 import { hostSessionOfKey } from "@powerhousedao/shared/clis/host-sessions";
 import { mountCredentialRoutes } from "./http/credential-routes.js";
-import { mountOAuthMetadata } from "./http/oauth-metadata.js";
+import {
+  issuerOf,
+  mcpResourceMetadataUrl,
+  mountOAuthMetadata,
+} from "./http/oauth-metadata.js";
 import { mountOAuthRoutes } from "./http/oauth-routes.js";
 import { runAsCaller } from "./services/host-session-scope.js";
 import { HostSessions } from "./services/host-sessions.js";
@@ -159,6 +163,7 @@ import { createGetParentIdsFn } from "./services/get-parent-ids.js";
 import {
   createMcpRequestAuthorizer,
   mcpCallerContext,
+  type McpRequestAuthorizerOptions,
 } from "./services/mcp-request-authorizer.js";
 import { buildSyncServingGate } from "./services/sync-serving-gate.js";
 import {
@@ -834,6 +839,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   attachmentReadsFollowDocumentPolicy: boolean;
   settings: ServerSettings;
   hostSessions: HostSessions | undefined;
+  /** `/mcp`'s challenges, when this host issues host session tokens a session could use. */
+  mcpOAuth: McpRequestAuthorizerOptions["oauth"];
 }> {
   const port = options.port ?? DEFAULT_PORT;
   const { adapter: httpAdapter } = await createHttpAdapter("express");
@@ -1322,10 +1329,23 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     );
   }
   // The OAuth routes that issue host session tokens, and their discovery.
+  let mcpOAuth: McpRequestAuthorizerOptions["oauth"];
   if (hostSessions) {
     const configured = options.server?.publicUrl
       ? withScheme(options.server.publicUrl)
       : undefined;
+    // `/mcp` challenges a caller to sign in where a session could act.
+    if (policy !== AuthorizationPolicy.ADMIN_ONLY) {
+      mcpOAuth = {
+        resourceMetadataUrl: (req) => {
+          const issuer = issuerOf(req, {
+            publicOrigin: configured,
+            basePath: settings.basePath,
+          });
+          return issuer ? mcpResourceMetadataUrl(issuer) : undefined;
+        },
+      };
+    }
     const oauth = mountOAuthRoutes(
       httpRoutes.hostScope(
         "oauth",
@@ -1356,6 +1376,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     const metadata = mountOAuthMetadata(httpAdapter, {
       publicOrigin: configured,
       basePath: settings.basePath,
+      mcp: options.mcp ?? true,
     });
     dbClosers.push(() => {
       oauth.dispose();
@@ -1395,6 +1416,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     attachmentReadsFollowDocumentPolicy,
     settings,
     hostSessions,
+    mcpOAuth,
   };
 }
 
@@ -1452,6 +1474,7 @@ async function _setupAPI(
   inspection?: IReactorInspectionSource,
   driveStore?: DriveStore,
   driveNodes?: IDriveNodeSource,
+  mcpOAuth?: McpRequestAuthorizerOptions["oauth"],
 ): Promise<API> {
   const hostModuleBase: IProcessorHostModule = {
     ...createReactorHostModuleBase({
@@ -1695,6 +1718,9 @@ async function _setupAPI(
             "/mcp",
           );
         },
+        // A write the request's delegated signer signs is no challenge's.
+        signsWrites: (req, grant) =>
+          options.delegatedSigner?.(mcpCallerContext(req, grant)) !== undefined,
         syncManager,
         authorizeRequest: createMcpRequestAuthorizer(
           authService,
@@ -1705,6 +1731,7 @@ async function _setupAPI(
               read: clients.read,
             }),
             documentPermissionService,
+            ...(mcpOAuth ? { oauth: mcpOAuth } : {}),
           },
         ),
       },
@@ -1973,6 +2000,7 @@ export async function initializeAndStartAPI(
     attachmentReadsFollowDocumentPolicy,
     settings,
     hostSessions,
+    mcpOAuth,
   } = await _setupCommonInfrastructure(options);
 
   // A request borne by a host session token writes signed by that session;
@@ -2092,6 +2120,7 @@ export async function initializeAndStartAPI(
       : undefined,
     reactorClientModule.reactorModule?.reactor,
     driveNodes,
+    mcpOAuth,
   );
 
   return {

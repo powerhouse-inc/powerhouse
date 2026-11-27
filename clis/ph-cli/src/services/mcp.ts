@@ -19,7 +19,7 @@ import {
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { IReactorClient } from "@powerhousedao/reactor";
-import { createServer } from "@powerhousedao/reactor-mcp";
+import { createServer, DOCUMENT_WRITE_TOOLS } from "@powerhousedao/reactor-mcp";
 import type { LocalDocumentModels } from "@powerhousedao/reactor-mcp/remote";
 import { resolveSwitchboardPortDefault } from "@powerhousedao/shared/clis/args";
 import { identityDataDir } from "@powerhousedao/shared/clis/identity";
@@ -268,16 +268,11 @@ async function forwardToolCall(
 }
 
 /**
- * The tools that write: they run here, signed and borne as the MCP client's
- * session. The Switchboard's HTTP `/mcp` signs none of them.
+ * The tools that write documents: they run here, signed and borne as the
+ * MCP client's session. The Switchboard's HTTP `/mcp` signs none of them for
+ * a caller who delegated no session to it.
  */
-export const SIGNED_TOOLS: ReadonlySet<string> = new Set([
-  "createDocument",
-  "addActions",
-  "deleteDocument",
-  "addDrive",
-  "deleteDrive",
-]);
+export const SIGNED_TOOLS: ReadonlySet<string> = DOCUMENT_WRITE_TOOLS;
 
 /** What an MCP client's session is called, and its credential signs. */
 export function mcpSessionLabel(clientName: string | undefined): string {

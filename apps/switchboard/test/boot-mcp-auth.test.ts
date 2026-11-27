@@ -225,6 +225,39 @@ const unsignedTool = (result: ToolResult) =>
   JSON.stringify(result.content).includes("over HTTP /mcp") &&
   JSON.stringify(result.content).includes("ph mcp");
 
+/**
+ * An anonymous caller's document write on a host that issues host session
+ * tokens: no tool runs, the caller is asked to sign in (401 naming /mcp's
+ * resource metadata), in the refusal's words.
+ */
+async function challengedWrite(
+  tool: string,
+  args: Record<string, unknown>,
+): Promise<boolean> {
+  const response = await fetch(`${base()}/mcp`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json, text/event-stream",
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: tool, arguments: args },
+    }),
+  });
+  const text = await response.text();
+  return (
+    response.status === 401 &&
+    (response.headers.get("www-authenticate") ?? "").includes(
+      '/.well-known/oauth-protected-resource/mcp", scope="documents:write"',
+    ) &&
+    text.includes("UNSIGNED_WRITE") &&
+    text.includes("ph mcp")
+  );
+}
+
 async function postPing(header?: string): Promise<number> {
   const response = await fetch(`${base()}/mcp`, {
     method: "POST",
@@ -340,12 +373,21 @@ describe("Switchboard's /mcp authorizes as its GraphQL API does", () => {
         { id: shared, actions: [folder("graphql")] },
       );
       const { type, input } = folder("mcp");
+      const mayWrite = caller === ADMIN || caller === WRITER;
+      expect(forbiddenGraphql(viaGraphql), caller).toBe(!mayWrite);
+      if (caller === "anonymous") {
+        // Asked to sign in before any tool runs.
+        expect(
+          await challengedWrite("addActions", {
+            documentId: shared,
+            actions: [{ type, input }],
+          }),
+        ).toBe(true);
+        continue;
+      }
       const viaMcp = await withClient(caller, (call) =>
         call("addActions", { documentId: shared, actions: [{ type, input }] }),
       );
-      const mayWrite = caller === ADMIN || caller === WRITER;
-
-      expect(forbiddenGraphql(viaGraphql), caller).toBe(!mayWrite);
       if (mayWrite) {
         // Allowed by the ACL, and still nobody's to sign: refused on both.
         expect(unsignedGraphql(viaGraphql), caller).toBe(true);
@@ -393,6 +435,18 @@ describe("Switchboard's /mcp authorizes as its GraphQL API does", () => {
           }
         `,
       );
+      if (caller === "anonymous") {
+        // GraphQL refuses both; over /mcp the caller is asked to sign in.
+        expect(inDrive.errors?.length ?? 0).toBeGreaterThan(0);
+        expect(loose.errors?.length ?? 0).toBeGreaterThan(0);
+        for (const args of [
+          { documentType: "powerhouse/document-model", driveId: shared },
+          { documentType: "powerhouse/document-model" },
+        ]) {
+          expect(await challengedWrite("createDocument", args)).toBe(true);
+        }
+        continue;
+      }
       const viaMcp = await withClient(caller, async (call) => ({
         inDrive: await call("createDocument", {
           documentType: "powerhouse/document-model",

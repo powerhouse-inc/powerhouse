@@ -20,8 +20,10 @@ export const ORIGIN_PLACEHOLDER = "${origin}";
 /**
  * The switchboard's HTTP surface, as path prefixes, which a server that
  * fronts Connect proxies to the switchboard: GraphQL (and its websocket),
- * the drives, attachments, MCP and package routes. Not the readiness and
- * health probes: those stay the fronting server's own.
+ * the drives, attachments, MCP, package routes, and the OAuth routes and
+ * discovery of its host session tokens (an MCP client signs in on Connect's
+ * origin, which is then their issuer). Not the readiness and health probes:
+ * those stay the fronting server's own.
  */
 export const SWITCHBOARD_PROXY_PATHS: readonly string[] = [
   "/graphql",
@@ -29,6 +31,9 @@ export const SWITCHBOARD_PROXY_PATHS: readonly string[] = [
   "/attachments",
   "/mcp",
   "/api/",
+  "/oauth",
+  "/.well-known/oauth-authorization-server",
+  "/.well-known/oauth-protected-resource",
 ];
 
 /** True for a request path the switchboard serves (see SWITCHBOARD_PROXY_PATHS). */

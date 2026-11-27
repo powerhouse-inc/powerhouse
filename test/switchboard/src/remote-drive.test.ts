@@ -292,16 +292,19 @@ describe("Remote drive sync via CONNECT channel", () => {
     await mcpClient.connect(transport);
 
     try {
-      // 2. A drive tool over HTTP is nobody's to sign: refused, naming ph mcp;
-      // the drive is the signing client's, and MCP reads it
-      const addDriveResult = await mcpClient.callTool({
-        name: "addDrive",
-        arguments: {
-          driveInput: { global: { name: "MCP Test Drive" } },
-        },
-      });
-      expect(addDriveResult.isError).toBe(true);
-      expect(JSON.stringify(addDriveResult.content)).toContain("`ph mcp`");
+      // 2. A drive tool over HTTP is nobody's to sign: an anonymous caller is
+      // asked to sign in (401), in words naming ph mcp; the drive is the
+      // signing client's, and MCP reads it
+      const addDriveRefusal = await mcpClient
+        .callTool({
+          name: "addDrive",
+          arguments: {
+            driveInput: { global: { name: "MCP Test Drive" } },
+          },
+        })
+        .catch((error: unknown) => error);
+      expect((addDriveRefusal as { code?: number }).code).toBe(401);
+      expect(String(addDriveRefusal)).toContain("`ph mcp`");
       const driveId = await createDriveOnSwitchboard("MCP Test Drive");
       const getDriveResult = await mcpClient.callTool({
         name: "getDrive",
@@ -313,17 +316,19 @@ describe("Remote drive sync via CONNECT channel", () => {
       clientModule = await createLocalReactor(driveId);
       await waitForDocument(clientModule, driveId);
 
-      // 4. A write tool over HTTP is nobody's to sign: refused, naming ph mcp
-      const createDocResult = await mcpClient.callTool({
-        name: "createDocument",
-        arguments: {
-          documentType: "powerhouse/document-model",
-          name: "MCP Doc",
-          driveId,
-        },
-      });
-      expect(createDocResult.isError).toBe(true);
-      expect(JSON.stringify(createDocResult.content)).toContain("`ph mcp`");
+      // 4. A write tool over HTTP is nobody's to sign: asked to sign in
+      const createRefusal = await mcpClient
+        .callTool({
+          name: "createDocument",
+          arguments: {
+            documentType: "powerhouse/document-model",
+            name: "MCP Doc",
+            driveId,
+          },
+        })
+        .catch((error: unknown) => error);
+      expect((createRefusal as { code?: number }).code).toBe(401);
+      expect(String(createRefusal)).toContain("`ph mcp`");
 
       // 5. The writes a signing client makes in the drive sync
       const documentId = await createDocumentInDrive(driveId);

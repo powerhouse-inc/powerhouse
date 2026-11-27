@@ -108,6 +108,11 @@ describe("origin placeholder", () => {
       "/attachments/abc",
       "/mcp",
       "/api/x/y",
+      "/oauth/device",
+      "/oauth/token",
+      "/.well-known/oauth-authorization-server",
+      "/.well-known/oauth-protected-resource",
+      "/.well-known/oauth-protected-resource/mcp",
     ]) {
       expect(isSwitchboardProxyPath(p), p).toBe(true);
     }
@@ -120,6 +125,8 @@ describe("origin placeholder", () => {
       "/health",
       "/api",
       "/d",
+      "/oauthx",
+      "/.well-known/openid-configuration",
     ]) {
       expect(isSwitchboardProxyPath(p), p).toBe(false);
     }

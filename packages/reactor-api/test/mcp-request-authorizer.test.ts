@@ -236,3 +236,86 @@ describe("createMcpRequestAuthorizer", () => {
     expect(access?.unrestricted).toBe(true);
   });
 });
+
+describe("challenges, on a host that issues host session tokens", () => {
+  const METADATA = "http://host/.well-known/oauth-protected-resource/mcp";
+  const oauth = { resourceMetadataUrl: () => METADATA };
+  const header = (error?: string) => ({
+    "WWW-Authenticate": `Bearer resource_metadata="${METADATA}", scope="documents:write"${error ? `, error="${error}"` : ""}`,
+  });
+
+  it("names the resource metadata and the scope when it refuses", async () => {
+    expect(
+      await documentPermissions({ oauth })(request("Bearer not-a-jwt")),
+    ).toEqual({
+      authorized: false,
+      status: 401,
+      message: "Authentication failed",
+      headers: header("invalid_token"),
+    });
+    expect(
+      await documentPermissions({ oauth, requireAuthenticatedCaller: true })(
+        request(),
+      ),
+    ).toEqual({
+      authorized: false,
+      status: 401,
+      message: "Authentication required",
+      headers: header(),
+    });
+  });
+
+  it("challenges an anonymous caller's writes to sign in, and nobody else's", async () => {
+    const anonymous = await admitted(documentPermissions({ oauth }));
+    expect(anonymous.writeChallenge).toEqual({
+      status: 401,
+      headers: header(),
+    });
+    // Its own session's bearer: the tool's refusal names the fixes.
+    const signed = await admitted(
+      documentPermissions({ oauth }),
+      await bearer(USER),
+    );
+    expect(signed.writeChallenge).toBeUndefined();
+    // A host that issues no tokens challenges nobody.
+    expect((await admitted(documentPermissions())).writeChallenge).toBe(
+      undefined,
+    );
+  });
+
+  it("asks a host session without documents:write for the scope", async () => {
+    const session = (scope: string) =>
+      ({
+        verifyBearer: () =>
+          Promise.resolve({
+            user: {
+              address: USER,
+              chainId: 1,
+              networkId: "eip155",
+              appKey: "did:key:zSession",
+              via: "host-session",
+              hostSession: { id: "a".repeat(32), scope, grant: "device" },
+            },
+            admins: [],
+            auth_enabled: true,
+          }),
+      }) as unknown as AuthService;
+    const authorizer = (scope: string) =>
+      createMcpRequestAuthorizer(
+        session(scope),
+        createAuthorizationService({
+          admins: [],
+          defaultProtection: false,
+          policy: AuthorizationPolicy.OPEN,
+        }),
+        { requireAuthenticatedCaller: false, resolveDocumentId, oauth },
+      );
+    const reader = await authorizer("documents:read")(request("Bearer phs_x"));
+    expect(reader).toMatchObject({
+      authorized: true,
+      writeChallenge: { status: 403, headers: header("insufficient_scope") },
+    });
+    const writer = await authorizer("documents:write")(request("Bearer phs_x"));
+    expect(writer).not.toHaveProperty("writeChallenge");
+  });
+});

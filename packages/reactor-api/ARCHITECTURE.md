@@ -190,6 +190,24 @@ withdrawn sessions count toward no cap. Under ADMIN_ONLY (`AUTH_ENABLED`
 without document permissions) a session could read and write nothing, so
 `device_authorization` refuses with `invalid_scope`, saying so.
 
+`/mcp` is a protected resource of its own
+(`/.well-known/oauth-protected-resource/mcp`, resource `<origin>/mcp`). Where
+the host issues tokens a session could use (host sessions on, not
+ADMIN_ONLY), its authorizer (`mcp-request-authorizer.ts`) challenges as MCP
+authorization asks: a refused bearer, and an anonymous caller under the
+floor, get 401 with
+`WWW-Authenticate: Bearer resource_metadata="<origin>/.well-known/oauth-protected-resource/mcp", scope="documents:write"`
+(plus `error="invalid_token"` for a bad token). A call of a document-writing tool
+(`DOCUMENT_WRITE_TOOLS` of reactor-mcp) that nothing would sign is answered
+before any tool runs: 401 for an anonymous caller, 403 `insufficient_scope`
+for a host session without `documents:write`, with the `UNSIGNED_WRITE`
+words; a caller with its own session's bearer gets the tool's refusal, and a
+request whose delegated signer signs is not challenged. Reads stay open.
+Connect's servers proxy `/oauth` and the two `/.well-known/oauth-*` documents
+with the switchboard's other paths (`SWITCHBOARD_PROXY_PATHS`), so under
+`ph vetra` an MCP client signs in on Connect's origin, which is then the
+issuer.
+
 Limits are charged per client (`src/http/client-limits.ts`): the socket's
 address, or with `trustProxy` the right-most `X-Forwarded-For` hop that is no
 loopback, private or link-local address. Counters drop ended windows; a full

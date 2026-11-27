@@ -245,6 +245,12 @@ describe("appRoute (same-origin publication)", () => {
       "/mcp",
       "/mcp/*",
       "/api/*",
+      "/oauth",
+      "/oauth/*",
+      "/.well-known/oauth-authorization-server",
+      "/.well-known/oauth-authorization-server/*",
+      "/.well-known/oauth-protected-resource",
+      "/.well-known/oauth-protected-resource/*",
     ]);
   });
 
@@ -253,7 +259,7 @@ describe("appRoute (same-origin publication)", () => {
     const appStart = out.indexOf("handle @app {");
     const app = out.slice(appStart, out.indexOf("\n\t}\n", appStart));
     expect(app).toContain(
-      "\t\t@switchboard path /graphql /graphql/* /attachments /attachments/* /mcp /mcp/* /api/*\n\t\thandle @switchboard {\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}",
+      "\t\t@switchboard path /graphql /graphql/* /attachments /attachments/* /mcp /mcp/* /api/* /oauth /oauth/* /.well-known/oauth-authorization-server /.well-known/oauth-authorization-server/* /.well-known/oauth-protected-resource /.well-known/oauth-protected-resource/*\n\t\thandle @switchboard {\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}",
     );
     expect(app).toContain(
       "\t\t@drive {\n\t\t\tpath /d/*\n\t\t\tnot header Accept *text/html*\n\t\t}\n\t\thandle @drive {\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}",

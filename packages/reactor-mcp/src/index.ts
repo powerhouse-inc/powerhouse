@@ -1,7 +1,9 @@
 export {
+  DOCUMENT_WRITE_TOOLS,
   setupMcpServer,
   type McpAuthorizationResult,
   type McpCallerWriteScope,
+  type McpChallenge,
   type McpGrant,
   type McpRequestAuthorizer,
   type SetupMcpServerOptions,

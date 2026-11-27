@@ -122,7 +122,11 @@ beforeEach(async () => {
   routes = new HttpRouteService({ httpAdapter: adapter, authService });
   disposeRoutes = () => undefined;
   remount();
-  mountOAuthMetadata(adapter, { publicOrigin: undefined, basePath: "/" });
+  mountOAuthMetadata(adapter, {
+    publicOrigin: undefined,
+    basePath: "/",
+    mcp: true,
+  });
 });
 
 afterEach(async () => {
@@ -254,6 +258,19 @@ describe("discovery", () => {
     const resource = await fetch(`${url}/.well-known/oauth-protected-resource`);
     expect(await resource.json()).toEqual({
       resource: issuer,
+      authorization_servers: [issuer],
+      bearer_methods_supported: ["header"],
+      scopes_supported: ["documents:write"],
+    });
+  });
+
+  it("describes /mcp as a resource of its own, protected by this issuer", async () => {
+    const response = await fetch(
+      `${url}/.well-known/oauth-protected-resource/mcp`,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      resource: `${issuer}/mcp`,
       authorization_servers: [issuer],
       bearer_methods_supported: ["header"],
       scopes_supported: ["documents:write"],

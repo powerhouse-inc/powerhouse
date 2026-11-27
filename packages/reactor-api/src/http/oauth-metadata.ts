@@ -6,7 +6,8 @@ import type { IHttpAdapter } from "../graphql/gateway/types.js";
 /**
  * Who issues this host's host session tokens, and the discovery documents
  * that say so: RFC 8414 (authorization server) and RFC 9728 (protected
- * resource, for GraphQL). Only what is served is listed: the device grant.
+ * resources: GraphQL's at the origin, and `/mcp`'s). Only what is served is
+ * listed.
  */
 
 export const DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
@@ -73,6 +74,16 @@ export function noIssuer(req: Pick<IncomingMessage, "headers">): string {
     : "This host has no public URL (PUBLIC_URL): it issues host session tokens over loopback only.";
 }
 
+/** `/mcp` as a protected resource (RFC 9728): it is served at the origin's root. */
+export function mcpResourceOf(issuer: string): string {
+  return `${new URL(issuer).origin}/mcp`;
+}
+
+/** Where `/mcp`'s resource metadata is: what its challenges name. */
+export function mcpResourceMetadataUrl(issuer: string): string {
+  return `${new URL(issuer).origin}/.well-known/oauth-protected-resource/mcp`;
+}
+
 /** The OAuth endpoints under an issuer. */
 export function oauthEndpoints(issuer: string) {
   return {
@@ -117,7 +128,12 @@ export function protectedResourceMetadata(resource: string, issuer: string) {
  */
 export function mountOAuthMetadata(
   adapter: Pick<IHttpAdapter, "mountNodeRoute">,
-  o: { publicOrigin: string | undefined; basePath: string },
+  o: {
+    publicOrigin: string | undefined;
+    basePath: string;
+    /** `/mcp` is served: its resource document is too. */
+    mcp?: boolean;
+  },
 ): { dispose(): void } {
   const base = basePathOf(o.basePath);
   const documents: [string, (issuer: string) => unknown][] = [
@@ -130,6 +146,12 @@ export function mountOAuthMetadata(
       (issuer) => protectedResourceMetadata(new URL(issuer).origin, issuer),
     ],
   ];
+  if (o.mcp) {
+    documents.push([
+      "/.well-known/oauth-protected-resource/mcp",
+      (issuer) => protectedResourceMetadata(mcpResourceOf(issuer), issuer),
+    ]);
+  }
   if (base) {
     documents.push(
       [

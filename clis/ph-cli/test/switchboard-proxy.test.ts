@@ -12,6 +12,9 @@ describe("switchboardProxy", () => {
       "^/attachments(/|$)",
       "^/mcp(/|$)",
       "^/api/",
+      "^/oauth(/|$)",
+      "^/\\.well-known/oauth-authorization-server(/|$)",
+      "^/\\.well-known/oauth-protected-resource(/|$)",
     ]);
     for (const rule of Object.values(rules)) {
       expect(rule.target).toBe("http://127.0.0.1:7540");
@@ -48,10 +51,22 @@ describe("switchboardProxy", () => {
       "/attachments/a",
       "/mcp",
       "/api/p/r",
+      // An MCP client signs in on Connect's origin (ph vetra).
+      "/oauth/authorize",
+      "/.well-known/oauth-authorization-server",
+      "/.well-known/oauth-protected-resource/mcp",
     ]) {
       expect(matches(p), p).toBe(true);
     }
-    for (const p of ["/", "/graphqlx", "/dx", "/d", "/productivity", "/api"]) {
+    for (const p of [
+      "/",
+      "/graphqlx",
+      "/dx",
+      "/d",
+      "/productivity",
+      "/api",
+      "/oauthx",
+    ]) {
       expect(matches(p), p).toBe(false);
     }
   });

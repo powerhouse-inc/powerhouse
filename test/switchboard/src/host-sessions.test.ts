@@ -495,6 +495,87 @@ describe("ph token", () => {
   }, 120_000);
 });
 
+/** A tool call on HTTP /mcp, as an MCP client posts it. */
+async function mcpCall(
+  tool: string,
+  args: Record<string, unknown>,
+  token?: string,
+) {
+  const response = await fetch(`${ORIGIN}/mcp`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json, text/event-stream",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: tool, arguments: args },
+    }),
+  });
+  return {
+    status: response.status,
+    challenge: response.headers.get("www-authenticate"),
+    text: await response.text(),
+  };
+}
+
+const MCP_CHALLENGE = `Bearer resource_metadata="${ORIGIN}/.well-known/oauth-protected-resource/mcp", scope="documents:write"`;
+
+describe("/mcp", () => {
+  it("describes itself as a resource this host's tokens open", async () => {
+    const response = await fetch(
+      `${ORIGIN}/.well-known/oauth-protected-resource/mcp`,
+    );
+    expect(await response.json()).toEqual({
+      resource: `${ORIGIN}/mcp`,
+      authorization_servers: [ORIGIN],
+      bearer_methods_supported: ["header"],
+      scopes_supported: ["documents:write"],
+    });
+  });
+
+  it("asks an anonymous caller's write to sign in, and serves its reads", async () => {
+    const write = await mcpCall("createDocument", {
+      documentType: "powerhouse/document-model",
+    });
+    expect(write.status).toBe(401);
+    expect(write.challenge).toBe(MCP_CHALLENGE);
+    expect(write.text).toContain("host session token");
+    expect((await mcpCall("getDrives", {})).status).toBe(200);
+  });
+
+  it("runs a token's write tool as its session, and answers a withdrawn token with the challenge", async () => {
+    const { access_token: token, sessionDid } = await pseudonymToken("agent");
+    const created = await mcpCall(
+      "createDocument",
+      { documentType: "powerhouse/document-model", name: "Via MCP" },
+      token,
+    );
+    expect(created.status, created.text).toBe(200);
+    const id = /"documentId\\?":\\?"([^"\\]+)/.exec(created.text)?.[1];
+    expect(id, created.text).toBeDefined();
+    // Every operation the tool wrote is signed as the session for its user.
+    const operations = await operationsOf(id!);
+    expect(operations.length).toBeGreaterThan(0);
+    for (const operation of operations) {
+      const signer = operation.action.context?.signer;
+      expect(signer?.app.key, operation.action.type).toBe(sessionDid);
+      expect(signer?.app.name).toBe("agent");
+      expect(signer?.user.address.toLowerCase()).toBe(
+        person!.address.toLowerCase(),
+      );
+    }
+
+    expect((await form("/oauth/revoke", { token })).status).toBe(200);
+    const after = await mcpCall("getDrives", {}, token);
+    expect(after.status).toBe(401);
+    expect(after.challenge).toBe(`${MCP_CHALLENGE}, error="invalid_token"`);
+  }, 60_000);
+});
+
 describe("the consent page's Renown button", () => {
   it("sends the person to Renown's console, and a token follows their approval", async () => {
     const started = await startGrant("billing", "14");

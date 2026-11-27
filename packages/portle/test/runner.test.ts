@@ -400,7 +400,7 @@ describe("PortleRunner: same-origin publication", () => {
     const out = runner.render();
     const caddyfile = readFileSync(out.caddyfile, "utf8");
     expect(caddyfile).toContain(
-      "\t\t@switchboard path /graphql /graphql/* /attachments /attachments/* /mcp /mcp/* /api/*\n\t\thandle @switchboard {\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}",
+      "\t\t@switchboard path /graphql /graphql/* /attachments /attachments/* /mcp /mcp/* /api/* /oauth /oauth/* /.well-known/oauth-authorization-server /.well-known/oauth-authorization-server/* /.well-known/oauth-protected-resource /.well-known/oauth-protected-resource/*\n\t\thandle @switchboard {\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}",
     );
     expect(caddyfile).toContain(
       "\t\t@drive {\n\t\t\tpath /d/*\n\t\t\tnot header Accept *text/html*\n\t\t}\n\t\thandle @drive {\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}",

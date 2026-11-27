@@ -418,21 +418,37 @@ describe("HTTP /mcp's drive tools", () => {
   it("refuse a write nobody signed for its caller, with the fix naming ph mcp", async () => {
     const before = await driveCount();
     const driveId = await createDocument(DRIVE_TYPE);
-    const [added, deleted] = await withMcp({}, async (call) => [
-      await call("addDrive", { name: "Nobody's" }),
-      await call("deleteDrive", { documentId: driveId }),
-    ]);
-    expect(added.isError).toBe(true);
-    const addText = JSON.stringify(added.content);
-    expect(addText).toContain("UNSIGNED_WRITE");
-    expect(addText).toContain(
-      "`addDrive` from an anonymous caller over HTTP /mcp asks the host to sign",
-    );
-    expect(addText).toContain("`ph mcp`");
-    expect(deleted.isError).toBe(true);
-    expect(JSON.stringify(deleted.content)).toContain(
-      "`deleteDrive` from an anonymous caller over HTTP /mcp asks the host to sign DELETE_DOCUMENT",
-    );
+    // An anonymous caller on a host that issues host session tokens is
+    // asked to sign in (401, WWW-Authenticate) before the tool runs, in the
+    // refusal's words.
+    for (const [tool, args] of [
+      ["addDrive", { name: "Nobody's" }],
+      ["deleteDrive", { documentId: driveId }],
+    ] as const) {
+      const response = await fetch(mcpUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: { name: tool, arguments: args },
+        }),
+      });
+      expect(response.status, tool).toBe(401);
+      expect(response.headers.get("www-authenticate")).toMatch(
+        /^Bearer resource_metadata="http:\/\/127\.0\.0\.1:\d+\/\.well-known\/oauth-protected-resource\/mcp", scope="documents:write"$/,
+      );
+      const text = await response.text();
+      expect(text).toContain("UNSIGNED_WRITE");
+      expect(text).toContain(
+        `\`${tool}\` from an anonymous caller over HTTP /mcp asks the host to sign`,
+      );
+      expect(text).toContain("`ph mcp`");
+    }
     expect(await driveCount()).toBe(before + 1);
     await expect(documentOf(driveId)).resolves.toBeDefined();
   });
