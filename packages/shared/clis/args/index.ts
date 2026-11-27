@@ -15,6 +15,7 @@ export * from "./login.js";
 export * from "./mcp.js";
 export * from "./migrate.js";
 export * from "./model.js";
+export * from "./mutate.js";
 export * from "./publish.js";
 export * from "./registry.js";
 export * from "./switchboard.js";

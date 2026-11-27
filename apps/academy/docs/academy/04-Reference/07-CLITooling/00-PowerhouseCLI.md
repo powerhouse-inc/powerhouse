@@ -271,6 +271,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Migrate](#migrate)
 - [Model Check](#model-check)
 - [Model Inspect](#model-inspect)
+- [Mutate](#mutate)
 - [Login](#login)
 - [Whoami](#whoami)
 - [Logout](#logout)
@@ -1166,6 +1167,69 @@ Experimental: the command, its output and the JSON report can change in any rele
 **Json** - Print exactly one JSON report on stdout and nothing else - Usage: `--json`
 
 **Default:** `false`
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Mutate
+
+Send a change to a document on a switchboard, signed as you (your Renown login or pseudonym, or the
+key in PH_IDENTITY_KEY) through ph-cli's own session "ph-cli": a Powerhouse 6.4 host signs nothing
+for its callers. The actions are plain objects; no document model is needed but for --create.
+
+  ph mutate &lt;document&gt; &lt;TYPE&gt; [--input &lt;json&gt; | --input-file &lt;file&gt;] [--scope &lt;scope&gt;] [--branch &lt;branch&gt;]
+  ph mutate &lt;document&gt; --actions &lt;file.json&gt;
+  ph mutate --create &lt;type&gt; [--parent &lt;drive&gt;] [--name &lt;name&gt;]
+  ph mutate --delete &lt;document&gt; [--cascade]
+
+The switchboard is --url (its GraphQL endpoint or base URL), else the one this project runs (its run
+record). A refusal prints the host's code (UNSIGNED_WRITE and its reason, or another) and its fix.
+  
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Document** - The document to change: its id or slug - Usage: `[document]`
+
+**Type** - The action's type, as the document model names it (SET_NAME) - Usage: `[TYPE]`
+
+
+
+
+### Options
+**Input** - The action's input as JSON (default: \{\}) - Usage: `--input <str>`
+
+**Input File** - A file holding the action's input as JSON - Usage: `--input-file <str>`
+
+**Scope** - The action's scope (default: global) - Usage: `--scope <str>`
+
+**Branch** - The branch to write to (default: main) - Usage: `--branch <str>`
+
+**Actions** - A JSON file with the actions to send, in order: an array of \{ type, input, scope \} - Usage: `--actions <str>`
+
+**Create** - Create a document of this type (powerhouse/document-model); its model must be one ph-cli holds: a base model, the project's or a package's in powerhouse.config.json - Usage: `--create <str>`
+
+**Parent** - With --create: the drive (id or slug) to file the new document in - Usage: `--parent <str>`
+
+**Name** - With --create: the new document's name - Usage: `--name <str>`
+
+**Delete** - Delete this document (id or slug); the host removes the links to it and its drive entry - Usage: `--delete <str>`
+
+**Url** - The switchboard: its GraphQL endpoint or base URL (default: the one this project runs, from its run record) - Usage: `--url <str>`
+
+
+
+
+### Flags
+**Cascade** - With --delete: also delete the documents only it holds (its children) - Usage: `--cascade`
+
+**Json** - Print JSON for scripts - Usage: `--json`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`

@@ -15,6 +15,7 @@ import { loginArgs } from "./login.js";
 import { mcpArgs } from "./mcp.js";
 import { migrateArgs } from "./migrate.js";
 import { modelCheckArgs } from "./model.js";
+import { mutateArgs } from "./mutate.js";
 import { publishArgs } from "./publish.js";
 import { registryLoginArgs } from "./registry.js";
 import { runArgs } from "./run.js";
@@ -146,6 +147,13 @@ export const phCliHelpCommands = {
     args: modelCheckArgs,
     description:
       "Check or inspect this package's document models (experimental): `ph model check|inspect`",
+    handler: () => {},
+  }),
+  mutate: helpCommand({
+    name: "mutate",
+    args: mutateArgs,
+    description:
+      "Send a signed change to a document on a switchboard, as you: an action, a file of actions, a create or a delete",
     handler: () => {},
   }),
   switchboard: helpCommand({

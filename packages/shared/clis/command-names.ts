@@ -19,6 +19,7 @@ export const phCliCommandNames = [
   "mcp",
   "migrate",
   "model",
+  "mutate",
   "switchboard",
   "login",
   "logout",

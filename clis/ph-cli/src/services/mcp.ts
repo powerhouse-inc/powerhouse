@@ -40,9 +40,15 @@ import {
   readVetraRuntime,
   type VetraRuntimeRecord,
 } from "../utils/vetra-runtime.js";
+import {
+  CONFIG_FILE,
+  configPackageModels,
+  findProjectDir,
+} from "./project-models.js";
 
 const CALL_TIMEOUT_MS = 10 * 60_000;
-const CONFIG_FILE = "powerhouse.config.json";
+
+export { findProjectDir };
 
 export type McpLauncherOptions = {
   projectDir?: string;
@@ -50,17 +56,6 @@ export type McpLauncherOptions = {
   /** Test seam: what starts Vetra; defaults to {@link currentPhCliRunVetraCommand}. */
   vetraCommand?: VetraCommand;
 };
-
-/** The nearest directory at or above `start` holding powerhouse.config.json. */
-export function findProjectDir(start: string): string | undefined {
-  let dir = path.resolve(start);
-  for (;;) {
-    if (fs.existsSync(path.join(dir, CONFIG_FILE))) return dir;
-    const parent = path.dirname(dir);
-    if (parent === dir) return undefined;
-    dir = parent;
-  }
-}
 
 // The tool list never touches the reactor, so a client that throws on use is enough.
 const reactorlessClient = new Proxy({} as IReactorClient, {
@@ -290,47 +285,6 @@ export function missingModelError(documentType: string): CallToolResult {
   );
 }
 
-/** The package names powerhouse.config.json lists, in its order. */
-function configPackageNames(projectDir: string): string[] {
-  try {
-    const config = JSON.parse(
-      fs.readFileSync(path.join(projectDir, CONFIG_FILE), "utf8"),
-    ) as { packages?: { packageName?: unknown }[] };
-    return (config.packages ?? [])
-      .map((entry) => entry.packageName)
-      .filter((name): name is string => typeof name === "string" && !!name);
-  } catch {
-    return [];
-  }
-}
-
-/**
- * The document models of the packages powerhouse.config.json lists, loaded
- * from node_modules by the loader the project's Switchboard loads them with.
- * A package that is not installed, or ships no models, adds none.
- */
-async function configPackageModels(
-  projectDir: string,
-): Promise<DocumentModelModule[]> {
-  const names = configPackageNames(projectDir);
-  if (names.length === 0) return [];
-  const { ImportPackageLoader, isExpectedLoaderMiss } =
-    await import("@powerhousedao/reactor-api");
-  const loader = new ImportPackageLoader(projectDir);
-  const models: DocumentModelModule[] = [];
-  for (const name of names) {
-    try {
-      models.push(...(await loader.loadDocumentModels(name)));
-    } catch (error) {
-      if (isExpectedLoaderMiss(error, name, "document-models")) continue;
-      console.error(
-        `[ph mcp] the document models of ${name} did not load: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  }
-  return models;
-}
-
 /**
  * The writing tools, run in this process over the project's Switchboard,
  * every action signed and every request borne as the MCP client's own
@@ -363,14 +317,18 @@ class SignedTools {
   }
 
   #configPackageModels(): Promise<DocumentModelModule[]> {
-    this.#packageModels ??= configPackageModels(this.projectDir).catch(
-      (error: unknown) => {
+    this.#packageModels ??= configPackageModels(
+      this.projectDir,
+      (name, error) =>
         console.error(
-          `[ph mcp] the packages of ${CONFIG_FILE} did not load: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        return [];
-      },
-    );
+          `[ph mcp] the document models of ${name} did not load: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+    ).catch((error: unknown) => {
+      console.error(
+        `[ph mcp] the packages of ${CONFIG_FILE} did not load: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return [];
+    });
     return this.#packageModels;
   }
 

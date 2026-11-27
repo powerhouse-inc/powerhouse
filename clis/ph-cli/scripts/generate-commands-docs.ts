@@ -33,6 +33,7 @@ import { logout } from "../src/commands/logout.js";
 import { mcp } from "../src/commands/mcp.js";
 import { migrate } from "../src/commands/migrate.js";
 import { modelCheck, modelInspect } from "../src/commands/model.js";
+import { mutate } from "../src/commands/mutate.js";
 import { phCli } from "../src/commands/ph-cli.js";
 import { runHost } from "../src/commands/run.js";
 import {
@@ -74,6 +75,7 @@ const commands = [
   { name: "migrate", command: migrate },
   { name: "model check", command: modelCheck },
   { name: "model inspect", command: modelInspect },
+  { name: "mutate", command: mutate },
   { name: "login", command: login },
   { name: "whoami", command: whoami },
   { name: "logout", command: logout },

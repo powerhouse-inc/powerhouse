@@ -15,6 +15,7 @@ import { logout } from "./logout.js";
 import { mcp } from "./mcp.js";
 import { migrate } from "./migrate.js";
 import { model } from "./model.js";
+import { mutate } from "./mutate.js";
 import { publish } from "./publish.js";
 import { registryLogin } from "./registry-login.js";
 import { runHost } from "./run.js";
@@ -39,6 +40,7 @@ export const phCliCommands = {
   mcp,
   migrate,
   model,
+  mutate,
   login,
   logout,
   whoami,
