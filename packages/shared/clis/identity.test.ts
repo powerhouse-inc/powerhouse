@@ -19,6 +19,7 @@ import {
   pseudonymCopies,
   readActiveIdentity,
   readLogin,
+  readLoginFile,
   readPseudonym,
   unlockPseudonym,
   type V3Keystore,
@@ -303,6 +304,27 @@ describe("the active identity", () => {
     // A logged-out file (`{}`) is no login.
     fs.writeFileSync(loginPaths(env).file, "{}");
     expect(readLogin(env)).toBeUndefined();
+  });
+
+  it("reads a login kept outside the home folder, as a project kept one before 6.4", () => {
+    writeLogin(new Date(Date.now() + 60_000).toISOString());
+    const ph = dir("project/.ph");
+    const files = {
+      file: path.join(ph, ".renown.json"),
+      keypair: path.join(ph, ".keypair.json"),
+    };
+    fs.renameSync(loginPaths(env).file, files.file);
+    expect(readLogin(env)).toBeUndefined();
+    expect(readLoginFile(files)).toMatchObject({
+      address: "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
+      label: "ada",
+      credentialId: "urn:uuid:1",
+      expired: false,
+      file: files.file,
+      keypairFile: files.keypair,
+    });
+    fs.writeFileSync(files.file, "{}");
+    expect(readLoginFile(files)).toBeUndefined();
   });
 
   it("is PH_IDENTITY_KEY's key when it is set, a Renown login or not", () => {

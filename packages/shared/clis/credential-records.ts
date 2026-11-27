@@ -75,6 +75,12 @@ export type CredentialWithdrawal = {
   expiresAt?: string;
   withdrawnAt: string;
   by: CredentialWithdrawer;
+  /**
+   * The withdrawn credential itself, where the withdrawer kept it (`ph
+   * migrate`'s for a login from before 6.4): the operations it vouched for
+   * stay checkable against it.
+   */
+  credential?: CredentialLike;
 };
 
 export class CredentialWithdrawnError extends Error {
@@ -270,6 +276,8 @@ export function writeCredentialWithdrawal(o: {
   label?: string;
   credentialId?: string;
   expiresAt?: string;
+  /** Kept in the tombstone: see {@link CredentialWithdrawal.credential}. */
+  credential?: CredentialLike;
   now?: Date;
 }): CredentialWithdrawal {
   const id = credentialRecordId(o.binding);
@@ -287,6 +295,7 @@ export function writeCredentialWithdrawal(o: {
     ...(o.expiresAt !== undefined ? { expiresAt: o.expiresAt } : {}),
     withdrawnAt: (o.now ?? new Date()).toISOString(),
     by: o.by,
+    ...(o.credential !== undefined ? { credential: o.credential } : {}),
   };
   writePrivate(credentialWithdrawalFile(o.dataDir, id), withdrawal);
   return withdrawal;

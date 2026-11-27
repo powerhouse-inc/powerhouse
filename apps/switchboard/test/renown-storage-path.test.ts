@@ -53,6 +53,31 @@ describe("initRenown: the instance key, and no user", () => {
     expect(existsSync(loginFile)).toBe(true);
   });
 
+  it("names the agent login, trusted keys and unsigned-write record from before 6.4, and keeps them", async () => {
+    userData = await mkdtemp(join(tmpdir(), "switchboard-renown-"));
+    const agent = join(userData, ".ph", "vetra", "agent");
+    await mkdir(agent, { recursive: true });
+    await writeFile(join(agent, ".renown.json"), JSON.stringify({ user: {} }));
+    await writeFile(join(userData, ".ph", "preview-trusted-keys.json"), "{}");
+    await mkdir(join(userData, ".ph", "unsigned-writes"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    await initRenown({
+      keypairPath: join(userData, ".ph", ".keypair.json"),
+      userDataDir: userData,
+    });
+    const warned = warn.mock.calls
+      .map((call) => call.map(String).join(" "))
+      .find((line) =>
+        line.includes("from before Powerhouse 6.4 and no longer read"),
+      );
+    expect(warned).toContain("ph migrate");
+    expect(warned).toContain(agent);
+    expect(warned).toContain("preview-trusted-keys.json");
+    expect(warned).toContain("unsigned-writes");
+    expect(existsSync(join(agent, ".renown.json"))).toBe(true);
+    expect(existsSync(join(userData, ".ph", "unsigned-writes"))).toBe(true);
+  });
+
   it("warns that identity.storagePath is no longer read", async () => {
     userData = await mkdtemp(join(tmpdir(), "switchboard-renown-"));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);

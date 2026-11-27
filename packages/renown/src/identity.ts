@@ -5,6 +5,7 @@ import {
   PasswordRequiredError,
   readActiveIdentity,
   readLogin,
+  readLoginFile,
   readPseudonym,
   unlockPseudonym,
 } from "@powerhousedao/shared/clis/identity";
@@ -84,11 +85,30 @@ export function homeLoginRenown(
     env?: Env;
   } = {},
 ): Promise<IRenown> {
-  const paths = loginPaths(opts.env);
+  return loginRenownAt(loginPaths(opts.env), opts);
+}
+
+/**
+ * Where a Renown login is kept: its `.renown.json` and the session key whose
+ * bearer acts for it. The home folder's (`loginPaths`), or one a project
+ * (`.ph/`) or Studio's agent (`.ph/vetra/agent/`) kept before Powerhouse 6.4.
+ */
+export type LoginFiles = { file: string; keypair: string };
+
+/** The Renown of the login kept in `files`; its key is the file's only. */
+function loginRenownAt(
+  files: LoginFiles,
+  opts: {
+    appName?: string;
+    baseUrl?: string;
+    switchboardUrl?: string;
+    revalidate?: "always" | "never";
+  },
+): Promise<IRenown> {
   return new RenownBuilder(opts.appName ?? "ph-cli", {
-    keyPath: paths.keypair,
+    keyPath: files.keypair,
     keyEnv: null,
-    storagePath: paths.file,
+    storagePath: files.file,
     ...(opts.baseUrl ? { baseUrl: opts.baseUrl } : {}),
     ...(opts.switchboardUrl ? { switchboardUrl: opts.switchboardUrl } : {}),
     revalidate: opts.revalidate ?? "always",
@@ -237,13 +257,28 @@ const NOT_FOUND = /not found/i;
  * Withdraws the home login's credential at Renown with a bearer of the login's
  * own session key, as the Renown site does before it asks the wallet.
  */
-export async function withdrawLogin(
+export function withdrawLogin(
   opts: { renownUrl?: string; env?: Env } = {},
 ): Promise<WithdrawResult> {
-  const env = opts.env ?? process.env;
-  const login = readLogin(env);
+  return withdrawLoginAt({
+    files: loginPaths(opts.env ?? process.env),
+    ...(opts.renownUrl ? { renownUrl: opts.renownUrl } : {}),
+  });
+}
+
+/**
+ * Withdraws, at Renown, the credential of the login kept in `files`, with a
+ * bearer of that login's own session key: the home login (`ph logout`), and
+ * the logins a project or Studio's agent kept before Powerhouse 6.4 (`ph
+ * migrate`). A login whose key is gone cannot be withdrawn this way.
+ */
+export async function withdrawLoginAt(o: {
+  files: LoginFiles;
+  renownUrl?: string;
+}): Promise<WithdrawResult> {
+  const login = readLoginFile(o.files);
   if (!login) return { status: "not-logged-in" };
-  const baseUrl = opts.renownUrl ?? DEFAULT_RENOWN_URL;
+  const baseUrl = o.renownUrl ?? DEFAULT_RENOWN_URL;
   const revokeUrl = new URL("/me", baseUrl).href;
   const lapses = login.expiresAt ? { expiresAt: login.expiresAt } : {};
   if (!login.credentialId) {
@@ -256,6 +291,14 @@ export async function withdrawLogin(
   if (login.expired) {
     return { status: "unavailable", reason: "it has expired", ...lapses };
   }
+  // A missing key would be made anew, and no new key proves anything.
+  if (!fs.existsSync(o.files.keypair)) {
+    return {
+      status: "unavailable",
+      reason: `its session key ${o.files.keypair} is gone`,
+      ...lapses,
+    };
+  }
   const endpoint = await resolveSwitchboardEndpoint({ baseUrl });
   if (!endpoint) {
     return {
@@ -265,8 +308,7 @@ export async function withdrawLogin(
     };
   }
   try {
-    const renown = await homeLoginRenown({
-      env,
+    const renown = await loginRenownAt(o.files, {
       baseUrl,
       switchboardUrl: endpoint,
       revalidate: "never",

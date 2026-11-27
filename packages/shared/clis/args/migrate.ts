@@ -8,6 +8,7 @@ import {
   positional,
   string,
 } from "cmd-ts";
+import { LEGACY_RENOWN_URL } from "../constants.js";
 import { debugArgs } from "./common.js";
 
 const versionDescription =
@@ -69,6 +70,21 @@ export const migrateArgs = {
     long: "rename-conflicting-types",
     description:
       "With --document-models or --document-model: rename a model type that has the name of a scalar, such as Address, by prefixing the model's name (InvoiceAddress), instead of refusing the model. The GraphQL type name changes; the TypeScript name the model's compat exports keeps the old name.",
+  }),
+  identity: flag({
+    type: optional(boolean),
+    long: "identity",
+    description:
+      "Run only the identity step, which `ph migrate` runs first: withdraw at Renown the logins a project and Studio's agent kept before Powerhouse 6.4 and remove them (the switchboard's own key stays), remove the owner claim, the preview's trusted keys and the dead identity settings, write .ph/.gitignore, summarise and remove a 6.3 host's record of unsigned writes, and report who administers the host. A second run has nothing to do. With --dry-run it asks nothing and writes nothing.",
+  }),
+  renownUrl: option({
+    type: string,
+    long: "renown-url",
+    description:
+      "The Renown the logins from before 6.4 were made at, which withdraws them",
+    defaultValue: () => LEGACY_RENOWN_URL,
+    defaultValueIsSerializable: true,
+    env: "PH_CONNECT_RENOWN_URL",
   }),
   dryRun: flag({
     type: optional(boolean),

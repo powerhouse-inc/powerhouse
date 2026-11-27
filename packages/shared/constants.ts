@@ -13,6 +13,13 @@
  */
 export const DEFAULT_RENOWN_URL = "https://renown-staging.vetra.io";
 
+/**
+ * Where `ph login` logged in before Powerhouse 6.4, whatever the default is
+ * now: the logins a project kept from then were made there, and `ph migrate`
+ * withdraws them there.
+ */
+export const LEGACY_RENOWN_URL = "https://www.renown.id";
+
 // Every package published from the monorepo that `ph update` / `ph use` keep in lockstep.
 export const PACKAGES_DEPENDENCIES = [
   "@powerhousedao/builder-tools",

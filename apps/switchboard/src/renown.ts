@@ -12,9 +12,12 @@ import {
   type RenownTrustPolicyOptions,
   type SwitchboardRequestFn,
 } from "@renown/sdk/node";
-import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
+import {
+  legacyIdentityPaths,
+  resolvePhDir,
+} from "@powerhousedao/shared/clis/ph-dir";
 import { childLogger } from "document-model";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 
@@ -66,19 +69,29 @@ export async function initRenown(
       "identity.storagePath is no longer read: this switchboard signs as its instance key only, never as a Renown login. Remove the setting.",
     );
   }
-  const loginFile =
-    storagePath ??
-    join(
-      resolvePhDir(
-        process.cwd(),
-        userDataDir ? { PH_USER_DATA_DIR: userDataDir } : {},
-      ),
-      ".renown.json",
-    );
+  const phDir = resolvePhDir(
+    process.cwd(),
+    userDataDir ? { PH_USER_DATA_DIR: userDataDir } : {},
+  );
+  const loginFile = storagePath ?? join(phDir, ".renown.json");
   if (holdsLogin(loginFile)) {
     logger.warn(
       "@file holds a Renown login from before Powerhouse 6.4. This switchboard no longer reads it and signs as its instance key only. Run `ph migrate` to withdraw and remove it.",
       loginFile,
+    );
+  }
+  // The rest of what came before 6.4 (the owner claim is reactor-api's to
+  // name): said, never withdrawn or removed here.
+  const legacy = legacyIdentityPaths(phDir);
+  const leftovers = [
+    legacy.agent,
+    ...legacy.trustedKeys,
+    legacy.unsignedWrites,
+  ].filter((file) => existsSync(file));
+  if (leftovers.length > 0) {
+    logger.warn(
+      "@files are from before Powerhouse 6.4 and no longer read; this switchboard withdraws and removes nothing. Run `ph migrate` to withdraw and remove them.",
+      leftovers.join(", "),
     );
   }
   if (process.env[RENOWN_PRIVATE_KEY_ENV]) {

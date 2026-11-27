@@ -48,6 +48,7 @@ import {
   SessionWithdrawnError,
   startSessionApproval,
   withdrawLogin,
+  withdrawLoginAt,
 } from "../src/identity.js";
 import { NodeStorage } from "../src/storage/storage.node.js";
 
@@ -268,6 +269,40 @@ describe("withdrawLogin and logoutHome", () => {
       reason: "Forbidden: not the issuer",
       revokeUrl: `${RENOWN}/me`,
     });
+  });
+
+  it("withdraw a login kept elsewhere (a project's, before 6.4) with a bearer of its own key", async () => {
+    // Written where `ph login` wrote it before 6.4, then moved into a project.
+    const { paths } = await writeLogin();
+    const ph = path.join(root, "project", ".ph");
+    fs.mkdirSync(ph, { recursive: true });
+    const files = {
+      file: path.join(ph, ".renown.json"),
+      keypair: path.join(ph, ".keypair.json"),
+    };
+    fs.renameSync(paths.file, files.file);
+    fs.renameSync(paths.keypair, files.keypair);
+    const calls = stubRenown(() =>
+      Response.json({ data: { renown_revokeCredential: true } }),
+    );
+    expect(await withdrawLoginAt({ files, renownUrl: RENOWN })).toEqual({
+      status: "withdrawn",
+    });
+    const revoke = calls.find((call) => call.url === SWITCHBOARD)!.init!;
+    expect(
+      (JSON.parse(revoke.body as string) as { variables: object }).variables,
+    ).toMatchObject({ credentialId: "urn:uuid:login-1" });
+    // The home folder has no login: nothing there was read or written.
+    expect(fs.existsSync(loginPaths(env).file)).toBe(false);
+    expect(fs.existsSync(loginPaths(env).keypair)).toBe(false);
+
+    // Without its key nothing proves it, and no key is made.
+    fs.rmSync(files.keypair);
+    expect(await withdrawLoginAt({ files, renownUrl: RENOWN })).toMatchObject({
+      status: "unavailable",
+      reason: `its session key ${files.keypair} is gone`,
+    });
+    expect(fs.existsSync(files.keypair)).toBe(false);
   });
 
   it("say when nothing can withdraw it", async () => {

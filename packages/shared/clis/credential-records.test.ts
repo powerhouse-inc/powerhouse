@@ -17,6 +17,7 @@ import {
   readCredentialRecord,
   readCredentialWithdrawal,
   writeCredentialRecord,
+  writeCredentialWithdrawal,
   withdrawCredentialRecords,
   type CredentialLike,
 } from "./credential-records.js";
@@ -75,6 +76,29 @@ describe("credential records", () => {
       chainId: 1,
       sessionDid: SESSION,
     });
+  });
+
+  it("keeps a withdrawn credential in its tombstone when the withdrawer hands it over", () => {
+    const given = credential({ label: "renown-app" });
+    const binding = credentialBindingOf(given)!;
+    const tombstone = writeCredentialWithdrawal({
+      dataDir,
+      binding,
+      by: "command",
+      credentialId: given.id,
+      credential: given,
+    });
+    expect(tombstone.credential).toEqual(given);
+    expect(
+      readCredentialWithdrawal({ dataDir, id: credentialRecordId(binding) }),
+    ).toMatchObject({ by: "command", credential: { id: given.id } });
+    // Without one, the tombstone holds none.
+    const other = credentialBindingOf(
+      credential({ session: "did:key:zOther" }),
+    )!;
+    expect(
+      writeCredentialWithdrawal({ dataDir, binding: other, by: "host" }),
+    ).not.toHaveProperty("credential");
   });
 
   it("writes a record its user alone may read, and reads it back", () => {

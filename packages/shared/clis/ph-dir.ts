@@ -18,6 +18,35 @@ export function resolvePhDir(
 }
 
 /**
+ * What a `.ph` tree kept of identities and unsigned writes before Powerhouse
+ * 6.4, none of which 6.4 reads: the project's Renown login (beside the
+ * switchboard's own key, which stays), Studio's agent login, the owner claim,
+ * the preview server's trusted keys, and a 6.3 host's record of the unsigned
+ * writes it signed. `ph migrate`'s identity step withdraws and removes them;
+ * a host that finds them says so and touches nothing.
+ */
+export function legacyIdentityPaths(phDir: string) {
+  const agent = path.join(phDir, "vetra", "agent");
+  return {
+    projectLogin: {
+      file: path.join(phDir, ".renown.json"),
+      keypair: path.join(phDir, ".keypair.json"),
+    },
+    agent,
+    agentLogin: {
+      file: path.join(agent, ".renown.json"),
+      keypair: path.join(agent, ".keypair.json"),
+    },
+    owner: path.join(phDir, ".owner.json"),
+    trustedKeys: [
+      path.join(phDir, "preview-trusted-keys.json"),
+      path.join(phDir, "vetra", "preview-trusted-keys.json"),
+    ],
+    unsignedWrites: path.join(phDir, "unsigned-writes"),
+  };
+}
+
+/**
  * The two PGlite store dirs the switchboard defaults to, for the server and
  * for `ph switchboard --reset` (which must touch the same paths). Without a
  * user-data root these are the classic literals, verbatim — byte-identical

@@ -128,6 +128,8 @@ function runMigrate(
       documentModel: [],
       renameConflictingTypes: undefined,
       strictResolvers: undefined,
+      identity: undefined,
+      renownUrl: "https://renown.test",
       dryRun: undefined,
       ...args,
     })

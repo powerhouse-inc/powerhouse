@@ -411,7 +411,18 @@ export function readLogin(
   env: Env = process.env,
   now: number = Date.now(),
 ): LoginInfo | undefined {
-  const paths = loginPaths(env);
+  return readLoginFile(loginPaths(env), now);
+}
+
+/**
+ * The Renown login kept in `paths.file` with its session key in
+ * `paths.keypair`: the home folder's, or one a project or an agent kept
+ * before Powerhouse 6.4. Undefined when the file holds no user.
+ */
+export function readLoginFile(
+  paths: { file: string; keypair: string },
+  now: number = Date.now(),
+): LoginInfo | undefined {
   const user = readJson<{ user?: StoredUser }>(paths.file)?.user;
   if (!user?.address || !user.credential) return undefined;
   let address: Address;

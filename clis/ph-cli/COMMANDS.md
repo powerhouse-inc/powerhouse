@@ -892,7 +892,7 @@ show help<br><br>
 
 
 ## Migrate
-Run migrations
+Run migrations. `ph migrate` runs the identity step first (what a project kept of identities before Powerhouse 6.4; `--identity` runs it alone), then moves the project to a version.
 ### arguments
 #### Version <br>
 The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `next`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages.<br><br>
@@ -912,6 +912,10 @@ Convert only this directory of subgraphs/ into a code-first subgraph. Repeat it 
 Convert only this directory of the document models directory into a code-first model. Repeat it for more directories. Implies --document-models.<br><br>
 **usage:** `--document-model <str>`<br>
 
+#### Renown Url <br>
+The Renown the logins from before 6.4 were made at, which withdraws them<br><br>
+**usage:** `--renown-url <str>`<br>
+**env**: `PH_CONNECT_RENOWN_URL`<br>**default**: `https//www.renown.id`
 
 ### flags
 #### Force <br>
@@ -933,6 +937,10 @@ Convert every schema-first document model into a code-first one, keeping each ve
 #### Rename Conflicting Types <br>
 With --document-models or --document-model: rename a model type that has the name of a scalar, such as Address, by prefixing the model's name (InvoiceAddress), instead of refusing the model. The GraphQL type name changes; the TypeScript name the model's compat exports keeps the old name.<br><br>
 **usage:** `--rename-conflicting-types`<br>
+
+#### Identity <br>
+Run only the identity step, which `ph migrate` runs first: withdraw at Renown the logins a project and Studio's agent kept before Powerhouse 6.4 and remove them (the switchboard's own key stays), remove the owner claim, the preview's trusted keys and the dead identity settings, write .ph/.gitignore, summarise and remove a 6.3 host's record of unsigned writes, and report who administers the host. A second run has nothing to do. With --dry-run it asks nothing and writes nothing.<br><br>
+**usage:** `--identity`<br>
 
 #### Dry Run <br>
 Print the diff of every file the migration would add, change or delete, and write nothing. It installs nothing and regenerates no code; it lists those steps instead.<br><br>

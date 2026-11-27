@@ -1033,7 +1033,7 @@ one.
 
 
 ## Migrate
-Run migrations
+Run migrations. `ph migrate` runs the identity step first (what a project kept of identities before Powerhouse 6.4; `--identity` runs it alone), then moves the project to a version.
 
 
 
@@ -1054,6 +1054,11 @@ Run migrations
 
 **Document Model** - Convert only this directory of the document models directory into a code-first model. Repeat it for more directories. Implies --document-models. - Usage: `--document-model <str>`
 
+**Renown Url** - The Renown the logins from before 6.4 were made at, which withdraws them - Usage: `--renown-url <str>`
+
+**Environment:** `PH_CONNECT_RENOWN_URL`
+**Default:** `https//www.renown.id`
+
 
 
 
@@ -1067,6 +1072,8 @@ Run migrations
 **Document Models** - Convert every schema-first document model into a code-first one, keeping each version's definition and reducers. The model gets the layout ph generate document-model --name writes: index.ts, upgrades/index.ts, and per version definition.ts, index.ts and modules/; the custom code of src/ moves into the version's directory. The generated code, src/ and &lt;name&gt;.json are removed. The names the generated code exported stay available from compat/v&lt;N&gt;/index.ts, imports of removed files are rewritten to it, and the document-models barrels are regenerated. A model that cannot keep the same definition is left as it is, with the reason. Upgrades no dependencies. - Usage: `--document-models`
 
 **Rename Conflicting Types** - With --document-models or --document-model: rename a model type that has the name of a scalar, such as Address, by prefixing the model's name (InvoiceAddress), instead of refusing the model. The GraphQL type name changes; the TypeScript name the model's compat exports keeps the old name. - Usage: `--rename-conflicting-types`
+
+**Identity** - Run only the identity step, which `ph migrate` runs first: withdraw at Renown the logins a project and Studio's agent kept before Powerhouse 6.4 and remove them (the switchboard's own key stays), remove the owner claim, the preview's trusted keys and the dead identity settings, write .ph/.gitignore, summarise and remove a 6.3 host's record of unsigned writes, and report who administers the host. A second run has nothing to do. With --dry-run it asks nothing and writes nothing. - Usage: `--identity`
 
 **Dry Run** - Print the diff of every file the migration would add, change or delete, and write nothing. It installs nothing and regenerates no code; it lists those steps instead. - Usage: `--dry-run`
 
