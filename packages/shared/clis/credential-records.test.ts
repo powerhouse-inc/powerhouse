@@ -9,12 +9,16 @@ import {
   credentialRecordFile,
   credentialRecordId,
   credentialRecordsDir,
+  credentialRecordUsedFile,
   credentialWithdrawalFile,
   CredentialWithdrawnError,
+  evictCredentialRecords,
   listCredentialRecords,
   listCredentialWithdrawals,
+  noteCredentialRecordUsed,
   pruneCredentialRecords,
   readCredentialRecord,
+  readCredentialRecordLastUsed,
   readCredentialWithdrawal,
   writeCredentialRecord,
   writeCredentialWithdrawal,
@@ -228,6 +232,60 @@ describe("credential records", () => {
     expect(listCredentialRecords({ dataDir }).map((r) => r.id)).toEqual([
       live.id,
     ]);
+  });
+
+  it("evicts an address's least recently used records, the expired first, with no tombstone", () => {
+    const now = new Date("2026-12-01T00:00:00.000Z");
+    const at = (day: number) => new Date(`2026-11-${day}T00:00:00.000Z`);
+    const write = (session: string, day: number, expires?: string) =>
+      writeCredentialRecord({
+        dataDir,
+        credential: credential({ session, ...(expires ? { expires } : {}) }),
+        source: "enrolled",
+        now: at(day),
+      });
+    const used = write("did:key:zUsed", 10);
+    const idle = write("did:key:zIdle", 11);
+    const lapsed = write("did:key:zLapsed", 12, "2026-11-30T00:00:00.000Z");
+    const fresh = write("did:key:zFresh", 13);
+    noteCredentialRecordUsed({ dataDir, id: used.id, at: at(20) });
+    expect(readCredentialRecordLastUsed({ dataDir, id: used.id })).toBe(
+      at(20).toISOString(),
+    );
+    const heard: string[] = [];
+    const evicted = evictCredentialRecords({
+      dataDir,
+      address: ADDRESS,
+      keep: 2,
+      except: fresh.id,
+      now,
+      beforeRemove: (record) => heard.push(record.id),
+    });
+    // The expired one, then the one used longest ago (never, written on the 11th).
+    expect(evicted.map((r) => r.id)).toEqual([lapsed.id, idle.id]);
+    expect(heard).toEqual([lapsed.id, idle.id]);
+    expect(
+      listCredentialRecords({ dataDir })
+        .map((r) => r.id)
+        .sort(),
+    ).toEqual([used.id, fresh.id].sort());
+    expect(listCredentialWithdrawals({ dataDir })).toEqual([]);
+    // Nothing more to do, and another address is not counted.
+    expect(
+      evictCredentialRecords({ dataDir, address: ADDRESS, keep: 2 }),
+    ).toEqual([]);
+    expect(
+      evictCredentialRecords({
+        dataDir,
+        address: "0x0000000000000000000000000000000000000001",
+        keep: 0,
+      }),
+    ).toEqual([]);
+    // A withdrawal takes the note with the record.
+    withdrawCredentialRecords({ dataDir, ids: [used.id], by: "command" });
+    expect(fs.existsSync(credentialRecordUsedFile(dataDir, used.id))).toBe(
+      false,
+    );
   });
 
   it("two processes writing one binding leave one whole record", async () => {

@@ -8,6 +8,11 @@
  * the switchboard's.
  */
 import { writeRunRecord, type RunRecord } from "@powerhousedao/host-core";
+import type { JobInfo } from "@powerhousedao/reactor";
+import {
+  BatchJobFailedError,
+  GraphQLReactorClient,
+} from "@powerhousedao/reactor-browser/graphql-client";
 import { listCredentialRecords } from "@powerhousedao/shared/clis/credential-records";
 import { readActiveIdentity } from "@powerhousedao/shared/clis/identity";
 import { sessionFilePath } from "@powerhousedao/shared/clis/sessions";
@@ -20,9 +25,20 @@ import { createSignatureVerifier } from "@renown/sdk";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import {
+  batchReport,
+  describeBatch,
   describeRefusal,
+  jobsOf,
   MUTATE_SESSION_LABEL,
   mutatePlan,
   refusalsOf,
@@ -310,6 +326,92 @@ describe("ph mutate on a real switchboard", () => {
     expect(unfiled).toHaveLength(1);
   }, 120_000);
 
+  it("names every job of a batch that failed part-way, and what applied", async () => {
+    const file = path.join(project, "partial.json");
+    fs.writeFileSync(
+      file,
+      JSON.stringify([
+        { type: "SET_A", input: {} },
+        { type: "SET_B", input: {}, scope: "local" },
+      ]),
+    );
+    // The host's answer: the first job FAILED, its dependent still applied
+    // (executeBatch is not atomic).
+    const job = (status: string, message?: string) =>
+      ({
+        id: `job-${status}`,
+        documentId: "doc",
+        status,
+        createdAtUtcIso: new Date().toISOString(),
+        ...(message ? { error: { name: "Error", message } } : {}),
+      }) as unknown as JobInfo;
+    const batch = vi
+      .spyOn(GraphQLReactorClient.prototype, "executeBatch")
+      .mockRejectedValueOnce(
+        new BatchJobFailedError("j0", {
+          j0: job("FAILED", "Boom"),
+          j1: job("READ_READY"),
+        }),
+      );
+    try {
+      expect(
+        await runMutate(
+          { document: "doc", actions: "partial.json", json: true },
+          io(),
+        ),
+      ).toBe(1);
+    } finally {
+      batch.mockRestore();
+    }
+    const report = JSON.parse(out.join("\n")) as Record<string, unknown>;
+    expect(report).toMatchObject({
+      ok: false,
+      error: "Failed: Boom",
+      jobs: [
+        {
+          key: "j0",
+          scope: "global",
+          entries: [0, 0],
+          types: ["SET_A"],
+          status: "FAILED",
+          error: "Boom",
+        },
+        { key: "j1", scope: "local", entries: [1, 1], status: "READ_READY" },
+      ],
+    });
+    expect(err).toEqual([
+      "Failed: Boom",
+      "The actions went as 2 jobs, one per run of one scope. A batch is not atomic: a job's failure leaves the others' writes.",
+      "  j0  entry 0 (global: SET_A)  FAILED: Boom",
+      "  j1  entry 1 (local: SET_B)  applied",
+      "Applied ones are on the document: resend only entry 0.",
+    ]);
+  }, 120_000);
+
+  it("outside a project signs as the identity home's pseudonym and writes nothing in the folder", async () => {
+    const outside = path.join(root, "outside");
+    fs.mkdirSync(outside, { recursive: true });
+    const before = readActiveIdentity({ env: { PH_IDENTITY_HOME: home } });
+    out = [];
+    err = [];
+    expect(
+      await runMutate(
+        {
+          create: "powerhouse/document-model",
+          name: "From Elsewhere",
+          url: origin,
+          json: true,
+        },
+        { ...io(), cwd: outside },
+      ),
+    ).toBe(0);
+    const created = JSON.parse(out.join("\n")) as {
+      signer: { address: string };
+    };
+    expect(created.signer.address).toBe(before!.address);
+    expect(fs.readdirSync(outside)).toEqual([]);
+  }, 120_000);
+
   it("says what the switchboard answered when it refuses, and exits 1", async () => {
     expect(
       await runMutate(
@@ -405,6 +507,44 @@ describe("ph mutate's arguments", () => {
     );
     expect(describeRefusal({ code: "FORBIDDEN", message: "No." })).toBe(
       "Refused (FORBIDDEN): No.",
+    );
+  });
+
+  it("plans one job per run of one scope, with the entries each sends", () => {
+    const action = (scope: string, type = "SET_X") => ({
+      id: type,
+      type,
+      scope,
+      timestampUtcMs: "1",
+      input: {},
+    });
+    const planned = jobsOf("doc", "main", [
+      action("global"),
+      action("global", "SET_Y"),
+      action("local"),
+      action("global"),
+    ]);
+    expect(
+      planned.map((job) => [job.key, job.scope, job.entries, job.dependsOn]),
+    ).toEqual([
+      ["j0", "global", [0, 1], []],
+      ["j1", "local", [2, 2], ["j0"]],
+      ["j2", "global", [3, 3], ["j1"]],
+    ]);
+    const report = batchReport(planned, {
+      j0: { status: "FAILED", error: { message: "Boom" } },
+      j1: { status: "READ_READY" },
+    });
+    expect(report[2]).toMatchObject({ key: "j2", status: "UNKNOWN" });
+    const lines = describeBatch(report);
+    expect(lines[1]).toBe(
+      "  j0  entries 0-1 (global: SET_X, SET_Y)  FAILED: Boom",
+    );
+    expect(lines.at(-1)).toBe(
+      "Applied ones are on the document: resend only entries 0-1, entry 3.",
+    );
+    expect(describeBatch(batchReport(planned.slice(0, 1), {})).at(-1)).toBe(
+      "Nothing applied: send the file again.",
     );
   });
 

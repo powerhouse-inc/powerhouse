@@ -471,10 +471,11 @@ function infoOf(
 /**
  * The pseudonym that acts in `dataDir`, without making one: the key in
  * `PH_IDENTITY_KEY`, else the store's own, else the home folder's default
- * (which a signature would copy in).
+ * (which a signature would copy in). With no `dataDir` (a command outside any
+ * store), the key or the home folder's default.
  */
 export function readPseudonym(opts: {
-  dataDir: string;
+  dataDir?: string;
   env?: Env;
 }): IdentityInfo | undefined {
   const env = opts.env ?? process.env;
@@ -497,13 +498,15 @@ export function readPseudonym(opts: {
     };
   }
   const home = homeDefault(env);
-  const dataFile = dataPseudonymFile(opts.dataDir);
-  const own = readPseudonymFile(dataFile);
-  if (own) {
-    const info = infoOf(own, "data-folder", dataFile);
-    return home && home !== own.address
-      ? { ...info, differsFromHome: home }
-      : info;
+  if (opts.dataDir !== undefined) {
+    const dataFile = dataPseudonymFile(opts.dataDir);
+    const own = readPseudonymFile(dataFile);
+    if (own) {
+      const info = infoOf(own, "data-folder", dataFile);
+      return home && home !== own.address
+        ? { ...info, differsFromHome: home }
+        : info;
+    }
   }
   if (!home) return undefined;
   const homeFile = homePseudonymFile(home, env);
@@ -515,10 +518,11 @@ export function readPseudonym(opts: {
  * Who acts here: the key in `PH_IDENTITY_KEY` when it is set (a service's
  * identity, given to this process alone), else the Renown login when there is
  * one (expired included, so signing can refuse it), else the pseudonym.
- * Never makes a key, never asks, never goes to the network.
+ * Never makes a key, never asks, never goes to the network. With no
+ * `dataDir`, a pseudonym is the home folder's.
  */
 export function readActiveIdentity(opts: {
-  dataDir: string;
+  dataDir?: string;
   env?: Env;
 }): IdentityInfo | undefined {
   const env = opts.env ?? process.env;
@@ -612,12 +616,42 @@ function recordCopy(address: Address, dataDir: string, env: Env): void {
 }
 
 export interface EnsurePseudonymOptions {
-  dataDir: string;
+  /** The store; none for a command outside any store (the home folder's alone). */
+  dataDir?: string;
   env?: Env;
   /** Encrypts a new key; else `PH_IDENTITY_PASSWORD`, else a plain file. */
   password?: string;
   /** Tests: cheaper scrypt parameters. */
   kdf?: KdfParams;
+}
+
+/** The home folder's default pseudonym, made when there is none. */
+async function ensureHomeDefault(
+  opts: EnsurePseudonymOptions,
+  env: Env,
+): Promise<Address> {
+  const held = homeDefault(env);
+  if (held) return held;
+  const password = opts.password ?? env[IDENTITY_PASSWORD_ENV];
+  const made = await pseudonymFileOf(
+    generatePrivateKey(),
+    password || undefined,
+    new Date().toISOString(),
+    opts.kdf,
+  );
+  const homeFile = homePseudonymFile(made.address, env);
+  keepKeyFile(homeFile, serializePseudonymFile(made), !password, true, env);
+  const pointer = createOwnerOnlyFile(
+    defaultFile(env),
+    `${JSON.stringify({ version: 1, pseudonym: made.address }, null, 2)}\n`,
+  );
+  const home = homeDefault(env);
+  if (!pointer.created && home !== made.address) {
+    // Another process made the default first: this one is not needed.
+    fs.rmSync(path.dirname(homeFile), { recursive: true, force: true });
+  }
+  if (!home) throw new Error(`No pseudonym in ${identityHome(env)}.`);
+  return home;
 }
 
 /**
@@ -628,14 +662,26 @@ export interface EnsurePseudonymOptions {
  * 2. The store has one: that one, also kept in the home folder.
  * 3. The home folder has a default: copied into the store byte for byte.
  * 4. Otherwise a new key, in the home folder (the default) and the store.
+ *
+ * With no `dataDir` the home folder's default, made when there is none, and
+ * nothing is written outside the home folder.
  */
 export async function ensurePseudonym(
   opts: EnsurePseudonymOptions,
 ): Promise<IdentityInfo> {
   const env = opts.env ?? process.env;
+  if (env[IDENTITY_KEY_ENV]) {
+    return readPseudonym({
+      ...(opts.dataDir === undefined ? {} : { dataDir: opts.dataDir }),
+      env,
+    })!;
+  }
+  if (opts.dataDir === undefined) {
+    await ensureHomeDefault(opts, env);
+    return readPseudonym({ env })!;
+  }
   const dataDir = path.resolve(opts.dataDir);
   const dataFile = dataPseudonymFile(dataDir);
-  if (env[IDENTITY_KEY_ENV]) return readPseudonym({ dataDir, env })!;
 
   const adopt = (text: string): IdentityInfo => {
     const pseudonym = parsePseudonymFile(text, dataFile);
@@ -655,28 +701,7 @@ export async function ensurePseudonym(
   const own = readText(dataFile);
   if (own !== undefined) return adopt(own);
 
-  let home = homeDefault(env);
-  if (!home) {
-    const password = opts.password ?? env[IDENTITY_PASSWORD_ENV];
-    const made = await pseudonymFileOf(
-      generatePrivateKey(),
-      password || undefined,
-      new Date().toISOString(),
-      opts.kdf,
-    );
-    const homeFile = homePseudonymFile(made.address, env);
-    keepKeyFile(homeFile, serializePseudonymFile(made), !password, true, env);
-    const pointer = createOwnerOnlyFile(
-      defaultFile(env),
-      `${JSON.stringify({ version: 1, pseudonym: made.address }, null, 2)}\n`,
-    );
-    home = homeDefault(env);
-    if (!pointer.created && home !== made.address) {
-      // Another process made the default first: this one is not needed.
-      fs.rmSync(path.dirname(homeFile), { recursive: true, force: true });
-    }
-    if (!home) throw new Error(`No pseudonym in ${identityHome(env)}.`);
-  }
+  const home = await ensureHomeDefault(opts, env);
   const text = readText(homePseudonymFile(home, env))!;
   const pseudonym = parsePseudonymFile(text);
   keepKeyFile(dataFile, text, pseudonym.key.type === "plain", true, env);

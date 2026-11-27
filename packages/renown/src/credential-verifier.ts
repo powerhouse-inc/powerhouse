@@ -3,6 +3,7 @@ import {
   credentialRecordId,
   credentialRecordsDir,
   credentialWithdrawalFile,
+  noteCredentialRecordUsed,
   parsePkhIssuer,
   withdrawCredentialRecords,
   writeCredentialWithdrawal,
@@ -107,6 +108,16 @@ export interface CredentialVerifier {
   onWithdrawn(listener: (claim: CredentialClaim) => void): () => void;
   /** Drops Renown's answers for `address` (narrowed when given); returns how many. */
   forget(address: string, chainId?: number, sessionDid?: string): number;
+  /**
+   * A record about to be removed to make room (an eviction), which is no
+   * withdrawal: forgotten here first, so its removal leaves no tombstone and
+   * its credential is checked as one with no record.
+   */
+  forgetRecord(binding: {
+    address: string;
+    chainId: number;
+    sessionDid: string;
+  }): void;
   close(): void;
 }
 
@@ -130,6 +141,8 @@ const REDISCOVER_MS = 60_000;
 const MAX_ANSWERS = 10_000;
 // A record replaced by remove-then-rename (Windows, a reader holding it open).
 const REAPPEAR_MS = 50;
+// How often a record's last use is written to `<id>.used`.
+const USED_NOTE_MS = 60 * 60_000;
 
 /** Renown's answers kept across restarts, in the shape hosts kept them before. */
 const ANSWERS_FILE = ".credentials.json";
@@ -176,6 +189,8 @@ type SeenRecord = {
   label: string;
   credentialId: string;
   expiresAt: string;
+  /** When this process last noted the record used (`<id>.used`). */
+  usedAt?: number;
 };
 
 type Answer =
@@ -273,6 +288,8 @@ export function createCredentialVerifier(
   // A record this host verified is gone: a withdrawal, kept as a tombstone.
   const withdrawnByHand = (id: string, record: SeenRecord) => {
     seen.delete(id);
+    // Its last-use note goes with it.
+    fs.rmSync(path.join(recordsDir, `${id}.used`), { force: true });
     if (record.check === "ok") {
       try {
         writeCredentialWithdrawal({
@@ -372,6 +389,22 @@ export function createCredentialVerifier(
       if (record.check !== "ok") return { ok: false, reason: record.check };
       if (Date.parse(record.expiresAt) <= now()) {
         return { ok: false, reason: "expired" };
+      }
+      // Its last use, for an address that must make room (at most hourly).
+      if (
+        record.usedAt === undefined ||
+        now() - record.usedAt >= USED_NOTE_MS
+      ) {
+        record.usedAt = now();
+        try {
+          noteCredentialRecordUsed({
+            dataDir,
+            id,
+            at: new Date(record.usedAt),
+          });
+        } catch (error) {
+          report(error);
+        }
       }
       return {
         ok: true,
@@ -663,6 +696,10 @@ export function createCredentialVerifier(
         if (matches(key)) unreachable.delete(key);
       }
       return dropped;
+    },
+
+    forgetRecord(binding) {
+      seen.delete(credentialRecordId(binding));
     },
 
     close() {

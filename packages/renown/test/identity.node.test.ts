@@ -615,6 +615,37 @@ describe("openSession", () => {
     expect(posted[0]!.request.sessionDid).toBe(remote.signer.app.key);
   });
 
+  it("opens a home session with no store: the home folder's pseudonym, nothing written elsewhere", async () => {
+    const session = await openSession({
+      label: "ph-cli",
+      place: "home",
+      interactive: false,
+      env,
+    });
+    expect(session.identity).toMatchObject({
+      kind: "pseudonym",
+      source: "home",
+    });
+    expect(fs.readdirSync(root)).toEqual(["home"]);
+    // A store opened later signs as the same pseudonym.
+    const later = await openSession({
+      dataDir: store(),
+      label: "ph-cli",
+      place: "home",
+      interactive: false,
+      env,
+    });
+    expect(later.identity.address).toBe(session.identity.address);
+    await expect(
+      openSession({
+        label: "agent",
+        place: "data-folder",
+        interactive: false,
+        env,
+      }),
+    ).rejects.toThrow(/needs the store's data folder/);
+  });
+
   it("keeps its credential across opens and renews it near its end", async () => {
     const dataDir = store();
     const open = () =>

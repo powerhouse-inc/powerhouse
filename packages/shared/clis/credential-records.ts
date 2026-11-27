@@ -9,6 +9,9 @@ import { warnNotOwnerOnly, writeOwnerOnlyFile } from "./owner-only.js";
  * `<dataDir>/.ph/credentials/<id>.json`. Present means valid; removing it
  * withdraws the credential at once. A withdrawal leaves a tombstone in
  * `withdrawn/`, so it holds after a restart and while Renown cannot be asked.
+ * Beside a record, `<id>.used` notes when a host last accepted it, so a full
+ * address can make room by its least recently used record (an eviction,
+ * which leaves no tombstone).
  *
  * A record holds a public proof, not a secret: whoever can write the folder
  * can only enrol a credential signed by a key they hold. Verifying it is the
@@ -326,9 +329,110 @@ export function withdrawCredentialRecords(o: {
         ...(o.now ? { now: o.now } : {}),
       }),
     );
-    fs.rmSync(credentialRecordFile(o.dataDir, id), { force: true });
+    removeRecord(o.dataDir, id);
   }
   return withdrawn;
+}
+
+// ------------------------------------------------------------- last use
+
+const RECORD_ID = /^[0-9a-f]{32}$/;
+
+/**
+ * `<id>.used` beside a record: when a host last accepted a credential by its
+ * record. A file of its own, so noting a use never rewrites the record (on
+ * Windows a rewrite can leave a moment with no record, which reads as a
+ * withdrawal).
+ */
+export function credentialRecordUsedFile(dataDir: string, id: string): string {
+  if (!RECORD_ID.test(id)) throw new Error(`"${id}" is no record id.`);
+  return path.join(credentialRecordsDir(dataDir), `${id}.used`);
+}
+
+/** When the record was last used; undefined when never noted (or unreadable). */
+export function readCredentialRecordLastUsed(o: {
+  dataDir: string;
+  id: string;
+}): string | undefined {
+  if (!RECORD_ID.test(o.id)) return undefined;
+  let text: string;
+  try {
+    text = fs
+      .readFileSync(credentialRecordUsedFile(o.dataDir, o.id), "utf8")
+      .trim();
+  } catch {
+    return undefined;
+  }
+  return Number.isFinite(Date.parse(text)) ? text : undefined;
+}
+
+/** Notes a use of the record at `at`. */
+export function noteCredentialRecordUsed(o: {
+  dataDir: string;
+  id: string;
+  at: Date;
+}): void {
+  fs.writeFileSync(
+    credentialRecordUsedFile(o.dataDir, o.id),
+    o.at.toISOString(),
+  );
+}
+
+/** A record's file and its last-use note. */
+function removeRecord(dataDir: string, id: string): void {
+  fs.rmSync(credentialRecordFile(dataDir, id), { force: true });
+  fs.rmSync(path.join(credentialRecordsDir(dataDir), `${id}.used`), {
+    force: true,
+  });
+}
+
+/**
+ * Keeps at most `keep` records of `address` (`except`, the one just written,
+ * among them and never removed): the others go in order, the expired first,
+ * then the least recently used (by `<id>.used`, else by when written). No
+ * tombstone: an evicted credential is not withdrawn, and may be enrolled
+ * again. `beforeRemove` hears of each before its file goes. Returns them.
+ */
+export function evictCredentialRecords(o: {
+  dataDir: string;
+  address: string;
+  keep: number;
+  except?: string;
+  now?: Date;
+  beforeRemove?: (record: CredentialRecord) => void;
+}): CredentialRecord[] {
+  const address = o.address.toLowerCase();
+  const own = listCredentialRecords(o).filter(
+    (record) => record.address === address,
+  );
+  const excess = own.length - o.keep;
+  if (excess <= 0) return [];
+  const now = (o.now ?? new Date()).getTime();
+  const expired = (record: CredentialRecord) => {
+    const at = Date.parse(record.credential.expirationDate ?? "");
+    return !Number.isNaN(at) && at <= now;
+  };
+  const lastUse = (record: CredentialRecord) =>
+    readCredentialRecordLastUsed({ dataDir: o.dataDir, id: record.id }) ??
+    record.createdAt;
+  const evicted = own
+    .filter((record) => record.id !== o.except)
+    .map((record) => ({
+      record,
+      expired: expired(record),
+      at: lastUse(record),
+    }))
+    .sort(
+      (a, b) =>
+        Number(b.expired) - Number(a.expired) || a.at.localeCompare(b.at),
+    )
+    .slice(0, excess)
+    .map(({ record }) => record);
+  for (const record of evicted) {
+    o.beforeRemove?.(record);
+    removeRecord(o.dataDir, record.id);
+  }
+  return evicted;
 }
 
 function jsonFiles(dir: string): string[] {
@@ -379,9 +483,7 @@ export function pruneCredentialRecords(o: { dataDir: string; now?: Date }): {
   const records = listCredentialRecords(o)
     .filter((record) => expired(record.credential.expirationDate))
     .map((record) => record.id);
-  for (const id of records) {
-    fs.rmSync(credentialRecordFile(o.dataDir, id), { force: true });
-  }
+  for (const id of records) removeRecord(o.dataDir, id);
   const withdrawals = listCredentialWithdrawals(o)
     .filter((withdrawal) => expired(withdrawal.expiresAt))
     .map((withdrawal) => withdrawal.id);

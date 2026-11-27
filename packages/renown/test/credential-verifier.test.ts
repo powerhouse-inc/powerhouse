@@ -1,6 +1,7 @@
 import {
   credentialRecordFile,
   credentialWithdrawalFile,
+  readCredentialRecordLastUsed,
   readCredentialWithdrawal,
   writeCredentialRecord,
   withdrawCredentialRecords,
@@ -159,6 +160,46 @@ describe("createCredentialVerifier: records", () => {
     await vi.waitFor(() =>
       expect(fs.existsSync(credentialWithdrawalFile(dataDir, id))).toBe(true),
     );
+  });
+
+  it("notes a record's last use beside it, at most hourly", async () => {
+    const { id } = writeCredentialRecord({
+      dataDir,
+      credential: await issue(),
+      source: "enrolled",
+    });
+    let clock = Date.now();
+    const v = verifier({ watch: false, now: () => clock });
+    expect((await v.check(claim())).ok).toBe(true);
+    const first = new Date(clock).toISOString();
+    expect(readCredentialRecordLastUsed({ dataDir, id })).toBe(first);
+    clock += 30 * 60_000;
+    expect((await v.check(claim())).ok).toBe(true);
+    expect(readCredentialRecordLastUsed({ dataDir, id })).toBe(first);
+    clock += 31 * 60_000;
+    expect((await v.check(claim())).ok).toBe(true);
+    expect(readCredentialRecordLastUsed({ dataDir, id })).toBe(
+      new Date(clock).toISOString(),
+    );
+  });
+
+  it("forgets an evicted record: its removal is no withdrawal", async () => {
+    const credential = await issue();
+    const { id } = writeCredentialRecord({
+      dataDir,
+      credential,
+      source: "enrolled",
+    });
+    const v = verifier({ watch: false });
+    expect((await v.check(claim())).ok).toBe(true);
+    v.forgetRecord(claim());
+    fs.rmSync(credentialRecordFile(dataDir, id));
+    // Checked as a credential with no record: Renown is out of reach here.
+    expect(await v.check(claim(), credential)).toMatchObject({
+      ok: true,
+      via: "signature",
+    });
+    expect(readCredentialWithdrawal({ dataDir, id })).toBeUndefined();
   });
 
   it("reads a rewritten record again", async () => {

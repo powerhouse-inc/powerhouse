@@ -16,7 +16,8 @@ import { configPackageModels, findProjectDir } from "./project-models.js";
 
 /**
  * `ph mutate`: a change to a document on a switchboard, signed as the person
- * (their Renown login or pseudonym, or the key in PH_IDENTITY_KEY) through
+ * (the key in PH_IDENTITY_KEY, else their Renown login, else their pseudonym:
+ * outside a project the identity home's) through
  * ph-cli's own session, so the switchboard signs nothing for the caller
  * (Powerhouse 6.4). Four forms: one action (`<document> <TYPE> --input`), a
  * file of plain actions (`<document> --actions`), a create (`--create`, built
@@ -408,21 +409,30 @@ const typesOf = (actions: readonly Action[]) => [
   ...new Set(actions.map((action) => action.type)),
 ];
 
+type PlannedJob = {
+  key: string;
+  documentId: string;
+  scope: string;
+  branch: string;
+  actions: Action[];
+  dependsOn: string[];
+  /** The entries of the `--actions` file it sends, first and last (0-based). */
+  entries: [number, number];
+};
+
 /** One job per run of actions in one scope, each after the one before. */
-function jobsOf(document: string, branch: string, actions: readonly Action[]) {
-  const jobs: {
-    key: string;
-    documentId: string;
-    scope: string;
-    branch: string;
-    actions: Action[];
-    dependsOn: string[];
-  }[] = [];
-  for (const action of actions) {
+export function jobsOf(
+  document: string,
+  branch: string,
+  actions: readonly Action[],
+): PlannedJob[] {
+  const jobs: PlannedJob[] = [];
+  actions.forEach((action, index) => {
     const last = jobs.at(-1);
     if (last && last.scope === action.scope) {
       last.actions.push(action);
-      continue;
+      last.entries[1] = index;
+      return;
     }
     jobs.push({
       key: `j${jobs.length}`,
@@ -431,9 +441,71 @@ function jobsOf(document: string, branch: string, actions: readonly Action[]) {
       branch,
       actions: [action],
       dependsOn: last ? [last.key] : [],
+      entries: [index, index],
     });
-  }
+  });
   return jobs;
+}
+
+/** A job of a batch that failed, as the person (and `--json`) reads it. */
+export type BatchJobReport = {
+  key: string;
+  scope: string;
+  /** The `--actions` entries it sent, first and last (0-based). */
+  entries: [number, number];
+  types: string[];
+  /** As the host reports it: READ_READY or WRITE_READY applied, FAILED did not. */
+  status: string;
+  error?: string;
+};
+
+/** A batch with a failed job: every job's state, for a retry to skip what applied. */
+class MutateBatchError extends MutateError {
+  constructor(
+    message: string,
+    readonly jobs: BatchJobReport[],
+  ) {
+    super(message);
+  }
+}
+
+/** Every planned job's state after a batch failed (`jobs` as the host gave them). */
+export function batchReport(
+  planned: readonly PlannedJob[],
+  jobs: Readonly<
+    Record<string, { status: string; error?: { message?: string } }>
+  >,
+): BatchJobReport[] {
+  return planned.map((job) => {
+    const info = jobs[job.key];
+    return {
+      key: job.key,
+      scope: job.scope,
+      entries: job.entries,
+      types: typesOf(job.actions),
+      status: info?.status ?? "UNKNOWN",
+      ...(info?.error?.message ? { error: info.error.message } : {}),
+    };
+  });
+}
+
+/** How a failed batch reads: one line per job, then what a retry sends. */
+export function describeBatch(jobs: readonly BatchJobReport[]): string[] {
+  const applied = (job: BatchJobReport) =>
+    job.status === "READ_READY" || job.status === "WRITE_READY";
+  const entries = ([first, last]: [number, number]) =>
+    first === last ? `entry ${first}` : `entries ${first}-${last}`;
+  const rest = jobs.filter((job) => !applied(job));
+  return [
+    `The actions went as ${jobs.length} jobs, one per run of one scope. A batch is not atomic: a job's failure leaves the others' writes.`,
+    ...jobs.map(
+      (job) =>
+        `  ${job.key}  ${entries(job.entries)} (${job.scope}: ${job.types.join(", ")})  ${applied(job) ? "applied" : job.status}${job.error ? `: ${job.error}` : ""}`,
+    ),
+    rest.length === jobs.length
+      ? "Nothing applied: send the file again."
+      : `Applied ones are on the document: resend only ${rest.map((job) => entries(job.entries)).join(", ")}.`,
+  ];
 }
 
 async function sendActions(
@@ -446,9 +518,21 @@ async function sendActions(
   if (actions.length === 1) {
     return client.execute(document, branch, actions);
   }
-  const { jobs } = await client.executeBatch({
-    jobs: jobsOf(document, branch, actions),
-  });
+  const planned = jobsOf(document, branch, actions);
+  let jobs: Awaited<ReturnType<GraphQLReactorClient["executeBatch"]>>["jobs"];
+  try {
+    ({ jobs } = await client.executeBatch({
+      jobs: planned.map(({ entries: _entries, ...job }) => job),
+    }));
+  } catch (error) {
+    const { BatchJobFailedError } =
+      await import("@powerhousedao/reactor-browser/graphql-client");
+    if (!BatchJobFailedError.isError(error)) throw error;
+    throw new MutateBatchError(
+      `Failed: ${error.message}`,
+      batchReport(planned, error.jobs),
+    );
+  }
   const last = Object.values(jobs).at(-1);
   return client.get(
     last?.documentId ?? document,
@@ -472,8 +556,14 @@ export async function runMutate(
     const host = hostOf(args, projectDir ?? io.cwd, io.env);
 
     const { openSession } = await import("@renown/sdk/identity");
+    // Outside a project (and without PH_USER_DATA_DIR) the identity home's
+    // pseudonym signs, and nothing is written in the current folder.
+    const dataDir =
+      projectDir || io.env.PH_USER_DATA_DIR
+        ? identityDataDir(projectDir ?? io.cwd, io.env)
+        : undefined;
     const session = await openSession({
-      dataDir: identityDataDir(projectDir ?? io.cwd, io.env),
+      ...(dataDir ? { dataDir } : {}),
       label: MUTATE_SESSION_LABEL,
       place: "home",
       interactive: io.interactive,
@@ -600,19 +690,24 @@ export async function runMutate(
 function failed(error: unknown, args: MutateArgs, io: MutateIo): number {
   const refusals = refusalsOf(error);
   const message = error instanceof Error ? error.message : String(error);
+  const batch = error instanceof MutateBatchError ? error.jobs : undefined;
   if (args.json) {
     io.out(
       JSON.stringify(
         {
           ok: false,
           ...(refusals.length > 0 ? { refusals } : { error: message }),
+          ...(batch ? { jobs: batch } : {}),
         },
         null,
         2,
       ),
     );
   }
-  if (refusals.length > 0) {
+  if (batch) {
+    io.err(message);
+    for (const line of describeBatch(batch)) io.err(line);
+  } else if (refusals.length > 0) {
     for (const refusal of refusals) io.err(describeRefusal(refusal));
   } else {
     io.err(error instanceof MutateError ? message : `Failed: ${message}`);

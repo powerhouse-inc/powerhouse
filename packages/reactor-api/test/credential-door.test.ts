@@ -2,6 +2,8 @@
 // out of reach, real bearers and credentials; and the enrolment routes.
 import {
   credentialRecordFile,
+  listCredentialRecords,
+  noteCredentialRecordUsed,
   readCredentialRecord,
   readCredentialWithdrawal,
   writeCredentialRecord,
@@ -201,10 +203,12 @@ describe("enrolment routes", () => {
   let server: Server;
   let hostUrl: string;
   let withdrawn: CredentialBinding[];
+  let evictedBindings: CredentialBinding[];
 
   beforeEach(async () => {
     vi.restoreAllMocks();
     withdrawn = [];
+    evictedBindings = [];
     type Handler = (
       req: IncomingMessage,
       res: ServerResponse,
@@ -221,6 +225,7 @@ describe("enrolment routes", () => {
       dataDir,
       hostDid: () => HOST,
       onWithdrawn: (binding) => withdrawn.push(binding),
+      onEvicted: (binding) => evictedBindings.push(binding),
     });
     server = createServer((req, res) => {
       const path = new URL(req.url ?? "/", "http://host").pathname;
@@ -322,6 +327,61 @@ describe("enrolment routes", () => {
     expect((await post("credentials/enrol", body)).status).toBe(201);
     expect((await post("credentials/enrol", body)).status).toBe(400);
   });
+
+  it("makes room at a full address by its least recently used record, leaving no tombstone", async () => {
+    // 50 records of the person, as fifty CI runs with a fresh home leave them.
+    const written: { id: string; session: string }[] = [];
+    for (let i = 0; i < 50; i++) {
+      const session = `did:key:zCiRun${String(i).padStart(2, "0")}`;
+      const { id } = writeCredentialRecord({
+        dataDir,
+        credential: await credentialFor(PERSON, session),
+        source: "enrolled",
+        now: new Date(Date.UTC(2026, 10, 1, 0, i)),
+      });
+      written.push({ id, session });
+    }
+    // The oldest was used since; the second oldest is the least recently used.
+    noteCredentialRecordUsed({
+      dataDir,
+      id: written[0]!.id,
+      at: new Date(),
+    });
+    const other = writeCredentialRecord({
+      dataDir,
+      credential: await credentialFor(STRANGER, "did:key:zStranger"),
+      source: "enrolled",
+      now: new Date(Date.UTC(2026, 9, 1)),
+    });
+    const fresh = await credentialFor(PERSON, "did:key:zCiRun50");
+    const enrolled = await enrolCredential({
+      hostUrl,
+      credential: fresh,
+      signTypedData: signAs(PERSON),
+    });
+    expect(readCredentialRecord({ dataDir, id: enrolled.id })).toBeDefined();
+    const evicted = written[1]!;
+    expect(readCredentialRecord({ dataDir, id: evicted.id })).toBeUndefined();
+    expect(
+      readCredentialWithdrawal({ dataDir, id: evicted.id }),
+    ).toBeUndefined();
+    expect(evictedBindings.map((b) => b.sessionDid)).toEqual([evicted.session]);
+    expect(readCredentialRecord({ dataDir, id: written[0]!.id })).toBeDefined();
+    expect(readCredentialRecord({ dataDir, id: other.id })).toBeDefined();
+    expect(
+      listCredentialRecords({ dataDir }).filter(
+        (r) => r.address === PERSON.address.toLowerCase(),
+      ),
+    ).toHaveLength(50);
+    // Evicted, not withdrawn: it may be enrolled again.
+    await expect(
+      enrolCredential({
+        hostUrl,
+        credential: await credentialFor(PERSON, evicted.session),
+        signTypedData: signAs(PERSON),
+      }),
+    ).resolves.toMatchObject({ id: evicted.id });
+  }, 120_000);
 
   it("limits how often one client enrols", async () => {
     const statuses: number[] = [];

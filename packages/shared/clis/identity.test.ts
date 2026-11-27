@@ -160,6 +160,19 @@ describe("ensurePseudonym", () => {
     expect(pseudonymCopies(first.address, env)).toHaveLength(2);
   });
 
+  it("with no store, makes and reads the home folder's default, writing nowhere else", async () => {
+    const made = await ensurePseudonym({ env });
+    expect(made).toMatchObject({ kind: "pseudonym", source: "home" });
+    expect(readPseudonym({ env })?.address).toBe(made.address);
+    expect(readActiveIdentity({ env })?.address).toBe(made.address);
+    expect(fs.readdirSync(root)).toEqual(["home"]);
+    // A store made later takes the same one.
+    expect(
+      (await ensurePseudonym({ dataDir: dir("later"), env })).address,
+    ).toBe(made.address);
+    expect((await ensurePseudonym({ env })).address).toBe(made.address);
+  });
+
   it("keeps a store's own pseudonym when the home folder's default differs", async () => {
     const mine = await ensurePseudonym({ dataDir: dir("mine"), env });
     const elsewhere = {

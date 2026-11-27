@@ -144,8 +144,17 @@ which writes them to a file readable by you only and never overwrites one;
 `--json` prints the identity as JSON. Give the key to the service as a secret
 (`PH_IDENTITY_KEY`). A process with it set signs as that identity,
 `Anonymous 0x7E5F...5Bdf`, whether or not a Renown login is in its identity
-home, and writes no key file. `openSession` above signs with it and enrols its
-session's credential at the host by a request the key signs.
+home. The key itself is never written; the process does write its session's
+key file in the identity home (`<home>/<address>/sessions/<label>.json`).
+`openSession` above signs with it and enrols its session's credential at the
+host by a request the key signs.
+
+A host keeps at most 50 enrolled credentials per address. A CI job whose
+container starts with a fresh identity home makes a new session key on every
+run, so each run enrols another one; at 50 the host makes room by that
+address's least recently used one (only a request the address's own key
+signs can do that). Give CI a persistent `PH_IDENTITY_HOME` (a cached
+folder) instead: every run then reuses one session.
 
 A service that must administer a host (install packages, say) goes into that
 host's `ADMINS`.
@@ -175,8 +184,16 @@ else the one the project runs (its run record under `.ph/run/`). `--json`
 prints the result for scripts. A refusal prints the host's code and fix, e.g.
 `Refused (UNSIGNED_WRITE, no-identity): ...`, and exits 1.
 
+A file of actions goes as one job per run of actions in one scope, each after
+the one before. The batch is not atomic: when a job fails, the others' writes
+stay. `ph mutate` then prints every job with the file's entries it sent and
+its state (also as `jobs` in `--json`), and which entries to send again.
+
 With `PH_IDENTITY_KEY` set, `ph mutate` signs as that identity: the same
-command serves a person at a terminal and a CI job.
+command serves a person at a terminal and a CI job (keep its
+`PH_IDENTITY_HOME` between runs, see above). Outside a project (and without
+`PH_USER_DATA_DIR`) it signs as your identity home's pseudonym and writes
+nothing in the current folder; name the switchboard with `--url`.
 
 ## Administration is the operator's
 

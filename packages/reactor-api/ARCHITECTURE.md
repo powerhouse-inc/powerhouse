@@ -117,6 +117,16 @@ internal coupling point between `auth-middleware.ts` and `graphql-manager.ts`.
 | a self-signed JWT of a session key, carrying or naming its credential | the token's signature, then the credential verifier (the store's records, then Renown) | `record`, `renown`, `last-answer`, `signature` |
 | `phs_<id>_<secret>`, a token of a session the caller delegated to this host | `HostSessions` (`src/services/host-sessions.ts`): the session file in `<dataDir>/.ph/host-sessions`, the hash of the secret, both ends, then the same credential verifier | `host-session` |
 
+A caller with no file access makes its credential known by enrolment
+(`src/http/credential-routes.ts`, `<base>/credentials/`): a request signed by
+the address's own key writes the record. The host keeps at most 50 records per
+address and 10,000 in all. An address at 50 makes room by its own records, so
+only its owner evicts them: the expired first, then the least recently used,
+by the `<id>.used` note the verifier writes beside a record at most hourly when
+it accepts it. An eviction is no withdrawal and leaves no tombstone; the
+verifier forgets the record first (`forgetRecord`), so its removal is not read
+as one, and the auth service drops what held it.
+
 A host session token is taken only where `options.hostSessions` is set: the
 GraphQL middleware, the WebSocket (`authenticateWebSocketConnection`), HTTP
 `/mcp` (`mcp-request-authorizer.ts`) and the switchboard's attachment routes.

@@ -2,6 +2,7 @@ import {
   credentialBindingOf,
   credentialRecordId,
   CredentialWithdrawnError,
+  evictCredentialRecords,
   listCredentialRecords,
   parsePkhIssuer,
   pruneCredentialRecords,
@@ -29,6 +30,9 @@ import { BodyTooLargeError, readBody, writeError } from "./node-response.js";
  * host keep, or withdraw, a credential's record in its data folder. Public
  * routes, outside the authenticated-caller floor: the caller has no accepted
  * credential yet. The host names itself and hands out single-use nonces.
+ * It keeps at most 50 records per address: a new one past that evicts the
+ * address's least recently used record (no tombstone), so a CI job that
+ * enrols a fresh session key per run keeps working.
  */
 
 export interface CredentialRoutesOptions {
@@ -37,6 +41,11 @@ export interface CredentialRoutesOptions {
   hostDid: () => string | undefined;
   /** A record was withdrawn: close what holds it. */
   onWithdrawn: (binding: CredentialBinding) => void;
+  /**
+   * A record is about to be evicted to make room for its address's new one
+   * (not withdrawn: no tombstone): forget it, and close what holds it.
+   */
+  onEvicted?: (binding: CredentialBinding) => void;
   /**
    * Whether a proxy of the deployment's own is in front (the host sets it
    * only with a configured PUBLIC_URL): limits then go by `X-Forwarded-For`
@@ -191,17 +200,19 @@ export function mountCredentialRoutes(
       return;
     }
     const id = credentialRecordId(binding);
-    if (!readCredentialRecord({ dataDir: options.dataDir, id })) {
+    const isNew = !readCredentialRecord({ dataDir: options.dataDir, id });
+    if (isNew) {
       let records = listCredentialRecords({ dataDir: options.dataDir });
       if (records.length >= ENROLLED_RECORDS) {
         pruneCredentialRecords({ dataDir: options.dataDir });
         records = listCredentialRecords({ dataDir: options.dataDir });
       }
-      if (
-        records.length >= ENROLLED_RECORDS ||
+      // A full address makes room by its own oldest record (below), so it
+      // adds nothing to the host's total.
+      const full =
         records.filter((r) => r.address === binding.address).length >=
-          RECORDS_PER_ADDRESS
-      ) {
+        RECORDS_PER_ADDRESS;
+      if (records.length >= ENROLLED_RECORDS && !full) {
         json(res, 507, { error: "This host keeps no more records" });
         return;
       }
@@ -219,6 +230,16 @@ export function mountCredentialRoutes(
         return;
       }
       throw error;
+    }
+    // Signed by the address's own key: only its owner evicts its records.
+    if (isNew) {
+      evictCredentialRecords({
+        dataDir: options.dataDir,
+        address: binding.address,
+        keep: RECORDS_PER_ADDRESS,
+        except: id,
+        beforeRemove: (record) => options.onEvicted?.(record),
+      });
     }
     json(res, 201, { id, expiresAt: credential.expirationDate });
   };

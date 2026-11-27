@@ -1327,6 +1327,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   const limitsTrustProxy = configured !== undefined;
   // Enrolment by a signed request, for a caller with no file access here.
   if (credentialVerifier) {
+    const verifier = credentialVerifier;
     mountCredentialRoutes(
       httpRoutes.hostScope(
         "credentials",
@@ -1341,6 +1342,15 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
             binding.chainId,
             binding.sessionDid,
           ),
+        // Forgotten before its file goes, so the removal is no withdrawal.
+        onEvicted: (binding) => {
+          verifier.forgetRecord(binding);
+          authService.invalidateCredential(
+            binding.address,
+            binding.chainId,
+            binding.sessionDid,
+          );
+        },
         trustProxy: limitsTrustProxy,
       },
     );

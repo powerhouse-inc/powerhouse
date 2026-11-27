@@ -183,10 +183,12 @@ export type ActiveIdentity = IdentityInfo & {
  * Who acts in `dataDir` and how it signs: the key in `PH_IDENTITY_KEY` when it
  * is set, else the Renown login when there is one, else the pseudonym (made
  * when `create` and there is none). A pseudonym's key is unlocked once, at
- * the first signature, asking its password when `interactive`.
+ * the first signature, asking its password when `interactive`. With no
+ * `dataDir` (a command outside any store) a pseudonym is the home folder's,
+ * and nothing is written outside it.
  */
 export async function resolveActiveIdentity(opts: {
-  dataDir: string;
+  dataDir?: string;
   interactive: boolean;
   create?: boolean;
   password?: string;
@@ -681,9 +683,13 @@ function approvedSession(where: {
  * acts by itself (an agent, an MCP client) stays withdrawn. `pseudonym: false`
  * refuses to sign as the pseudonym: only a Renown login or an approved
  * session signs.
+ *
+ * A `home` session needs no `dataDir`: outside any store (a command run
+ * elsewhere) the pseudonym is the home folder's, and nothing is written
+ * outside the home folder.
  */
 export async function openSession(o: {
-  dataDir: string;
+  dataDir?: string;
   label: string;
   place: SessionPlace;
   interactive: boolean;
@@ -694,7 +700,18 @@ export async function openSession(o: {
   env?: Env;
 }): Promise<OpenSession> {
   const env = o.env ?? process.env;
-  const where = { dataDir: o.dataDir, label: o.label, place: o.place, env };
+  if (o.place === "data-folder" && o.dataDir === undefined) {
+    throw new Error(
+      `The session "${o.label}" is a store's: it needs the store's data folder.`,
+    );
+  }
+  // A home session's file is in the identity home, whatever the store.
+  const where = {
+    dataDir: o.dataDir ?? "",
+    label: o.label,
+    place: o.place,
+    env,
+  };
   const approved =
     o.place === "data-folder" ? approvedSession(where) : undefined;
   let active: ActiveIdentity;
@@ -715,7 +732,11 @@ export async function openSession(o: {
       env,
       ...(o.password === undefined ? {} : { password: o.password }),
     });
-    if (!resolved) throw new Error(`No identity acts in ${o.dataDir}.`);
+    if (!resolved) {
+      throw new Error(
+        `No identity acts in ${o.dataDir ?? "the identity home"}.`,
+      );
+    }
     active = resolved;
     source =
       active.kind === "renown"
@@ -760,7 +781,7 @@ export async function openSession(o: {
               place: o.place,
               label: o.label,
               address: active.address,
-              dataDir: o.dataDir,
+              dataDir: where.dataDir,
               env,
             }),
           );
