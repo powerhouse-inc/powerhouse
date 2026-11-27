@@ -85,7 +85,11 @@ import {
 import { mountOAuthRoutes } from "./http/oauth-routes.js";
 import { runAsCaller } from "./services/host-session-scope.js";
 import { HostSessions } from "./services/host-sessions.js";
-import { OperatorSet, parseOperatorSource } from "./services/operator-set.js";
+import {
+  identityKeyBesideLogin,
+  OperatorSet,
+  parseOperatorSource,
+} from "./services/operator-set.js";
 import {
   createAuthFetchMiddleware,
   type AuthFetchMiddleware,
@@ -1021,11 +1025,15 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     options.renown ?? resolveRenownConfig(configuredRenown, {}, logger);
   const stateDir = authStateDir(optionAuth);
   // Administration over HTTP: ADMINS, and whom the launcher named.
+  const operatorSource = parseOperatorSource(optionAuth.operator);
   const operators = new OperatorSet({
     admins,
-    source: parseOperatorSource(optionAuth.operator),
+    source: operatorSource,
     dataDir: path.dirname(stateDir),
+    log: (message) => logger.warn("@message", message),
   });
+  const keyBesideLogin = identityKeyBesideLogin();
+  if (keyBesideLogin) logger.warn("@message", keyBesideLogin);
   if (operators.configured) {
     logger.info("Administered by @operators", operators.describe());
   } else {

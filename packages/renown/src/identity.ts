@@ -180,10 +180,10 @@ export type ActiveIdentity = IdentityInfo & {
 };
 
 /**
- * Who acts in `dataDir` and how it signs: the Renown login when there is one,
- * else the pseudonym (made when `create` and there is none). A pseudonym's key
- * is unlocked once, at the first signature, asking its password when
- * `interactive`.
+ * Who acts in `dataDir` and how it signs: the key in `PH_IDENTITY_KEY` when it
+ * is set, else the Renown login when there is one, else the pseudonym (made
+ * when `create` and there is none). A pseudonym's key is unlocked once, at
+ * the first signature, asking its password when `interactive`.
  */
 export async function resolveActiveIdentity(opts: {
   dataDir: string;
@@ -494,7 +494,11 @@ export class SessionWithdrawnError extends Error {
 }
 
 export interface OpenSession {
-  /** Who acts: the Renown login or the pseudonym. */
+  /**
+   * Who acts: the key in `PH_IDENTITY_KEY` when it is set, else the Renown
+   * login, else the pseudonym; or the wallet of an approved data-folder
+   * session ({@link openSession}).
+   */
   identity: IdentityInfo;
   /** What actions' `context.signer` names. */
   signer: SessionSigner;
@@ -660,8 +664,11 @@ function approvedSession(where: {
 
 /**
  * The session `label` of whoever acts in `dataDir`, ready to sign: a
- * data-folder session a Renown wallet approved signs as that wallet; else a
- * pseudonym (made when there is none) signs its session's credential itself
+ * data-folder session a Renown wallet approved signs as that wallet, whoever
+ * acts here, `PH_IDENTITY_KEY` included (the one place the variable does not
+ * win: the wallet approved that session's key for this store); else the
+ * active identity (`PH_IDENTITY_KEY`'s key, else the Renown login, else the
+ * pseudonym). A pseudonym, or the key, signs its session's credential itself
  * and renews it when it has less than {@link SESSION_RENEW_DAYS} left; a
  * Renown login's `home` session is the login's own, a `data-folder` one must
  * have been approved ({@link SessionApprovalRequiredError}). A pseudonym's

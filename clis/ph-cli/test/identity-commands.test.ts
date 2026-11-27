@@ -113,6 +113,14 @@ describe("ph whoami", () => {
     });
   });
 
+  it("shows PH_IDENTITY_KEY's key, with no login to override", async () => {
+    vi.stubEnv("PH_IDENTITY_KEY", `0x${"44".repeat(32)}`);
+    await runWhoami({ renownUrl: RENOWN }, print);
+    expect(lines[0]).toMatch(
+      /^Anonymous 0x.{4}\.\.\..{4} \(no Renown login\)$/,
+    );
+  });
+
   it("shows the Renown login when there is one", async () => {
     await ensurePseudonym({ dataDir: store });
     await login();
@@ -180,7 +188,10 @@ describe("ph identity new", () => {
     await login();
     vi.stubEnv("PH_IDENTITY_KEY", key);
     await runWhoami({ renownUrl: RENOWN }, print);
-    expect(lines[0]).toBe(`${name} (no Renown login)`);
+    // The login is there, overridden: not "(no Renown login)".
+    expect(lines[0]).toBe(
+      `${name} (PH_IDENTITY_KEY overrides the Renown login of 0x5aAe...eAed)`,
+    );
     expect(lines.join("\n")).toContain("PH_IDENTITY_KEY (never written)");
     expect(fs.readdirSync(store)).toEqual([]);
   });

@@ -24,9 +24,10 @@ function refuse(message: string, code = "refused"): Error {
 /**
  * How a Cli's command line signs when the Cli configures no identity
  * (`Cli.configureIdentity`): as the person's active identity on this
- * computer (their Renown login, else their pseudonym, made at the first
- * signature), with a session labelled `label` (the Cli's name) kept in their
- * home folder. Renown's signing code loads at that first signature only.
+ * computer (the key in `PH_IDENTITY_KEY` when it is set, else their Renown
+ * login, else their pseudonym, made at the first signature), with a session
+ * labelled `label` (the Cli's name) kept in their home folder. Renown's
+ * signing code loads at that first signature only.
  */
 export function defaultIdentity(label: string): IdentityConfiguration {
   return {

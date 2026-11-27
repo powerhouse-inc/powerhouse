@@ -1,7 +1,12 @@
 // Who administers an instance over HTTP: ADMINS, and whom its launcher named
 // (`PH_OPERATOR`), the OS user's identities read as they change. No caller
 // becomes an owner by signing in first.
-import { ensurePseudonym } from "@powerhousedao/shared/clis/identity";
+import {
+  addressOfKey,
+  ensurePseudonym,
+  loginPaths,
+  parsePrivateKey,
+} from "@powerhousedao/shared/clis/identity";
 import {
   ChannelScheme,
   EventBus,
@@ -9,7 +14,7 @@ import {
   ReactorClientBuilder,
 } from "@powerhousedao/reactor";
 import type { DocumentModelModule, ILogger } from "document-model";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -19,6 +24,7 @@ import {
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
 import {
+  identityKeyBesideLogin,
   OperatorSet,
   parseOperatorSource,
 } from "../src/services/operator-set.js";
@@ -26,6 +32,7 @@ import {
 const ADMIN = "0x00000000000000000000000000000000000000aa";
 const NAMED = "0x00000000000000000000000000000000000000bb";
 const STRANGER = "0x00000000000000000000000000000000000000cc";
+const LOGIN = "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed";
 
 const dirs: string[] = [];
 function tempDir(): string {
@@ -92,6 +99,75 @@ describe("the operator set", () => {
       expect(set.has(pseudonym.address)).toBe(true);
       expect(set.has(STRANGER)).toBe(false);
     });
+  });
+
+  /** A Renown login in `home`, as `ph login` writes it. */
+  function writeLogin(home: string, address: string) {
+    const file = loginPaths({ PH_IDENTITY_HOME: home }).file;
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(
+      file,
+      JSON.stringify({
+        user: {
+          address,
+          chainId: 1,
+          credential: {
+            id: "urn:uuid:login",
+            expirationDate: new Date(Date.now() + 86_400_000).toISOString(),
+          },
+        },
+      }),
+    );
+  }
+
+  it("keeps the OS user's Renown login beside PH_IDENTITY_KEY's key", () => {
+    const home = path.join(tempDir(), "home");
+    writeLogin(home, LOGIN);
+    const key = `0x${"44".repeat(32)}`;
+    const env = { PH_IDENTITY_HOME: home, PH_IDENTITY_KEY: key };
+    const set = new OperatorSet({
+      admins: [],
+      source: { osUser: true, addresses: [] },
+      dataDir: tempDir(),
+      env,
+      log: () => undefined,
+    });
+    // The process acts as the key, and the developer's login administers too.
+    expect(set.has(addressOfKey(parsePrivateKey(key)))).toBe(true);
+    expect(set.has(LOGIN)).toBe(true);
+    expect(set.has(STRANGER)).toBe(false);
+    expect(identityKeyBesideLogin(env)).toMatch(
+      /^PH_IDENTITY_KEY is set while the Renown login of .* is in the identity home/,
+    );
+    expect(identityKeyBesideLogin({ PH_IDENTITY_HOME: home })).toBeUndefined();
+    expect(
+      identityKeyBesideLogin({
+        PH_IDENTITY_HOME: path.join(tempDir(), "empty"),
+        PH_IDENTITY_KEY: key,
+      }),
+    ).toBeUndefined();
+  });
+
+  it("logs once, naming it, an identity it cannot read, and keeps the login", () => {
+    const home = path.join(tempDir(), "home");
+    writeLogin(home, LOGIN);
+    let now = 1_000_000;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    const log = vi.fn();
+    const set = new OperatorSet({
+      admins: [],
+      source: { osUser: true, addresses: [] },
+      dataDir: tempDir(),
+      env: { PH_IDENTITY_HOME: home, PH_IDENTITY_KEY: "0x1234" },
+      log,
+    });
+    expect(set.has(LOGIN)).toBe(true);
+    now += 1_500;
+    expect(set.has(STRANGER)).toBe(false);
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(String(log.mock.calls[0]?.[0])).toMatch(
+      /^The OS user's key in PH_IDENTITY_KEY cannot be read, so it administers nothing here: PH_IDENTITY_KEY: Not a private key/,
+    );
   });
 });
 

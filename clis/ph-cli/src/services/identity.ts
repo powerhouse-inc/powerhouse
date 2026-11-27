@@ -6,9 +6,11 @@ import {
   identityDataDir,
   type IdentityInfo,
   IDENTITY_KEY_ENV,
+  type LoginInfo,
   loginPaths,
   pseudonymLabel,
   readActiveIdentity,
+  readLogin,
   readPseudonym,
 } from "@powerhousedao/shared/clis/identity";
 import { createOwnerOnlyFile } from "@powerhousedao/shared/clis/owner-only";
@@ -34,8 +36,14 @@ function keyLine(info: IdentityInfo): string {
   }
 }
 
-/** What `ph whoami` prints for `info`. */
-export function describeIdentity(info: IdentityInfo | undefined): string[] {
+/**
+ * What `ph whoami` prints for `info`; `login` is the home's Renown login,
+ * which `PH_IDENTITY_KEY` overrides when both are there.
+ */
+export function describeIdentity(
+  info: IdentityInfo | undefined,
+  login: LoginInfo | undefined = undefined,
+): string[] {
   if (!info) {
     return [
       "Nobody yet: no Renown login, and no pseudonym on this computer.",
@@ -58,8 +66,11 @@ export function describeIdentity(info: IdentityInfo | undefined): string[] {
       `  Login:    ${login.file}`,
     ];
   }
+  const overridden = info.source === "env" && login !== undefined;
   return [
-    `${info.label} (no Renown login)`,
+    overridden
+      ? `${info.label} (${IDENTITY_KEY_ENV} overrides the Renown login of ${login.label})`
+      : `${info.label} (no Renown login)`,
     `  Address:  ${info.address}`,
     `  Key:      ${keyLine(info)}`,
     `  Password: ${info.encrypted ? "yes" : "no"}`,
@@ -114,7 +125,7 @@ export async function runWhoami(
       "Renown no longer knows your login: it was withdrawn or has expired.",
     );
   }
-  for (const line of describeIdentity(info)) print(line);
+  for (const line of describeIdentity(info, readLogin())) print(line);
   if (checked === "valid") print("  Renown:   still valid");
   const notice = projectLoginNotice(dataDir);
   if (notice) print(notice);

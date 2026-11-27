@@ -15,8 +15,9 @@ type PersonSession = {
 
 /**
  * `remote` with the person who runs the Cli as its writer when it names no
- * signer: their active identity on this computer (their Renown login, else
- * their pseudonym, made at the first signature), a session labelled `label`
+ * signer: their active identity on this computer (the key in
+ * `PH_IDENTITY_KEY` when it is set, else their Renown login, else their
+ * pseudonym, made at the first signature), a session labelled `label`
  * (the Cli's name) kept in their home folder and made known at the
  * switchboard `switchboardBase`. Once a write opened it, requests bear that
  * session unless `remote` names a token. Renown's signing code loads at the

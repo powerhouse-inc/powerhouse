@@ -187,10 +187,14 @@ host is a separate right, held by its operators:
   a deployment.
 - `PH_OPERATOR`: whom the launcher names. `ph run`, `ph dev`, `ph switchboard`,
   `ph vetra` and the supervisor pass `PH_OPERATOR=os-user`: the identities of
-  the OS user who runs the host (their Renown login, and the store's
-  pseudonym, re-read at most once a second, so a pseudonym made after boot
-  counts at once). It also takes addresses. The bare switchboard binary and
-  containers pass nothing: `ADMINS` alone.
+  the OS user who runs the host (the key in `PH_IDENTITY_KEY` when it is set,
+  else their Renown login, else their pseudonym; their Renown login also when
+  the key is set; and the store's pseudonym), re-read at most once a second,
+  so a pseudonym made after boot counts at once. A service key in a project's
+  `.env` thus takes no administration from the developer who is logged in; the
+  host warns at boot that the key and a login are both there, and logs once an
+  identity it cannot read (a malformed key). It also takes addresses. The bare
+  switchboard binary and containers pass nothing: `ADMINS` alone.
 
 Administration covers package installs and uninstalls, the AI gateway, remote
 drives (`addRemoteDrive` over MCP), privacy erasure and disclosure, the
