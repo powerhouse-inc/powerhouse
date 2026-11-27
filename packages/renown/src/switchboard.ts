@@ -352,6 +352,24 @@ function issuedTo(
   );
 }
 
+/**
+ * A GraphQL error answer: the messages joined, as before, and the
+ * `extensions.code` of each error that named one, so a caller can tell an
+ * answer apart by its code instead of its wording.
+ */
+export class SwitchboardRequestError extends Error {
+  readonly codes: readonly string[];
+
+  constructor(errors: readonly { message: string; extensions?: unknown }[]) {
+    super(errors.map((e) => e.message).join("; "));
+    this.name = "SwitchboardRequestError";
+    this.codes = errors.flatMap((e) => {
+      const code = (e.extensions as { code?: unknown } | undefined)?.code;
+      return typeof code === "string" ? [code] : [];
+    });
+  }
+}
+
 /** Per-request options: `token` is a Renown bearer token that authenticates
  * the request (sent as `Authorization: Bearer <token>` over HTTP). */
 export interface SwitchboardRequestOptions {
@@ -464,10 +482,13 @@ export class SwitchboardClient {
        it before judging the status: the messages say what was wrong, the code
        only that something was. */
     const body = (await response.json().catch(() => undefined)) as
-      | { data?: unknown; errors?: { message: string }[] }
+      | {
+          data?: unknown;
+          errors?: { message: string; extensions?: unknown }[];
+        }
       | undefined;
     if (body?.errors?.length) {
-      throw new Error(body.errors.map((e) => e.message).join("; "));
+      throw new SwitchboardRequestError(body.errors);
     }
     if (!response.ok || !body) {
       throw new Error(`Switchboard request failed: ${response.status}`);

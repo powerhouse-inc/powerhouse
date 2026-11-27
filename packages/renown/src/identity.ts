@@ -15,7 +15,9 @@ import type { PrivateKeyAccount } from "viem/accounts";
 import { DEFAULT_RENOWN_CHAIN_ID, DEFAULT_RENOWN_URL } from "./constants.js";
 import {
   buildAndSignCredential,
+  checkDelegationCredential,
   fetchDelegationCredential,
+  type DelegationCredentialStatus,
   type SignCredentialTypedData,
 } from "./credential.js";
 import {
@@ -43,14 +45,17 @@ import { randomUUID } from "node:crypto";
 import type { ISigner } from "@powerhousedao/shared/document-model";
 import { enrolCredential } from "./credential-enrolment.js";
 import { MemoryKeyStorage } from "./crypto/memory-key-storage.js";
-import { NodeKeyStorage } from "./crypto/node-key-storage.js";
+import {
+  NodeKeyStorage,
+  RENOWN_PRIVATE_KEY_ENV,
+} from "./crypto/node-key-storage.js";
 import type { RenownCrypto } from "./crypto/renown-crypto.js";
 import { RenownCryptoBuilder } from "./crypto/renown-crypto-builder.js";
 import { RenownCryptoSigner } from "./crypto/signer.js";
 import type { JwkKeyPair } from "./crypto/types.js";
 import { resolveSwitchboardEndpoint } from "./discovery.js";
 import { RenownBuilder } from "./init.node.js";
-import { SwitchboardClient } from "./switchboard.js";
+import { SwitchboardClient, SwitchboardRequestError } from "./switchboard.js";
 import type { IRenown, PowerhouseVerifiableCredential, User } from "./types.js";
 
 /**
@@ -95,7 +100,10 @@ export function homeLoginRenown(
  */
 export type LoginFiles = { file: string; keypair: string };
 
-/** The Renown of the login kept in `files`; its key is the file's only. */
+/**
+ * The Renown of the login kept in `files`; its key is the file's only, or
+ * `keyPair` when the caller found the login's key elsewhere.
+ */
 function loginRenownAt(
   files: LoginFiles,
   opts: {
@@ -103,16 +111,21 @@ function loginRenownAt(
     baseUrl?: string;
     switchboardUrl?: string;
     revalidate?: "always" | "never";
+    keyPair?: JwkKeyPair;
   },
 ): Promise<IRenown> {
-  return new RenownBuilder(opts.appName ?? "ph-cli", {
+  const builder = new RenownBuilder(opts.appName ?? "ph-cli", {
     keyPath: files.keypair,
     keyEnv: null,
     storagePath: files.file,
     ...(opts.baseUrl ? { baseUrl: opts.baseUrl } : {}),
     ...(opts.switchboardUrl ? { switchboardUrl: opts.switchboardUrl } : {}),
     revalidate: opts.revalidate ?? "always",
-  }).build();
+  });
+  if (opts.keyPair) {
+    builder.withKeyPairStorage(new MemoryKeyStorage(opts.keyPair));
+  }
+  return builder.build();
 }
 
 export interface HomeLogin {
@@ -245,13 +258,36 @@ export type WithdrawResult =
   | { status: "not-found" }
   /** Renown did not take the login's own bearer: the wallet must sign. */
   | { status: "refused"; reason: string; revokeUrl: string }
-  /** Nothing could ask Renown: the login lapses at its expiry. */
-  | { status: "unavailable"; reason: string; expiresAt?: string };
+  /**
+   * Nothing could ask Renown: the login lapses at its expiry. `keyMissing`:
+   * the login's session key file is gone, so no run can withdraw it this way.
+   */
+  | {
+      status: "unavailable";
+      reason: string;
+      expiresAt?: string;
+      keyMissing?: true;
+    };
 
 // How the switchboard words a refusal (FORBIDDEN, UNAUTHENTICATED, 401, 403).
 const REFUSED =
   /forbidden|unauthenticated|unauthori[sz]ed|not authori[sz]ed|failed: 40[13]\b/i;
-const NOT_FOUND = /not found/i;
+
+/**
+ * Renown's own "no such credential", and nothing else that reads alike (a
+ * "Document not found" of another resolver): `renown_revokeCredential`'s
+ * NOT_FOUND code, or the exact text an older renown-package's fallback throws.
+ */
+function credentialNotFound(error: unknown, credentialId: string): boolean {
+  if (
+    error instanceof SwitchboardRequestError &&
+    error.codes.includes("NOT_FOUND")
+  ) {
+    return true;
+  }
+  const message = error instanceof Error ? error.message : String(error);
+  return message === `Credential not found: ${credentialId}`;
+}
 
 /**
  * Withdraws the home login's credential at Renown with a bearer of the login's
@@ -270,11 +306,14 @@ export function withdrawLogin(
  * Withdraws, at Renown, the credential of the login kept in `files`, with a
  * bearer of that login's own session key: the home login (`ph logout`), and
  * the logins a project or Studio's agent kept before Powerhouse 6.4 (`ph
- * migrate`). A login whose key is gone cannot be withdrawn this way.
+ * migrate`). A login whose key file is gone is withdrawn only with `keyPair`,
+ * its session key found elsewhere ({@link envSessionKey}).
  */
 export async function withdrawLoginAt(o: {
   files: LoginFiles;
   renownUrl?: string;
+  /** The login's session key, when its file is gone. */
+  keyPair?: JwkKeyPair;
 }): Promise<WithdrawResult> {
   const login = readLoginFile(o.files);
   if (!login) return { status: "not-logged-in" };
@@ -292,11 +331,12 @@ export async function withdrawLoginAt(o: {
     return { status: "unavailable", reason: "it has expired", ...lapses };
   }
   // A missing key would be made anew, and no new key proves anything.
-  if (!fs.existsSync(o.files.keypair)) {
+  if (!o.keyPair && !fs.existsSync(o.files.keypair)) {
     return {
       status: "unavailable",
       reason: `its session key ${o.files.keypair} is gone`,
       ...lapses,
+      keyMissing: true,
     };
   }
   const endpoint = await resolveSwitchboardEndpoint({ baseUrl });
@@ -312,6 +352,7 @@ export async function withdrawLoginAt(o: {
       baseUrl,
       switchboardUrl: endpoint,
       revalidate: "never",
+      ...(o.keyPair ? { keyPair: o.keyPair } : {}),
     });
     const token = await renown.getBearerToken({ expiresIn: 600 });
     await new SwitchboardClient(endpoint).revokeCredential(login.credentialId, {
@@ -321,8 +362,83 @@ export async function withdrawLoginAt(o: {
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     if (REFUSED.test(reason)) return { status: "refused", reason, revokeUrl };
-    if (NOT_FOUND.test(reason)) return { status: "not-found" };
+    if (credentialNotFound(error, login.credentialId)) {
+      return { status: "not-found" };
+    }
     return { status: "unavailable", reason, ...lapses };
+  }
+}
+
+type StoredLoginUser = {
+  address?: string;
+  chainId?: number;
+  credential?: Partial<PowerhouseVerifiableCredential>;
+};
+
+/**
+ * What Renown's read model says of the credential of the login kept in
+ * `files`: `active`, `revoked`, `expired`, `absent` (it never held it) or
+ * `unknown` (no answer, or the file names no session key to ask about). Asks
+ * the switchboard Renown's discovery names, else its REST API; needs no auth.
+ */
+export async function checkLoginAt(o: {
+  files: LoginFiles;
+  renownUrl?: string;
+  timeoutMs?: number;
+}): Promise<DelegationCredentialStatus> {
+  let user: StoredLoginUser | undefined;
+  try {
+    user = (
+      JSON.parse(fs.readFileSync(o.files.file, "utf8")) as {
+        user?: StoredLoginUser;
+      }
+    ).user;
+  } catch {
+    return "unknown";
+  }
+  const credential = user?.credential;
+  const appDid = credential?.credentialSubject?.id;
+  const issuer = credential?.issuer?.id?.split(":");
+  const address = credential?.issuer?.ethereumAddress ?? user?.address;
+  const chainId = Number(issuer?.[3] ?? user?.chainId ?? 1);
+  if (!appDid || !address || !Number.isInteger(chainId)) return "unknown";
+  const baseUrl = o.renownUrl ?? DEFAULT_RENOWN_URL;
+  const switchboardUrl = await resolveSwitchboardEndpoint({
+    baseUrl,
+    ...(o.timeoutMs ? { timeoutMs: o.timeoutMs } : {}),
+  });
+  const check = await checkDelegationCredential({
+    address,
+    chainId,
+    appDid,
+    ...(credential?.expirationDate
+      ? { expirationDate: credential.expirationDate }
+      : {}),
+    ...(switchboardUrl ? { switchboardUrl } : { baseUrl }),
+    ...(o.timeoutMs ? { timeoutMs: o.timeoutMs } : {}),
+  });
+  return check.status;
+}
+
+/**
+ * The key pair in `PH_RENOWN_PRIVATE_KEY` (JSON, bare or as `{ keyPair }`),
+ * when it is the session key `did` names; else undefined. A login made before
+ * 6.4 signed with that variable's key when it was set.
+ */
+export async function envSessionKey(
+  did: string,
+  env: Env = process.env,
+): Promise<JwkKeyPair | undefined> {
+  const text = env[RENOWN_PRIVATE_KEY_ENV];
+  if (!text) return undefined;
+  let keyPair: JwkKeyPair;
+  try {
+    const parsed = JSON.parse(text) as JwkKeyPair | { keyPair: JwkKeyPair };
+    keyPair = "keyPair" in parsed ? parsed.keyPair : parsed;
+    if (!keyPair?.publicKey || !keyPair.privateKey) return undefined;
+    return (await cryptoOf(keyPair)).did === did ? keyPair : undefined;
+  } catch {
+    return undefined;
   }
 }
 

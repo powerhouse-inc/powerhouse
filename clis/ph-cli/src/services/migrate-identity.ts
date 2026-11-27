@@ -5,10 +5,12 @@ import {
 } from "@powerhousedao/shared/clis/credential-records";
 import {
   identityDataDir,
+  identityHome,
   readLoginFile,
   shortAddress,
 } from "@powerhousedao/shared/clis/identity";
 import { legacyIdentityPaths } from "@powerhousedao/shared/clis/ph-dir";
+import type { DelegationCredentialStatus, JwkKeyPair } from "@renown/sdk/node";
 import type { LoginFiles, WithdrawResult } from "@renown/sdk/identity";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -35,9 +37,16 @@ import path from "node:path";
  *    (`.ph/unsigned-writes/`): summarised once, by code and field, and deleted.
  *
  * Each item acts on what exists, so a second run has nothing to do. A dry run
- * asks Renown nothing and writes nothing. A withdraw that fails keeps that
- * item's files, says why and where to withdraw by hand, and makes the step
- * exit 1; the other items go on.
+ * asks Renown nothing and writes nothing. A withdraw Renown refuses, or one
+ * whose key is gone, asks Renown's read model whether it still holds the
+ * credential: revoked, expired or never held, the item is done as withdrawn;
+ * a key gone but in PH_RENOWN_PRIVATE_KEY withdraws with that key. Otherwise
+ * the item's files stay, the step says why and where to withdraw by hand
+ * (after which a run finishes it), and exits 1; the other items go on.
+ *
+ * Outside a project (`projectDir` unset, PH_USER_DATA_DIR set) the step acts
+ * on the data folder only, never on the current folder's files. It removes
+ * nothing that holds the identity home.
  */
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -45,17 +54,34 @@ type Env = Readonly<Record<string, string | undefined>>;
 export type IdentityStepIo = {
   out: (line: string) => void;
   env: Env;
-  /** Withdraws a login at Renown; renown's `withdrawLoginAt` by default. */
-  withdraw?: (files: LoginFiles, renownUrl: string) => Promise<WithdrawResult>;
+  /**
+   * Withdraws a login at Renown, with `keyPair` when its key file is gone;
+   * renown's `withdrawLoginAt` by default.
+   */
+  withdraw?: (
+    files: LoginFiles,
+    renownUrl: string,
+    keyPair?: JwkKeyPair,
+  ) => Promise<WithdrawResult>;
+  /** Renown's read model on a login's credential; renown's `checkLoginAt` by default. */
+  check?: (
+    files: LoginFiles,
+    renownUrl: string,
+  ) => Promise<DelegationCredentialStatus>;
+  /** The key in PH_RENOWN_PRIVATE_KEY when it is `did`'s; renown's `envSessionKey` by default. */
+  envKey?: (did: string) => Promise<JwkKeyPair | undefined>;
   /** The files git tracks under `dir`, relative to it; `git ls-files` by default. */
   gitTracked?: (dir: string) => string[];
 };
 
 export type IdentityStepOptions = {
-  projectDir: string;
+  /** The Powerhouse project; unset outside one (then PH_USER_DATA_DIR names the data folder). */
+  projectDir?: string;
   dryRun: boolean;
   /** The Renown the logins were made at. */
   renownUrl: string;
+  /** Why that Renown, as the step says it: the flag, or the default. */
+  renownUrlFrom?: string;
 };
 
 /** The settings nothing reads since 6.4, in powerhouse.config.json. */
@@ -86,11 +112,15 @@ const DEAD_HOST_SETTINGS: { pattern: RegExp; what: string }[] = [
 const HOST_FILE = /\.(?:[cm]?js|[cm]?ts|json)$/;
 
 type Step = {
-  projectDir: string;
+  /** The project; unset outside one, where only the data folder is acted on. */
+  projectDir: string | undefined;
   dataDir: string;
   phDir: string;
   dryRun: boolean;
   renownUrl: string;
+  renownUrlFrom: string;
+  /** Which Renown is asked has been said. */
+  renownSaid: boolean;
   io: IdentityStepIo;
   /** Lines to print under the heading. */
   lines: string[];
@@ -106,12 +136,38 @@ const say = (step: Step, line: string) => step.lines.push(`  ${line}`);
 const unread = (count: number) =>
   `nothing reads ${count === 1 ? "it" : "them"} since 6.4`;
 
-/** A path as the person reads it: relative to the project when inside it. */
+/** A path as the person reads it: relative to the project (or data folder) when inside it. */
 function shown(step: Step, file: string): string {
-  const relative = path.relative(step.projectDir, file);
+  const relative = path.relative(step.projectDir ?? step.dataDir, file);
   return relative && !relative.startsWith("..") && !path.isAbsolute(relative)
     ? relative.replaceAll("\\", "/")
     : file;
+}
+
+/** `outer` is `inner` or holds it. */
+function holds(outer: string, inner: string): boolean {
+  const relative = path.relative(path.resolve(outer), path.resolve(inner));
+  return (
+    relative === "" ||
+    (!relative.startsWith("..") && !path.isAbsolute(relative))
+  );
+}
+
+/**
+ * Whether `files` may be removed: none holds the identity home (a
+ * PH_IDENTITY_HOME set inside `.ph`), which the step never deletes. Says so
+ * when not.
+ */
+function removable(step: Step, files: readonly string[]): boolean {
+  const home = identityHome(step.io.env);
+  const held = files.find((file) => holds(file, home));
+  if (held === undefined) return true;
+  step.findings++;
+  say(
+    step,
+    `Kept ${shown(step, held)}: it holds the identity home ${home} (PH_IDENTITY_HOME), which this step never deletes. Point PH_IDENTITY_HOME elsewhere and run \`ph migrate --identity\` again.`,
+  );
+  return false;
 }
 
 function remove(file: string): void {
@@ -133,9 +189,162 @@ function storedCredential(file: string): CredentialLike | undefined {
 async function defaultWithdraw(
   files: LoginFiles,
   renownUrl: string,
+  keyPair?: JwkKeyPair,
 ): Promise<WithdrawResult> {
   const { withdrawLoginAt } = await import("@renown/sdk/identity");
-  return withdrawLoginAt({ files, renownUrl });
+  return withdrawLoginAt({ files, renownUrl, ...(keyPair ? { keyPair } : {}) });
+}
+
+async function defaultCheck(
+  files: LoginFiles,
+  renownUrl: string,
+): Promise<DelegationCredentialStatus> {
+  const { checkLoginAt } = await import("@renown/sdk/identity");
+  return checkLoginAt({ files, renownUrl });
+}
+
+/** Says once, before the first question to Renown, which Renown it is and why. */
+function sayRenown(step: Step): void {
+  if (step.renownSaid) return;
+  step.renownSaid = true;
+  say(
+    step,
+    `${step.dryRun ? "Would ask" : "Asking"} Renown at ${step.renownUrl} (${step.renownUrlFrom}).`,
+  );
+}
+
+/** What Renown's read model answered, as a line says it; undefined while it holds it. */
+function goneAtRenown(
+  step: Step,
+  status: DelegationCredentialStatus,
+  what: string,
+): string | undefined {
+  switch (status) {
+    case "revoked":
+      return `${step.renownUrl} withdrew ${what} already`;
+    case "expired":
+      return `${step.renownUrl} holds ${what} as expired`;
+    case "absent":
+      return `${step.renownUrl} never held ${what}`;
+    default:
+      return undefined;
+  }
+}
+
+type Login = NonNullable<ReturnType<typeof readLoginFile>>;
+
+/**
+ * After a withdraw Renown refused, or one whose key file is gone: Renown's
+ * read model, then the key in PH_RENOWN_PRIVATE_KEY. Returns the line that
+ * opens the item's "done", or undefined when the item stays (said here).
+ */
+async function settleFailedWithdraw(
+  step: Step,
+  o: { what: string; files: LoginFiles; removed: string },
+  who: string,
+  result: Extract<WithdrawResult, { status: "refused" | "unavailable" }>,
+): Promise<string | undefined> {
+  const meUrl = new URL("/me", step.renownUrl).href;
+  let failure = result;
+  const keyMissing = result.status === "unavailable" && result.keyMissing;
+  if (result.status === "refused" || keyMissing) {
+    const status = await (step.io.check ?? defaultCheck)(
+      o.files,
+      step.renownUrl,
+    );
+    const gone = goneAtRenown(step, status, `${o.what} of ${who}`);
+    if (gone) return `${gone}, so there was nothing to withdraw`;
+  }
+  if (keyMissing) {
+    const subject = storedCredential(o.files.file)?.credentialSubject?.id;
+    const keyPair = subject
+      ? await (
+          step.io.envKey ??
+          (async (did: string) => {
+            const { envSessionKey } = await import("@renown/sdk/identity");
+            return envSessionKey(did, step.io.env);
+          })
+        )(subject)
+      : undefined;
+    if (keyPair) {
+      const again = await (step.io.withdraw ?? defaultWithdraw)(
+        o.files,
+        step.renownUrl,
+        keyPair,
+      );
+      if (again.status === "withdrawn") {
+        return `Withdrew ${o.what} of ${who} at ${step.renownUrl} with the key in PH_RENOWN_PRIVATE_KEY, which its credential names`;
+      }
+      if (again.status === "not-found" || again.status === "not-logged-in") {
+        return `${step.renownUrl} holds ${o.what} of ${who} no more, so there was nothing to withdraw`;
+      }
+      failure = again;
+    }
+  }
+  step.failed++;
+  if (failure.status === "refused") {
+    say(
+      step,
+      `Could not withdraw ${o.what} of ${who}: Renown did not take its key as proof (${failure.reason}).`,
+    );
+    say(
+      step,
+      `  Withdraw it with your wallet at ${failure.revokeUrl}, then run \`ph migrate --identity\` again: it finds it withdrawn and finishes. ${o.removed} stay until then.`,
+    );
+    return undefined;
+  }
+  say(
+    step,
+    `Could not withdraw ${o.what} of ${who} at ${step.renownUrl}: ${failure.reason}.`,
+  );
+  say(
+    step,
+    failure.keyMissing
+      ? `  Withdraw it with your wallet at ${meUrl}, then run \`ph migrate --identity\` again: it finds it withdrawn and finishes. ${o.removed} stay until then.`
+      : `  Run \`ph migrate --identity\` again, or withdraw it with your wallet at ${meUrl}. ${o.removed} stay until then.`,
+  );
+  return undefined;
+}
+
+/**
+ * A login that names no credential: nothing withdraws it by its id. Renown's
+ * read model may say it holds none; otherwise its files stay, with the
+ * wallet page to withdraw it at.
+ */
+async function loginWithoutCredential(
+  step: Step,
+  o: { what: string; files: LoginFiles; removed: string },
+  who: string,
+): Promise<string | undefined> {
+  const subject = storedCredential(o.files.file)?.credentialSubject?.id;
+  const meUrl = new URL("/me", step.renownUrl).href;
+  if (step.dryRun) {
+    say(
+      step,
+      `${o.what.charAt(0).toUpperCase()}${o.what.slice(1)} of ${who} names no credential: nothing withdraws it by its id. ${subject ? `Would ask Renown's read model whether it still holds it, and keep ${o.removed} while it does.` : `Would keep ${o.removed}.`}`,
+    );
+    return undefined;
+  }
+  if (subject) {
+    const status = await (step.io.check ?? defaultCheck)(
+      o.files,
+      step.renownUrl,
+    );
+    const gone = goneAtRenown(step, status, `${o.what} of ${who}`);
+    if (gone) return `${gone}, so there was nothing to withdraw`;
+  }
+  step.findings++;
+  say(
+    step,
+    `Kept ${o.removed}: ${o.what} of ${who} names no credential, so nothing withdraws it here.`,
+  );
+  say(
+    step,
+    subject
+      ? `  Withdraw it with your wallet at ${meUrl}, then run \`ph migrate --identity\` again: it finds it withdrawn and deletes ${o.removed}.`
+      : `  Withdraw it with your wallet at ${meUrl}, then delete ${o.removed}.`,
+  );
+  return undefined;
 }
 
 /**
@@ -153,7 +362,8 @@ async function withdrawLegacyLogin(
     kept?: string;
   },
 ): Promise<void> {
-  const login = readLoginFile(o.files);
+  if (!removable(step, o.removes)) return;
+  const login: Login | undefined = readLoginFile(o.files);
   const removed = o.removes.map((file) => shown(step, file)).join(" and ");
   if (!login) {
     step.acted++;
@@ -166,29 +376,38 @@ async function withdrawLegacyLogin(
     return;
   }
   const who = `${login.label === shortAddress(login.address) ? login.address : `${login.label} (${login.address})`}`;
-  const lapsed = login.expired
-    ? `expired on ${login.expiresAt}`
-    : !login.credentialId
-      ? "names no credential"
-      : undefined;
+  const expired = login.expired ? `expired on ${login.expiresAt}` : undefined;
   const tombstone = shown(
     step,
     path.join(step.dataDir, ".ph", "credentials", "withdrawn"),
   );
   const what = `${o.what.charAt(0).toUpperCase()}${o.what.slice(1)}`;
+  const item = { what: o.what, files: o.files, removed };
+  if (!expired) sayRenown(step);
   if (step.dryRun) {
     step.acted++;
-    say(
-      step,
-      lapsed
-        ? `Would delete ${removed}: ${o.what} of ${who} ${lapsed}, so there is nothing to withdraw.`
-        : `Would withdraw ${o.what} of ${who} at ${step.renownUrl} with a bearer of ${shown(step, o.files.keypair)}, keep it as a tombstone in ${tombstone}/ and delete ${removed}.`,
-    );
+    if (expired) {
+      say(
+        step,
+        `Would delete ${removed}: ${o.what} of ${who} ${expired}, so there is nothing to withdraw.`,
+      );
+    } else if (!login.credentialId) {
+      await loginWithoutCredential(step, item, who);
+      return;
+    } else {
+      say(
+        step,
+        `Would withdraw ${o.what} of ${who} at ${step.renownUrl} with a bearer of ${shown(step, o.files.keypair)}, keep it as a tombstone in ${tombstone}/ and delete ${removed}.`,
+      );
+    }
     if (o.kept) say(step, `  ${o.kept}`);
     return;
   }
-  let heard = `${what} of ${who} ${lapsed}: nothing to withdraw`;
-  if (!lapsed) {
+  let heard: string | undefined =
+    `${what} of ${who} ${expired}: nothing to withdraw`;
+  if (!expired && !login.credentialId) {
+    heard = await loginWithoutCredential(step, item, who);
+  } else if (!expired) {
     const result = await (step.io.withdraw ?? defaultWithdraw)(
       o.files,
       step.renownUrl,
@@ -201,30 +420,11 @@ async function withdrawLegacyLogin(
       case "not-logged-in":
         heard = `${step.renownUrl} holds ${o.what} of ${who} no more, so there was nothing to withdraw`;
         break;
-      case "refused":
-        step.failed++;
-        say(
-          step,
-          `Could not withdraw ${o.what} of ${who}: Renown did not take its key as proof (${result.reason}).`,
-        );
-        say(
-          step,
-          `  Withdraw it with your wallet at ${result.revokeUrl}, then run \`ph migrate --identity\` again. ${removed} stay until then.`,
-        );
-        return;
-      case "unavailable":
-        step.failed++;
-        say(
-          step,
-          `Could not withdraw ${o.what} of ${who} at ${step.renownUrl}: ${result.reason}.`,
-        );
-        say(
-          step,
-          `  Run \`ph migrate --identity\` again, or withdraw it with your wallet at ${new URL("/me", step.renownUrl).href}. ${removed} stay until then.`,
-        );
-        return;
+      default:
+        heard = await settleFailedWithdraw(step, item, who, result);
     }
   }
+  if (heard === undefined) return;
   const credential = storedCredential(o.files.file);
   const binding = credential ? credentialBindingOf(credential) : undefined;
   if (credential && binding) {
@@ -275,7 +475,7 @@ async function agentLogin(step: Step): Promise<void> {
       files: legacy.agentLogin,
       removes: [legacy.agent],
     });
-  } else if (fs.existsSync(legacy.agent)) {
+  } else if (fs.existsSync(legacy.agent) && removable(step, [legacy.agent])) {
     step.acted++;
     if (step.dryRun) {
       say(
@@ -291,7 +491,7 @@ async function agentLogin(step: Step): Promise<void> {
     }
   }
   const trusted = legacy.trustedKeys.filter((file) => fs.existsSync(file));
-  if (trusted.length > 0) {
+  if (trusted.length > 0 && removable(step, trusted)) {
     step.acted++;
     const files = trusted.map((file) => shown(step, file)).join(" and ");
     if (step.dryRun) {
@@ -306,7 +506,7 @@ async function agentLogin(step: Step): Promise<void> {
 /** Item 3: the owner claim. */
 function ownerClaim(step: Step): void {
   const file = legacyIdentityPaths(step.phDir).owner;
-  if (!fs.existsSync(file)) return;
+  if (!fs.existsSync(file) || !removable(step, [file])) return;
   let owner: string | undefined;
   try {
     const value = (
@@ -367,8 +567,22 @@ function hostFiles(dir: string): string[] {
   });
 }
 
+/**
+ * `value` as JSON in the layout of `text`, the file it was read from: the
+ * same indentation (its first indented line's; none for a file on one line),
+ * line ends and final newline.
+ */
+export function jsonLike(text: string, value: unknown): string {
+  const lines = text.trim().includes("\n");
+  const indent = lines ? (/\n([ \t]+)\S/.exec(text)?.[1] ?? "  ") : "";
+  const eol = text.includes("\r\n") ? "\r\n" : "\n";
+  const body = JSON.stringify(value, null, indent).replaceAll("\n", eol);
+  return /\r?\n$/.test(text) ? `${body}${eol}` : body;
+}
+
 /** Item 4: the settings nothing reads since 6.4. */
 function deadSettings(step: Step): void {
+  if (step.projectDir === undefined) return;
   const configFile = path.join(step.projectDir, "powerhouse.config.json");
   if (fs.existsSync(configFile)) {
     const text = fs.readFileSync(configFile, "utf8");
@@ -393,10 +607,7 @@ function deadSettings(step: Step): void {
             `Would remove ${keys} from ${shown(step, configFile)}: ${unread(dropped.length)}.`,
           );
         } else {
-          fs.writeFileSync(
-            configFile,
-            `${JSON.stringify(config, null, 2)}${text.endsWith("\n") ? "\n" : ""}`,
-          );
+          fs.writeFileSync(configFile, jsonLike(text, config));
           say(
             step,
             `Removed ${keys} from ${shown(step, configFile)}: ${unread(dropped.length)}.`,
@@ -515,7 +726,7 @@ type RecordEntry = {
 /** Item 7: a 6.3 host's record of the unsigned writes it signed. */
 function unsignedWrites(step: Step): void {
   const dir = legacyIdentityPaths(step.phDir).unsignedWrites;
-  if (!fs.existsSync(dir)) return;
+  if (!fs.existsSync(dir) || !removable(step, [dir])) return;
   const totals = new Map<
     string,
     { reason: string; field: string; count: number }
@@ -603,35 +814,38 @@ function administration(step: Step): string {
       .filter(Boolean);
   const fromEnv = split(step.io.env.ADMINS);
   if (fromEnv.length > 0) configured.push({ from: "ADMINS", admins: fromEnv });
-  const envFile = path.join(step.projectDir, ".env");
-  const fromFile = split(envValue(envFile, "ADMINS"));
-  if (fromFile.length > 0) {
-    configured.push({
-      from: `ADMINS in ${shown(step, envFile)}`,
-      admins: fromFile,
-    });
-  }
-  try {
-    const config = JSON.parse(
-      fs.readFileSync(
-        path.join(step.projectDir, "powerhouse.config.json"),
-        "utf8",
-      ),
-    ) as { auth?: { admins?: unknown } };
-    const listed = config.auth?.admins;
-    const admins = Array.isArray(listed)
-      ? listed.filter(
-          (a: unknown): a is string => typeof a === "string" && a !== "",
-        )
-      : [];
-    if (admins.length > 0) {
+  const projectDir = step.projectDir;
+  if (projectDir !== undefined) {
+    const envFile = path.join(projectDir, ".env");
+    const fromFile = split(envValue(envFile, "ADMINS"));
+    if (fromFile.length > 0) {
       configured.push({
-        from: "auth.admins in powerhouse.config.json",
-        admins,
+        from: `ADMINS in ${shown(step, envFile)}`,
+        admins: fromFile,
       });
     }
-  } catch {
-    // No config, or none readable: nothing configured there.
+    try {
+      const config = JSON.parse(
+        fs.readFileSync(
+          path.join(projectDir, "powerhouse.config.json"),
+          "utf8",
+        ),
+      ) as { auth?: { admins?: unknown } };
+      const listed = config.auth?.admins;
+      const admins = Array.isArray(listed)
+        ? listed.filter(
+            (a: unknown): a is string => typeof a === "string" && a !== "",
+          )
+        : [];
+      if (admins.length > 0) {
+        configured.push({
+          from: "auth.admins in powerhouse.config.json",
+          admins,
+        });
+      }
+    } catch {
+      // No config, or none readable: nothing configured there.
+    }
   }
   if (configured.length === 0) {
     return "No administrator configured for deployments: on this computer whoever runs the host (`ph dev`, `ph run`) administers it; a deployment needs ADMINS=<address> (`ph whoami` shows yours).";
@@ -644,13 +858,26 @@ export async function migrateIdentity(
   options: IdentityStepOptions,
   io: IdentityStepIo = { out: (line) => console.log(line), env: process.env },
 ): Promise<number> {
-  const dataDir = identityDataDir(options.projectDir, io.env);
+  const projectDir =
+    options.projectDir === undefined
+      ? undefined
+      : path.resolve(options.projectDir);
+  if (projectDir === undefined && !io.env.PH_USER_DATA_DIR) {
+    throw new Error(
+      "The identity step acts on a project: run it in one, or set PH_USER_DATA_DIR to the data folder.",
+    );
+  }
+  const dataDir = identityDataDir(projectDir, io.env);
   const step: Step = {
-    projectDir: path.resolve(options.projectDir),
+    projectDir,
     dataDir,
     phDir: path.join(dataDir, ".ph"),
     dryRun: options.dryRun,
     renownUrl: options.renownUrl,
+    renownUrlFrom:
+      options.renownUrlFrom ??
+      "the default, where `ph login` logged in before 6.4; `--renown-url` names another",
+    renownSaid: false,
     io,
     lines: [],
     acted: 0,

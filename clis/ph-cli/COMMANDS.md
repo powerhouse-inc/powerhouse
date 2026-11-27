@@ -913,9 +913,9 @@ Convert only this directory of the document models directory into a code-first m
 **usage:** `--document-model <str>`<br>
 
 #### Renown Url <br>
-The Renown the logins from before 6.4 were made at, which withdraws them<br><br>
+The Renown the logins from before 6.4 were made at, which withdraws them. Defaults to https://www.renown.id, where `ph login` logged in before 6.4; no environment variable sets it, so a 6.4 setting for the current Renown never sends the withdraws elsewhere.<br><br>
 **usage:** `--renown-url <str>`<br>
-**env**: `PH_CONNECT_RENOWN_URL`<br>**default**: `https//www.renown.id`
+
 
 ### flags
 #### Force <br>

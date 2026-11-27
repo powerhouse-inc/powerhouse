@@ -137,11 +137,14 @@ export function parsePkhIssuer(
   return { networkId: parts[2], chainId, address: parts[4].toLowerCase() };
 }
 
-/** The binding a credential names, or undefined for a malformed issuer. */
+/** The binding a credential names, or undefined for a malformed (or no) issuer. */
 export function credentialBindingOf(
   credential: CredentialLike,
 ): CredentialBinding | undefined {
-  const issuer = parsePkhIssuer(credential.issuer.id);
+  const issuerId = (credential.issuer as CredentialLike["issuer"] | undefined)
+    ?.id;
+  if (typeof issuerId !== "string") return undefined;
+  const issuer = parsePkhIssuer(issuerId);
   if (!issuer || !credential.credentialSubject?.id) return undefined;
   return {
     address: issuer.address,

@@ -203,13 +203,27 @@ export function dryRunReport(
   return `${diffs.join("")}ph migrate would write ${diffs.length} file(s); nothing was written.\n${notRun}`;
 }
 
-export async function startMigrate({
+/** The version a migration moves to, resolved before anything is changed. */
+export type MigrateTarget = {
+  projectDir: string;
+  packageJson: ProjectPackageJson;
+  /** As asked, or the channel inferred. */
+  requested: string;
+  /** From the npm registry; unset when it could not be resolved under --force. */
+  targetVersion: string | undefined;
+};
+
+/**
+ * Resolves the version `ph migrate` moves to: the one asked, else the
+ * project's channel, from the npm registry. Throws for a version the registry
+ * does not know (unless --force), before any step has changed anything.
+ */
+export async function resolveMigrateTarget({
   versionPositional,
   version,
   force,
   debug,
-  dryRun,
-}: MigrateArgs) {
+}: MigrateArgs): Promise<MigrateTarget> {
   // The project is where powerhouse.config.json is: the command also runs
   // from a sub-folder, and from a package of a monorepo.
   const projectDir =
@@ -249,6 +263,13 @@ export async function startMigrate({
   if (targetVersion && !process.env[VERSION_CHECKED_ENV]) {
     await warnIfOlderRelease(packageJson, targetVersion);
   }
+  return { projectDir, packageJson, requested, targetVersion };
+}
+
+export async function startMigrate(args: MigrateArgs, target?: MigrateTarget) {
+  const { force, debug, dryRun } = args;
+  const { projectDir, requested, targetVersion } =
+    target ?? (await resolveMigrateTarget(args));
 
   const bundledVersion = getBundledPhCliVersion();
   if (debug) {

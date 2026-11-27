@@ -76,6 +76,11 @@ describe("credential records", () => {
       chainId: 1,
       sessionDid: SESSION,
     });
+    // A malformed stored credential names no binding, and throws nothing.
+    const { issuer: _issuer, ...noIssuer } = credential();
+    expect(
+      credentialBindingOf(noIssuer as unknown as CredentialLike),
+    ).toBeUndefined();
   });
 
   it("keeps a withdrawn credential in its tombstone when the withdrawer hands it over", () => {

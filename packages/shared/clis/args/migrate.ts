@@ -78,13 +78,9 @@ export const migrateArgs = {
       "Run only the identity step, which `ph migrate` runs first: withdraw at Renown the logins a project and Studio's agent kept before Powerhouse 6.4 and remove them (the switchboard's own key stays), remove the owner claim, the preview's trusted keys and the dead identity settings, write .ph/.gitignore, summarise and remove a 6.3 host's record of unsigned writes, and report who administers the host. A second run has nothing to do. With --dry-run it asks nothing and writes nothing.",
   }),
   renownUrl: option({
-    type: string,
+    type: optional(string),
     long: "renown-url",
-    description:
-      "The Renown the logins from before 6.4 were made at, which withdraws them",
-    defaultValue: () => LEGACY_RENOWN_URL,
-    defaultValueIsSerializable: true,
-    env: "PH_CONNECT_RENOWN_URL",
+    description: `The Renown the logins from before 6.4 were made at, which withdraws them. Defaults to ${LEGACY_RENOWN_URL}, where \`ph login\` logged in before 6.4; no environment variable sets it, so a 6.4 setting for the current Renown never sends the withdraws elsewhere.`,
   }),
   dryRun: flag({
     type: optional(boolean),

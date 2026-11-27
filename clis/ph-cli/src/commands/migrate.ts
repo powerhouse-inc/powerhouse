@@ -31,25 +31,37 @@ export const migrate = command({
       );
       process.exit(1);
     }
-    const identityStep = async () => {
+    /**
+     * The identity step, or undefined outside a Powerhouse project (unless
+     * PH_USER_DATA_DIR names the data folder): it never acts on the current
+     * folder's files for want of a project.
+     */
+    const identityStep = async (): Promise<number | undefined> => {
       const [
         { findNodeProjectRoot, isPowerhouseProject },
         { migrateIdentity },
+        { LEGACY_RENOWN_URL },
       ] = await Promise.all([
         import("../utils.js"),
         import("../services/migrate-identity.js"),
+        import("@powerhousedao/shared/clis/constants"),
       ]);
       const projectDir =
-        findNodeProjectRoot(process.cwd(), isPowerhouseProject) ??
-        process.cwd();
+        findNodeProjectRoot(process.cwd(), isPowerhouseProject) ?? undefined;
+      if (projectDir === undefined && !process.env.PH_USER_DATA_DIR) {
+        return undefined;
+      }
       const code = await migrateIdentity({
-        projectDir,
+        ...(projectDir ? { projectDir } : {}),
         dryRun: Boolean(args.dryRun),
-        renownUrl: args.renownUrl,
+        renownUrl: args.renownUrl ?? LEGACY_RENOWN_URL,
+        ...(args.renownUrl ? { renownUrlFrom: "--renown-url" } : {}),
       });
       process.env[IDENTITY_STEP_DONE_ENV] = "1";
       return code;
     };
+    const NOT_IN_PROJECT =
+      "not in a Powerhouse project (no powerhouse.config.json beside a package.json here or above)";
     if (args.identity) {
       if (
         models ||
@@ -63,7 +75,14 @@ export const migrate = command({
         );
         process.exit(1);
       }
-      process.exit(await identityStep());
+      const code = await identityStep();
+      if (code === undefined) {
+        console.error(
+          `ph migrate --identity: ${NOT_IN_PROJECT}. Run it in the project, or set PH_USER_DATA_DIR to the data folder it acts on.`,
+        );
+        process.exit(1);
+      }
+      process.exit(code);
     }
     if (models || subgraphs) {
       if (args.versionPositional ?? args.version ?? args.force) {
@@ -95,12 +114,23 @@ export const migrate = command({
       }
       process.exit(code);
     }
-    // The identity step first; a withdraw it could not make fails the
-    // command at the end, after the version migration ran.
-    const identityCode =
-      process.env[IDENTITY_STEP_DONE_ENV] === "1" ? 0 : await identityStep();
-    const { startMigrate } = await import("../services/migrate.js");
-    await startMigrate(args);
+    // The version is checked first, so a mistyped one stops the command
+    // before the identity step withdraws anything. Then the identity step; a
+    // withdraw it could not make fails the command at the end, after the
+    // version migration ran.
+    const { resolveMigrateTarget, startMigrate } =
+      await import("../services/migrate.js");
+    const target = await resolveMigrateTarget(args);
+    let identityCode = 0;
+    if (process.env[IDENTITY_STEP_DONE_ENV] !== "1") {
+      const code = await identityStep();
+      if (code === undefined) {
+        console.log(`Identity step: skipped, ${NOT_IN_PROJECT}.`);
+      } else {
+        identityCode = code;
+      }
+    }
+    await startMigrate(args, target);
     process.exit(identityCode);
   },
 });

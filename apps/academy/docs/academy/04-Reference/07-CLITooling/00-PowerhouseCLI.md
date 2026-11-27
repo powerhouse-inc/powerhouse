@@ -1054,10 +1054,7 @@ Run migrations. `ph migrate` runs the identity step first (what a project kept o
 
 **Document Model** - Convert only this directory of the document models directory into a code-first model. Repeat it for more directories. Implies --document-models. - Usage: `--document-model <str>`
 
-**Renown Url** - The Renown the logins from before 6.4 were made at, which withdraws them - Usage: `--renown-url <str>`
-
-**Environment:** `PH_CONNECT_RENOWN_URL`
-**Default:** `https//www.renown.id`
+**Renown Url** - The Renown the logins from before 6.4 were made at, which withdraws them. Defaults to `https://www.renown.id`, where `ph login` logged in before 6.4; no environment variable sets it, so a 6.4 setting for the current Renown never sends the withdraws elsewhere. - Usage: `--renown-url <str>`
 
 
 

@@ -8,13 +8,21 @@ it.
 
 ## The identity step of `ph migrate`
 
-`ph migrate` runs the identity step first, before it moves the project to a
-version. `ph migrate --identity` runs it alone.
+`ph migrate` checks the version you asked for, then runs the identity step,
+then moves the project to that version: a mistyped version stops the command
+before anything is withdrawn. `ph migrate --identity` runs the step alone.
 
 ```bash
 ph migrate --identity --dry-run   # what it would do: asks Renown nothing, writes nothing
 ph migrate --identity
 ```
+
+The step acts on a Powerhouse project (a `powerhouse.config.json` beside a
+`package.json`, in the current folder or above). Outside one,
+`ph migrate --identity` stops with `not in a Powerhouse project`, and plain
+`ph migrate` skips the step; with `PH_USER_DATA_DIR` set, the step acts on that
+data folder's `.ph` alone. It never deletes a folder that holds your identity
+home (`PH_IDENTITY_HOME`).
 
 Each item acts on what it finds, so a second run says `nothing to do`:
 
@@ -34,7 +42,8 @@ Each item acts on what it finds, so a second run says `nothing to do`:
    printed with the `ADMINS` line to set for a deployment.
 4. **Dead settings.** `auth.renown.source`, `auth.ownerClaim`,
    `auth.offlineCredentials` and `auth.resolveIdentity` are removed from
-   `powerhouse.config.json`; `RENOWN_SOURCE` and `RESOLVE_CALLER_IDENTITY`
+   `powerhouse.config.json`, which keeps its own indentation and line ends;
+   `RENOWN_SOURCE` and `RESOLVE_CALLER_IDENTITY`
    from `.env`. In `hosts/`, each line that still sets one (and
    `identity.storagePath`) is reported with its file and line, for you to
    edit.
@@ -49,14 +58,38 @@ Each item acts on what it finds, so a second run says `nothing to do`:
    field, then deletes the folder. Each of those callers needs a signed client
    now.
 
-The logins are withdrawn at `https://www.renown.id`, where `ph login` logged in
-before 6.4. A login made at another Renown takes `--renown-url <url>` (or
-`PH_CONNECT_RENOWN_URL`).
+### How a login is withdrawn
 
-A withdraw that fails (Renown cannot be reached, or does not take the key as
-proof) keeps that item's files, prints the reason and the Renown page where
-you can withdraw it with your wallet, and makes the command exit 1. The other
-items go on. Run `ph migrate --identity` again to finish it.
+The logins are withdrawn at `https://www.renown.id`, where `ph login` logged in
+before 6.4. A login made at another Renown takes `--renown-url <url>`. No
+environment variable changes it (`PH_CONNECT_RENOWN_URL` names your current
+Renown, which is often not the one the old login was made at). The step prints
+which Renown it asks and why.
+
+For each login the step goes on until one of these settles it:
+
+1. **Expired.** Nothing to withdraw: the step keeps its credential as a
+   tombstone and deletes the files, asking Renown nothing.
+2. **Withdrawn with its own key.** A bearer of the login's session key
+   (`.ph/.keypair.json`, or the agent's) asks Renown to withdraw the
+   credential. Renown withdraws it, or answers that it holds no such
+   credential: done.
+3. **Refused, or the key file is gone.** The step asks Renown's read model,
+   which needs no proof, whether it still holds the credential. Withdrawn
+   already (with your wallet, say), expired there, or never held: done.
+4. **The key is in `PH_RENOWN_PRIVATE_KEY`.** A login before 6.4 signed with
+   that variable's key when it was set. When the key file is gone and the
+   variable holds the key the credential names, the step withdraws with it.
+5. **Otherwise** the item's files stay, the step prints why and Renown's page
+   (`<renown>/me`) where you withdraw it with your wallet, and the command
+   exits 1. Withdraw it there, then run `ph migrate --identity` again: step 3
+   finds it withdrawn and finishes the item.
+
+When Renown cannot be reached at all, the item's files stay and a later run
+tries again. A login that names no credential cannot be withdrawn by its id:
+the step keeps its files, unless Renown's read model says it holds it no
+more, and points you to your wallet's page; withdraw it there, then run the
+step again (or delete the file). The other items go on in every case.
 
 A 6.4 switchboard that finds these files logs a warning naming them and
 `ph migrate`. It never withdraws or deletes anything itself.

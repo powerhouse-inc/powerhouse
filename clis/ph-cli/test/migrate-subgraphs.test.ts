@@ -14,7 +14,10 @@ import {
 import { gqlModule } from "./subgraph-project.js";
 import { projectTypeErrors, resolverCallErrors } from "@powerhousedao/codegen";
 
-vi.mock("../src/services/migrate.js", () => ({ startMigrate: vi.fn() }));
+vi.mock("../src/services/migrate.js", () => ({
+  startMigrate: vi.fn(),
+  resolveMigrateTarget: vi.fn(),
+}));
 
 /** The resolver calls of the subgraph's index.ts that the project's tsc rejects. */
 function rejectedResolverCalls(root: string, index: string) {

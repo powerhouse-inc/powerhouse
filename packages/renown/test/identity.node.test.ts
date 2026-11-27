@@ -36,7 +36,9 @@ import {
 import { NodeKeyStorage } from "../src/crypto/node-key-storage.js";
 import { RenownCryptoBuilder } from "../src/crypto/renown-crypto-builder.js";
 import {
+  checkLoginAt,
   consoleApprovalUrl,
+  envSessionKey,
   LoginExpiredError,
   logoutHome,
   openSession,
@@ -303,6 +305,159 @@ describe("withdrawLogin and logoutHome", () => {
       reason: `its session key ${files.keypair} is gone`,
     });
     expect(fs.existsSync(files.keypair)).toBe(false);
+  });
+
+  it("read not found from Renown's own answer only, never from words alike", async () => {
+    await writeLogin();
+    // renown_revokeCredential's own: the NOT_FOUND code.
+    stubRenown(() =>
+      Response.json({
+        errors: [{ message: "Not found", extensions: { code: "NOT_FOUND" } }],
+      }),
+    );
+    expect(await withdrawLogin({ renownUrl: RENOWN, env })).toEqual({
+      status: "not-found",
+    });
+    // Another resolver's "not found" is no answer about the credential.
+    stubRenown(() =>
+      Response.json({ errors: [{ message: "Document not found" }] }),
+    );
+    expect(await withdrawLogin({ renownUrl: RENOWN, env })).toMatchObject({
+      status: "unavailable",
+      reason: "Document not found",
+    });
+    // An older renown-package: its fallback's exact text.
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/api/switchboard")) {
+        return Promise.resolve(Response.json({ endpoint: SWITCHBOARD }));
+      }
+      const query = (JSON.parse(String(init?.body)) as { query: string }).query;
+      calls.push(query);
+      return Promise.resolve(
+        query.includes("renown_revokeCredential")
+          ? Response.json({
+              errors: [
+                {
+                  message:
+                    'Cannot query field "renown_revokeCredential" on type "Mutation".',
+                },
+              ],
+            })
+          : Response.json({ data: { renownCredentials: [] } }),
+      );
+    });
+    expect(await withdrawLogin({ renownUrl: RENOWN, env })).toEqual({
+      status: "not-found",
+    });
+    expect(calls.some((q) => q.includes("renownCredentials"))).toBe(true);
+  });
+
+  it("withdraw a login whose key file is gone with the PH_RENOWN_PRIVATE_KEY key it names", async () => {
+    const { paths, did } = await writeLogin();
+    const envKey = fs.readFileSync(paths.keypair, "utf8");
+    fs.rmSync(paths.keypair);
+    const files = { file: paths.file, keypair: paths.keypair };
+    expect(await withdrawLoginAt({ files, renownUrl: RENOWN })).toMatchObject({
+      status: "unavailable",
+      keyMissing: true,
+    });
+    // Only the key the login's credential names.
+    expect(
+      await envSessionKey("did:key:zAnother", {
+        PH_RENOWN_PRIVATE_KEY: envKey,
+      }),
+    ).toBeUndefined();
+    expect(await envSessionKey(did, {})).toBeUndefined();
+    expect(
+      await envSessionKey(did, { PH_RENOWN_PRIVATE_KEY: "not json" }),
+    ).toBeUndefined();
+    const keyPair = await envSessionKey(did, { PH_RENOWN_PRIVATE_KEY: envKey });
+    expect(keyPair).toBeDefined();
+
+    const calls = stubRenown(() =>
+      Response.json({ data: { renown_revokeCredential: true } }),
+    );
+    expect(
+      await withdrawLoginAt({ files, renownUrl: RENOWN, keyPair }),
+    ).toEqual({ status: "withdrawn" });
+    const revoke = calls.find((call) => call.url === SWITCHBOARD)!.init!;
+    const bearer = (revoke.headers as Record<string, string>).Authorization;
+    const verified = await verifyAuthBearerToken(
+      bearer.replace(/^Bearer /, ""),
+    );
+    expect(verified && verified.issuer).toBe(did);
+    // No key file is made for it.
+    expect(fs.existsSync(paths.keypair)).toBe(false);
+  });
+
+  it("ask Renown's read model whether it still holds a login's credential", async () => {
+    const { paths, did } = await writeLogin();
+    const stored = JSON.parse(fs.readFileSync(paths.file, "utf8")) as {
+      user: { credential: Record<string, unknown> };
+    };
+    const expires = stored.user.credential.expirationDate as string;
+    stored.user.credential = {
+      ...stored.user.credential,
+      issuer: {
+        id: `did:pkh:eip155:1:${ADDRESS.toLowerCase()}`,
+        ethereumAddress: ADDRESS,
+      },
+      credentialSubject: { id: did, app: "renown-app" },
+    };
+    fs.writeFileSync(paths.file, JSON.stringify(stored));
+    const files = { file: paths.file, keypair: paths.keypair };
+    const row = {
+      documentId: "doc-1",
+      credentialId: "urn:uuid:login-1",
+      context: [],
+      type: [],
+      issuerId: `did:pkh:eip155:1:${ADDRESS.toLowerCase()}`,
+      issuerEthereumAddress: ADDRESS.toLowerCase(),
+      issuanceDate: new Date(Date.now() - 86_400_000).toISOString(),
+      expirationDate: expires,
+      credentialSubjectId: did,
+      credentialSubjectApp: "renown-app",
+      credentialStatusId: null,
+      credentialStatusType: null,
+      credentialSchemaId: "",
+      credentialSchemaType: "",
+      proofVerificationMethod: "",
+      proofEthereumAddress: ADDRESS,
+      proofCreated: "",
+      proofPurpose: "",
+      proofType: "",
+      proofValue: "",
+      proofEip712Domain: JSON.stringify({ version: "1", chainId: 1 }),
+      proofEip712PrimaryType: "VerifiableCredential",
+      revoked: true,
+    };
+    const answer = (issued: unknown[]) =>
+      vi.stubGlobal("fetch", (input: string | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith("/api/switchboard")) {
+          return Promise.resolve(Response.json({ endpoint: SWITCHBOARD }));
+        }
+        const { variables } = JSON.parse(String(init?.body)) as {
+          variables: { input: { includeRevoked: boolean } };
+        };
+        return Promise.resolve(
+          Response.json({
+            data: {
+              renownCredentials: variables.input.includeRevoked ? issued : [],
+            },
+          }),
+        );
+      });
+    answer([row]);
+    expect(await checkLoginAt({ files, renownUrl: RENOWN })).toBe("revoked");
+    answer([]);
+    expect(await checkLoginAt({ files, renownUrl: RENOWN })).toBe("absent");
+    vi.stubGlobal("fetch", () =>
+      Promise.reject(new TypeError("no network in this test")),
+    );
+    expect(await checkLoginAt({ files, renownUrl: RENOWN })).toBe("unknown");
   });
 
   it("say when nothing can withdraw it", async () => {
