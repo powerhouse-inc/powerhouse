@@ -19,6 +19,15 @@ export type TabDef = {
 
 export type Badge = { count: number; tone: "warn" | "error" };
 
+/** A sign beside a panel's title for something that is not a problem count.
+ * `label` says what it stands for; `text` is its few words for where there
+ * is room: "1 legacy". */
+export type PanelMark = {
+  icon: LucideIcon;
+  label: string;
+  text: string;
+};
+
 export type PanelDef = {
   id: string;
   title: string;
@@ -27,6 +36,7 @@ export type PanelDef = {
   tabs: TabDef[];
   defaultTab?: () => string;
   useBadge?: () => Badge | undefined;
+  useMark?: () => PanelMark | undefined;
 };
 
 export type NavGroup = { id: string; label: string };

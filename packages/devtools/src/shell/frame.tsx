@@ -31,7 +31,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip.js";
 import { panelById, tabOf } from "./location.js";
 import { PowerhouseMark } from "./mark.js";
 import { usePageLinks } from "./page-link.js";
-import type { Badge, PanelDef } from "./registry.js";
+import type { Badge, PanelDef, PanelMark } from "./registry.js";
 import { paletteShortcutLabel, toggleShortcutLabel } from "./shortcuts.js";
 import { useShell } from "./state.js";
 
@@ -41,29 +41,51 @@ function badgeTone(badge: Badge) {
   return badge.tone === "error" ? "text-destructive" : "text-warning";
 }
 
+const noBadge = (): Badge | undefined => undefined;
+const noMark = (): PanelMark | undefined => undefined;
+
 function NavBadge({ useBadge }: { useBadge: () => Badge | undefined }) {
   const badge = useBadge();
   if (!badge) return null;
   return (
     <span
-      className={cn(
-        "ml-auto font-mono text-[11px] tabular-nums",
-        badgeTone(badge),
-      )}
+      className={cn("font-mono text-[11px] tabular-nums", badgeTone(badge))}
     >
       {badge.count}
     </span>
   );
 }
 
-function NavDot({ useBadge }: { useBadge: () => Badge | undefined }) {
-  const badge = useBadge();
-  if (!badge) return null;
+function NavMark({ useMark }: { useMark: () => PanelMark | undefined }) {
+  const mark = useMark();
+  if (!mark) return null;
+  return (
+    <span data-testid="ph-nav-mark" title={mark.label} className="flex">
+      <mark.icon aria-hidden className="size-3 shrink-0 text-warning" />
+    </span>
+  );
+}
+
+/** A panel's mark and its problem count, at the end of its row. */
+function NavSigns({ panel }: { panel: PanelDef }) {
+  return (
+    <span className="ml-auto flex shrink-0 items-center gap-1.5">
+      <NavMark useMark={panel.useMark ?? noMark} />
+      <NavBadge useBadge={panel.useBadge ?? noBadge} />
+    </span>
+  );
+}
+
+/** On the icon rail, one dot stands for the count and for the mark. */
+function NavDot({ panel }: { panel: PanelDef }) {
+  const badge = (panel.useBadge ?? noBadge)();
+  const mark = (panel.useMark ?? noMark)();
+  if (!badge && !mark) return null;
   return (
     <span
       className={cn(
         "absolute top-1 right-1.5 size-1.5 rounded-full",
-        badge.tone === "error" ? "bg-destructive" : "bg-warning",
+        badge?.tone === "error" ? "bg-destructive" : "bg-warning",
       )}
     />
   );
@@ -87,12 +109,7 @@ function NavItem({ panel, compact }: { panel: PanelDef; compact?: boolean }) {
     >
       <panel.icon className="size-3.5 shrink-0" />
       {!compact && <span className="truncate">{panel.title}</span>}
-      {panel.useBadge &&
-        (compact ? (
-          <NavDot useBadge={panel.useBadge} />
-        ) : (
-          <NavBadge useBadge={panel.useBadge} />
-        ))}
+      {compact ? <NavDot panel={panel} /> : <NavSigns panel={panel} />}
     </button>
   );
   if (!compact) return button;
@@ -211,7 +228,7 @@ export function PanelSwitcher() {
                 >
                   <p.icon />
                   {p.title}
-                  {p.useBadge && <NavBadge useBadge={p.useBadge} />}
+                  <NavSigns panel={p} />
                 </DropdownMenuItem>
               ))}
           </DropdownMenuGroup>

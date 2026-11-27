@@ -29,7 +29,7 @@ import {
 import { defaultPanel } from "./location.js";
 import { PowerhouseMark } from "./mark.js";
 import { usePageLinks } from "./page-link.js";
-import type { Badge, PanelDef, Registry } from "./registry.js";
+import type { Badge, PanelDef, PanelMark, Registry } from "./registry.js";
 import { toggleShortcutLabel } from "./shortcuts.js";
 import { useShell } from "./state.js";
 
@@ -70,6 +70,7 @@ function placement(anchor: Anchor): { side: Side; align: Align } {
 }
 
 const noBadge = (): Badge | undefined => undefined;
+const noMark = (): PanelMark | undefined => undefined;
 const notUnavailable = (): string | undefined => undefined;
 
 const badgeText = (badge: Badge) =>
@@ -80,13 +81,20 @@ const badgeText = (badge: Badge) =>
 const showsOnLauncher = (badge: Badge | undefined, pinned: boolean) =>
   pinned || badge?.tone === "error";
 
-function BadgeMark({ badge }: { badge: Badge }) {
+/** What the launcher draws over a panel's icon: its badge's tone, or a
+ * warning for a mark alone. */
+const signTone = (
+  badge: Badge | undefined,
+  mark: PanelMark | undefined,
+): Badge["tone"] | undefined => badge?.tone ?? (mark ? "warn" : undefined);
+
+function BadgeMark({ tone }: { tone: Badge["tone"] }) {
   return (
     <span
       aria-hidden
       className={cn(
         "absolute top-1 right-1",
-        badge.tone === "error"
+        tone === "error"
           ? "size-2 rounded-full bg-destructive ring-2 ring-background"
           : "h-2 w-2.5 bg-warning [clip-path:polygon(50%_0,100%_100%,0_100%)]",
       )}
@@ -178,6 +186,7 @@ export function Launcher() {
               key={panel.id}
               panel={panel}
               useBadge={panel.useBadge ?? noBadge}
+              useMark={panel.useMark ?? noMark}
               pinned={pins.includes(panel.id)}
               side={side}
             />
@@ -233,18 +242,24 @@ function MarkButton({ side, onOpen }: { side: Side; onOpen: () => void }) {
 function LauncherPanel({
   panel,
   useBadge,
+  useMark,
   pinned,
   side,
 }: {
   panel: PanelDef;
   useBadge: () => Badge | undefined;
+  useMark: () => PanelMark | undefined;
   pinned: boolean;
   side: Side;
 }) {
   const { navigate } = useShell();
   const badge = useBadge();
+  const mark = useMark();
   if (!showsOnLauncher(badge, pinned)) return null;
-  const label = badge ? `${panel.title} · ${badgeText(badge)}` : panel.title;
+  const tone = signTone(badge, mark);
+  const label = [panel.title, badge && badgeText(badge), mark?.label]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <Tooltip>
       <TooltipTrigger
@@ -258,7 +273,7 @@ function LauncherPanel({
             className={barButton}
           >
             <panel.icon />
-            {badge && <BadgeMark badge={badge} />}
+            {tone && <BadgeMark tone={tone} />}
           </Button>
         }
       />
@@ -270,19 +285,26 @@ function LauncherPanel({
 function OffLauncherWarning({
   panel,
   useBadge,
+  useMark,
   pinned,
 }: {
   panel: PanelDef;
   useBadge: () => Badge | undefined;
+  useMark: () => PanelMark | undefined;
   pinned: boolean;
 }) {
   const badge = useBadge();
-  if (!badge || showsOnLauncher(badge, pinned)) return null;
+  const mark = useMark();
+  const tone = signTone(badge, mark);
+  if (!tone || showsOnLauncher(badge, pinned)) return null;
+  const said = [badge && badgeText(badge), mark?.label]
+    .filter(Boolean)
+    .join(", ");
   return (
     <>
-      <BadgeMark badge={badge} />
+      <BadgeMark tone={tone} />
       <span className="sr-only">
-        , {panel.title}: {badgeText(badge)}
+        , {panel.title}: {said}
       </span>
     </>
   );
@@ -320,6 +342,7 @@ function PanelList({
                       key={panel.id}
                       panel={panel}
                       useBadge={panel.useBadge ?? noBadge}
+                      useMark={panel.useMark ?? noMark}
                       pinned={pins.includes(panel.id)}
                     />
                   ))}
@@ -335,7 +358,7 @@ function PanelList({
         align={align}
         sideOffset={8}
         aria-label="All panels"
-        className="w-64 overflow-y-auto p-1"
+        className="w-80 overflow-y-auto p-1"
       >
         <div className="px-2 pt-1 pb-1.5 text-[11px] text-muted-foreground">
           Panels
@@ -345,6 +368,7 @@ function PanelList({
             key={panel.id}
             panel={panel}
             useBadge={panel.useBadge ?? noBadge}
+            useMark={panel.useMark ?? noMark}
             pinned={pins.includes(panel.id)}
             onTogglePin={
               panel.id === defaultPanel(registry).id
@@ -361,17 +385,20 @@ function PanelList({
 function PanelRow({
   panel,
   useBadge,
+  useMark,
   pinned,
   onTogglePin,
 }: {
   panel: PanelDef;
   useBadge: () => Badge | undefined;
+  useMark: () => PanelMark | undefined;
   pinned: boolean;
   /** Absent for the default panel: the mark opens it. */
   onTogglePin?: () => void;
 }) {
   const { navigate } = useShell();
   const badge = useBadge();
+  const mark = useMark();
   const StatusIcon = badge?.tone === "error" ? CircleX : TriangleAlert;
   return (
     <div className="flex items-center gap-0.5">
@@ -383,17 +410,29 @@ function PanelRow({
       >
         <panel.icon className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="truncate">{panel.title}</span>
-        {badge && (
-          <span
-            className={cn(
-              "ml-auto flex shrink-0 items-center gap-1 text-xs",
-              badge.tone === "error" ? "text-destructive" : "text-warning",
-            )}
-          >
-            <StatusIcon className="size-3.5" />
-            {badgeText(badge)}
-          </span>
-        )}
+        <span className="ml-auto flex shrink-0 items-center gap-2.5 text-xs">
+          {mark && (
+            <span
+              data-testid="ph-panel-row-mark"
+              title={mark.label}
+              className="flex items-center gap-1 text-warning"
+            >
+              <mark.icon className="size-3.5" />
+              {mark.text}
+            </span>
+          )}
+          {badge && (
+            <span
+              className={cn(
+                "flex items-center gap-1",
+                badge.tone === "error" ? "text-destructive" : "text-warning",
+              )}
+            >
+              <StatusIcon className="size-3.5" />
+              {badgeText(badge)}
+            </span>
+          )}
+        </span>
       </button>
       {onTogglePin ? (
         <Button

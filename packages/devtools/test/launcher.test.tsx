@@ -8,13 +8,14 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { History } from "lucide-react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DevtoolsRoot,
   DevtoolsShell,
   DevtoolsStandalone,
 } from "../src/shell/root.js";
-import type { Badge, Registry } from "../src/shell/registry.js";
+import type { Badge, PanelMark, Registry } from "../src/shell/registry.js";
 import { TEST_REGISTRY } from "./registry.fixture.js";
 import { stackInfo } from "./stack.fixture.js";
 import { clearStorage, savedView } from "./storage.fixture.js";
@@ -36,6 +37,23 @@ function withBadges(badges: Record<string, Badge>): Registry {
     useBadge: () => badges[panel.id],
   }));
   return { ...TEST_REGISTRY, panels: [first, ...rest] };
+}
+
+const LEGACY: PanelMark = {
+  icon: History,
+  label: "2 legacy things",
+  text: "2 legacy",
+};
+
+function withMarks(
+  marks: Record<string, PanelMark>,
+  registry: Registry = TEST_REGISTRY,
+): Registry {
+  const [first, ...rest] = registry.panels.map((panel) => ({
+    ...panel,
+    useMark: () => marks[panel.id],
+  }));
+  return { ...registry, panels: [first, ...rest] };
 }
 
 function renderDock(registry: Registry = TEST_REGISTRY) {
@@ -115,6 +133,46 @@ describe("the launcher", () => {
 
     expect(savedView().open).toBe(true);
     expect(shownPanel()).toBe("beta");
+  });
+
+  it("shows a panel's mark beside its warnings on the panel list", async () => {
+    renderDock(
+      withMarks(
+        { alpha: LEGACY, beta: LEGACY },
+        withBadges({ beta: { count: 1, tone: "warn" } }),
+      ),
+    );
+
+    expect(panelsButton().textContent).toContain(
+      "Beta: 1 warning, 2 legacy things",
+    );
+
+    const list = await openPanelList();
+    const rows = [
+      ...list.querySelectorAll<HTMLElement>("[data-panel-row]"),
+    ].map((row) => row.textContent);
+    expect(rows).toEqual(["Alpha2 legacy", "Beta2 legacy1 warning"]);
+    expect(
+      within(list)
+        .getAllByTestId("ph-panel-row-mark")
+        .map((mark) => mark.title),
+    ).toEqual(["2 legacy things", "2 legacy things"]);
+  });
+
+  it("flags the panel list for a mark alone", () => {
+    renderDock(withMarks({ beta: LEGACY }));
+    expect(onBar()).toEqual([]);
+    expect(panelsButton().textContent).toContain("Beta: 2 legacy things");
+  });
+
+  it("names the mark on a pinned panel", () => {
+    localStorage.setItem(PINS_KEY, JSON.stringify(["beta"]));
+    renderDock(withMarks({ beta: LEGACY }));
+
+    expect(onBar()).toEqual(["beta"]);
+    expect(
+      screen.getByRole("button", { name: "Open Beta · 2 legacy things" }),
+    ).not.toBeNull();
   });
 
   it("pins a panel to the launcher for every tab, and unpins it", async () => {
