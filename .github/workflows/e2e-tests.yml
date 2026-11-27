@@ -394,11 +394,13 @@ jobs:
 
   switchboard-e2e-tests:
     name: Run Switchboard E2E Tests
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
-    # The suites start their own switchboards on PGlite: the shared one on
-    # SWITCHBOARD_PORT, renown-self-auth's on 4022 and 4023, and router's on 4024.
-    # No Postgres.
+    # The suites start their own switchboards on PGlite, one file at a time: the
+    # shared one on SWITCHBOARD_PORT, renown-self-auth's on 4022 and 4023,
+    # router's and host-sessions' on 4024, host-sessions-policies' on 4025 and
+    # 4026, oauth-pages' on 4026 (in headless Chromium). No Postgres.
     env:
       SWITCHBOARD_PORT: 4001
     steps:
@@ -424,6 +426,21 @@ jobs:
       # Only the suite and what it depends on, switchboard's bin included.
       - name: Install and build
         run: bash .github/actions/setup/install-and-build.sh "@powerhousedao/test-switchboard..."
+
+      - name: Resolve Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+        working-directory: ./test/switchboard
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+        working-directory: ./test/switchboard
 
       - name: Run switchboard E2E tests
         run: pnpm test:e2e:switchboard
