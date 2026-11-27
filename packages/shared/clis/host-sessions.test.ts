@@ -3,7 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  credentialRecordId,
   listCredentialRecords,
+  readCredentialWithdrawal,
   writeCredentialRecord,
   type CredentialLike,
 } from "./credential-records.js";
@@ -27,6 +29,7 @@ import {
   readHostSessionLastUsed,
   removeHostSession,
   shortHostSessionId,
+  withdrawHostSession,
   writeHostSession,
 } from "./host-sessions.js";
 import { fileAccessList } from "./owner-only.js";
@@ -149,6 +152,42 @@ describe("host session files", () => {
     expect(listCredentialRecords({ dataDir })).toMatchObject([
       { source: "host-session", sessionDid: made.did, label: "billing" },
     ]);
+  });
+});
+
+describe("withdrawing a host session", () => {
+  it("writes its credential's tombstone, record or not, and removes its file", () => {
+    const session = newHostSession({
+      label: "billing",
+      clientId: "curl",
+      grant: "device",
+    });
+    const credential = {
+      id: "urn:uuid:withdrawn",
+      issuer: {
+        id: "did:pkh:eip155:1:0x00000000000000000000000000000000000000aa",
+        ethereumAddress: "0x00000000000000000000000000000000000000aa",
+      },
+      credentialSubject: { id: session.did, app: "billing" },
+      issuanceDate: new Date().toISOString(),
+      expirationDate: new Date(Date.now() + 86_400_000).toISOString(),
+      proof: {},
+    };
+    writeHostSession(dataDir, { ...session, credential });
+    const binding = withdrawHostSession({
+      dataDir,
+      session: { ...session, credential },
+      by: "command",
+    });
+    expect(binding).toEqual({
+      address: "0x00000000000000000000000000000000000000aa",
+      chainId: 1,
+      sessionDid: session.did,
+    });
+    expect(readHostSession({ dataDir, id: session.id })).toBeUndefined();
+    expect(
+      readCredentialWithdrawal({ dataDir, id: credentialRecordId(binding!) }),
+    ).toMatchObject({ by: "command", label: "billing" });
   });
 });
 

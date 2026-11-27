@@ -1,7 +1,15 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import type { CredentialLike } from "./credential-records.js";
+import {
+  credentialBindingOf,
+  credentialRecordId,
+  withdrawCredentialRecords,
+  writeCredentialWithdrawal,
+  type CredentialBinding,
+  type CredentialLike,
+  type CredentialWithdrawer,
+} from "./credential-records.js";
 import { warnNotOwnerOnly, writeOwnerOnlyFile } from "./owner-only.js";
 import { newSession, type JsonWebKey } from "./sessions.js";
 
@@ -174,6 +182,44 @@ export function removeHostSession(o: { dataDir: string; id: string }): void {
   if (!isHostSessionId(o.id)) return;
   fs.rmSync(hostSessionFile(o.dataDir, o.id), { force: true });
   fs.rmSync(hostSessionUsedFile(o.dataDir, o.id), { force: true });
+}
+
+/**
+ * Withdraws a session: its credential's tombstone, as `ph credentials
+ * withdraw` writes it (also when the host kept no record of it), then its
+ * file. A running host refuses its tokens from their next request. Returns
+ * the binding withdrawn, for a session that was approved.
+ */
+export function withdrawHostSession(o: {
+  dataDir: string;
+  session: HostSessionFile;
+  by: CredentialWithdrawer;
+}): CredentialBinding | undefined {
+  const { dataDir, session, by } = o;
+  const binding = session.credential
+    ? credentialBindingOf(session.credential)
+    : undefined;
+  if (binding) {
+    const withdrawn = withdrawCredentialRecords({
+      dataDir,
+      ids: [credentialRecordId(binding)],
+      by,
+    });
+    if (withdrawn.length === 0) {
+      writeCredentialWithdrawal({
+        dataDir,
+        binding,
+        by,
+        label: session.credential?.credentialSubject.app,
+        credentialId: session.credential?.id,
+        ...(session.credential?.expirationDate
+          ? { expiresAt: session.credential.expirationDate }
+          : {}),
+      });
+    }
+  }
+  removeHostSession({ dataDir, id: session.id });
+  return binding;
 }
 
 // ------------------------------------------------------------- last use

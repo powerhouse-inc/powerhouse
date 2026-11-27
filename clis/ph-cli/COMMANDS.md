@@ -36,6 +36,10 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Identity Password](#identity-password)
 - [Credentials List](#credentials-list)
 - [Credentials Withdraw](#credentials-withdraw)
+- [Token Create](#token-create)
+- [Token Approve](#token-approve)
+- [Token List](#token-list)
+- [Token Withdraw](#token-withdraw)
 - [Install](#install)
 - [Uninstall](#uninstall)
 <br>
@@ -1207,6 +1211,150 @@ show help<br><br>
 #### Data Dir <br>
 The store's data folder (default: PH_USER_DATA_DIR, else the project)<br><br>
 **usage:** `--data-dir <str>`<br>
+
+
+## Token Create
+
+Create a host session token: a token for a tool that signs nothing itself (curl, a script, an MCP
+client), with which the host signs that tool's document changes as you, labelled. It runs the host's
+OAuth device grant: with a pseudonym it approves the grant itself after asking you; with a Renown
+login it opens the host's page, where you approve it with Renown. The token lives at most 30 days
+and administers nothing.
+
+Only the token goes to stdout, so a script can keep it:
+  TOKEN=$(ph token create --label billing --days 7)
+  curl -H "Authorization: Bearer $TOKEN" http://localhost:4001/graphql ...
+  
+### options
+#### Url <br>
+The host, as its consent page names it (default: this project's switchboard on localhost)<br><br>
+**usage:** `--url <str>`<br>
+
+#### Label <br>
+What the session is called, as the operations it signs name it (default: ph token)<br><br>
+**usage:** `--label <str>`<br>
+
+#### Days <br>
+How many days the token lives, 1 to 30 (default: 30)<br><br>
+**usage:** `--days <number>`<br>
+
+#### Replace <br>
+A session to withdraw once the new token is issued: its id (or a prefix) or label<br><br>
+**usage:** `--replace <str>`<br>
+
+#### Data Dir <br>
+The store's data folder (default: PH_USER_DATA_DIR, else the project)<br><br>
+**usage:** `--data-dir <str>`<br>
+
+
+### flags
+#### Yes <br>
+Approve without asking (for scripts)<br><br>
+**usage:** `--yes, -y`<br>
+
+#### Json <br>
+Print JSON for scripts<br><br>
+**usage:** `--json`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Token Approve
+
+Approve a code a device or tool shows (the host's consent page names this command): shows what you
+would allow, asks, then signs the session's credential as your pseudonym. Approve only a code you
+started yourself in the last 10 minutes.
+  
+### arguments
+#### Code *[required]*<br>
+The code the device or tool shows, e.g. WXYZ-BCDF<br><br>
+**usage:** `<code>`<br>
+
+
+### options
+#### Url <br>
+The host, as its consent page names it (default: this project's switchboard on localhost)<br><br>
+**usage:** `--url <str>`<br>
+
+
+### flags
+#### Yes <br>
+Approve without asking (for scripts)<br><br>
+**usage:** `--yes, -y`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Token List
+
+List the host sessions of this store (`.ph/host-sessions` in the data folder): label, who, how it
+was granted, the client, its dates and last use. With --url, the host's own list of yours.
+  
+### options
+#### Url <br>
+The host, as its consent page names it (default: this project's switchboard on localhost)<br><br>
+**usage:** `--url <str>`<br>
+
+#### Data Dir <br>
+The store's data folder (default: PH_USER_DATA_DIR, else the project)<br><br>
+**usage:** `--data-dir <str>`<br>
+
+
+### flags
+#### Json <br>
+Print JSON for scripts<br><br>
+**usage:** `--json`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Token Withdraw
+
+Withdraw a host session by its id (or a prefix) or label: its tokens are refused from their next
+request, and the withdrawal holds after a restart. With --url, at the host, as yourself.
+  
+### arguments
+#### Id Label *[required]*<br>
+The session to withdraw: its id (or a prefix) or its label<br><br>
+**usage:** `<id | label>`<br>
+
+
+### options
+#### Url <br>
+The host, as its consent page names it (default: this project's switchboard on localhost)<br><br>
+**usage:** `--url <str>`<br>
+
+#### Data Dir <br>
+The store's data folder (default: PH_USER_DATA_DIR, else the project)<br><br>
+**usage:** `--data-dir <str>`<br>
+
+
+### flags
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
 
 
 ## Install

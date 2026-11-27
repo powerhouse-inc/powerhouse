@@ -35,6 +35,12 @@ import { migrate } from "../src/commands/migrate.js";
 import { modelCheck, modelInspect } from "../src/commands/model.js";
 import { phCli } from "../src/commands/ph-cli.js";
 import { runHost } from "../src/commands/run.js";
+import {
+  tokenApprove,
+  tokenCreate,
+  tokenList,
+  tokenWithdraw,
+} from "../src/commands/token.js";
 import { uninstall } from "../src/commands/uninstall.js";
 import { vetra } from "../src/commands/vetra.js";
 import { whoami } from "../src/commands/whoami.js";
@@ -74,6 +80,10 @@ const commands = [
   { name: "identity password", command: identityPassword },
   { name: "credentials list", command: credentialsList },
   { name: "credentials withdraw", command: credentialsWithdraw },
+  { name: "token create", command: tokenCreate },
+  { name: "token approve", command: tokenApprove },
+  { name: "token list", command: tokenList },
+  { name: "token withdraw", command: tokenWithdraw },
   { name: "install", command: install },
   { name: "uninstall", command: uninstall },
 ];

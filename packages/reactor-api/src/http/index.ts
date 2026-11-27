@@ -33,6 +33,14 @@ export {
   type WebhookSignatureEncoding,
   type WebhookVerification,
 } from "./webhook-verify.js";
+// The host's OAuth routes for host session tokens, for a host that composes
+// its own server (and the CLIs' tests that run against them).
+export {
+  mountOAuthRoutes,
+  RENOWN_APP_LABEL,
+  type OAuthRoutesOptions,
+} from "./oauth-routes.js";
+export { mountOAuthMetadata } from "./oauth-metadata.js";
 export {
   isCountedRequest,
   NodeEventLoopDelay,

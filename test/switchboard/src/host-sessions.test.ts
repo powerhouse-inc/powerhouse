@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { GraphQLReactorClient } from "@powerhousedao/reactor-browser/graphql-client";
 import {
   credentialRecordId,
@@ -29,6 +29,11 @@ import { SWITCHBOARD_COMMAND } from "./switchboard-bin.js";
 
 const PORT = 4024;
 const ORIGIN = `http://localhost:${PORT}`;
+/** The built ph-cli of this monorepo. */
+const PH_CLI = resolve(
+  import.meta.dirname,
+  "../../../clis/ph-cli/dist/cli.mjs",
+);
 const ENDPOINT = `${ORIGIN}/graphql`;
 const DEVICE_CODE = "urn:ietf:params:oauth:grant-type:device_code";
 // Well-known Anvil dev key #2: the Renown wallet of the console test.
@@ -391,6 +396,103 @@ describe("revocation", () => {
     expect((await form("/oauth/revoke", { token })).status).toBe(200);
     expect((await graphql("{ __typename }", {}, token)).status).toBe(401);
   }, 60_000);
+});
+
+/** Runs the built `ph-cli` as the person, in the store's project folder. */
+function phCli(args: string[]): Promise<{
+  code: number | null;
+  stdout: string;
+  stderr: string;
+}> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [PH_CLI, ...args], {
+      cwd: root,
+      env: {
+        ...process.env,
+        PH_IDENTITY_HOME: join(root, "home"),
+        PH_USER_DATA_DIR: join(root, "person"),
+        BROWSER: "none",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString()));
+    child.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
+    child.on("error", reject);
+    child.on("close", (code) => resolve({ code, stdout, stderr }));
+  });
+}
+
+describe("ph token", () => {
+  it("creates a token a pseudonym approves, which writes signed as its session; withdrawn, it is refused", async () => {
+    const created = await phCli([
+      "token",
+      "create",
+      "--url",
+      ORIGIN,
+      "--label",
+      "cli",
+      "--days",
+      "7",
+      "--yes",
+    ]);
+    expect(created.code, created.stderr).toBe(0);
+    // Only the token goes to stdout.
+    const token = created.stdout.trim();
+    expect(token).toMatch(/^phs_[0-9a-f]{32}_[A-Za-z0-9_-]{43}$/);
+    issued.push(token);
+    expect(created.stderr).toContain(
+      "May       sign document changes as you; no administration",
+    );
+
+    const made = await graphql(CREATE, {}, token);
+    expect(made.body.errors, JSON.stringify(made.body.errors)).toBeUndefined();
+    const id = (
+      made.body.data!.DocumentModel as { createEmptyDocument: { id: string } }
+    ).createEmptyDocument.id;
+    const named = await graphql(
+      /* GraphQL */ `
+        mutation ($id: String!) {
+          DocumentModel {
+            setModelName(documentIdOrSlug: $id, input: { name: "Cli" }) {
+              id
+            }
+          }
+        }
+      `,
+      { id },
+      token,
+    );
+    expect(
+      named.body.errors,
+      JSON.stringify(named.body.errors),
+    ).toBeUndefined();
+    const operation = (await operationsOf(id)).findLast(
+      (op) => op.action.type === "SET_MODEL_NAME",
+    );
+    expect(operation?.action.context?.signer?.app.name).toBe("cli");
+    expect(operation?.action.context?.signer?.user.address.toLowerCase()).toBe(
+      person!.address.toLowerCase(),
+    );
+
+    const listed = await phCli(["token", "list", "--data-dir", store]);
+    expect(listed.code, listed.stderr).toBe(0);
+    expect(listed.stdout).toMatch(
+      /cli\s+0x[0-9a-fA-F]{4}\.\.\.[0-9a-fA-F]{4}\s+device\s+ph-cli/,
+    );
+
+    const withdrawn = await phCli([
+      "token",
+      "withdraw",
+      "cli",
+      "--data-dir",
+      store,
+    ]);
+    expect(withdrawn.code, withdrawn.stderr).toBe(0);
+    expect((await graphql("{ __typename }", {}, token)).status).toBe(401);
+  }, 120_000);
 });
 
 describe("the consent page's Renown button", () => {

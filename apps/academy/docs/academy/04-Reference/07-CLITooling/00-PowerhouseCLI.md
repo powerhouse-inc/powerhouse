@@ -277,6 +277,10 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Identity Password](#identity-password)
 - [Credentials List](#credentials-list)
 - [Credentials Withdraw](#credentials-withdraw)
+- [Token Create](#token-create)
+- [Token Approve](#token-approve)
+- [Token List](#token-list)
+- [Token Withdraw](#token-withdraw)
 - [Install](#install)
 - [Uninstall](#uninstall)
 
@@ -1321,6 +1325,134 @@ credential from its next request, and the withdrawal holds after a restart.
 
 ### Options
 **Data Dir** - The store's data folder (default: PH_USER_DATA_DIR, else the project) - Usage: `--data-dir <str>`
+
+
+## Token Create
+
+Create a host session token: a token for a tool that signs nothing itself (curl, a script, an MCP
+client), with which the host signs that tool's document changes as you, labelled. It runs the host's
+OAuth device grant: with a pseudonym it approves the grant itself after asking you; with a Renown
+login it opens the host's page, where you approve it with Renown. The token lives at most 30 days
+and administers nothing.
+
+Only the token goes to stdout, so a script can keep it:
+  TOKEN=$(ph token create --label billing --days 7)
+  curl -H "Authorization: Bearer $TOKEN" `http://localhost:4001/graphql` ...
+  
+
+
+
+### Options
+**Url** - The host, as its consent page names it (default: this project's switchboard on localhost) - Usage: `--url <str>`
+
+**Label** - What the session is called, as the operations it signs name it (default: ph token) - Usage: `--label <str>`
+
+**Days** - How many days the token lives, 1 to 30 (default: 30) - Usage: `--days <number>`
+
+**Replace** - A session to withdraw once the new token is issued: its id (or a prefix) or label - Usage: `--replace <str>`
+
+**Data Dir** - The store's data folder (default: PH_USER_DATA_DIR, else the project) - Usage: `--data-dir <str>`
+
+
+
+
+### Flags
+**Yes** - Approve without asking (for scripts) - Usage: `--yes, -y`
+
+**Json** - Print JSON for scripts - Usage: `--json`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Token Approve
+
+Approve a code a device or tool shows (the host's consent page names this command): shows what you
+would allow, asks, then signs the session's credential as your pseudonym. Approve only a code you
+started yourself in the last 10 minutes.
+  
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Code *[required]*** - The code the device or tool shows, e.g. WXYZ-BCDF - Usage: `<code>`
+
+
+
+
+### Options
+**Url** - The host, as its consent page names it (default: this project's switchboard on localhost) - Usage: `--url <str>`
+
+
+
+
+### Flags
+**Yes** - Approve without asking (for scripts) - Usage: `--yes, -y`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Token List
+
+List the host sessions of this store (`.ph/host-sessions` in the data folder): label, who, how it
+was granted, the client, its dates and last use. With --url, the host's own list of yours.
+  
+
+
+
+### Options
+**Url** - The host, as its consent page names it (default: this project's switchboard on localhost) - Usage: `--url <str>`
+
+**Data Dir** - The store's data folder (default: PH_USER_DATA_DIR, else the project) - Usage: `--data-dir <str>`
+
+
+
+
+### Flags
+**Json** - Print JSON for scripts - Usage: `--json`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Token Withdraw
+
+Withdraw a host session by its id (or a prefix) or label: its tokens are refused from their next
+request, and the withdrawal holds after a restart. With --url, at the host, as yourself.
+  
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Id Label *[required]*** - The session to withdraw: its id (or a prefix) or its label - Usage: `<id | label>`
+
+
+
+
+### Options
+**Url** - The host, as its consent page names it (default: this project's switchboard on localhost) - Usage: `--url <str>`
+
+**Data Dir** - The store's data folder (default: PH_USER_DATA_DIR, else the project) - Usage: `--data-dir <str>`
+
+
+
+
+### Flags
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
 
 
 ## Install

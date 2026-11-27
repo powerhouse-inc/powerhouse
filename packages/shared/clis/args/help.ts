@@ -18,6 +18,7 @@ import { modelCheckArgs } from "./model.js";
 import { publishArgs } from "./publish.js";
 import { registryLoginArgs } from "./registry.js";
 import { runArgs } from "./run.js";
+import { tokenCreateArgs } from "./token.js";
 import { uninstallArgs } from "./uninstall.js";
 
 // Thin wrapper around `command()` that preserves the literal types of
@@ -186,6 +187,13 @@ export const phCliHelpCommands = {
     args: credentialsListArgs,
     description:
       "List the credentials this store's host accepts, and withdraw them: `list`, `withdraw`",
+    handler: () => {},
+  }),
+  token: helpCommand({
+    name: "token",
+    args: tokenCreateArgs,
+    description:
+      "Host session tokens for tools that sign nothing themselves: `create`, `approve`, `list`, `withdraw`",
     handler: () => {},
   }),
   install: helpCommand({

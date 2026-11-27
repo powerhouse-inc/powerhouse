@@ -4,9 +4,7 @@ import {
   CredentialWithdrawnError,
   parsePkhIssuer,
   readCredentialWithdrawal,
-  withdrawCredentialRecords,
   writeCredentialRecord,
-  writeCredentialWithdrawal,
   type CredentialBinding,
   type CredentialLike,
   type CredentialWithdrawer,
@@ -25,6 +23,7 @@ import {
   readHostSessionLastUsed,
   removeHostSession,
   shortHostSessionId,
+  withdrawHostSession,
   writeHostSession,
   type HostSessionFile,
 } from "@powerhousedao/shared/clis/host-sessions";
@@ -353,29 +352,7 @@ export function mountOAuthRoutes(
 
   /** Withdraws a session: its credential's tombstone, then its file. */
   const withdraw = (session: HostSessionFile, by: CredentialWithdrawer) => {
-    const binding = session.credential
-      ? credentialBindingOf(session.credential)
-      : undefined;
-    if (binding) {
-      const withdrawn = withdrawCredentialRecords({
-        dataDir,
-        ids: [credentialRecordId(binding)],
-        by,
-      });
-      if (withdrawn.length === 0) {
-        writeCredentialWithdrawal({
-          dataDir,
-          binding,
-          by,
-          label: session.credential?.credentialSubject.app,
-          credentialId: session.credential?.id,
-          ...(session.credential?.expirationDate
-            ? { expiresAt: session.credential.expirationDate }
-            : {}),
-        });
-      }
-    }
-    removeHostSession({ dataDir, id: session.id });
+    const binding = withdrawHostSession({ dataDir, session, by });
     if (binding) options.onWithdrawn(binding);
     logger.info("@session: withdrawn (@by)", describe(session), by);
   };

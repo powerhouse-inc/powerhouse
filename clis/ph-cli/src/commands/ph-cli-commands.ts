@@ -18,6 +18,7 @@ import { model } from "./model.js";
 import { publish } from "./publish.js";
 import { registryLogin } from "./registry-login.js";
 import { runHost } from "./run.js";
+import { token } from "./token.js";
 import { uninstall } from "./uninstall.js";
 import { unpublish } from "./unpublish.js";
 import { vetra } from "./vetra.js";
@@ -43,6 +44,7 @@ export const phCliCommands = {
   whoami,
   identity,
   credentials,
+  token,
   install,
   uninstall,
   run: runHost,

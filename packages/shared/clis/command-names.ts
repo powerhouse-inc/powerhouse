@@ -25,6 +25,7 @@ export const phCliCommandNames = [
   "whoami",
   "identity",
   "credentials",
+  "token",
   "install",
   "add",
   "i",
