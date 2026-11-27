@@ -5,7 +5,9 @@ import {
   UNSIGNED_WRITE_CASES,
   UNSIGNED_WRITE_ERROR_CODE,
   UNSIGNED_WRITE_REASONS,
+  unsignedWriteCause,
   unsignedWriteExtensions,
+  unsignedWriteFix,
   unsignedWriteMessage,
 } from "./unsigned-writes.js";
 
@@ -21,6 +23,34 @@ describe("unsigned writes", () => {
     ).toBe(
       "Refused: this host signs no writes for its callers (Powerhouse 6.4). `Mutation.renameDocument` from an anonymous caller asks the host to build and sign SET_NAME. Sign it as yourself: a Powerhouse client (reactor-browser, clint, `ph mcp`) does it for you, or run `ph mutate <document> SET_NAME --input '<json>'`, or send a host session token (`Authorization: Bearer phs_...`, from this host's OAuth device grant at `/oauth`).",
     );
+  });
+
+  it("exports cause and fix, and composes the refusal from them", () => {
+    const write = {
+      reason: "host-built",
+      field: "Mutation.renameDocument",
+      caller: null,
+      actions: ["SET_NAME"],
+    } as const;
+    expect(unsignedWriteCause(write)).toBe(
+      "`Mutation.renameDocument` from an anonymous caller asks the host to build and sign SET_NAME",
+    );
+    expect(unsignedWriteFix(write)).toBe(
+      "Sign it as yourself: a Powerhouse client (reactor-browser, clint, `ph mcp`) does it for you, or run `ph mutate <document> SET_NAME --input '<json>'`, or send a host session token (`Authorization: Bearer phs_...`, from this host's OAuth device grant at `/oauth`).",
+    );
+    for (const reason of UNSIGNED_WRITE_REASONS) {
+      const each = {
+        reason,
+        field: "Mutation.execute",
+        caller: { address: "0xabc", label: "agent x" },
+        actions: ["SET_NAME", "ADD_FILE"],
+      };
+      expect(unsignedWriteMessage(each)).toBe(
+        `Refused: this host signs no writes for its callers (Powerhouse 6.4). ${unsignedWriteCause(each)}. ${unsignedWriteFix(each)}`,
+      );
+      expect(unsignedWriteCause(each)).not.toMatch(/\.$/);
+      expect(unsignedWriteFix(each)).toMatch(/\.$/);
+    }
   });
 
   it("names a host session token as a fix for HTTP /mcp's writes", () => {

@@ -95,8 +95,18 @@ function whatItDid(write: UnsignedWrite): string {
   }
 }
 
-/** The fix a refusal names. */
-function fixFor(write: UnsignedWrite): string {
+/**
+ * What happened, as one clause without a final stop: the field, the caller
+ * and what the write asked for (`` `Mutation.renameDocument` from an
+ * anonymous caller asks the host to build and sign SET_NAME ``). The 6.4
+ * refusal and the 6.3 line's log both start from it.
+ */
+export function unsignedWriteCause(write: UnsignedWrite): string {
+  return `\`${write.field}\` from ${describeUnsignedWriteCaller(write.caller)} ${whatItDid(write)}`;
+}
+
+/** The fix a refusal names, as whole sentences ending in a stop. */
+export function unsignedWriteFix(write: UnsignedWrite): string {
   switch (write.reason) {
     case "unsigned-actions":
     case "host-built":
@@ -110,7 +120,7 @@ function fixFor(write: UnsignedWrite): string {
 
 /** The refusal's text: cause, caller and fix. */
 export function unsignedWriteMessage(write: UnsignedWrite): string {
-  return `Refused: this host signs no writes for its callers (Powerhouse 6.4). \`${write.field}\` from ${describeUnsignedWriteCaller(write.caller)} ${whatItDid(write)}. ${fixFor(write)}`;
+  return `Refused: this host signs no writes for its callers (Powerhouse 6.4). ${unsignedWriteCause(write)}. ${unsignedWriteFix(write)}`;
 }
 
 /** A refusal's GraphQL `extensions`. */
