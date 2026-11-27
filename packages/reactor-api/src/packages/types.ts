@@ -117,6 +117,13 @@ export type IPackageManagerOptions = {
   packages?: string[];
   configFile?: string;
   reportError?: ReportError;
+  /**
+   * The entry of `packages` that is the project under development. Set it
+   * only for a host that runs in development: the manager then warns once per
+   * process when that project has legacy document models or legacy subgraphs.
+   * It leaves with their support in 6.4.
+   */
+  devProject?: string;
 };
 
 export interface PackageConfig {

@@ -9,9 +9,11 @@ import {
   useDocumentModelModules,
   useEditorModules,
 } from "@powerhousedao/reactor-browser";
+import type { DocumentModelLib } from "@powerhousedao/shared/document-model";
 import { renderHook } from "@testing-library/react";
+import { defineDocumentModel, materialize, ph } from "document-model";
 import { createElement } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BrowserPackageManager,
   declareExternalPackagesLayer,
@@ -184,6 +186,111 @@ describe("BrowserPackageManager.init — the generic chrome's editors", () => {
       "powerhouse/document-drive",
     );
     expect(pm.getPackageSource(COMMON)).toBe("common");
+  });
+});
+
+describe("BrowserPackageManager — the development warning for the project's legacy document models", () => {
+  const TODO_WARNING =
+    "Warning: This project has legacy document models (acme/todo). " +
+    "6.4 removes support for them. " +
+    "Run `ph migrate --document-models` to convert them, " +
+    "or write document models with defineDocumentModel (`ph generate document-model --name <name>`).";
+  let warnings: string[];
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    warnings = [];
+    vi.spyOn(console, "warn").mockImplementation((...parts: unknown[]) => {
+      warnings.push(parts.map(String).join(" "));
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  const legacyModel = (id: string) => ({ documentModel: { global: { id } } });
+
+  function modelWithDefinition() {
+    const model = defineDocumentModel({
+      id: "acme/note",
+      name: "Note",
+      description: "",
+      extension: "note",
+      version: 1,
+      author: { name: "Powerhouse" },
+      scopes: {
+        global: {
+          schema: ph.object("NoteState", {
+            fields: { title: ph.String({ required: true }) },
+          }),
+          initialValue: { title: "" },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    return materialize(model.version({ modules: [] }));
+  }
+
+  const project = (documentModels: unknown[]) =>
+    ({
+      manifest: { name: "todo-project" },
+      documentModels,
+      editors: [],
+    }) as unknown as DocumentModelLib;
+
+  it("warns once per page load, naming only the legacy document models", async () => {
+    const pm = new BrowserPackageManager("test", null);
+    await pm.init(
+      project([legacyModel("acme/todo"), modelWithDefinition()]),
+      "1.0.0",
+      false,
+      false,
+    );
+    expect(warnings).toEqual([TODO_WARNING]);
+
+    pm.updateLocalPackage(project([legacyModel("acme/todo")]), "1.0.0");
+    pm.updateLocalPackage(
+      project([legacyModel("acme/todo"), legacyModel("acme/invoice")]),
+      "1.0.0",
+    );
+    expect(warnings).toEqual([TODO_WARNING]);
+  });
+
+  it("warns when the first legacy document model arrives with a rebuild", () => {
+    const pm = new BrowserPackageManager("test", null);
+    pm.updateLocalPackage(project([modelWithDefinition()]), "1.0.0");
+    expect(warnings).toEqual([]);
+    pm.updateLocalPackage(project([legacyModel("acme/todo")]), "1.0.0");
+    expect(warnings).toEqual([TODO_WARNING]);
+  });
+
+  it("is silent in a production build", () => {
+    vi.stubEnv("PROD", true);
+    const pm = new BrowserPackageManager("test", null);
+    pm.updateLocalPackage(project([legacyModel("acme/todo")]), "1.0.0");
+    expect(warnings).toEqual([]);
+  });
+
+  it("is silent for the packages that are not the project", async () => {
+    const pm = new BrowserPackageManager("test", null);
+    await pm.init(undefined, undefined, false, false);
+    pm.addLocalPackage("@acme/installed", project([legacyModel("acme/todo")]));
+    expect(warnings).toEqual([]);
+  });
+
+  it("registers a project it cannot read as it did without the warning", () => {
+    const pm = new BrowserPackageManager("test", null);
+    const noModels = {
+      manifest: { name: "todo-project" },
+      editors: [],
+    } as unknown as DocumentModelLib;
+    const noDocumentModel = project([{}]);
+    expect(() => pm.updateLocalPackage(noModels, "1.0.0")).not.toThrow();
+    expect(() => pm.updateLocalPackage(noDocumentModel, "1.0.0")).not.toThrow();
+    expect(pm.localPackage).toBe(noDocumentModel);
+    expect(warnings).toEqual([]);
   });
 });
 

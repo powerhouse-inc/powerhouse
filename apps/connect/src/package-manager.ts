@@ -14,6 +14,10 @@ import {
   type IPackageManager,
 } from "@powerhousedao/reactor-browser";
 import {
+  formatDeprecation,
+  legacyAuthoringText,
+} from "@powerhousedao/shared/clis/deprecations";
+import {
   checkSharedDeps,
   CONNECT_LAYER_ORDER,
   formatSharedDepWarnings,
@@ -28,6 +32,7 @@ import {
   PwaConfigSchema,
 } from "@powerhousedao/shared/document-model";
 import { toCdnUrl } from "@powerhousedao/shared/registry/urls";
+import { isLegacyDocumentModelModule } from "document-model";
 import { getSharedDeps } from "./shared-deps.js";
 import {
   resolveFragmentAssetUrls,
@@ -156,6 +161,7 @@ export class BrowserPackageManager implements IPackageManager {
   #cdnUrl: string | null;
   #localPackageVersion: string | undefined;
   #localPackageNames: Set<string> = new Set([LOCAL_PACKAGE_NAME]);
+  #legacyAuthoringWarned = false;
   #pwaSyncTimer: ReturnType<typeof setTimeout> | undefined;
   /** Serialized last-mirrored PWA fragment; lets a sync skip the IndexedDB
    * write + manifest re-attach when nothing PWA-relevant changed. */
@@ -252,6 +258,7 @@ export class BrowserPackageManager implements IPackageManager {
       importUrl: null,
       loadedPackage: pkg,
     });
+    this.#warnLegacyAuthoring(pkg);
     if (version) {
       this.#localPackageVersion = version;
       this.#notifyPackagesChanged();
@@ -263,6 +270,24 @@ export class BrowserPackageManager implements IPackageManager {
         if (fetchedVersion) this.#notifyPackagesChanged();
       })
       .catch(() => {});
+  }
+
+  /** Once per page load, in a development build: the project's legacy document models. */
+  #warnLegacyAuthoring(pkg: DocumentModelLib<any>) {
+    if (import.meta.env.PROD || this.#legacyAuthoringWarned) return;
+    try {
+      const text = legacyAuthoringText({
+        documentModels: pkg.documentModels
+          .filter(isLegacyDocumentModelModule)
+          .map((module) => module.documentModel.global.id),
+        subgraphs: [],
+      });
+      if (text === undefined) return;
+      this.#legacyAuthoringWarned = true;
+      console.warn(formatDeprecation(text, null));
+    } catch {
+      // A package the warning cannot read registers as it did without it.
+    }
   }
 
   get packages() {

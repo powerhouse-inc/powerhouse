@@ -184,6 +184,8 @@ type Options = {
   pgliteFactory?: PgliteFactory;
   configFile?: string;
   packages?: string[];
+  /** The entry of `packages` under development; see `IPackageManagerOptions`. */
+  devProject?: string;
   /** Route prefix, gateway and public origin. Env is not read: map it at the
    *  edge with `reactorApiConfigFromEnv`. */
   server?: ReactorApiConfig["server"];
@@ -1145,6 +1147,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     configFile: options.configFile,
     packages: options.packages ?? [],
     reportError: options.reportError,
+    devProject: options.devProject,
   });
 
   // Package routes hang off <basePath>/api, webhooks off <basePath>/webhooks.

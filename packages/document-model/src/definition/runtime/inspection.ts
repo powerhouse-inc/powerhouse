@@ -134,6 +134,17 @@ function describeThrown(error: unknown): { message: string; name: string } {
 }
 
 /**
+ * Whether a loaded module is a legacy document model: it carries no
+ * `definition`. It serves the 6.3 development warning and leaves with legacy
+ * document model support in 6.4.
+ */
+export function isLegacyDocumentModelModule(
+  module: InspectableDocumentModelModule,
+): boolean {
+  return readDefinition(module).kind === "absent";
+}
+
+/**
  * Reads the structured definition a module carries. `structured` holds the
  * specification the stored path serves, `specifications.at(-1)`. A module
  * without a valid, matching, canonically serialized definition is served from

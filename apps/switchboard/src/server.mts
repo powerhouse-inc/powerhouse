@@ -1336,6 +1336,7 @@ async function initServer(
       https: options.https,
       packageLoaders: packageLoaders.length > 0 ? packageLoaders : undefined,
       packages: packages,
+      devProject: dev ? basePath : undefined,
       processorConfig: options.processorConfig,
       ...(renown ? { hostSigner: renown.signer } : {}),
       processors: vetraProcessorFactory

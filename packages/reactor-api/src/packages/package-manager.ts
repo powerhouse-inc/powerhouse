@@ -23,6 +23,7 @@ import type {
   PackagePieceEntry,
 } from "./types.js";
 import { baseDocumentModels } from "./base-document-models.js";
+import { warnLegacyAuthoring } from "./legacy-authoring.js";
 import {
   buildScalarRegistry,
   describeScalarRefusal,
@@ -307,6 +308,7 @@ export class PackageManager implements IPackageManager {
     this.updateSubgraphsMap(subgraphsMap);
     this.updateProcessorsMap(processorsMap);
     this.updatePiecesMap(piecesMap);
+    this.warnLegacyAuthoring();
 
     this.unsubscribePackages?.();
     this.unsubscribePackages = undefined;
@@ -630,6 +632,7 @@ export class PackageManager implements IPackageManager {
     }
     this.upgradeManifestsMap = upgradeManifestsMap;
     this.updatePackagesMap(documentModelsMap);
+    this.warnLegacyAuthoring();
   }
 
   private async updateSubgraphsForPackage(pkg: string): Promise<void> {
@@ -638,6 +641,7 @@ export class PackageManager implements IPackageManager {
     if (!this.subscribedPackages.has(pkg)) return;
     const next = this.withReload("subgraphs", this.subgraphsMap, pkg, load);
     if (next) this.updateSubgraphsMap(next);
+    this.warnLegacyAuthoring();
   }
 
   private async updateScalarsForPackage(pkg: string): Promise<void> {
@@ -670,6 +674,24 @@ export class PackageManager implements IPackageManager {
     if (!this.subscribedPackages.has(pkg)) return;
     const next = this.withReload("pieces", this.piecesMap, pkg, load);
     if (next) this.updatePiecesMap(next);
+  }
+
+  private warnLegacyAuthoring(): void {
+    const project = this.options.devProject;
+    if (project === undefined) return;
+    try {
+      warnLegacyAuthoring(
+        project,
+        {
+          documentModels: this.docModelsMap.get(project) ?? [],
+          subgraphs: this.subgraphsMap.get(project) ?? [],
+        },
+        (line) => this.logger.warn(line),
+      );
+    } catch (error) {
+      // A warning must not fail a load.
+      this.logger.debug("Skipped the legacy authoring warning: @error", error);
+    }
   }
 
   /** Debounced per key so repeated subscribePackages calls reuse one timer. */

@@ -49,6 +49,7 @@ export type {
   DocumentModelDefinitionInspection,
   InspectableDocumentModelModule,
 } from "./runtime/inspection.js";
+export { isLegacyDocumentModelModule } from "./runtime/inspection.js";
 export { materialize } from "./runtime/materialize.js";
 export type {
   ActionOf,
