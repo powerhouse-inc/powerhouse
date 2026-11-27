@@ -143,10 +143,12 @@ in that session's scope, and `executeSubgraph` gives a host session's user
 The door notes a session's last use in `<id>.used` beside its file, at most
 hourly, never by rewriting the session file. A session a Renown login
 approved through the console (`approvedThrough: "renown"`) is asked of Renown
-too, at most once per the verifier's answer TTL: withdrawn there, the
-verifier writes the tombstone (`by: "renown"`) and the token is refused.
-Renown unreachable leaves the record's answer; a pseudonym's session is the
-record's alone.
+too, at most once per the verifier's answer TTL: once Renown has not served
+it in two answers at least a minute apart, the verifier writes the tombstone
+(`by: "renown"`) and the token is refused; it works in between, so a
+withdrawal there takes effect within about a minute. Renown unreachable
+leaves the record's answer, and is asked again a minute later, not on every
+request; a pseudonym's session is the record's alone.
 
 A host session's document writes are signed by the session: the door readies
 a `RenownCryptoSigner` over the session's key (`app.name` the credential's

@@ -87,9 +87,10 @@ export interface CredentialCheckOptions {
   /**
    * Renown signed the credential (its console): a record here does not end
    * the check. Renown is asked too, at most once per answer TTL; withdrawn
-   * there, the record is withdrawn here (its tombstone) and the credential
-   * refused. Renown unreachable, or holding no such credential, leaves the
-   * record's answer.
+   * there (not served in two answers at least a minute apart), the record is
+   * withdrawn here (its tombstone) and the credential refused; until the
+   * second answer it holds. Renown unreachable (asked again after a minute),
+   * or never having held such a credential, leaves the record's answer.
    */
   atRenown?: boolean;
 }
@@ -108,6 +109,17 @@ export interface CredentialVerifier {
 }
 
 const DEFAULT_ANSWER_TTL_MS = 60_000;
+/**
+ * How long "Renown cannot be reached" holds for a credential Renown signed:
+ * an outage costs a request the timeout once a minute, not every time.
+ */
+const UNREACHABLE_TTL_MS = 60_000;
+/**
+ * A credential Renown signed is withdrawn here only once Renown has not
+ * served it in two answers this far apart: one empty answer (a lagging read
+ * model, a proxy's) is not a withdrawal for good.
+ */
+const NOT_SERVED_CONFIRM_MS = 60_000;
 const DEFAULT_TIMEOUT_MS = 3_000;
 const ISSUANCE_SKEW_MS = 5 * 60_000;
 const REDISCOVER_MS = 60_000;
@@ -518,14 +530,31 @@ export function createCredentialVerifier(
     }
   };
 
-  // Renown's word on a credential that has a record here, kept for the answer
-  // TTL: whether it was withdrawn there. Apart from `answers`, which speak
-  // for credentials with no record.
-  const words = new Map<string, { withdrawn: boolean; at: number }>();
+  // Renown's word on a credential that has a record here: served, not
+  // reachable, or not served (since `missedAt`, the first such answer). Kept
+  // for the answer TTL, "not reachable" for a minute. Apart from `answers`,
+  // which speak for credentials with no record.
+  type Word = {
+    at: number;
+    heard: "served" | "unreachable" | "not-served";
+    missedAt?: number;
+  };
+  const words = new Map<string, Word>();
+
+  const keepWord = (key: string, word: Word) => {
+    words.delete(key);
+    if (words.size >= MAX_ANSWERS) {
+      const oldest = words.keys().next().value;
+      if (oldest !== undefined) words.delete(oldest);
+    }
+    words.set(key, word);
+  };
 
   // Renown signed this credential, so it held it: asked with the credential's
   // date, a credential Renown no longer serves reads as withdrawn (over REST
-  // too, which serves active ones only), unless that date has passed.
+  // too, which serves active ones only), unless that date has passed. Only a
+  // second such answer, a minute or more after the first, withdraws it: the
+  // credential keeps working in between.
   const withdrawnAtRenown = async (
     claim: CredentialClaim,
     expirationDate: string,
@@ -533,20 +562,36 @@ export function createCredentialVerifier(
     const key = keyOf(claim.address, claim.chainId, claim.sessionDid);
     const inProcess = (await options.inProcessRenown?.()) !== undefined;
     const held = words.get(key);
-    if (!inProcess && held && ttl > 0 && now() - held.at < ttl) {
-      return held.withdrawn;
+    const holds = held?.heard === "unreachable" ? UNREACHABLE_TTL_MS : ttl;
+    if (!inProcess && held && holds > 0 && now() - held.at < holds) {
+      return false;
     }
     const check = await ask(`signed|${key}`, claim, expirationDate);
-    // Unreachable: the record's answer stands, and Renown is asked next time.
-    if (check.status === "unknown") return false;
-    const withdrawn = check.status === "revoked";
-    words.delete(key);
-    if (words.size >= MAX_ANSWERS) {
-      const oldest = words.keys().next().value;
-      if (oldest !== undefined) words.delete(oldest);
+    const at = now();
+    // A miss heard before an outage still counts toward the second one.
+    const missedAt = held?.missedAt;
+    switch (check.status) {
+      case "revoked": {
+        const first = missedAt ?? at;
+        if (at - first >= NOT_SERVED_CONFIRM_MS) {
+          words.delete(key);
+          return true;
+        }
+        keepWord(key, { at, heard: "not-served", missedAt: first });
+        return false;
+      }
+      case "unknown":
+        // Unreachable: the record's answer stands; Renown is asked again in a minute.
+        keepWord(key, {
+          at,
+          heard: "unreachable",
+          ...(missedAt !== undefined ? { missedAt } : {}),
+        });
+        return false;
+      default:
+        keepWord(key, { at, heard: "served" });
+        return false;
     }
-    words.set(key, { withdrawn, at: now() });
-    return withdrawn;
   };
 
   return {

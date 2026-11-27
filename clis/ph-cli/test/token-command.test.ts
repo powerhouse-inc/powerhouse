@@ -11,6 +11,7 @@ import {
   credentialRecordId,
   readCredentialWithdrawal,
 } from "@powerhousedao/shared/clis/credential-records";
+import type * as HostSessionsModule from "@powerhousedao/shared/clis/host-sessions";
 import {
   listHostSessions,
   readHostSession,
@@ -36,6 +37,22 @@ import {
   runTokenWithdraw,
   type TokenIo,
 } from "../src/services/token.js";
+
+// `ph token`'s own withdrawals, made to fail where a test asks; the host's
+// (reactor-api's build) are not this module's.
+const failWithdrawals = vi.hoisted(() => ({ on: false }));
+vi.mock("@powerhousedao/shared/clis/host-sessions", async (importOriginal) => {
+  const actual = await importOriginal<typeof HostSessionsModule>();
+  return {
+    ...actual,
+    withdrawHostSession: (
+      ...args: Parameters<typeof actual.withdrawHostSession>
+    ) => {
+      if (failWithdrawals.on) throw new Error("the store is read-only");
+      return actual.withdrawHostSession(...args);
+    },
+  };
+});
 
 // viem is the SDK's own dependency; ph-cli does not declare it.
 type Account = {
@@ -128,6 +145,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  failWithdrawals.on = false;
   for (const held of hosts.splice(0)) await held.close();
   vi.restoreAllMocks();
   fs.rmSync(root, { recursive: true, force: true });
@@ -246,6 +264,53 @@ describe("ph token create", () => {
     expect((await sb.sessions.verify(old)).ok).toBe(false);
     expect((await sb.sessions.verify(fresh)).ok).toBe(true);
     expect(listHostSessions({ dataDir: sb.dataDir })).toHaveLength(1);
+  });
+
+  it("--replace finds the old session before it starts a grant: naming none, nothing starts", async () => {
+    const sb = await host();
+    await runTokenCreate({ url: sb.url, label: "billing", yes: true }, io());
+    out = [];
+    const before = listHostSessions({ dataDir: sb.dataDir }).length;
+    expect(
+      await runTokenCreate(
+        { url: sb.url, yes: true, replace: "reports", dataDir: sb.dataDir },
+        io(),
+      ),
+    ).toBe(1);
+    expect(err.at(-1)).toBe("No host session reports.");
+    expect(out).toEqual([]);
+    // No grant was started: no new session key on the host.
+    expect(listHostSessions({ dataDir: sb.dataDir })).toHaveLength(before);
+  });
+
+  it("--replace that cannot withdraw the old session still prints the new token, says so, and exits 1", async () => {
+    const sb = await host();
+    await runTokenCreate({ url: sb.url, label: "billing", yes: true }, io());
+    const old = out.pop()!;
+    failWithdrawals.on = true;
+    expect(
+      await runTokenCreate(
+        {
+          url: sb.url,
+          label: "billing",
+          yes: true,
+          replace: "billing",
+          dataDir: sb.dataDir,
+        },
+        io(),
+      ),
+    ).toBe(1);
+    expect(out).toHaveLength(1);
+    const fresh = out[0]!;
+    expect(fresh).toMatch(/^phs_/);
+    expect((await sb.sessions.verify(fresh)).ok).toBe(true);
+    expect((await sb.sessions.verify(old)).ok).toBe(true);
+    const oldId = /^phs_([0-9a-f]{32})_/.exec(old)![1]!;
+    const said = err.join("\n");
+    expect(said).toContain(
+      `The new token is issued, but ${oldId.slice(0, 8)} ("billing") was not withdrawn: the store is read-only`,
+    );
+    expect(said).toContain(`ph token withdraw ${oldId.slice(0, 8)} --data-dir`);
   });
 });
 

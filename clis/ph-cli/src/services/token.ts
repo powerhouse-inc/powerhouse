@@ -410,6 +410,15 @@ export async function runTokenCreate(
       );
     }
     const identity = await identityOf(io);
+    // The session to replace is found first: a target that names none, or
+    // several, stops the command before any grant starts.
+    const replacing = args.replace
+      ? await findSession(
+          args.replace,
+          { url: args.url, dataDir: args.dataDir },
+          io,
+        )
+      : undefined;
     const start = await form(`${url}/oauth/device_authorization`, {
       client_id: CLIENT_ID,
       ph_label: args.label ?? DEFAULT_LABEL,
@@ -441,12 +450,21 @@ export async function runTokenCreate(
       io.open(started.verification_uri_complete);
     }
     const issued = await pollToken(url, started, io);
-    if (args.replace) {
-      await withdraw(args.replace, { ...args, url: args.url }, io, {
-        except: issued.ph_session,
-      });
-    }
+    // Printed before the old session goes: the new token is never lost.
     io.out(args.json ? JSON.stringify(issued, null, 2) : issued.access_token);
+    if (replacing) {
+      try {
+        await replacing.withdraw();
+      } catch (error) {
+        io.err(
+          `The new token is issued, but ${replacing.id.slice(0, 8)} ("${replacing.label}") was not withdrawn: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        io.err(
+          `Withdraw it yourself: ph token withdraw ${replacing.id.slice(0, 8)}${replacing.where}`,
+        );
+        return 1;
+      }
+    }
     return 0;
   } catch (error) {
     return failed(error, io);
@@ -621,37 +639,50 @@ function matchOne<T extends { id: string; label: string }>(
   return found[0];
 }
 
-/** Withdraws the session `target` names: in the files, or at `--url`. */
-async function withdraw(
+/** The one session a target names, found; `withdraw` then withdraws it. */
+type FoundSession = {
+  id: string;
+  label: string;
+  /** Where it is, as `ph token withdraw` takes it: ` --url ...` or ` --data-dir ...`. */
+  where: string;
+  withdraw(): Promise<void>;
+};
+
+/** The session `target` names: in the files, or at `--url`. */
+async function findSession(
   target: string,
   args: { url?: string; dataDir?: string },
   io: TokenIo,
-  o: { except?: string } = {},
-): Promise<void> {
-  const keep = (row: { id: string }) => row.id !== o.except;
+): Promise<FoundSession> {
   if (atHost(args)) {
     const url = hostUrlOf(args.url);
-    const row = matchOne((await hostSessions(url, io)).filter(keep), target);
-    const done = await call(
-      `${url}/oauth/sessions/${encodeURIComponent(row.id)}/withdraw`,
-      {
-        method: "POST",
-        headers: { authorization: `Bearer ${await ownBearer(url, io)}` },
+    const row = matchOne(await hostSessions(url, io), target);
+    return {
+      id: row.id,
+      label: row.label,
+      where: ` --url ${url}`,
+      withdraw: async () => {
+        const done = await call(
+          `${url}/oauth/sessions/${encodeURIComponent(row.id)}/withdraw`,
+          {
+            method: "POST",
+            headers: { authorization: `Bearer ${await ownBearer(url, io)}` },
+          },
+        );
+        if (done.status !== 200) {
+          throw new TokenError(
+            `${url} did not withdraw ${row.id.slice(0, 8)}: ${why(done.body, done.status)}`,
+          );
+        }
+        io.err(
+          `Withdrew ${row.id.slice(0, 8)} ("${row.label}") at ${url}: its tokens are refused from their next request.`,
+        );
       },
-    );
-    if (done.status !== 200) {
-      throw new TokenError(
-        `${url} did not withdraw ${row.id.slice(0, 8)}: ${why(done.body, done.status)}`,
-      );
-    }
-    io.err(
-      `Withdrew ${row.id.slice(0, 8)} ("${row.label}") at ${url}: its tokens are refused from their next request.`,
-    );
-    return;
+    };
   }
   const dataDir = dataDirOf(args, io.env);
   const sessions = listHostSessions({ dataDir }).filter(
-    (session) => session.credential !== undefined && keep(session),
+    (session) => session.credential !== undefined,
   );
   const row = matchOne(
     sessions.map((session) => ({
@@ -661,10 +692,18 @@ async function withdraw(
     })),
     target,
   );
-  withdrawHostSession({ dataDir, session: row.session, by: "command" });
-  io.err(
-    `Withdrew ${row.id.slice(0, 8)} ("${row.label}"): a running host refuses its tokens from their next request.`,
-  );
+  return {
+    id: row.id,
+    label: row.label,
+    where: ` --data-dir ${dataDir}`,
+    withdraw: () => {
+      withdrawHostSession({ dataDir, session: row.session, by: "command" });
+      io.err(
+        `Withdrew ${row.id.slice(0, 8)} ("${row.label}"): a running host refuses its tokens from their next request.`,
+      );
+      return Promise.resolve();
+    },
+  };
 }
 
 export async function runTokenWithdraw(
@@ -672,7 +711,7 @@ export async function runTokenWithdraw(
   io: TokenIo = defaultTokenIo(),
 ): Promise<number> {
   try {
-    await withdraw(args.target, args, io);
+    await (await findSession(args.target, args, io)).withdraw();
     return 0;
   } catch (error) {
     return failed(error, io);

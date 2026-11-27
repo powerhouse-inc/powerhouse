@@ -203,7 +203,12 @@ describe("a host session token at the door", () => {
   it("refuses a session Renown approved once Renown withdraws it, and writes the tombstone", async () => {
     const { session, token, credential, recordId } = await approved();
     writeHostSession(dataDir, { ...session, approvedThrough: "renown" });
-    const atRenown = createCredentialVerifier({ dataDir, answerTtlMs: 0 });
+    let clock = Date.now();
+    const atRenown = createCredentialVerifier({
+      dataDir,
+      answerTtlMs: 0,
+      now: () => clock,
+    });
     const door = new HostSessions({
       dataDir,
       verifier: atRenown,
@@ -214,10 +219,16 @@ describe("a host session token at the door", () => {
         Promise.resolve(Response.json({ credential })),
       );
       expect((await door.verify(token)).ok).toBe(true);
-      // Renown serves it no more: withdrawn there.
+      // Renown serves it no more: withdrawn there, once a second answer a
+      // minute later says so too. The session works in between.
       vi.mocked(globalThis.fetch).mockImplementation(() =>
         Promise.resolve(Response.json({}, { status: 404 })),
       );
+      expect((await door.verify(token)).ok).toBe(true);
+      expect(
+        readCredentialWithdrawal({ dataDir, id: recordId }),
+      ).toBeUndefined();
+      clock += 61_000;
       expect(await door.verify(token)).toEqual({
         ok: false,
         reason: "withdrawn",

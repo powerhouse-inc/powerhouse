@@ -418,7 +418,7 @@ describe("createCredentialVerifier: Renown", () => {
 });
 
 describe("createCredentialVerifier: a recorded credential Renown signed", () => {
-  it("is refused, and withdrawn here, once Renown no longer serves it", async () => {
+  it("is refused, and withdrawn here, once Renown has not served it for a minute", async () => {
     const credential = await issue();
     const { id } = writeCredentialRecord({
       dataDir,
@@ -426,14 +426,26 @@ describe("createCredentialVerifier: a recorded credential Renown signed", () => 
       source: "host-session",
     });
     fetchSpy.mockImplementation(reply(200, { credential }));
-    const v = verifier({ answerTtlMs: 0, watch: false });
+    let clock = Date.now();
+    const v = verifier({ answerTtlMs: 0, watch: false, now: () => clock });
     const heard: string[] = [];
     v.onWithdrawn((c) => heard.push(c.sessionDid));
     expect(await v.check(claim(), undefined, { atRenown: true })).toMatchObject(
       { ok: true, via: "record" },
     );
-    // Withdrawn at Renown: REST serves active credentials only.
+    // Withdrawn at Renown: REST serves active credentials only. One answer
+    // saying so is not enough: the credential holds until a second one, a
+    // minute or more after the first.
     fetchSpy.mockImplementation(reply(404, {}));
+    for (const later of [0, 30_000, 29_000]) {
+      clock += later;
+      expect(
+        await v.check(claim(), undefined, { atRenown: true }),
+      ).toMatchObject({ ok: true, via: "record" });
+    }
+    expect(readCredentialWithdrawal({ dataDir, id })).toBeUndefined();
+    expect(heard).toEqual([]);
+    clock += 1_000;
     expect(await v.check(claim(), undefined, { atRenown: true })).toEqual({
       ok: false,
       reason: "withdrawn-at-renown",
@@ -464,6 +476,67 @@ describe("createCredentialVerifier: a recorded credential Renown signed", () => 
     expect(
       await verifier().check(claim(), undefined, { atRenown: true }),
     ).toMatchObject({ ok: true, via: "record" });
+  });
+
+  it("writes no tombstone for one empty answer: served again, the miss is forgotten", async () => {
+    const credential = await issue();
+    const { id } = writeCredentialRecord({
+      dataDir,
+      credential,
+      source: "host-session",
+    });
+    let clock = Date.now();
+    const v = verifier({ answerTtlMs: 0, watch: false, now: () => clock });
+    const check = () => v.check(claim(), undefined, { atRenown: true });
+    fetchSpy.mockImplementation(reply(200, { credential: null }));
+    expect((await check()).ok).toBe(true);
+    clock += 61_000;
+    fetchSpy.mockImplementation(reply(200, { credential }));
+    expect((await check()).ok).toBe(true);
+    clock += 61_000;
+    fetchSpy.mockImplementation(reply(200, { credential: null }));
+    expect((await check()).ok).toBe(true);
+    expect(readCredentialWithdrawal({ dataDir, id })).toBeUndefined();
+    expect(fs.existsSync(credentialRecordFile(dataDir, id))).toBe(true);
+  });
+
+  it("asks an unreachable Renown once a minute, keeping the record's answer", async () => {
+    const credential = await issue();
+    writeCredentialRecord({ dataDir, credential, source: "host-session" });
+    let clock = Date.now();
+    const v = verifier({ answerTtlMs: 0, watch: false, now: () => clock });
+    const check = () => v.check(claim(), undefined, { atRenown: true });
+    for (let i = 0; i < 3; i++) {
+      expect(await check()).toMatchObject({ ok: true, via: "record" });
+    }
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    clock += 61_000;
+    expect((await check()).ok).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("counts a miss heard before an outage toward the second one", async () => {
+    const credential = await issue();
+    const { id } = writeCredentialRecord({
+      dataDir,
+      credential,
+      source: "host-session",
+    });
+    let clock = Date.now();
+    const v = verifier({ answerTtlMs: 0, watch: false, now: () => clock });
+    const check = () => v.check(claim(), undefined, { atRenown: true });
+    fetchSpy.mockImplementation(reply(404, {}));
+    expect((await check()).ok).toBe(true);
+    clock += 10_000;
+    fetchSpy.mockRejectedValue(new TypeError("fetch failed"));
+    expect((await check()).ok).toBe(true);
+    clock += 61_000;
+    fetchSpy.mockImplementation(reply(404, {}));
+    expect(await check()).toEqual({
+      ok: false,
+      reason: "withdrawn-at-renown",
+    });
+    expect(readCredentialWithdrawal({ dataDir, id })?.by).toBe("renown");
   });
 
   it("is the record's alone without `atRenown`: a pseudonym's is never asked", async () => {
