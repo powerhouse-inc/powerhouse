@@ -1,5 +1,13 @@
 # CLI Identity & Authentication
 
+:::info
+This page describes the CLI before Powerhouse 6.4. Since 6.4 `ph login` keeps
+the login in your home folder, for every project, and a switchboard signs
+only its own work. For who signs a write now, service identities
+(`ph identity new`) and `ph mutate`, see [Every caller signs its writes](/academy/Reference/Authorization/EveryCallerSigns);
+for moving a project, [Upgrading identities to 6.4](/academy/Reference/Authorization/UpgradingTo64).
+:::
+
 This guide covers how to authenticate the Powerhouse CLI with your Ethereum identity and use that identity in the Switchboard for authenticated operations with remote services.
 
 ## Overview
