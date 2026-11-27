@@ -25,7 +25,7 @@
     "wagmi": "^2.19.5"
   },
   "devDependencies": {
-    "@playwright/test": "1.64.1",
+    "@playwright/test": "npm:flashwright-test@1.64.1-flashwright.11",
     "@powerhousedao/coverage-baseline": "workspace:*",
     "@tailwindcss/postcss": "^4",
     "@types/node": "catalog:",
