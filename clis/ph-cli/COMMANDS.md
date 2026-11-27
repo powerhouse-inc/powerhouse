@@ -1153,7 +1153,7 @@ This command:
 #### Renown Url <br>
 Renown server URL.<br><br>
 **usage:** `--renown-url <str>`<br>
-**env**: `PH_CONNECT_RENOWN_URL`<br>**default**: `https//renown-staging.vetra.io`
+**env**: `PH_CONNECT_RENOWN_URL`<br>**default**: `https://renown-staging.vetra.io`
 #### Timeout <br>
 Authentication timeout in seconds.<br><br>
 **usage:** `--timeout <number>`<br>
@@ -1209,7 +1209,7 @@ show help<br><br>
 #### Renown Url <br>
 Renown server URL.<br><br>
 **usage:** `--renown-url <str>`<br>
-**env**: `PH_CONNECT_RENOWN_URL`<br>**default**: `https//renown-staging.vetra.io`
+**env**: `PH_CONNECT_RENOWN_URL`<br>**default**: `https://renown-staging.vetra.io`
 
 ## Logout
 
@@ -1219,7 +1219,7 @@ its key included. Your pseudonym acts again.
 #### Renown Url <br>
 Renown server URL.<br><br>
 **usage:** `--renown-url <str>`<br>
-**env**: `PH_CONNECT_RENOWN_URL`<br>**default**: `https//renown-staging.vetra.io`
+**env**: `PH_CONNECT_RENOWN_URL`<br>**default**: `https://renown-staging.vetra.io`
 
 ### flags
 #### Debug <br>

@@ -443,6 +443,28 @@ describe("createCredentialVerifier: Renown", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
+  it("asks again at once after forget while Renown is still out of reach", async () => {
+    const credential = await issue();
+    const v = verifier();
+    // Renown is down (every fetch fails): the signature, and the mark.
+    expect(await v.check(claim(), credential)).toMatchObject({
+      ok: true,
+      via: "signature",
+    });
+    expect((await v.check(claim(), credential)).ok).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    // Forgotten: the next check asks again, though Renown is still down.
+    v.forget(person.address);
+    expect(await v.check(claim(), credential)).toMatchObject({
+      ok: true,
+      via: "signature",
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    // Marked again by that miss: no ask within the minute.
+    expect((await v.check(claim(), credential)).ok).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps Renown's last answer while it cannot be reached, across a restart", async () => {
     const credential = await issue();
     fetchSpy.mockImplementation(reply(200, { credential }));

@@ -104,7 +104,9 @@ challenge: a write tool there answers with the `UNSIGNED_WRITE` refusal
   `cursor://...`), which the consent page shows in full. Refused: plain `http`
   off loopback, a fragment, user info, and the schemes `javascript`, `data`,
   `file`, `vbscript`, `blob`, `about`, `ws`, `wss`, `ftp`, `mailto`, `tel`,
-  `sms` and `intent`.
+  `sms`, `smsto`, `mms`, `callto`, `facetime`, `facetime-audio`, `intent`,
+  `search-ms`, `view-source`, `market`, `itms-services` and every `ms-`
+  scheme.
 - **Errors before you act** (an unknown client, a redirect URI it did not
   register, a missing PKCE challenge) are a page on the host naming the error.
   Only a loopback client is sent back at once. After you click Approve or Deny

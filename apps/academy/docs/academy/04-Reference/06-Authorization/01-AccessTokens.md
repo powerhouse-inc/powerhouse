@@ -119,6 +119,12 @@ next request. Both take `--data-dir`. With `--url <host>` they ask the host
 instead, with a bearer of your own `ph-cli` session, and list or withdraw only
 your sessions there.
 
+That bearer is not a host session token. A bearer your identity sends is
+valid at any host that knows its credential, for ten minutes: a host you send
+it to can act as you elsewhere in that time. Give `--url` only hosts you
+trust, and keep identities that are in a host's `ADMINS` away from hosts you
+do not run. (A later release binds each bearer to the host it is sent to.)
+
 A token also withdraws itself: `POST <host>/oauth/revoke` with
 `token=<token>` (RFC 7009).
 

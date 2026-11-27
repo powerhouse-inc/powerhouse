@@ -33,7 +33,9 @@ const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
  * Schemes no redirect URI takes: the browser runs, reads or serves them
  * itself, they carry no answer back to an app, or they hand the code to
  * whatever the device opens for them (a mail, a call, a message, an
- * Android intent).
+ * Android intent, an app store, a Windows tool). Every `ms-` scheme too
+ * (`ms-msdt:`, `ms-settings:`, ...): Windows' own, and no MCP client
+ * redirects to one.
  */
 const REFUSED_SCHEMES = new Set([
   "javascript:",
@@ -48,8 +50,20 @@ const REFUSED_SCHEMES = new Set([
   "mailto:",
   "tel:",
   "sms:",
+  "smsto:",
+  "mms:",
+  "callto:",
+  "facetime:",
+  "facetime-audio:",
   "intent:",
+  "search-ms:",
+  "view-source:",
+  "market:",
+  "itms-services:",
 ]);
+
+const refusedScheme = (protocol: string) =>
+  REFUSED_SCHEMES.has(protocol) || protocol.startsWith("ms-");
 
 export type OAuthClient = {
   format: typeof FORMAT;
@@ -109,7 +123,7 @@ export function redirectUriRefusal(uri: unknown): string | undefined {
       ? undefined
       : `${uri} is plain http off loopback (localhost, 127.0.0.1, [::1])`;
   }
-  if (REFUSED_SCHEMES.has(url.protocol)) {
+  if (refusedScheme(url.protocol)) {
     return `${uri}: a ${url.protocol} URI takes no redirect`;
   }
   return undefined;

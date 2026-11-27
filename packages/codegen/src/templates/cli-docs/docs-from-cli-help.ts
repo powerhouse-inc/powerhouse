@@ -31,9 +31,12 @@ function makeDefaultsDescriptors(defaults: string[]) {
   const withoutOptional = defaults.filter(
     (d) => d !== "optional" && d !== "[...optional]",
   );
+  // Split at the first colon only: a value such as `https://...` keeps its own.
   const formatted = withoutOptional.map((d) => {
-    const [label, ...rest] = d.split(":").map((s) => s.trim());
-    return `**${label}**: \`${rest.join("")}\``;
+    const at = d.indexOf(":");
+    const label = (at < 0 ? d : d.slice(0, at)).trim();
+    const value = at < 0 ? "" : d.slice(at + 1).trim();
+    return `**${label}**: \`${value}\``;
   });
   return formatted;
 }

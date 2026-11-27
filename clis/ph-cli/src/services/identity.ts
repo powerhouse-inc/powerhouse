@@ -262,6 +262,7 @@ export function runIdentityNew(
   const advice = [
     `The service signs its own writes as ${name} when ${IDENTITY_KEY_ENV} is set: no \`ph login\`, no Renown.`,
     `A service that administers a host (installs packages, say) goes into that host's ADMINS=${address}.`,
+    "A bearer this identity sends is valid at any host that knows its credential for ten minutes, so a host you send it to can act as it elsewhere in that time: keep identities that are in ADMINS away from hosts you do not run.",
   ];
 
   if (!args.save) {

@@ -117,6 +117,12 @@ internal coupling point between `auth-middleware.ts` and `graphql-manager.ts`.
 | a self-signed JWT of a session key, carrying or naming its credential | the token's signature, then the credential verifier (the store's records, then Renown) | `record`, `renown`, `last-answer`, `signature` |
 | `phs_<id>_<secret>`, a token of a session the caller delegated to this host | `HostSessions` (`src/services/host-sessions.ts`): the session file in `<dataDir>/.ph/host-sessions`, the hash of the secret, both ends, then the same credential verifier | `host-session` |
 
+The verifier (`@renown/sdk/node` `createCredentialVerifier`) keeps at most
+10,000 of Renown's answers in memory, and as many "Renown cannot be reached"
+marks, oldest out first. While Renown is down, a flood of fresh credentials
+(cheap to mint) can push live entries out, which then wait Renown's 3 s
+timeout once more; the cost stays bounded, and is accepted as is.
+
 A caller with no file access makes its credential known by enrolment
 (`src/http/credential-routes.ts`, `<base>/credentials/`): a request signed by
 the address's own key writes the record. The host keeps at most 50 records per
@@ -183,8 +189,9 @@ MCP clients sign in with the authorization code grant (RFC 6749 4.1) on the
 same grant object and consent. `register` (RFC 7591) keeps public clients
 only (`none` at the token endpoint), with https, loopback http or an app's
 own scheme (RFC 8252 7.1; not `javascript`, `data`, `file`, `vbscript`,
-`blob`, `about`, `ws`, `wss`, `ftp`, `mailto`, `tel`, `sms`, `intent`, the
-page shows it in full) for
+`blob`, `about`, `ws`, `wss`, `ftp`, `mailto`, `tel`, `sms`, `smsto`, `mms`,
+`callto`, `facetime`, `facetime-audio`, `intent`, `search-ms`, `view-source`,
+`market`, `itms-services`, nor any `ms-` scheme; the page shows it in full) for
 redirect URIs; 10 registrations a minute and 20 held per address, 1,000 in
 all. A client no grant was approved for is dropped after an hour, one in use
 30 days after its last approval; a full table drops its oldest unused client

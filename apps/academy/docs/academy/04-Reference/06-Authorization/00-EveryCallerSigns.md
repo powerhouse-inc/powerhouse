@@ -159,11 +159,18 @@ folder) instead: every run then reuses one session.
 A service that must administer a host (install packages, say) goes into that
 host's `ADMINS`.
 
+Mind where it sends its bearers. A bearer this identity sends is valid at any
+host that knows its credential for ten minutes, so a host you send it to can
+act as it elsewhere in that time. Keep identities that are in `ADMINS` away
+from hosts you do not run. (A later release binds each bearer to the host it
+is sent to.)
+
 ## `ph mutate` for scripts
 
-`ph mutate` sends one change, signed as you through ph-cli's own session
-`ph-cli`. The actions are plain objects; no document model is needed except
-for `--create`.
+`ph mutate` sends a change to a document: one action, a file of actions, a
+create or a delete, signed as you through ph-cli's own session `ph-cli`. The
+actions are plain objects; no document model is needed except for
+`--create`.
 
 ```bash
 # one action

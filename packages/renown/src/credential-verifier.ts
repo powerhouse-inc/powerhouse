@@ -137,7 +137,9 @@ const NOT_SERVED_CONFIRM_MS = 60_000;
 const DEFAULT_TIMEOUT_MS = 3_000;
 const ISSUANCE_SKEW_MS = 5 * 60_000;
 const REDISCOVER_MS = 60_000;
-// Renown's answers held in memory; the oldest goes first.
+// Renown's answers held in memory; the oldest goes first. A flood of fresh
+// credentials during an outage can push live ones out, which then pay the
+// timeout once more: bounded, and accepted (reactor-api ARCHITECTURE.md).
 const MAX_ANSWERS = 10_000;
 // A record replaced by remove-then-rename (Windows, a reader holding it open).
 const REAPPEAR_MS = 50;

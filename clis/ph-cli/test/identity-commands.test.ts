@@ -181,6 +181,9 @@ describe("ph identity new", () => {
     expect(addressOfKey(parsePrivateKey(key))).toBe(address);
     expect(err.join("\n")).toMatch(/Nothing was written/);
     expect(err.join("\n")).toContain(`ADMINS=${address}`);
+    expect(err.join("\n")).toContain(
+      "keep identities that are in ADMINS away from hosts you do not run",
+    );
     expect(fs.existsSync(home)).toBe(false);
     expect(fs.readdirSync(store)).toEqual([]);
 

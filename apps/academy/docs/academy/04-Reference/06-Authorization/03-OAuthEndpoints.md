@@ -79,7 +79,9 @@ and optionally `grant_types` (must include `authorization_code`) and
 ["authorization_code"]`, `response_types: ["code"]`. Redirect URIs: `https`,
 loopback `http`, or an app's own scheme, not `javascript`, `data`, `file`,
 `vbscript`, `blob`, `about`, `ws`, `wss`, `ftp`, `mailto`, `tel`, `sms`,
-`intent`; no fragment, no user info. Refused with `invalid_redirect_uri`.
+`smsto`, `mms`, `callto`, `facetime`, `facetime-audio`, `intent`,
+`search-ms`, `view-source`, `market`, `itms-services`, nor any `ms-` scheme;
+no fragment, no user info. Refused with `invalid_redirect_uri`.
 
 `GET oauth/authorize` (RFC 6749 4.1.1):
 
