@@ -275,6 +275,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Whoami](#whoami)
 - [Logout](#logout)
 - [Identity Password](#identity-password)
+- [Identity New](#identity-new)
 - [Credentials List](#credentials-list)
 - [Credentials Withdraw](#credentials-withdraw)
 - [Token Create](#token-create)
@@ -1265,6 +1266,27 @@ Set, change or remove the password of your pseudonym, in the home folder and in 
 
 ### Flags
 **Remove** - Remove the password: the key is kept readable by your user only - Usage: `--remove`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Identity New
+Make an identity for a service: a new Ethereum key, printed as `PH_IDENTITY_KEY=0x...` with the name it signs under (Anonymous 0x1a2b...9f3c). Writes nothing unless --save names a file, which is readable by you only and never overwritten. A process with PH_IDENTITY_KEY set signs its own writes with that key.
+
+
+
+### Options
+**Label** - What the identity is for (the service's name): printed with it and kept in the saved file - Usage: `--label <str>`
+
+**Save** - Write the key to this file, readable by you only, instead of printing it; an existing file is never overwritten - Usage: `--save <str>`
+
+
+
+
+### Flags
+**Json** - Print the identity as JSON - Usage: `--json`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 

@@ -179,7 +179,7 @@ export const phCliHelpCommands = {
     name: "identity",
     args: identityPasswordArgs,
     description:
-      "Manage your pseudonym: `ph identity password` sets, changes or removes its password",
+      "Your pseudonym and identities for services: `ph identity password` sets, changes or removes your pseudonym's password; `ph identity new` makes a key a service signs with (PH_IDENTITY_KEY)",
     handler: () => {},
   }),
   credentials: helpCommand({

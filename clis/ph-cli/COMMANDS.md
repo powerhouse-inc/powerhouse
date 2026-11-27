@@ -34,6 +34,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Whoami](#whoami)
 - [Logout](#logout)
 - [Identity Password](#identity-password)
+- [Identity New](#identity-new)
 - [Credentials List](#credentials-list)
 - [Credentials Withdraw](#credentials-withdraw)
 - [Token Create](#token-create)
@@ -1143,6 +1144,32 @@ Set, change or remove the password of your pseudonym, in the home folder and in 
 #### Remove <br>
 Remove the password: the key is kept readable by your user only<br><br>
 **usage:** `--remove`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Identity New
+Make an identity for a service: a new Ethereum key, printed as `PH_IDENTITY_KEY=0x...` with the name it signs under (Anonymous 0x1a2b...9f3c). Writes nothing unless --save names a file, which is readable by you only and never overwritten. A process with PH_IDENTITY_KEY set signs its own writes with that key.
+### options
+#### Label <br>
+What the identity is for (the service's name): printed with it and kept in the saved file<br><br>
+**usage:** `--label <str>`<br>
+
+#### Save <br>
+Write the key to this file, readable by you only, instead of printing it; an existing file is never overwritten<br><br>
+**usage:** `--save <str>`<br>
+
+
+### flags
+#### Json <br>
+Print the identity as JSON<br><br>
+**usage:** `--json`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>

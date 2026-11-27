@@ -501,15 +501,18 @@ export function readPseudonym(opts: {
 }
 
 /**
- * Who acts here: the Renown login when there is one (expired included, so
- * signing can refuse it), else the pseudonym. Never makes a key, never asks,
- * never goes to the network.
+ * Who acts here: the key in `PH_IDENTITY_KEY` when it is set (a service's
+ * identity, given to this process alone), else the Renown login when there is
+ * one (expired included, so signing can refuse it), else the pseudonym.
+ * Never makes a key, never asks, never goes to the network.
  */
 export function readActiveIdentity(opts: {
   dataDir: string;
   env?: Env;
 }): IdentityInfo | undefined {
-  const login = readLogin(opts.env ?? process.env);
+  const env = opts.env ?? process.env;
+  if (env[IDENTITY_KEY_ENV]) return readPseudonym({ ...opts, env });
+  const login = readLogin(env);
   if (login) {
     return {
       kind: "renown",

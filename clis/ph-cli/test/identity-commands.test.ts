@@ -1,13 +1,18 @@
 import {
+  addressOfKey,
   ensurePseudonym,
   loginPaths,
+  parsePrivateKey,
 } from "@powerhousedao/shared/clis/identity";
+import { fileAccessList } from "@powerhousedao/shared/clis/owner-only";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { parseEnv } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   projectLoginNotice,
+  runIdentityNew,
   runLogout,
   runWhoami,
 } from "../src/services/identity.js";
@@ -141,5 +146,98 @@ describe("ph logout", () => {
   it("says when nobody is logged in", async () => {
     await runLogout({ renownUrl: RENOWN }, print);
     expect(lines[0]).toBe("Not logged in.");
+  });
+});
+
+describe("ph identity new", () => {
+  let out: string[];
+  let err: string[];
+  const io = () => ({
+    out: (line: string) => out.push(line),
+    err: (line: string) => err.push(line),
+  });
+  beforeEach(() => {
+    out = [];
+    err = [];
+  });
+
+  const HEADING =
+    /^# (Anonymous 0x[0-9a-fA-F]{4}\.\.\.[0-9a-fA-F]{4})(?: "([^"]+)")?: (0x[0-9a-fA-F]{40})$/;
+
+  it("prints the key as the line a service is given, named as ph whoami names it, and writes nothing", async () => {
+    expect(runIdentityNew({ label: "billing  job" }, io())).toBe(0);
+    expect(out).toHaveLength(2);
+    const [, name, label, address] = HEADING.exec(out[0]!)!;
+    expect(label).toBe("billing job");
+    const key = /^PH_IDENTITY_KEY=(0x[0-9a-f]{64})$/.exec(out[1]!)![1]!;
+    expect(addressOfKey(parsePrivateKey(key))).toBe(address);
+    expect(err.join("\n")).toMatch(/Nothing was written/);
+    expect(err.join("\n")).toContain(`ADMINS=${address}`);
+    expect(fs.existsSync(home)).toBe(false);
+    expect(fs.readdirSync(store)).toEqual([]);
+
+    // The process it is given to acts as it, a Renown login or not.
+    await login();
+    vi.stubEnv("PH_IDENTITY_KEY", key);
+    await runWhoami({ renownUrl: RENOWN }, print);
+    expect(lines[0]).toBe(`${name} (no Renown login)`);
+    expect(lines.join("\n")).toContain("PH_IDENTITY_KEY (never written)");
+    expect(fs.readdirSync(store)).toEqual([]);
+  });
+
+  it("makes a new key each time", () => {
+    runIdentityNew({}, io());
+    runIdentityNew({}, io());
+    expect(out[1]).not.toBe(out[3]);
+    expect(out[0]).toMatch(HEADING);
+    expect(HEADING.exec(out[0]!)![2]).toBeUndefined();
+  });
+
+  it("saves it as an env file readable by its owner only, and never overwrites one", () => {
+    const file = path.join(root, "secrets", "billing.env");
+    expect(
+      runIdentityNew(
+        { label: "billing", save: file },
+        { ...io(), now: () => new Date("2026-11-27T10:00:00Z") },
+      ),
+    ).toBe(0);
+    const text = fs.readFileSync(file, "utf8");
+    const key = parseEnv(text).PH_IDENTITY_KEY!;
+    const address = addressOfKey(parsePrivateKey(key));
+    expect(text.split("\n")[0]).toMatch(HEADING);
+    expect(text).toContain("2026-11-27T10:00:00.000Z");
+    expect(out.join("\n")).not.toContain(key);
+    expect(out[0]).toBe(
+      `Anonymous ${address.slice(0, 6)}...${address.slice(-4)} "billing": ${address}`,
+    );
+    if (process.platform === "win32") {
+      expect(fileAccessList(file)).toHaveLength(1);
+    } else {
+      expect(fs.statSync(file).mode & 0o777).toBe(0o600);
+    }
+
+    out = [];
+    err = [];
+    expect(runIdentityNew({ save: file }, io())).toBe(1);
+    expect(err[0]).toMatch(/exists: nothing was written/);
+    expect(out).toEqual([]);
+    expect(fs.readFileSync(file, "utf8")).toBe(text);
+  });
+
+  it("answers as JSON, with the key only when nothing is saved", () => {
+    runIdentityNew({ label: "ci", json: true }, io());
+    const printed = JSON.parse(out.join("\n")) as Record<string, string>;
+    expect(printed).toMatchObject({ label: "ci", env: "PH_IDENTITY_KEY" });
+    expect(addressOfKey(parsePrivateKey(printed.privateKey!))).toBe(
+      printed.address,
+    );
+    expect(printed.name).toMatch(/^Anonymous 0x/);
+
+    out = [];
+    const file = path.join(root, "ci.env");
+    runIdentityNew({ save: file, json: true }, io());
+    const saved = JSON.parse(out.join("\n")) as Record<string, string>;
+    expect(saved).toMatchObject({ file, env: "PH_IDENTITY_KEY" });
+    expect(saved.privateKey).toBeUndefined();
   });
 });

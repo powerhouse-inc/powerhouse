@@ -1,6 +1,8 @@
 import {
+  addressOfKey,
   askPassword,
   changePseudonymPassword,
+  generatePrivateKey,
   identityDataDir,
   type IdentityInfo,
   IDENTITY_KEY_ENV,
@@ -9,12 +11,14 @@ import {
   readActiveIdentity,
   readPseudonym,
 } from "@powerhousedao/shared/clis/identity";
+import { createOwnerOnlyFile } from "@powerhousedao/shared/clis/owner-only";
 import fs from "node:fs";
 import path from "node:path";
 
 /**
  * `ph whoami`, `ph logout` and `ph identity`: who acts here, the Renown login
- * in the home folder, and the pseudonym when nobody is logged in.
+ * in the home folder, the pseudonym when nobody is logged in, and new
+ * identities for services (`ph identity new`).
  */
 
 type Print = (line: string) => void;
@@ -208,5 +212,96 @@ export async function runIdentityPassword(
   for (const file of result.written) print(`  wrote ${file}`);
   for (const file of result.missing)
     print(`  not found (moved or deleted): ${file}`);
+  return 0;
+}
+
+export type IdentityNewIo = {
+  /** stdout: the identity, and its key unless it was saved. */
+  out: Print;
+  /** stderr: what to do with it. */
+  err: Print;
+  now?: () => Date;
+};
+
+/**
+ * `ph identity new`: a new Ethereum key for a service, printed as the line
+ * the service is given (`PH_IDENTITY_KEY=0x...`) after a comment naming it as
+ * `ph whoami` names a pseudonym, which together read as an env file. Nothing
+ * is written unless `save` names a file; that file gets the same lines,
+ * readable by the OS user only, and an existing file is never overwritten.
+ */
+export function runIdentityNew(
+  args: { label?: string; save?: string; json?: boolean },
+  io: IdentityNewIo = {
+    out: (line) => console.log(line),
+    err: (line) => console.error(line),
+  },
+): number {
+  const label = args.label?.replace(/\s+/g, " ").trim() || undefined;
+  const key = generatePrivateKey();
+  const address = addressOfKey(key);
+  const name = pseudonymLabel(address);
+  const privateKey = `0x${Buffer.from(key).toString("hex")}`;
+  const heading = `# ${name}${label ? ` "${label}"` : ""}: ${address}`;
+  const variable = `${IDENTITY_KEY_ENV}=${privateKey}`;
+  const identity = { address, name, ...(label ? { label } : {}) };
+  const advice = [
+    `The service signs its own writes as ${name} when ${IDENTITY_KEY_ENV} is set: no \`ph login\`, no Renown.`,
+    `A service that administers a host (installs packages, say) goes into that host's ADMINS=${address}.`,
+  ];
+
+  if (!args.save) {
+    if (args.json) {
+      io.out(
+        JSON.stringify(
+          { ...identity, env: IDENTITY_KEY_ENV, privateKey },
+          null,
+          2,
+        ),
+      );
+    } else {
+      io.out(heading);
+      io.out(variable);
+    }
+    io.err(
+      "Nothing was written. Whoever holds this key signs as this identity: give it to the service as a secret.",
+    );
+    for (const line of advice) io.err(line);
+    return 0;
+  }
+
+  const file = path.resolve(args.save);
+  const createdAt = (io.now?.() ?? new Date()).toISOString();
+  const text = [
+    heading,
+    `# Made by \`ph identity new\` on ${createdAt}. Whoever holds this key signs as this identity.`,
+    variable,
+    "",
+  ].join("\n");
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const { created, restricted } = createOwnerOnlyFile(file, text);
+  if (!created) {
+    io.err(`${file} exists: nothing was written. Name a new file.`);
+    return 1;
+  }
+  if (!restricted) {
+    fs.rmSync(file, { force: true });
+    io.err(
+      `Could not limit ${file} to your user, so the key is not kept there: nothing was written.`,
+    );
+    return 1;
+  }
+  if (args.json) {
+    io.out(
+      JSON.stringify({ ...identity, env: IDENTITY_KEY_ENV, file }, null, 2),
+    );
+  } else {
+    io.out(`${name}${label ? ` "${label}"` : ""}: ${address}`);
+    io.out(`Saved its key to ${file}, readable by you only.`);
+  }
+  io.err(
+    `It is an env file: load it into the service's environment (\`node --env-file=${file}\`, \`docker run --env-file ${file}\`).`,
+  );
+  for (const line of advice) io.err(line);
   return 0;
 }

@@ -28,6 +28,11 @@ import {
   recoverCredentialSigner,
   verifyCredentialSignature,
 } from "../src/credential.js";
+import {
+  CREDENTIAL_ROUTES,
+  recoverCredentialRecordRequestSigner,
+  type CredentialRecordRequest,
+} from "../src/credential-enrolment.js";
 import { NodeKeyStorage } from "../src/crypto/node-key-storage.js";
 import { RenownCryptoBuilder } from "../src/crypto/renown-crypto-builder.js";
 import {
@@ -342,6 +347,82 @@ describe("openSession", () => {
         session.signer.app.key,
       ),
     ).toBe(true);
+  });
+
+  it("signs and enrols as PH_IDENTITY_KEY's key, a Renown login or not, writing no pseudonym", async () => {
+    await writeLogin();
+    const key = `0x${"44".repeat(32)}` as const;
+    const service = privateKeyToAccount(key);
+    const keyEnv = { ...env, PH_IDENTITY_KEY: key };
+    const dataDir = store();
+
+    // Into a data folder this process can write: the credential's record.
+    const local = await openSession({
+      dataDir,
+      label: "billing",
+      place: "home",
+      interactive: false,
+      target: { dataDir },
+      env: keyEnv,
+    });
+    expect(local.identity).toMatchObject({
+      kind: "pseudonym",
+      source: "env",
+      address: service.address,
+    });
+    expect(local.signer.user.address).toBe(service.address);
+    expect(local.credential.issuer.ethereumAddress).toBe(service.address);
+    expect(await verifyCredentialSignature(local.credential)).toBe(true);
+    expect(listCredentialRecords({ dataDir })).toMatchObject([
+      { address: service.address.toLowerCase(), label: "billing" },
+    ]);
+    expect(fs.existsSync(path.join(dataDir, ".ph", ".pseudonym.json"))).toBe(
+      false,
+    );
+    expect(
+      fs.existsSync(path.join(env.PH_IDENTITY_HOME!, "default.json")),
+    ).toBe(false);
+
+    // At a host's URL: an enrolment the key itself signs.
+    const posted: { request: CredentialRecordRequest; signature: string }[] =
+      [];
+    vi.stubGlobal("fetch", (input: string | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      if (url.pathname === CREDENTIAL_ROUTES.challenge) {
+        return Promise.resolve(
+          Response.json({
+            host: "did:key:zHost",
+            nonce: "00ff",
+            expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          }),
+        );
+      }
+      if (url.pathname === CREDENTIAL_ROUTES.enrol) {
+        posted.push(JSON.parse(String(init?.body)) as (typeof posted)[number]);
+        return Promise.resolve(
+          Response.json({ id: "r1", expiresAt: "2099-01-01T00:00:00Z" }),
+        );
+      }
+      return Promise.resolve(new Response(null, { status: 404 }));
+    });
+    const remote = await openSession({
+      dataDir: path.join(root, "elsewhere"),
+      label: "billing",
+      place: "home",
+      interactive: false,
+      target: { url: "http://host.test" },
+      env: keyEnv,
+    });
+    expect(remote.signer.user.address).toBe(service.address);
+    expect(posted).toHaveLength(1);
+    expect(
+      await recoverCredentialRecordRequestSigner(
+        posted[0]!.request,
+        posted[0]!.signature,
+        1,
+      ),
+    ).toBe(service.address);
+    expect(posted[0]!.request.sessionDid).toBe(remote.signer.app.key);
   });
 
   it("keeps its credential across opens and renews it near its end", async () => {

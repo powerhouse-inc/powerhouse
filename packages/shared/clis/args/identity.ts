@@ -33,6 +33,28 @@ export const logoutArgs = {
   ...debugArgs,
 };
 
+// `ph identity new`.
+export const identityNewArgs = {
+  label: option({
+    type: optional(string),
+    long: "label",
+    description:
+      "What the identity is for (the service's name): printed with it and kept in the saved file",
+  }),
+  save: option({
+    type: optional(string),
+    long: "save",
+    description:
+      "Write the key to this file, readable by you only, instead of printing it; an existing file is never overwritten",
+  }),
+  json: flag({
+    type: optional(boolean),
+    long: "json",
+    description: "Print the identity as JSON",
+  }),
+  ...debugArgs,
+};
+
 // `ph identity password`.
 export const identityPasswordArgs = {
   remove: flag({

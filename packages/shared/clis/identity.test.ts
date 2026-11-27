@@ -304,6 +304,27 @@ describe("the active identity", () => {
     fs.writeFileSync(loginPaths(env).file, "{}");
     expect(readLogin(env)).toBeUndefined();
   });
+
+  it("is PH_IDENTITY_KEY's key when it is set, a Renown login or not", () => {
+    writeLogin(new Date(Date.now() + 60_000).toISOString());
+    const key = `0x${"33".repeat(32)}`;
+    expect(
+      readActiveIdentity({
+        dataDir: dir("svc"),
+        env: { ...env, PH_IDENTITY_KEY: key },
+      }),
+    ).toMatchObject({
+      kind: "pseudonym",
+      source: "env",
+      address: addressOfKey(parsePrivateKey(key)),
+    });
+    expect(() =>
+      readActiveIdentity({
+        dataDir: dir("svc"),
+        env: { ...env, PH_IDENTITY_KEY: "0x1234" },
+      }),
+    ).toThrow(/PH_IDENTITY_KEY/);
+  });
 });
 
 describe("changePseudonymPassword", () => {
