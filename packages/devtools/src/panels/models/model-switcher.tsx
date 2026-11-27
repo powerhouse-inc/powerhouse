@@ -9,6 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "../../ui/dropdown-menu.js";
 import { Switcher } from "../../components/switcher.js";
+import { legacyOf } from "../../project/legacy.js";
+import { LegacyTag } from "../../project/legacy-notice.js";
 
 /** The model's name as a button that opens a searchable list of the
  * project's models: name first, document type below, so long ones wrap. */
@@ -34,14 +36,20 @@ export function ModelSwitcher({
       noMatch="No document model matches."
       testId="ph-model"
       itemData={(model) => ({ "data-document-type": model.documentType })}
-      renderItem={(model) => (
-        <span className="flex min-w-0 flex-col">
-          <span className="font-medium break-words">{model.name}</span>
-          <Mono className="text-[11.5px] break-all text-muted-foreground">
-            {model.documentType}
-          </Mono>
-        </span>
-      )}
+      renderItem={(model) => {
+        const legacy = legacyOf({ kind: "document-model", module: model });
+        return (
+          <>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="font-medium break-words">{model.name}</span>
+              <Mono className="text-[11.5px] break-all text-muted-foreground">
+                {model.documentType}
+              </Mono>
+            </span>
+            {legacy && <LegacyTag legacy={legacy} short />}
+          </>
+        );
+      }}
     />
   );
 }

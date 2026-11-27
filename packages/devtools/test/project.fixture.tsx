@@ -1,6 +1,7 @@
 import { act, render, type RenderResult } from "@testing-library/react";
 import { vi } from "vitest";
 import type {
+  DevStackInfo,
   DevtoolsApiErrorCode,
   ProjectApp,
   ProjectCheck,
@@ -51,7 +52,7 @@ export const INVOICE: ProjectDocumentModel = {
   description: "An invoice with line items and a payment status.",
   author: "Acme",
   authorWebsite: "https://acme.dev",
-  layout: "stored",
+  authoring: "legacy",
   source: "document-models/invoice/invoice.json",
   folder: "document-models/invoice",
   versions: [1],
@@ -67,7 +68,7 @@ export const CUSTOMER: ProjectDocumentModel = {
   description: "A customer invoices are sent to.",
   author: "Acme",
   authorWebsite: null,
-  layout: "stored",
+  authoring: "legacy",
   source: "document-models/customer/customer.json",
   folder: "document-models/customer",
   versions: [1],
@@ -134,7 +135,7 @@ export const BILLING: ProjectApp = {
 export const INVOICE_STATS: ProjectSubgraph = {
   name: "invoice-stats",
   folder: "subgraphs/invoice-stats",
-  style: "schema-first",
+  authoring: "legacy",
   schema: { source: SUBGRAPH_SDL, file: "subgraphs/invoice-stats/schema.ts" },
   queries: ["invoiceStats.example(driveId: String!): String"],
   mutations: [],
@@ -340,6 +341,7 @@ export function fileList(
 export type ProjectServer = {
   /** Absent: this dev server does not read the project. */
   snapshot?: ProjectSnapshot;
+  info?: DevStackInfo;
   details: Record<string, ProjectDocumentModelDetail>;
   fileList?: ProjectFileList;
   /** The text the files route answers, by path. A path without one is not
@@ -435,6 +437,7 @@ export function serveProject(server: ProjectServer) {
       }
       return answer(server.snapshot);
     }
+    if (route === "info") return answer(server.info);
     if (route === "project/files") return answer(server.fileList);
     if (route.startsWith(MODEL_ROUTE)) {
       const type = decodeURIComponent(route.slice(MODEL_ROUTE.length));
@@ -475,13 +478,14 @@ export function renderDevtools(
   panel: string,
   focus?: string,
   app?: DevtoolsApp,
+  registry: Registry = BUILD_REGISTRY,
 ): RenderResult {
   window.history.replaceState(null, "", "/__ph/devtools");
   seedView({
     open: false,
     target: { panel, ...(focus && { focus: focusOf(focus) }) },
   });
-  return render(<DevtoolsStandalone app={app} registry={BUILD_REGISTRY} />);
+  return render(<DevtoolsStandalone app={app} registry={registry} />);
 }
 
 /** Polls at once, as coming back to the tab does. */

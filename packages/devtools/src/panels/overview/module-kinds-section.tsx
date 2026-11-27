@@ -7,6 +7,7 @@ import {
 import type { ProjectModuleKind, ProjectSection } from "../../api.js";
 import { Skeleton } from "../../components/loading.js";
 import { Section } from "../../components/section.js";
+import { Tag } from "../../components/status.js";
 import { cn } from "../../lib/cn.js";
 import { plural } from "../../lib/plural.js";
 import {
@@ -16,6 +17,8 @@ import {
   type ProjectModule,
 } from "../../project/kinds.js";
 import { worstCheck } from "../../project/checks.js";
+import { countLegacy } from "../../project/legacy.js";
+import { LegacyIcon, legacyCountLabel } from "../../project/legacy-notice.js";
 import { useProject } from "../../project/provider.js";
 import { panelById } from "../../shell/location.js";
 import { useShell } from "../../shell/state.js";
@@ -23,7 +26,13 @@ import { useShell } from "../../shell/state.js";
 type KindHealth =
   | { state: "loading" }
   | { state: "unreadable"; message: string }
-  | { state: "read"; count: number; failing: number; warning: number };
+  | {
+      state: "read";
+      count: number;
+      failing: number;
+      warning: number;
+      legacy: number;
+    };
 
 function kindHealth(
   section: ProjectSection<ProjectModule> | undefined,
@@ -32,6 +41,7 @@ function kindHealth(
   if (!section.ok) return { state: "unreadable", message: section.message };
   const worst = section.items.map(({ module }) => worstCheck(module.checks));
   return {
+    legacy: countLegacy(section.items),
     state: "read",
     count: section.items.length,
     failing: worst.filter((state) => state === "fail").length,
@@ -103,16 +113,28 @@ function ModuleTile({
         <panel.icon className="size-3.5 shrink-0" />
         <span className="truncate">{panel.title}</span>
       </span>
-      <span
-        data-testid="ph-overview-module-count"
-        className="text-xl leading-tight font-medium tabular-nums"
-      >
-        {health.state === "read" ? (
-          health.count
-        ) : health.state === "loading" ? (
-          <Skeleton className="h-5 w-6" />
-        ) : (
-          "–"
+      <span className="flex min-w-0 items-center gap-2">
+        <span
+          data-testid="ph-overview-module-count"
+          className="text-xl leading-tight font-medium tabular-nums"
+        >
+          {health.state === "read" ? (
+            health.count
+          ) : health.state === "loading" ? (
+            <Skeleton className="h-5 w-6" />
+          ) : (
+            "–"
+          )}
+        </span>
+        {health.state === "read" && health.legacy > 0 && (
+          <Tag
+            tone="warn"
+            data-testid="ph-overview-module-legacy"
+            title={legacyCountLabel(kind, health.legacy)}
+          >
+            <LegacyIcon aria-hidden className="size-3" />
+            {health.legacy} legacy
+          </Tag>
         )}
       </span>
       <span

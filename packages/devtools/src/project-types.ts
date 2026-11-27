@@ -50,6 +50,14 @@ export type ProjectModuleKind =
   | "subgraph"
   | "processor";
 
+/**
+ * How a document model or a subgraph is authored.
+ * `legacy`: a legacy document model, which stores a `<name>.json`
+ * specification, or a legacy subgraph, which is anything but a class that
+ * extends `Subgraph`.
+ */
+export type ProjectAuthoring = "current" | "legacy";
+
 export type ProjectDocumentModel = {
   documentType: string;
   name: string;
@@ -58,9 +66,7 @@ export type ProjectDocumentModel = {
   author: string;
   /** The author's website as the model states it. Null when it states none. */
   authorWebsite: string | null;
-  /** `stored`: a `<name>.json` specification.
-   * `code-first`: an `index.ts` that exports the model. */
-  layout: "stored" | "code-first";
+  authoring: ProjectAuthoring;
   /** The specification file or the entry module. */
   source: string;
   folder: string;
@@ -90,9 +96,10 @@ export type ProjectApp = ProjectEditor & {
 export type ProjectSubgraph = {
   name: string;
   folder: string;
-  style: "schema-first" | "code-first";
-  /** The SDL and the file it was read from. Null for a code-first subgraph,
-   * whose schema exists only when its module runs. */
+  authoring: ProjectAuthoring;
+  /** The SDL and the file it was read from. Null when no SDL can be read from
+   * text: always so for a subgraph that is not legacy, whose schema exists
+   * only when its module runs. */
   schema: { source: string; file: string } | null;
   /** Field signatures such as `invoiceStats.example(driveId: String!): String`. */
   queries: string[];

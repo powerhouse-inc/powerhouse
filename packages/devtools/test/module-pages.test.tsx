@@ -8,7 +8,9 @@ import {
   within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ProjectSubgraph } from "../src/api.js";
 import { projectFilePath } from "../src/project/open-in-editor.js";
+import { REGISTRY } from "../src/registry.js";
 import { resolveHost, type DevtoolsApp } from "../src/props.js";
 import {
   BILLING,
@@ -26,6 +28,7 @@ import {
   SUBGRAPH_SDL,
   type ProjectServer,
 } from "./project.fixture.js";
+import { stackInfo } from "./stack.fixture.js";
 import { clearStorage, savedView } from "./storage.fixture.js";
 
 /** What the app loaded in this tab. */
@@ -637,8 +640,8 @@ describe("Build › Drive Apps", () => {
 describe("Build › Subgraphs", () => {
   it("shows a subgraph's endpoint, its operations and its SDL", async () => {
     await open("subgraphs");
-    expect(rowText()).toEqual(["invoice-stats/graphql/invoice-stats"]);
-    expect(header()).toBe("invoice-stats");
+    expect(rowText()).toEqual(["invoice-stats/graphql/invoice-statsLegacy"]);
+    expect(header()).toBe("invoice-statsLegacy subgraph");
     expect(tabs()).toEqual([
       "overview:Overview",
       "schema:Schema",
@@ -673,7 +676,7 @@ describe("Build › Subgraphs", () => {
         items: [
           {
             ...INVOICE_STATS,
-            style: "code-first",
+            authoring: "current",
             schema: null,
             queries: [],
             mutations: [],
@@ -773,5 +776,101 @@ describe("opening a file in the editor", () => {
       openInEditorUrl: (path) => `/open?path=${path}`,
     });
     expect(host.openInEditorUrl("/a.tsx")).toBe("/open?path=/a.tsx");
+  });
+});
+
+describe("Build › Subgraphs › a legacy subgraph", () => {
+  const notice = () => screen.getByTestId("ph-legacy-notice");
+  const headerTag = () =>
+    within(detail().querySelector("header")!).queryByTestId("ph-legacy-tag");
+  const rowTag = () =>
+    within(screen.getByTestId("ph-module-row")).queryByTestId("ph-legacy-tag");
+  const serve = (authoring: ProjectSubgraph["authoring"]) => {
+    server.snapshot = snapshot({
+      subgraphs: { ok: true, items: [{ ...INVOICE_STATS, authoring }] },
+    });
+  };
+
+  it("is marked in the list and beside its name, with the command that converts it", async () => {
+    await open("subgraphs");
+    expect(rowTag()?.textContent).toBe("Legacy");
+    expect(rowTag()?.title).toBe("Legacy subgraph");
+    expect(headerTag()?.textContent).toBe("Legacy subgraph");
+    expect(within(notice()).getByTestId("ph-command").textContent).toContain(
+      "ph migrate --subgraph invoice-stats",
+    );
+  });
+
+  it("copies a prompt that covers a subgraph the command cannot convert", async () => {
+    const writeText = vi.fn((_text: string) => Promise.resolve());
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    await open("subgraphs");
+
+    click(
+      screen
+        .getAllByTestId("ph-legacy-way")
+        .find((way) => way.dataset.way === "agent")!,
+    );
+    click(screen.getByTestId("ph-legacy-copy-prompt"));
+
+    const prompt = writeText.mock.lastCall?.[0];
+    expect(prompt).toContain(
+      "convert the legacy subgraph in `subgraphs/invoice-stats/`",
+    );
+    expect(prompt).toContain("Run `ph migrate --subgraph invoice-stats`.");
+    expect(prompt).toContain("`index.ts exports no subgraph class`");
+  });
+
+  it("keeps the mark on the other tabs, where the notice is not", async () => {
+    await open("subgraphs");
+    click(tab("schema"));
+    expect(headerTag()).not.toBeNull();
+    expect(screen.queryByTestId("ph-legacy-notice")).toBeNull();
+  });
+
+  it("says nothing about legacy for a subgraph that is not", async () => {
+    serve("current");
+    await open("subgraphs");
+    expect(rowTag()).toBeNull();
+    expect(headerTag()).toBeNull();
+    expect(screen.queryByTestId("ph-legacy-notice")).toBeNull();
+  });
+
+  it("marks in the sidebar each kind that has legacy modules", async () => {
+    await open("subgraphs");
+    const marks = (panel: string) =>
+      [
+        ...document.querySelectorAll<HTMLElement>(
+          `nav [data-panel="${panel}"] [data-testid="ph-nav-mark"]`,
+        ),
+      ].map((mark) => mark.title);
+    expect(marks("subgraphs")).toEqual(["1 legacy subgraph"]);
+    expect(marks("models")).toEqual(["2 legacy document models"]);
+    expect(marks("editors")).toEqual([]);
+
+    serve("current");
+    server.snapshot = { ...server.snapshot!, revision: "r2" };
+    pollNow();
+    await waitFor(() => expect(marks("subgraphs")).toEqual([]));
+    expect(marks("models")).toEqual(["2 legacy document models"]);
+  });
+
+  it("counts the legacy modules of a kind in Overview", async () => {
+    server.info = stackInfo();
+    renderDevtools("overview", undefined, APP, REGISTRY);
+    const legacy = async (kind: string) => {
+      const tile = (await screen.findAllByTestId("ph-overview-module")).find(
+        (candidate) => candidate.dataset.kind === kind,
+      )!;
+      return within(tile).queryByTestId("ph-overview-module-legacy");
+    };
+    await waitFor(async () =>
+      expect((await legacy("document-model"))?.textContent).toBe("2 legacy"),
+    );
+    expect((await legacy("document-model"))?.title).toBe(
+      "2 legacy document models",
+    );
+    expect((await legacy("subgraph"))?.textContent).toBe("1 legacy");
+    expect(await legacy("editor")).toBeNull();
   });
 });

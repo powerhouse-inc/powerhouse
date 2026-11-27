@@ -8,6 +8,7 @@ const RESOLVED = `\0${ID}`;
 export const COMPILED_CSS = join(import.meta.dirname, ".cache/standalone.css");
 
 const PROPERTY_RULE = /@property\s+(--[\w-]+)\s*\{([^}]*)\}/g;
+const LENGTH_SYNTAX = /syntax\s*:\s*["']<length>["']/;
 
 /**
  * The stylesheet for a shadow root. `@property` rules register from a
@@ -17,13 +18,22 @@ const PROPERTY_RULE = /@property\s+(--[\w-]+)\s*\{([^}]*)\}/g;
  * own fallback for a browser without `@property` does. Nothing is registered
  * on the page, whose own `--tw-*` properties keep their meaning.
  *
+ * A registered `<length>` reads a minified `0` as `0px`. An unregistered
+ * property keeps the bare number, which `calc()` cannot add to a length, and
+ * the `box-shadow` of every element with a ring would be dropped. So a zero
+ * length is written with its unit.
+ *
  * @param {string} css
  */
 export function withPropertyDefaults(css) {
   const defaults = [...css.matchAll(PROPERTY_RULE)].flatMap(
     ([, name, body]) => {
       const initial = /initial-value\s*:\s*([^;]+)/.exec(body);
-      return initial ? [`${name}:${initial[1].trim()}`] : [];
+      if (!initial) return [];
+      const value = initial[1].trim();
+      return [
+        `${name}:${value === "0" && LENGTH_SYNTAX.test(body) ? "0px" : value}`,
+      ];
     },
   );
   if (defaults.length === 0) return css;

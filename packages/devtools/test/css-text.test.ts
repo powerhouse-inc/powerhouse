@@ -10,6 +10,14 @@ describe("the stylesheet for a shadow root", () => {
     );
   });
 
+  it("writes a zero length with its unit, so calc() can add it to a length", () => {
+    const css =
+      '@property --tw-ring-offset-width{syntax:"<length>";inherits:false;initial-value:0}@property --tw-translate-x{syntax:"*";inherits:false;initial-value:0}';
+    expect(withPropertyDefaults(css)).toContain(
+      "{--tw-ring-offset-width:0px;--tw-translate-x:0}",
+    );
+  });
+
   it("leaves a stylesheet without registered properties as it is", () => {
     expect(withPropertyDefaults(".a{color:red}")).toBe(".a{color:red}");
   });

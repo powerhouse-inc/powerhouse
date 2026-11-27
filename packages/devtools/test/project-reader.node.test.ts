@@ -134,7 +134,7 @@ describe("the project snapshot", () => {
         description: "A note with a title and tags.",
         author: "Fixture",
         authorWebsite: null,
-        layout: "stored",
+        authoring: "legacy",
         source: NOTE_JSON,
         folder: "document-models/note",
         versions: [1],
@@ -305,14 +305,14 @@ describe("the project snapshot", () => {
     );
   });
 
-  it("reads a schema-first subgraph's SDL and flattens its namespaced fields", async () => {
+  it("reads a legacy subgraph's SDL and flattens its namespaced fields", async () => {
     const { root } = project();
     const [subgraph] = items((await readerOf(root).snapshot()).subgraphs);
 
     expect(subgraph).toMatchObject({
       name: "note-stats",
       folder: "subgraphs/note-stats",
-      style: "schema-first",
+      authoring: "legacy",
       queries: ["noteStats.count(driveId: String!): Int!", "version: String"],
       mutations: [
         "noteStats.reset(driveId: String!, hard: Boolean = false): Boolean",
@@ -328,7 +328,7 @@ describe("the project snapshot", () => {
     });
   });
 
-  it("answers no schema for a code-first subgraph", async () => {
+  it("answers no schema for a subgraph class that extends Subgraph", async () => {
     const { root } = project({
       "subgraphs/typed/index.ts":
         'import { Subgraph } from "@powerhousedao/reactor-api";\nexport class TypedSubgraph extends Subgraph {\n  static subgraphName = "typed";\n}\n',
@@ -338,7 +338,7 @@ describe("the project snapshot", () => {
     expect(typed).toMatchObject({
       name: "typed",
       folder: "subgraphs/typed",
-      style: "code-first",
+      authoring: "current",
       schema: null,
       queries: [],
       mutations: [],
@@ -346,6 +346,19 @@ describe("the project snapshot", () => {
     expect(check(typed, "registered")?.label).toBe(
       "Not registered in subgraphs/index.ts",
     );
+  });
+
+  it("reads a subgraph that is not a class as a legacy subgraph too", async () => {
+    const { root } = project({
+      "subgraphs/plain/index.ts":
+        'export const plain = {\n  name: "plain",\n  typeDefs: "type Query { ok: Boolean }",\n  resolvers: {},\n};\n',
+    });
+    const subgraphs = items((await readerOf(root).snapshot()).subgraphs);
+
+    expect(subgraphs.map(({ name, authoring }) => [name, authoring])).toEqual([
+      ["note-stats", "legacy"],
+      ["plain", "legacy"],
+    ]);
   });
 
   it("reads a processor's type from its imports and its hosts from the factory lists", async () => {

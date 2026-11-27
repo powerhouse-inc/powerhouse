@@ -11,6 +11,7 @@ import {
 } from "@powerhousedao/codegen/utils";
 import type {
   ProjectApp,
+  ProjectAuthoring,
   ProjectDiagnostic,
   ProjectEditor,
   ProjectProcessor,
@@ -172,7 +173,6 @@ export function readProcessors(
     .sort(byKey(({ name }) => name));
 }
 
-/** The subgraphs of `subgraphs/`. Only a schema-first one has SDL to read from text. */
 export function readSubgraphs(
   sources: Project,
   root: string,
@@ -180,13 +180,13 @@ export function readSubgraphs(
   return getSubgraphDirNames(sources)
     .map((dirName) => {
       const { subgraphName, style } = getSubgraphMetadata(sources, dirName);
+      const legacy = style === "schema-first";
+      const authoring: ProjectAuthoring = legacy ? "legacy" : "current";
       return {
         name: subgraphName ?? dirName,
         folder: `${SUBGRAPHS_DIR}/${dirName}`,
-        style,
-        ...(style === "schema-first"
-          ? readSubgraphSchema(root, dirName)
-          : noSchema()),
+        authoring,
+        ...(legacy ? readSubgraphSchema(root, dirName) : noSchema()),
       };
     })
     .sort(byKey(({ name }) => name));
