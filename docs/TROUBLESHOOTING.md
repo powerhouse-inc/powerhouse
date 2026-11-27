@@ -11,6 +11,7 @@ Repo traps that cost maintainers time. Each entry: symptom, cause, fix.
 ## Tests
 
 - **reactor-browser test "passes" in milliseconds.** Its vitest config has a `browser` project (Playwright Chromium) and a `node` project (`*.node.test.ts`). Run `pnpm test`, or `pnpm exec vitest run --project browser <file>`. A run with no `browser (chromium)` label didn't use the browser.
+- **A page's form post passes its fetch tests but is refused in a browser.** Node's `fetch` sends the headers a test sets; a browser sends its own: `Origin: null` on a same-origin POST from a page with `Referrer-Policy: no-referrer`, and `form-action` CSP checks on the redirect a post answers with. Drive such pages in headless Chromium, as `test/switchboard/src/oauth-pages.test.ts` does.
 - **A second Postgres from a compose override fails to bind 5433.** Compose merges `ports` lists. Use `ports: !override` in the override file and point tests at it with `REACTOR_TEST_PG_URL`.
 
 ## CI

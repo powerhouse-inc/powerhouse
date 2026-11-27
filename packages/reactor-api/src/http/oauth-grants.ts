@@ -60,6 +60,13 @@ export type CodeGrantRequest = {
   state?: string;
   /** The resource the token is for, on this host. */
   resource?: string;
+  /**
+   * sha256 (hex) of the key of the consent page's continue link, made at
+   * `authorize` and written only into that page: whoever else knows the user
+   * code (`device/pending` shows the grant to anyone with it) cannot take the
+   * code from `authorize/continue`.
+   */
+  continueKeyHash?: string;
   /** When the code was issued: the grant then lives under the code's hash. */
   issuedAt?: string;
 };
@@ -149,6 +156,23 @@ export function verifierHolds(challenge: string, verifier: unknown): boolean {
   }
   const expected = Buffer.from(challenge);
   const given = Buffer.from(s256(verifier));
+  return expected.length === given.length && timingSafeEqual(expected, given);
+}
+
+/** A new key for a consent page's continue link, and the hash kept of it. */
+export function newContinueKey(): { key: string; hash: string } {
+  const key = randomBytes(32).toString("base64url");
+  return { key, hash: createHash("sha256").update(key).digest("hex") };
+}
+
+/** Whether `key` is the continue key of `request`, compared in constant time. */
+export function continueKeyHolds(
+  request: CodeGrantRequest,
+  key: unknown,
+): boolean {
+  if (typeof key !== "string" || !request.continueKeyHash) return false;
+  const expected = Buffer.from(request.continueKeyHash, "hex");
+  const given = createHash("sha256").update(key).digest();
   return expected.length === given.length && timingSafeEqual(expected, given);
 }
 

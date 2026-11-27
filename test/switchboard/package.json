@@ -24,6 +24,7 @@
     "graphql-sse": "catalog:",
     "graphql-ws": "catalog:",
     "lz-string": "^1.5.0",
+    "playwright": "catalog:",
     "tsdown": "catalog:",
     "viem": "~2.50.4",
     "vitest": "catalog:",

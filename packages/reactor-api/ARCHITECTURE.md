@@ -171,16 +171,24 @@ MCP clients sign in with the authorization code grant (RFC 6749 4.1) on the
 same grant object and consent. `register` (RFC 7591) keeps public clients
 only (`none` at the token endpoint), with https or loopback http redirect
 URIs, 10 registrations a minute and 20 held per address, 1,000 in all, each
-for 30 days. `authorize` takes a registered client and redirect URI (else it
+for 30 days. `authorize` is rate limited before any work (the device
+starts' limit), then takes a registered client and redirect URI (else it
 answers with a page and sends nothing), PKCE S256 only, `documents:write`,
-and a `resource` on this host (else `invalid_target`); other refusals go
-back to the client with `state` and `iss` (RFC 9207). It starts the grant as
+and a `resource` on this host (else `invalid_target`). Its other refusals
+come before the person acts: they go back to the client at once (with
+`state` and `iss`, RFC 9207) only for a loopback redirect URI, and are
+otherwise a page on this host naming the error, so open registration makes
+no open redirect (RFC 9700 4.11.2). After the person acts (Approve, Deny)
+the browser goes back to any registered URI. It starts the grant as
 `device_authorization` does (the same limits and caps, `grant: "code"`, the
 label the client's name) and shows the consent page, which names where the
 browser returns and checks back every 5 s (`authorize/continue`, no
 script); the person approves it as any grant (`ph token approve`, or Renown
-in a tab of its own). Approved, `continue` issues the code once (the grant
-then kept under the code's hash, a minute) and sends the browser back.
+in a tab of its own). The continue link carries a key made at `authorize`
+and written only into that page (its hash on the grant), never shown by
+`device/pending`, so the user code alone takes no code. Approved, `continue`
+issues the code once (the grant then kept under the code's hash, a minute)
+and sends the browser back.
 `token` with `authorization_code` takes the code once and checks the
 client, the exact redirect URI, the verifier and the resource; a code that
 fails a check is spent and its session withdrawn. A code is no device code,
@@ -233,9 +241,18 @@ address, or with `trustProxy` the right-most `X-Forwarded-For` hop that is no
 loopback, private or link-local address. Counters drop ended windows; a full
 table refuses a client it holds no count for. Per client: 10 device starts
 and 10 unknown codes a minute, 20 pending grants, 3 Renown polls; in all,
-1,000 pending grants and 50 Renown polls. `device/renown` needs an Origin
-header naming the issuer's origin. The sweep of ended grants runs at most
-every 30 s.
+1,000 pending grants and 50 Renown polls. The sweep of ended grants runs at
+most every 30 s.
+
+The consent page's buttons (`device/deny`, `device/renown`) are taken only
+from the host's own pages: an Origin naming the issuer's origin, and
+`Sec-Fetch-Site` same-origin when sent; `device/renown` needs the Origin
+header. The pages send `Referrer-Policy: same-origin`, so a browser names
+the origin in the page's own form posts (under `no-referrer` it sends
+`Origin: null`); `Origin: null` counts only with `Sec-Fetch-Site:
+same-origin`. A code grant's page also lets its forms reach the redirect
+URI's origin (`form-action`, which browsers check on the redirect), where
+its Deny goes.
 
 `AuthService.authenticate()` (the old Express middleware signature) is kept for
 backwards compatibility but is `@deprecated`. New code uses `authenticateRequest()`.

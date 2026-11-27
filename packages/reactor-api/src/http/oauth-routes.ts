@@ -48,6 +48,7 @@ import { clientAddress, perMinuteLimit } from "./client-limits.js";
 import { BodyTooLargeError, readBody } from "./node-response.js";
 import {
   clientNameOf,
+  isLoopbackRedirectUri,
   listOAuthClients,
   MAX_REDIRECT_URIS,
   newOAuthClient,
@@ -58,6 +59,7 @@ import {
 } from "./oauth-clients.js";
 import {
   AUTHORIZATION_CODE_TTL_MS,
+  continueKeyHolds,
   DEVICE_GRANT_TTL_MS,
   DEVICE_POLL_INTERVAL_S,
   findDeviceGrant,
@@ -66,6 +68,7 @@ import {
   grantNonce,
   grantNonceHolds,
   listDeviceGrants,
+  newContinueKey,
   newDeviceCode,
   newDeviceGrant,
   newUserCode,
@@ -88,9 +91,10 @@ import {
 import {
   codeEntryPage,
   consentPage,
+  formTargetOf,
   messagePage,
   pageHeaders,
-  redirectHostOf,
+  returnsToOf,
 } from "./oauth-pages.js";
 
 /**
@@ -620,6 +624,11 @@ export function mountOAuthRoutes(
    * Origin header too (`required`). An approval carries the person's
    * credential for the session's key, which no other site can forge, so a
    * client elsewhere (Connect) may post it (`any`).
+   *
+   * The pages send `Referrer-Policy: same-origin`, so a browser names this
+   * host's origin. `Origin: null` (a browser under a stricter policy of its
+   * own) counts as this host's only with `Sec-Fetch-Site: same-origin`, which
+   * no page of another site can make a browser send.
    */
   const consentAction = async (
     req: IncomingMessage,
@@ -633,12 +642,14 @@ export function mountOAuthRoutes(
     const page = fromForm(req);
     const origin = req.headers.origin;
     const site = req.headers["sec-fetch-site"];
-    if (
-      from !== "any" &&
-      ((origin === undefined && from === "own-page-required") ||
-        (origin !== undefined && origin !== new URL(issuer).origin) ||
-        (site !== undefined && site !== "same-origin" && site !== "none"))
-    ) {
+    const ownOrigin =
+      origin === undefined
+        ? from !== "own-page-required"
+        : origin === new URL(issuer).origin ||
+          (origin === "null" && site === "same-origin");
+    const ownSite =
+      site === undefined || site === "same-origin" || site === "none";
+    if (from !== "any" && (!ownOrigin || !ownSite)) {
       if (page) {
         send(
           res,
@@ -1122,7 +1133,7 @@ export function mountOAuthRoutes(
       ends_at: new Date(at + grant.days * DAY_MS).toISOString(),
       client_id: grant.clientId,
       // An MCP client's sign-in: where the person's browser returns.
-      ...(grant.code ? { returns_to: redirectHostOf(grant) } : {}),
+      ...(grant.code ? { returns_to: returnsToOf(grant) } : {}),
       requested_from: grant.requestedFrom,
       requested_at: grant.requestedAt,
       expires_at: grant.expiresAt,
@@ -1299,20 +1310,28 @@ export function mountOAuthRoutes(
   const authorizePage = (res: ServerResponse, status: number, why: string) =>
     send(res, status, messagePage("Cannot sign in", why), pageHeaders([]));
 
-  /** Where a code grant's page checks back: approved, it goes on to the client. */
-  const continueUrlOf = (issuer: string, grant: DeviceGrant, at: number) =>
+  /**
+   * Where a code grant's page checks back: approved, it goes on to the
+   * client. The key was made at `authorize` and is in this page only.
+   */
+  const continueUrlOf = (issuer: string, grant: DeviceGrant, key: string) =>
     withQuery(oauthEndpoints(issuer).authorizeContinue, {
       user_code: formatUserCode(grant.userCode),
-      nonce: grantNonce(grant, at),
+      key,
     });
 
   const codeConsentPage = (
     res: ServerResponse,
     issuer: string,
     grant: DeviceGrant,
+    continueKey: string,
     notice?: string,
   ) => {
     const at = now();
+    // Deny answers with a redirect to the client: its target may be reached.
+    const returns = grant.code
+      ? formTargetOf(grant.code.redirectUri)
+      : undefined;
     send(
       res,
       200,
@@ -1324,20 +1343,33 @@ export function mountOAuthRoutes(
         endsAt: at + grant.days * DAY_MS,
         renownAction: oauthEndpoints(issuer).deviceRenown,
         denyAction: oauthEndpoints(issuer).deviceDeny,
-        continueUrl: continueUrlOf(issuer, grant, at),
+        continueUrl: continueUrlOf(issuer, grant, continueKey),
         ...(notice ? { notice } : {}),
       }),
-      pageHeaders([renownOrigin]),
+      pageHeaders(returns ? [renownOrigin, returns] : [renownOrigin]),
     );
   };
 
   /**
    * `authorize` (RFC 6749 4.1.1): a registered client's request, with PKCE
    * S256 and a resource on this host, starts a grant on the device grant's
-   * object and shows its consent page. An unknown client or redirect URI is
-   * answered here; every other refusal goes back to the client.
+   * object and shows its consent page. Rate limited before any work. An
+   * unknown client or redirect URI is answered here. Any other refusal comes
+   * before the person acts, so it goes back to the client at once only for a
+   * loopback redirect URI; any other is a page here naming the error, so an
+   * open registration makes no open redirect (RFC 9700 4.11.2). After the
+   * person acts (Approve, Deny) the browser goes back to any of them.
    */
   const authorize = (req: IncomingMessage, res: ServerResponse) => {
+    const from = clientOf(req);
+    if (startsLimited(from)) {
+      authorizePage(
+        res,
+        429,
+        "Too many sign-ins from this address: wait a minute, then sign in again from the app.",
+      );
+      return;
+    }
     const issuer = issuerFor(req, res);
     if (!issuer) return;
     const query = queryOf(req);
@@ -1364,10 +1396,16 @@ export function mountOAuthRoutes(
     }
     const state = query.get("state") ?? undefined;
     const fail = (error: string, description: string) =>
-      redirectCode(res, { redirectUri, state }, issuer, {
-        error,
-        error_description: description,
-      });
+      isLoopbackRedirectUri(redirectUri)
+        ? redirectCode(res, { redirectUri, state }, issuer, {
+            error,
+            error_description: description,
+          })
+        : authorizePage(
+            res,
+            error === "temporarily_unavailable" ? 429 : 400,
+            `${description} (${error})`,
+          );
     if (query.get("response_type") !== "code") {
       fail(
         "unsupported_response_type",
@@ -1420,14 +1458,6 @@ export function mountOAuthRoutes(
       fail("invalid_request", `ph_days: a whole number from 1 to ${maxDays}.`);
       return;
     }
-    const from = clientOf(req);
-    if (startsLimited(from)) {
-      fail(
-        "temporarily_unavailable",
-        "Too many sign-ins from this address: wait a minute.",
-      );
-      return;
-    }
     const asLabel = (value: string | undefined) => {
       const label = value?.slice(0, LABEL_MAX).trim();
       return label && validLabel(label) ? label : undefined;
@@ -1436,6 +1466,7 @@ export function mountOAuthRoutes(
       asLabel(query.get("ph_label") ?? undefined) ??
       asLabel(client.clientName) ??
       DEFAULT_CODE_LABEL;
+    const continueKey = newContinueKey();
     const started = startGrant({
       client: from,
       label,
@@ -1450,19 +1481,21 @@ export function mountOAuthRoutes(
         codeChallenge: challenge,
         ...(state !== undefined ? { state } : {}),
         ...(resources[0] !== undefined ? { resource: resources[0] } : {}),
+        continueKeyHash: continueKey.hash,
       },
     });
     if (!started.ok) {
       fail("temporarily_unavailable", started.description);
       return;
     }
-    codeConsentPage(res, issuer, started.grant);
+    codeConsentPage(res, issuer, started.grant, continueKey.key);
   };
 
   /**
    * Where a code grant's consent page checks back: once the grant is
    * approved its code is issued, once, and the browser goes to the client
-   * with it; denied or expired, with the error; else the page again.
+   * with it; denied or expired, with the error; else the page again. Only
+   * with the page's own key: the user code alone opens nothing here.
    */
   const authorizeContinue = (req: IncomingMessage, res: ServerResponse) => {
     const issuer = issuerFor(req, res);
@@ -1470,7 +1503,8 @@ export function mountOAuthRoutes(
     const query = queryOf(req);
     const grant = grantByCode(req, res, query.get("user_code"), true);
     if (!grant) return;
-    if (!grant.code || !grantNonceHolds(grant, query.get("nonce"), now())) {
+    const key = query.get("key");
+    if (!grant.code || key === null || !continueKeyHolds(grant.code, key)) {
       authorizePage(
         res,
         403,
@@ -1504,6 +1538,7 @@ export function mountOAuthRoutes(
         res,
         issuer,
         grant,
+        key,
         "Not approved yet: approve it with Renown or `ph token approve`; this page checks again by itself.",
       );
       return;

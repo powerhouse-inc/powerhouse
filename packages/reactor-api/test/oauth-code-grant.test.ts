@@ -148,7 +148,22 @@ async function consent(target: string) {
   const next = /<a href="([^"]+)">continue<\/a>/
     .exec(page)![1]
     .replaceAll("&amp;", "&");
-  return { page, code, next };
+  return { page, code, next, headers: response.headers };
+}
+
+/** An authorize request of `clientId` with PKCE, `extra` over it. */
+function authorizeOf(
+  clientId: string,
+  extra: Record<string, string | undefined> = {},
+) {
+  return authorizeUrl({
+    response_type: "code",
+    client_id: clientId,
+    redirect_uri: REDIRECT,
+    code_challenge: pkce().challenge,
+    code_challenge_method: "S256",
+    ...extra,
+  });
 }
 
 /** Approves the code as PERSON, as `ph token approve` does. */
@@ -310,7 +325,7 @@ describe("authorize", () => {
   it("shows the consent page with where the browser returns, and approves nothing by being opened", async () => {
     const clientId = await client();
     const { challenge } = pkce();
-    const { page } = await consent(
+    const { page, headers } = await consent(
       authorizeUrl({
         response_type: "code",
         client_id: clientId,
@@ -320,6 +335,12 @@ describe("authorize", () => {
         state: "s1",
       }),
     );
+    // Deny answers with a redirect to the client, which `form-action`
+    // checks too: the redirect URI's origin may be reached from this page.
+    expect(headers.get("content-security-policy")).toContain(
+      "form-action 'self' https://renown.test http://127.0.0.1:65001;",
+    );
+    expect(headers.get("referrer-policy")).toBe("same-origin");
     for (const shown of [
       "Claude Code",
       "Returns to",
@@ -382,6 +403,68 @@ describe("authorize", () => {
         JSON.stringify(params),
       ).toMatchObject({ error, state: "st", iss: url });
     }
+    expect(listDeviceGrants(dataDir)).toEqual([]);
+  });
+
+  it("answers a refusal for a redirect URI off loopback with a page here, before the person acts, sending nothing", async () => {
+    const registered = await register({
+      client_name: "Web app",
+      redirect_uris: ["https://app.example/cb"],
+    });
+    const clientId = ((await registered.json()) as { client_id: string })
+      .client_id;
+    const base = {
+      response_type: "code",
+      client_id: clientId,
+      redirect_uri: "https://app.example/cb",
+      state: "st",
+      code_challenge: pkce().challenge,
+      code_challenge_method: "S256",
+    };
+    for (const [params, error] of [
+      [{ code_challenge: undefined }, "invalid_request"],
+      [{ resource: "https://elsewhere.example/mcp" }, "invalid_target"],
+      [{ scope: "documents:read" }, "invalid_scope"],
+      [{ response_type: "token" }, "unsupported_response_type"],
+    ] as const) {
+      const response = await open(authorizeUrl({ ...base, ...params }));
+      expect(response.status, JSON.stringify(params)).toBe(400);
+      expect(response.headers.get("location")).toBeNull();
+      const page = await response.text();
+      expect(page).toContain("Cannot sign in");
+      expect(page).toContain(error);
+      expect(page).not.toContain("app.example");
+    }
+    // The consent page itself, and its Deny, still go back there.
+    const { page, code } = await consent(authorizeUrl(base));
+    const nonce = /name="nonce" value="([^"]+)"/.exec(page)![1];
+    const denied = await fetch(`${url}/oauth/device/deny`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ user_code: code, nonce }).toString(),
+    });
+    expect(denied.status).toBe(302);
+    expect(denied.headers.get("location")).toMatch(
+      /^https:\/\/app\.example\/cb\?error=access_denied&/,
+    );
+  });
+
+  it("is rate limited before any work, whatever it asks", async () => {
+    const statuses: number[] = [];
+    for (let i = 0; i < 11; i++) {
+      statuses.push(
+        (await open(authorizeOf("phc_" + "0".repeat(32), { state: "x" })))
+          .status,
+      );
+    }
+    expect(statuses.slice(0, 10).every((s) => s === 400)).toBe(true);
+    expect(statuses[10]).toBe(429);
+    // A registered client from that address waits too.
+    const clientId = await client();
+    const limited = await open(authorizeOf(clientId));
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("location")).toBeNull();
     expect(listDeviceGrants(dataDir)).toEqual([]);
   });
 
@@ -543,19 +626,42 @@ describe("the consent page's checks", () => {
     expect(listDeviceGrants(dataDir)).toEqual([]);
   });
 
-  it("needs the page's nonce", async () => {
+  it("goes on only with the page's own key", async () => {
     const clientId = await client();
-    const { next } = await consent(
-      authorizeUrl({
-        response_type: "code",
-        client_id: clientId,
-        redirect_uri: REDIRECT,
-        code_challenge: pkce().challenge,
-        code_challenge_method: "S256",
-      }),
-    );
+    const { next } = await consent(authorizeOf(clientId));
     const forged = new URL(next);
-    forged.searchParams.set("nonce", `${Date.now() + 60_000}.forged`);
+    forged.searchParams.set("key", randomBytes(32).toString("base64url"));
     expect((await open(forged.href)).status).toBe(403);
+    forged.searchParams.delete("key");
+    expect((await open(forged.href)).status).toBe(403);
+  });
+
+  it("gives whoever holds only the user code no way to take the code", async () => {
+    const clientId = await client();
+    const { code: userCode, next } = await consent(authorizeOf(clientId));
+    const key = new URL(next).searchParams.get("key")!;
+    // `device/pending` shows the grant to anyone with the user code: never
+    // the page's key, and its nonce opens no continue link.
+    const shown = await (
+      await fetch(`${url}/oauth/device/pending?user_code=${userCode}`)
+    ).text();
+    expect(shown).not.toContain(key);
+    const { nonce } = JSON.parse(shown) as { nonce: string };
+    await approveAs(userCode);
+    const continueUrl = `${url}/oauth/authorize/continue`;
+    const tries: Record<string, string>[] = [
+      { user_code: userCode, nonce },
+      { user_code: userCode, key: nonce },
+      { user_code: userCode },
+    ];
+    for (const query of tries) {
+      const tried = await open(
+        `${continueUrl}?${new URLSearchParams(query).toString()}`,
+      );
+      expect(tried.status, JSON.stringify(query)).toBe(403);
+      expect(tried.headers.get("location")).toBeNull();
+    }
+    // The page's own link still takes it, once.
+    expect((await sentBack(next)).code).toBeDefined();
   });
 });

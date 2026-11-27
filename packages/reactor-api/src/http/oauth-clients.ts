@@ -80,6 +80,20 @@ export function redirectUriRefusal(uri: unknown): string | undefined {
   return `${uri} is neither https nor http on loopback (localhost, 127.0.0.1, [::1])`;
 }
 
+/**
+ * Whether `uri` returns to a listener on the person's own computer (RFC 8252
+ * 7.3): http on loopback. Sending a browser there takes it to no site of
+ * anyone else's, so it may go at once, before the person acts.
+ */
+export function isLoopbackRedirectUri(uri: string): boolean {
+  try {
+    const url = new URL(uri);
+    return url.protocol === "http:" && LOOPBACK.has(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 /** A client name as the consent page may show it; undefined for none. */
 export function clientNameOf(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;

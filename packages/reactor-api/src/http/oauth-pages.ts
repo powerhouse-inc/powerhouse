@@ -9,20 +9,45 @@ import { formatUserCode } from "./oauth-grants.js";
  * buttons post to the host, which checks the page's nonce and the origin.
  */
 
-/** What every page is sent with: no framing, no script, no caching. */
+/**
+ * What every page is sent with: no framing, no script, no caching. Its forms
+ * post to this host, whose answer may send the browser on to `formTargets`
+ * (CSP sources; browsers check `form-action` on the redirect too).
+ *
+ * `Referrer-Policy: same-origin`, not `no-referrer`: under `no-referrer` a
+ * browser sends `Origin: null` with the page's own form posts (Fetch,
+ * "serializing a request origin"), and the host takes its buttons only from
+ * its own origin. Other sites still get no referrer.
+ */
 export function pageHeaders(
-  formOrigins: readonly string[],
+  formTargets: readonly string[],
 ): Record<string, string> {
   return {
     "content-type": "text/html; charset=utf-8",
-    "content-security-policy": `default-src 'none'; style-src 'unsafe-inline'; form-action 'self'${formOrigins
-      .map((origin) => ` ${origin}`)
+    "content-security-policy": `default-src 'none'; style-src 'unsafe-inline'; form-action 'self'${formTargets
+      .map((target) => ` ${target}`)
       .join("")}; frame-ancestors 'none'; base-uri 'none'`,
     "x-frame-options": "DENY",
     "x-content-type-options": "nosniff",
     "cache-control": "no-store",
-    "referrer-policy": "no-referrer",
+    "referrer-policy": "same-origin",
   };
+}
+
+/**
+ * The CSP source that lets a form's answer redirect to `uri`: its origin, or
+ * its scheme for a private-use scheme (RFC 8252 7.1) and for an IPv6 literal,
+ * which a CSP host source cannot name.
+ */
+export function formTargetOf(uri: string): string | undefined {
+  let url: URL;
+  try {
+    url = new URL(uri);
+  } catch {
+    return undefined;
+  }
+  const web = url.protocol === "http:" || url.protocol === "https:";
+  return web && !url.hostname.startsWith("[") ? url.origin : url.protocol;
 }
 
 export function escapeHtml(value: string): string {
@@ -104,11 +129,18 @@ ${error}
   );
 }
 
-/** The host a code grant's redirect URI names: what the consent page shows. */
-export function redirectHostOf(grant: DeviceGrant): string | undefined {
+/**
+ * Where a code grant's browser returns, as the consent page shows it: the
+ * host of an http(s) redirect URI (punycode for an IDN), else the whole URI,
+ * scheme and target (an app's own scheme, RFC 8252 7.1).
+ */
+export function returnsToOf(grant: DeviceGrant): string | undefined {
   if (!grant.code) return undefined;
   try {
-    return new URL(grant.code.redirectUri).host;
+    const url = new URL(grant.code.redirectUri);
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.host
+      : url.href;
   } catch {
     return grant.code.redirectUri;
   }
@@ -135,7 +167,7 @@ export function consentPage(o: {
 }): string {
   const { grant } = o;
   const code = formatUserCode(grant.userCode);
-  const returnsTo = redirectHostOf(grant);
+  const returnsTo = returnsToOf(grant);
   const rows: [string, string][] = [
     ["Host", o.hostDid ? `${o.issuer} (${shortDid(o.hostDid)})` : o.issuer],
     ["Session", `"${grant.label}" (${shortDid(grant.sessionDid)})`],

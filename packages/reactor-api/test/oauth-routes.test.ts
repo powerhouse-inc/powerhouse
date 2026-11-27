@@ -520,6 +520,9 @@ describe("the consent page", () => {
       "frame-ancestors 'none'",
     );
     expect(response.headers.get("x-frame-options")).toBe("DENY");
+    // Not no-referrer: under it a browser sends `Origin: null` with the
+    // page's own buttons.
+    expect(response.headers.get("referrer-policy")).toBe("same-origin");
     const page = await response.text();
     for (const shown of [
       "billing",
@@ -555,11 +558,32 @@ describe("the consent page", () => {
       "sec-fetch-site": "cross-site",
     });
     expect(fetchedCrossSite.status).toBe(403);
+    // `Origin: null` is this host's only where the browser says same-origin.
+    for (const headers of [
+      { origin: "null" },
+      { origin: "null", "sec-fetch-site": "cross-site" },
+      { origin: "null", "sec-fetch-site": "same-site" },
+    ]) {
+      const refused = await form("/oauth/device/deny", fields, headers);
+      expect(refused.status, JSON.stringify(headers)).toBe(403);
+    }
     expect((await poll(started)).body.error).toBe("authorization_pending");
 
     const denied = await form("/oauth/device/deny", fields, { origin: issuer });
     expect(denied.status).toBe(200);
     expect(await denied.text()).toContain("Denied");
+  });
+
+  it("takes a button posted with `Origin: null` from a same-origin page", async () => {
+    const started = await start();
+    const pending = await pendingOf(started.user_code);
+    const denied = await form(
+      "/oauth/device/deny",
+      { user_code: started.user_code, nonce: pending.nonce },
+      { origin: "null", "sec-fetch-site": "same-origin" },
+    );
+    expect(denied.status).toBe(200);
+    expect((await poll(started)).body.error).toBe("access_denied");
   });
 
   it("sends a Renown login to Renown's console for the session's key", async () => {
@@ -910,7 +934,17 @@ describe("the Renown button", () => {
     const started = await start();
     const { nonce } = await pendingOf(started.user_code);
     expect((await press(started, nonce)).status).toBe(403);
+    expect((await press(started, nonce, { origin: "null" })).status).toBe(403);
     expect((await press(started, nonce, { origin: issuer })).status).toBe(303);
+    // A browser's same-origin post under a policy that hides the origin.
+    expect(
+      (
+        await press(started, nonce, {
+          origin: "null",
+          "sec-fetch-site": "same-origin",
+        })
+      ).status,
+    ).toBe(303);
   });
 
   it("starts at most 3 polls per address", async () => {

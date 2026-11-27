@@ -4323,6 +4323,9 @@ importers:
       lz-string:
         specifier: ^1.5.0
         version: 1.5.0
+      playwright:
+        specifier: 'catalog:'
+        version: 1.64.1
       tsdown:
         specifier: 'catalog:'
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
