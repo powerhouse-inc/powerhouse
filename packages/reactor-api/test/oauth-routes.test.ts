@@ -239,18 +239,22 @@ async function poll(started: Started, clientId = "curl") {
 }
 
 describe("discovery", () => {
-  it("lists the device grant and its endpoints, and nothing it does not serve", async () => {
+  it("lists the grants it serves and their endpoints, and nothing it does not serve", async () => {
     const response = await fetch(
       `${url}/.well-known/oauth-authorization-server`,
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       issuer,
+      authorization_endpoint: `${issuer}/oauth/authorize`,
       device_authorization_endpoint: `${issuer}/oauth/device_authorization`,
       token_endpoint: `${issuer}/oauth/token`,
+      registration_endpoint: `${issuer}/oauth/register`,
       revocation_endpoint: `${issuer}/oauth/revoke`,
-      grant_types_supported: [DEVICE_CODE],
-      response_types_supported: [],
+      grant_types_supported: [DEVICE_CODE, "authorization_code"],
+      response_types_supported: ["code"],
+      code_challenge_methods_supported: ["S256"],
+      authorization_response_iss_parameter_supported: true,
       token_endpoint_auth_methods_supported: ["none"],
       revocation_endpoint_auth_methods_supported: ["none"],
       scopes_supported: ["documents:write"],

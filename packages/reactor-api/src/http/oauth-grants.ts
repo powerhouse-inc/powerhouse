@@ -19,6 +19,11 @@ import path from "node:path";
  * made for it; the person approves the session's key with a credential, and
  * the client's next poll is issued a token for it. The id is the first 32 hex
  * of the sha256 of the device code: the code itself is kept nowhere.
+ *
+ * An authorization code grant (an MCP client's sign-in) is the same grant
+ * with its `code` part; once approved and its code issued, it is kept under
+ * the code's hash instead, so the token request takes it as a poll takes a
+ * device grant: once.
  */
 
 /** What a person types: 8 of these, shown `WXYZ-BCDF` (about 34 bits). */
@@ -35,6 +40,29 @@ const NONCE_TTL_MS = DEVICE_GRANT_TTL_MS;
 const FORMAT = "ph-oauth-grant";
 
 export type DeviceGrantStatus = "pending" | "approved" | "denied";
+
+/** How long an authorization code may be exchanged, once issued. */
+export const AUTHORIZATION_CODE_TTL_MS = 60_000;
+
+/**
+ * The authorization code grant's own part (RFC 6749 4.1, RFC 7636, RFC 8707):
+ * the registered client that asked, where its code goes, and the PKCE
+ * challenge the token request must answer. The rest of the grant (its user
+ * code, session and consent) is the device grant's.
+ */
+export type CodeGrantRequest = {
+  /** The registered client (`phc_...`). */
+  clientId: string;
+  /** The redirect URI the code goes to, one the client registered. */
+  redirectUri: string;
+  /** base64url(sha256(code_verifier)). */
+  codeChallenge: string;
+  state?: string;
+  /** The resource the token is for, on this host. */
+  resource?: string;
+  /** When the code was issued: the grant then lives under the code's hash. */
+  issuedAt?: string;
+};
 
 export type DeviceGrant = {
   format: typeof FORMAT;
@@ -63,6 +91,8 @@ export type DeviceGrant = {
   nonceKey: string;
   /** A Renown console session the person was sent to, if any. */
   renownSession?: string;
+  /** Set for an authorization code grant (an MCP client's sign-in). */
+  code?: CodeGrantRequest;
 };
 
 export function oauthGrantsDir(dataDir: string): string {
@@ -103,6 +133,25 @@ export function normalizeUserCode(typed: unknown): string | undefined {
   return code;
 }
 
+/** base64url(sha256(verifier)): PKCE's S256 (RFC 7636 4.2). */
+export function s256(verifier: string): string {
+  return createHash("sha256").update(verifier).digest("base64url");
+}
+
+/** Whether `verifier` answers the S256 `challenge`, compared in constant time. */
+export function verifierHolds(challenge: string, verifier: unknown): boolean {
+  // RFC 7636 4.1: 43 to 128 unreserved characters.
+  if (
+    typeof verifier !== "string" ||
+    !/^[A-Za-z0-9._~-]{43,128}$/.test(verifier)
+  ) {
+    return false;
+  }
+  const expected = Buffer.from(challenge);
+  const given = Buffer.from(s256(verifier));
+  return expected.length === given.length && timingSafeEqual(expected, given);
+}
+
 /** `WXYZ-BCDF`. */
 export function formatUserCode(code: string): string {
   return `${code.slice(0, 4)}-${code.slice(4)}`;
@@ -119,8 +168,10 @@ export function newDeviceGrant(o: {
   clientId: string;
   requestedFrom: string;
   now: number;
+  code?: CodeGrantRequest;
 }): DeviceGrant {
   return {
+    ...(o.code ? { code: o.code } : {}),
     format: FORMAT,
     version: 1,
     id: grantIdOf(o.deviceCode),

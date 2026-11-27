@@ -42,7 +42,7 @@ export interface RouteHostSession {
   id: string;
   /** What the session may do: `documents:write`. */
   scope: string;
-  /** How it was granted: `device` (RFC 8628). */
+  /** How it was granted: `device` (RFC 8628) or `code` (an MCP client's sign-in, RFC 6749 4.1). */
   grant: string;
 }
 

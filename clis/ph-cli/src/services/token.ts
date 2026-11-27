@@ -174,6 +174,8 @@ type Pending = {
   days: number;
   ends_at: string;
   client_id: string;
+  /** An MCP client's sign-in: the host the person's browser returns to. */
+  returns_to?: string;
   requested_from: string;
   requested_at: string;
   warning: string;
@@ -200,6 +202,9 @@ function describePending(pending: Pending): string[] {
     ["May", pending.may],
     ["Ends", `${utc(pending.ends_at)} (${pending.days} days)`],
     ["Asked by", pending.client_id],
+    ...(pending.returns_to
+      ? ([["Returns to", pending.returns_to]] as [string, string][])
+      : []),
     ["From", `${pending.requested_from}, ${utc(pending.requested_at)}`],
   ];
   return [

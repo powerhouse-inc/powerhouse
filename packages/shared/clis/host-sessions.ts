@@ -49,8 +49,12 @@ export const HOST_SESSION_SCOPE = "documents:write";
 /** The longest a host session lives, whatever was asked. */
 export const HOST_SESSION_MAX_DAYS = 30;
 
-/** How a host session was granted: the OAuth device grant (RFC 8628). */
-export type HostSessionGrant = "device";
+/**
+ * How a host session was granted: the OAuth device grant (RFC 8628), or the
+ * authorization code grant with PKCE (RFC 6749 4.1, RFC 7636) an MCP client
+ * signs in with.
+ */
+export type HostSessionGrant = "device" | "code";
 
 /** A token of the session, as the file keeps it. */
 export type HostSessionToken = {

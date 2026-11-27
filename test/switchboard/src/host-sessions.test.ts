@@ -3,6 +3,17 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import {
+  UnauthorizedError,
+  type OAuthClientProvider,
+} from "@modelcontextprotocol/sdk/client/auth.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type {
+  OAuthClientInformationFull,
+  OAuthClientMetadata,
+  OAuthTokens,
+} from "@modelcontextprotocol/sdk/shared/auth.js";
 import { GraphQLReactorClient } from "@powerhousedao/reactor-browser/graphql-client";
 import {
   credentialRecordId,
@@ -574,6 +585,163 @@ describe("/mcp", () => {
     expect(after.status).toBe(401);
     expect(after.challenge).toBe(`${MCP_CHALLENGE}, error="invalid_token"`);
   }, 60_000);
+});
+
+/** An MCP client's own store of its OAuth state, in memory, as the SDK asks for it. */
+class MemoryOAuthProvider implements OAuthClientProvider {
+  registered: OAuthClientInformationFull | undefined;
+  saved: OAuthTokens | undefined;
+  verifier = "";
+  authorizationUrl: URL | undefined;
+  readonly redirectUrl = MCP_REDIRECT;
+  readonly clientMetadata: OAuthClientMetadata = {
+    client_name: "e2e mcp",
+    redirect_uris: [MCP_REDIRECT],
+    token_endpoint_auth_method: "none",
+    grant_types: ["authorization_code"],
+    response_types: ["code"],
+  };
+  state() {
+    return "e2e-state";
+  }
+  clientInformation() {
+    return this.registered;
+  }
+  saveClientInformation(information: OAuthClientInformationFull) {
+    this.registered = information;
+  }
+  tokens() {
+    return this.saved;
+  }
+  saveTokens(tokens: OAuthTokens) {
+    this.saved = tokens;
+  }
+  redirectToAuthorization(url: URL) {
+    this.authorizationUrl = url;
+  }
+  saveCodeVerifier(verifier: string) {
+    this.verifier = verifier;
+  }
+  codeVerifier() {
+    return this.verifier;
+  }
+}
+
+const MCP_REDIRECT = "http://127.0.0.1:65002/callback";
+
+describe("an MCP client signing in with the SDK's own auth()", () => {
+  it("discovers from the 401, registers, is approved by a pseudonym, and writes as the session", async () => {
+    const provider = new MemoryOAuthProvider();
+    const anonymous = new Client({ name: "e2e", version: "1.0.0" });
+    await anonymous.connect(
+      new StreamableHTTPClientTransport(new URL(`${ORIGIN}/mcp`), {
+        authProvider: provider,
+      }),
+    );
+    // A write: the 401 sends the client through discovery and registration
+    // to the authorize URL, which it hands to its browser.
+    await expect(
+      anonymous.callTool({
+        name: "createDocument",
+        arguments: { documentType: "powerhouse/document-model" },
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedError);
+    await anonymous.close();
+    expect(provider.registered?.client_id).toMatch(/^phc_[0-9a-f]{32}$/);
+    const authorizeUrl = provider.authorizationUrl!;
+    expect(authorizeUrl.origin + authorizeUrl.pathname).toBe(
+      `${ORIGIN}/oauth/authorize`,
+    );
+    expect(Object.fromEntries(authorizeUrl.searchParams)).toMatchObject({
+      response_type: "code",
+      code_challenge_method: "S256",
+      redirect_uri: MCP_REDIRECT,
+      resource: `${ORIGIN}/mcp`,
+      scope: "documents:write",
+      state: "e2e-state",
+    });
+
+    // The person's browser: the consent page, approved by the pseudonym as
+    // `ph token approve` approves it, through the approve route.
+    const page = await (await fetch(authorizeUrl)).text();
+    const userCode = /ph token approve ([A-Z]{4}-[A-Z]{4})/.exec(page)![1]!;
+    const next = /<a href="([^"]+)">continue<\/a>/
+      .exec(page)![1]!
+      .replaceAll("&amp;", "&");
+    const pending = (await (
+      await fetch(`${ORIGIN}/oauth/device/pending?user_code=${userCode}`)
+    ).json()) as {
+      session_did: string;
+      nonce: string;
+      label: string;
+      days: number;
+      returns_to: string;
+    };
+    expect(pending).toMatchObject({
+      label: "e2e mcp",
+      returns_to: "127.0.0.1:65002",
+    });
+    const credential = await person!.issueSessionCredential!(
+      pending.session_did,
+      { label: pending.label, expiresInDays: pending.days },
+    );
+    const approved = await fetch(`${ORIGIN}/oauth/device/approve`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        user_code: userCode,
+        credential,
+        nonce: pending.nonce,
+      }),
+    });
+    expect(approved.status, await approved.clone().text()).toBe(200);
+
+    // The page goes on to the client with its code, the state and the issuer.
+    const back = await fetch(next, { redirect: "manual" });
+    expect(back.status).toBe(302);
+    const location = new URL(back.headers.get("location")!);
+    expect(location.origin + location.pathname).toBe(MCP_REDIRECT);
+    expect(location.searchParams.get("state")).toBe("e2e-state");
+    expect(location.searchParams.get("iss")).toBe(ORIGIN);
+    const code = location.searchParams.get("code")!;
+
+    // The client exchanges it, with its verifier, and writes signed.
+    const transport = new StreamableHTTPClientTransport(
+      new URL(`${ORIGIN}/mcp`),
+      { authProvider: provider },
+    );
+    await transport.finishAuth(code);
+    expect(provider.saved?.access_token).toMatch(/^phs_/);
+    issued.push(provider.saved!.access_token);
+    const signedIn = new Client({ name: "e2e", version: "1.0.0" });
+    await signedIn.connect(transport);
+    try {
+      const created = await signedIn.callTool({
+        name: "createDocument",
+        arguments: {
+          documentType: "powerhouse/document-model",
+          name: "Signed in",
+        },
+      });
+      expect(created.isError, JSON.stringify(created.content)).toBeFalsy();
+      const id = (created.structuredContent as { documentId: string })
+        .documentId;
+      const operations = await operationsOf(id);
+      expect(operations.length).toBeGreaterThan(0);
+      for (const operation of operations) {
+        const signer = operation.action.context?.signer;
+        expect(signer?.app.key, operation.action.type).toBe(
+          pending.session_did,
+        );
+        expect(signer?.app.name).toBe("e2e mcp");
+        expect(signer?.user.address.toLowerCase()).toBe(
+          person!.address.toLowerCase(),
+        );
+      }
+    } finally {
+      await signedIn.close();
+    }
+  }, 120_000);
 });
 
 describe("the consent page's Renown button", () => {

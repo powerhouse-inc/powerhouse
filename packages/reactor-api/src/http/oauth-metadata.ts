@@ -11,6 +11,7 @@ import type { IHttpAdapter } from "../graphql/gateway/types.js";
  */
 
 export const DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
+export const AUTHORIZATION_CODE_GRANT = "authorization_code";
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
@@ -91,20 +92,29 @@ export function oauthEndpoints(issuer: string) {
     token: `${issuer}/oauth/token`,
     revocation: `${issuer}/oauth/revoke`,
     device: `${issuer}/oauth/device`,
+    deviceDeny: `${issuer}/oauth/device/deny`,
+    deviceRenown: `${issuer}/oauth/device/renown`,
+    authorize: `${issuer}/oauth/authorize`,
+    authorizeContinue: `${issuer}/oauth/authorize/continue`,
+    registration: `${issuer}/oauth/register`,
   };
 }
 
-/** RFC 8414's document. */
+/** RFC 8414's document: the device grant, and the code grant with PKCE and registration. */
 export function authorizationServerMetadata(issuer: string) {
   const endpoints = oauthEndpoints(issuer);
   return {
     issuer,
+    authorization_endpoint: endpoints.authorize,
     device_authorization_endpoint: endpoints.deviceAuthorization,
     token_endpoint: endpoints.token,
+    registration_endpoint: endpoints.registration,
     revocation_endpoint: endpoints.revocation,
-    grant_types_supported: [DEVICE_CODE_GRANT],
-    // No authorization endpoint is served: no response type is either.
-    response_types_supported: [] as string[],
+    grant_types_supported: [DEVICE_CODE_GRANT, AUTHORIZATION_CODE_GRANT],
+    response_types_supported: ["code"],
+    code_challenge_methods_supported: ["S256"],
+    // RFC 9207: the redirect names the issuer.
+    authorization_response_iss_parameter_supported: true,
     token_endpoint_auth_methods_supported: ["none"],
     revocation_endpoint_auth_methods_supported: ["none"],
     scopes_supported: [HOST_SESSION_SCOPE],

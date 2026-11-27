@@ -162,9 +162,29 @@ host session the caller writes stay refused (`UNSIGNED_WRITE`).
 ```
 src/http/oauth-routes.ts     the routes, in the host scope `oauth` (<base>/oauth)
 src/http/oauth-grants.ts     pending grants, <dataDir>/.ph/oauth/grants/
+src/http/oauth-clients.ts    registered clients, <dataDir>/.ph/oauth/clients/
 src/http/oauth-metadata.ts   the issuer, RFC 8414 and RFC 9728 documents
 src/http/oauth-pages.ts      the consent page (plain HTML, no script)
 ```
+
+MCP clients sign in with the authorization code grant (RFC 6749 4.1) on the
+same grant object and consent. `register` (RFC 7591) keeps public clients
+only (`none` at the token endpoint), with https or loopback http redirect
+URIs, 10 registrations a minute and 20 held per address, 1,000 in all, each
+for 30 days. `authorize` takes a registered client and redirect URI (else it
+answers with a page and sends nothing), PKCE S256 only, `documents:write`,
+and a `resource` on this host (else `invalid_target`); other refusals go
+back to the client with `state` and `iss` (RFC 9207). It starts the grant as
+`device_authorization` does (the same limits and caps, `grant: "code"`, the
+label the client's name) and shows the consent page, which names where the
+browser returns and checks back every 5 s (`authorize/continue`, no
+script); the person approves it as any grant (`ph token approve`, or Renown
+in a tab of its own). Approved, `continue` issues the code once (the grant
+then kept under the code's hash, a minute) and sends the browser back.
+`token` with `authorization_code` takes the code once and checks the
+client, the exact redirect URI, the verifier and the resource; a code that
+fails a check is spent and its session withdrawn. A code is no device code,
+nor a device code a code.
 
 The OAuth device grant (RFC 8628) issues them. `device_authorization` makes
 the session's key (its file, approved by nobody) and a pending grant;

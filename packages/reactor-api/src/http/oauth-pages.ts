@@ -2,7 +2,8 @@ import type { DeviceGrant } from "./oauth-grants.js";
 import { formatUserCode } from "./oauth-grants.js";
 
 /**
- * The consent page of the device grant (RFC 8628 3.3): plain HTML, no script,
+ * The consent page of the device grant (RFC 8628 3.3), and of the
+ * authorization code grant on the same grant object: plain HTML, no script,
  * the look of the switchboard's other approval page (workflow waitpoints).
  * Opening it approves nothing: it shows what the person would allow, and its
  * buttons post to the host, which checks the page's nonce and the origin.
@@ -55,13 +56,13 @@ button { width: 100%; height: 36px; border: 0; border-radius: 8px; color: #fff; 
 .done h1 { color: var(--ok); } .closed h1 { color: var(--muted); }
 `;
 
-function shell(title: string, tone: string, body: string): string {
+function shell(title: string, tone: string, body: string, head = ""): string {
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
+<meta name="robots" content="noindex">${head}
 <title>${escapeHtml(title)}</title>
 <style>${STYLE}</style>
 </head>
@@ -103,7 +104,23 @@ ${error}
   );
 }
 
-/** What the person allows, and the ways to answer. */
+/** The host a code grant's redirect URI names: what the consent page shows. */
+export function redirectHostOf(grant: DeviceGrant): string | undefined {
+  if (!grant.code) return undefined;
+  try {
+    return new URL(grant.code.redirectUri).host;
+  } catch {
+    return grant.code.redirectUri;
+  }
+}
+
+/**
+ * What the person allows, and the ways to answer. For an authorization code
+ * grant (an MCP client signing in) the page also says where the browser
+ * returns, and checks back every few seconds (`continueUrl`, no script): once
+ * the code is approved, here or by `ph token approve`, the browser goes on to
+ * the client; Renown's console opens in a tab of its own meanwhile.
+ */
 export function consentPage(o: {
   issuer: string;
   hostDid: string | undefined;
@@ -112,13 +129,18 @@ export function consentPage(o: {
   endsAt: number;
   renownAction: string;
   denyAction: string;
+  continueUrl?: string;
+  /** Said above the details, e.g. that the code is not approved yet. */
+  notice?: string;
 }): string {
   const { grant } = o;
   const code = formatUserCode(grant.userCode);
+  const returnsTo = redirectHostOf(grant);
   const rows: [string, string][] = [
     ["Host", o.hostDid ? `${o.issuer} (${shortDid(o.hostDid)})` : o.issuer],
     ["Session", `"${grant.label}" (${shortDid(grant.sessionDid)})`],
     ["Asked by", grant.clientId],
+    ...(returnsTo ? ([["Returns to", returnsTo]] as [string, string][]) : []),
     [
       "From",
       `${grant.requestedFrom}, ${formatTime(Date.parse(grant.requestedAt))}`,
@@ -132,17 +154,29 @@ export function consentPage(o: {
     )
     .join("");
   const hidden = `<input type="hidden" name="user_code" value="${escapeHtml(grant.userCode)}"><input type="hidden" name="nonce" value="${escapeHtml(o.nonce)}">`;
+  const notice = o.notice
+    ? `<p class="warning">${escapeHtml(o.notice)}</p>\n`
+    : "";
+  // Renown's console in a tab of its own: this page keeps checking back.
+  const renownTarget = o.continueUrl ? ' target="_blank"' : "";
+  const next = o.continueUrl
+    ? `\n<p>Once it is approved this page goes on to ${escapeHtml(returnsTo ?? "the app")} by itself, or <a href="${escapeHtml(o.continueUrl)}">continue</a>.</p>`
+    : "";
+  const refresh = o.continueUrl
+    ? `\n<meta http-equiv="refresh" content="5;url=${escapeHtml(o.continueUrl)}">`
+    : "";
   return shell(
     `Approve ${code}?`,
     "open",
-    `<p class="may">The session "${escapeHtml(grant.label)}" may sign document changes as you on this host; no administration.</p>
+    `${notice}<p class="may">The session "${escapeHtml(grant.label)}" may sign document changes as you on this host; no administration.</p>
 <dl>${details}</dl>
 <p class="warning">Approve only a code you started yourself in the last 10 minutes.</p>
 <div class="actions">
 <form class="inline" method="post" action="${escapeHtml(o.denyAction)}">${hidden}<button type="submit" class="deny">Deny</button></form>
-<form class="inline" method="post" action="${escapeHtml(o.renownAction)}">${hidden}<button type="submit" class="approve">Approve with Renown</button></form>
+<form class="inline" method="post" action="${escapeHtml(o.renownAction)}"${renownTarget}>${hidden}<button type="submit" class="approve">Approve with Renown</button></form>
 </div>
-<p>With a pseudonym on this computer, approve it there instead:<br><code>ph token approve ${escapeHtml(code)} --url ${escapeHtml(o.issuer)}</code></p>`,
+<p>With a pseudonym on this computer, approve it there instead:<br><code>ph token approve ${escapeHtml(code)} --url ${escapeHtml(o.issuer)}</code></p>${next}`,
+    refresh,
   );
 }
 

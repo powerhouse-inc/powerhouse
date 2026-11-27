@@ -47,6 +47,17 @@ import {
 import { clientAddress, perMinuteLimit } from "./client-limits.js";
 import { BodyTooLargeError, readBody } from "./node-response.js";
 import {
+  clientNameOf,
+  listOAuthClients,
+  MAX_REDIRECT_URIS,
+  newOAuthClient,
+  readOAuthClient,
+  redirectUriRefusal,
+  writeOAuthClient,
+  type OAuthClient,
+} from "./oauth-clients.js";
+import {
+  AUTHORIZATION_CODE_TTL_MS,
   DEVICE_GRANT_TTL_MS,
   DEVICE_POLL_INTERVAL_S,
   findDeviceGrant,
@@ -62,10 +73,13 @@ import {
   readDeviceGrant,
   removeDeviceGrant,
   takeDeviceGrant,
+  verifierHolds,
   writeDeviceGrant,
+  type CodeGrantRequest,
   type DeviceGrant,
 } from "./oauth-grants.js";
 import {
+  AUTHORIZATION_CODE_GRANT,
   DEVICE_CODE_GRANT,
   issuerOf,
   noIssuer,
@@ -76,15 +90,19 @@ import {
   consentPage,
   messagePage,
   pageHeaders,
+  redirectHostOf,
 } from "./oauth-pages.js";
 
 /**
  * The OAuth routes that issue host session tokens (F3e part 2): the device
- * authorization grant (RFC 8628) with its consent page, the token endpoint,
- * revocation (RFC 7009), and the sessions a person holds here. Public routes
- * in the host scope `oauth`, outside the authenticated-caller floor: their
- * caller has no token yet. Nothing is approved without the person's
- * credential for the session's key; opening a page approves nothing.
+ * authorization grant (RFC 8628) with its consent page, the authorization
+ * code grant with PKCE (RFC 6749 4.1, RFC 7636) on the same grant and consent
+ * for MCP clients, their dynamic registration (RFC 7591, public clients
+ * only), the token endpoint, revocation (RFC 7009), and the sessions a person
+ * holds here. Public routes in the host scope `oauth`, outside the
+ * authenticated-caller floor: their caller has no token yet. Nothing is
+ * approved without the person's credential for the session's key; opening a
+ * page approves nothing.
  */
 
 /**
@@ -137,6 +155,12 @@ const SWEEP_EVERY_MS = 30_000;
 /** Renown console polls running at once, in all and per client. */
 const RENOWN_POLLS = 50;
 const RENOWN_POLLS_PER_CLIENT = 3;
+/** Client registrations: a minute's, and those held, per client and in all. */
+const REGISTRATIONS_PER_MINUTE = 10;
+const CLIENTS_PER_ADDRESS = 20;
+const MAX_CLIENTS = 1000;
+/** What a code grant's session is called when its client names none. */
+const DEFAULT_CODE_LABEL = "mcp client";
 const SKEW_MS = 5 * 60_000;
 const DAY_MS = 24 * 60 * 60_000;
 const LABEL_MAX = 64;
@@ -210,6 +234,33 @@ function text(value: unknown): string | undefined {
   return typeof value === "string" && value !== "" ? value : undefined;
 }
 
+/**
+ * Why `resource` (RFC 8707) is no resource of the host `issuer` names;
+ * undefined when it is one: `/mcp`, GraphQL, any URL on its origin.
+ */
+function resourceRefusal(resource: string, issuer: string): string | undefined {
+  let url: URL;
+  try {
+    url = new URL(resource);
+  } catch {
+    return `resource ${resource} is no URL.`;
+  }
+  if (url.hash !== "") return `resource ${resource} carries a fragment.`;
+  const origin = new URL(issuer).origin;
+  return url.origin === origin
+    ? undefined
+    : `resource ${resource} is not on this host (${origin}).`;
+}
+
+/** `uri` with `params` added to its query: where a code or an error goes. */
+function withQuery(uri: string, params: Record<string, string | undefined>) {
+  const url = new URL(uri);
+  for (const [name, value] of Object.entries(params)) {
+    if (value !== undefined) url.searchParams.set(name, value);
+  }
+  return url.href;
+}
+
 /** Whether a label can name a session: short, printable, and no did (the console reads one as none). */
 function validLabel(label: string): boolean {
   return (
@@ -236,6 +287,7 @@ export function mountOAuthRoutes(
   const checkCredential = options.checkCredential ?? checkCredentialFor;
   const startsLimited = perMinuteLimit(STARTS_PER_MINUTE, now);
   const missesLimited = perMinuteLimit(MISSES_PER_MINUTE, now);
+  const registrationsLimited = perMinuteLimit(REGISTRATIONS_PER_MINUTE, now);
   const clientOf = (req: IncomingMessage) =>
     clientAddress(req, options.trustProxy ?? false);
   // When each grant was last polled, and its interval (slow_down raises it).
@@ -676,9 +728,8 @@ export function mountOAuthRoutes(
       );
       return;
     }
-    const rawDays = text(params.ph_days);
-    const days = rawDays === undefined ? maxDays : Number(rawDays);
-    if (!Number.isInteger(days) || days < 1 || days > maxDays) {
+    const days = daysOf(params.ph_days);
+    if (days === undefined) {
       oauthError(
         res,
         "invalid_request",
@@ -686,39 +737,82 @@ export function mountOAuthRoutes(
       );
       return;
     }
+    const started = startGrant({
+      client,
+      label,
+      days,
+      clientId,
+      grant: "device",
+    });
+    if (!started.ok) {
+      oauthError(res, "slow_down", started.description, 429);
+      return;
+    }
+    const { device } = oauthEndpoints(issuer);
+    const shown = formatUserCode(started.grant.userCode);
+    json(res, 200, {
+      device_code: started.deviceCode,
+      user_code: shown,
+      verification_uri: device,
+      verification_uri_complete: `${device}?user_code=${shown}`,
+      expires_in: Math.floor(DEVICE_GRANT_TTL_MS / 1000),
+      interval: DEVICE_POLL_INTERVAL_S,
+    });
+  };
+
+  /** `ph_days`: the host's most when absent, undefined when out of range. */
+  const daysOf = (value: unknown): number | undefined => {
+    const raw = text(value);
+    const days = raw === undefined ? maxDays : Number(raw);
+    return Number.isInteger(days) && days >= 1 && days <= maxDays
+      ? days
+      : undefined;
+  };
+
+  /**
+   * Starts a grant, either kind: the session's key (its file, approved by
+   * nobody) and the pending grant, within the host's and the client's caps
+   * of pending grants. One path for the device grant and the code grant.
+   */
+  const startGrant = (o: {
+    client: string;
+    label: string;
+    days: number;
+    /** What the consent page names as who asked. */
+    clientId: string;
+    grant: "device" | "code";
+    code?: CodeGrantRequest;
+  }):
+    | { ok: true; grant: DeviceGrant; deviceCode: string }
+    | { ok: false; description: string } => {
     sweep();
     const at = now();
     const waiting = listDeviceGrants(dataDir).filter(
       (grant) => grant.status === "pending" && Date.parse(grant.expiresAt) > at,
     );
     if (waiting.length >= MAX_PENDING_GRANTS) {
-      oauthError(
-        res,
-        "slow_down",
-        "This host holds too many pending grants: try again later.",
-        429,
-      );
-      return;
+      return {
+        ok: false,
+        description:
+          "This host holds too many pending grants: try again later.",
+      };
     }
     if (
-      waiting.filter((grant) => grant.requestedFrom === client).length >=
+      waiting.filter((grant) => grant.requestedFrom === o.client).length >=
       PENDING_PER_CLIENT
     ) {
-      oauthError(
-        res,
-        "slow_down",
-        `This address holds ${PENDING_PER_CLIENT} pending grants: approve, deny or let them expire first.`,
-        429,
-      );
-      return;
+      return {
+        ok: false,
+        description: `This address holds ${PENDING_PER_CLIENT} pending grants: approve, deny or let them expire first.`,
+      };
     }
     const taken = new Set(waiting.map((grant) => grant.userCode));
     let userCode = newUserCode();
     while (taken.has(userCode)) userCode = newUserCode();
     const session = newHostSession({
-      label,
-      clientId,
-      grant: "device",
+      label: o.label,
+      clientId: o.code?.clientId ?? o.clientId,
+      grant: o.grant,
       scope: HOST_SESSION_SCOPE,
       now: new Date(at),
     });
@@ -729,30 +823,62 @@ export function mountOAuthRoutes(
       userCode,
       sessionId: session.id,
       sessionDid: session.did,
-      label,
+      label: o.label,
       scope: HOST_SESSION_SCOPE,
-      days,
-      clientId,
-      requestedFrom: client,
+      days: o.days,
+      clientId: o.clientId,
+      requestedFrom: o.client,
       now: at,
+      ...(o.code ? { code: o.code } : {}),
     });
     writeDeviceGrant(dataDir, grant);
     logger.info(
-      'Host session @id "@label": device grant asked by @client from @from',
+      'Host session @id "@label": @kind grant asked by @client from @from',
       shortHostSessionId(session.id),
-      label,
-      clientId,
-      client,
+      o.label,
+      o.grant === "code" ? "authorization code" : "device",
+      o.clientId,
+      o.client,
     );
-    const { device } = oauthEndpoints(issuer);
-    const shown = formatUserCode(userCode);
+    return { ok: true, grant, deviceCode };
+  };
+
+  /** Issues the token of an approved grant's session, once. */
+  const issueToken = (
+    res: ServerResponse,
+    grant: DeviceGrant,
+    session: HostSessionFile | undefined,
+    unknown: string,
+  ) => {
+    const end = session ? hostSessionEnd(session) : undefined;
+    if (!session?.credential || !session.address || !end) {
+      oauthError(res, "invalid_grant", unknown);
+      return;
+    }
+    const at = now();
+    const minted = mintHostSessionToken(session.id);
+    writeHostSession(dataDir, {
+      ...session,
+      tokens: [
+        ...session.tokens,
+        { hash: minted.hash, expiresAt: new Date(end).toISOString() },
+      ],
+    });
+    logger.info(
+      "@session: token issued to @client (@kind grant), ends @end",
+      describe(session),
+      grant.clientId,
+      grant.code ? "authorization code" : "device",
+      new Date(end).toISOString(),
+    );
     json(res, 200, {
-      device_code: deviceCode,
-      user_code: shown,
-      verification_uri: device,
-      verification_uri_complete: `${device}?user_code=${shown}`,
-      expires_in: Math.floor(DEVICE_GRANT_TTL_MS / 1000),
-      interval: DEVICE_POLL_INTERVAL_S,
+      access_token: minted.token,
+      token_type: "Bearer",
+      expires_in: Math.max(0, Math.floor((end - at) / 1000)),
+      scope: session.scope,
+      ph_session: session.id,
+      ph_label: session.credential.credentialSubject.app,
+      ph_address: session.address,
     });
   };
 
@@ -763,11 +889,15 @@ export function mountOAuthRoutes(
       oauthError(res, "invalid_request", "grant_type is required.");
       return;
     }
+    if (grantType === AUTHORIZATION_CODE_GRANT) {
+      codeToken(req, res, params);
+      return;
+    }
     if (grantType !== DEVICE_CODE_GRANT) {
       oauthError(
         res,
         "unsupported_grant_type",
-        `This host issues tokens for the device grant (${DEVICE_CODE_GRANT}) only.`,
+        `This host issues tokens for the device grant (${DEVICE_CODE_GRANT}) and the authorization code grant only.`,
       );
       return;
     }
@@ -778,7 +908,8 @@ export function mountOAuthRoutes(
     }
     const id = grantIdOf(deviceCode);
     const grant = readDeviceGrant(dataDir, id);
-    if (!grant) {
+    // A code grant's code is no device code: its checks are the code's.
+    if (!grant || grant.code) {
       oauthError(res, "invalid_grant", "Unknown or used device code.");
       return;
     }
@@ -828,35 +959,90 @@ export function mountOAuthRoutes(
     // Approved: the first poll takes the grant and is issued the token.
     const taken = takeDeviceGrant(dataDir, id);
     polls.delete(id);
-    const session = taken && readHostSession({ dataDir, id: taken.sessionId });
-    const end = session ? hostSessionEnd(session) : undefined;
-    if (!taken || !session?.credential || !session.address || !end) {
+    if (!taken) {
       oauthError(res, "invalid_grant", "Unknown or used device code.");
       return;
     }
-    const minted = mintHostSessionToken(session.id);
-    writeHostSession(dataDir, {
-      ...session,
-      tokens: [
-        ...session.tokens,
-        { hash: minted.hash, expiresAt: new Date(end).toISOString() },
-      ],
-    });
-    logger.info(
-      "@session: token issued to @client (device grant), ends @end",
-      describe(session),
-      taken.clientId,
-      new Date(end).toISOString(),
+    issueToken(
+      res,
+      taken,
+      readHostSession({ dataDir, id: taken.sessionId }),
+      "Unknown or used device code.",
     );
-    json(res, 200, {
-      access_token: minted.token,
-      token_type: "Bearer",
-      expires_in: Math.max(0, Math.floor((end - at) / 1000)),
-      scope: session.scope,
-      ph_session: session.id,
-      ph_label: session.credential.credentialSubject.app,
-      ph_address: session.address,
-    });
+  };
+
+  /**
+   * The authorization code grant's token request (RFC 6749 4.1.3, RFC 7636
+   * 4.5): the code taken once, then bound to the client it was issued to,
+   * the exact redirect URI, the PKCE verifier and the resource. A code that
+   * fails a check is spent, and its session withdrawn.
+   */
+  const codeToken = (
+    req: IncomingMessage,
+    res: ServerResponse,
+    params: Params,
+  ) => {
+    const code = text(params.code);
+    if (!code) {
+      oauthError(res, "invalid_request", "code is required.");
+      return;
+    }
+    const grant = takeDeviceGrant(dataDir, grantIdOf(code));
+    if (!grant?.code?.issuedAt) {
+      // Not taken (or not a code): it is no code here, or it was used.
+      if (grant) writeDeviceGrant(dataDir, grant);
+      oauthError(res, "invalid_grant", "Unknown, used or expired code.");
+      return;
+    }
+    const session = readHostSession({ dataDir, id: grant.sessionId });
+    const spent = (error: string, description: string) => {
+      if (session) {
+        if (session.credential && session.tokens.length === 0) {
+          withdraw(session, "host");
+        } else if (!session.credential) {
+          removeHostSession({ dataDir, id: session.id });
+        }
+      }
+      oauthError(res, error, description);
+    };
+    const request = grant.code;
+    if (Date.parse(grant.expiresAt) <= now()) {
+      spent("invalid_grant", "The code has expired: sign in again.");
+      return;
+    }
+    if (text(params.client_id) !== request.clientId) {
+      spent("invalid_grant", "The code was issued to another client.");
+      return;
+    }
+    if (text(params.redirect_uri) !== request.redirectUri) {
+      spent(
+        "invalid_grant",
+        "redirect_uri is not the one the code was asked for.",
+      );
+      return;
+    }
+    if (!verifierHolds(request.codeChallenge, params.code_verifier)) {
+      spent(
+        "invalid_grant",
+        "code_verifier does not answer the code's S256 challenge.",
+      );
+      return;
+    }
+    const resource = text(params.resource);
+    if (resource !== undefined && resource !== request.resource) {
+      const issuer = issuerOf(req, {
+        publicOrigin: options.publicOrigin,
+        basePath: options.basePath,
+      });
+      if (!issuer || resourceRefusal(resource, issuer) || request.resource) {
+        spent(
+          "invalid_target",
+          "resource is not the one the code was asked for, on this host.",
+        );
+        return;
+      }
+    }
+    issueToken(res, grant, session, "The code's session is gone.");
   };
 
   const revoke = async (req: IncomingMessage, res: ServerResponse) => {
@@ -935,6 +1121,8 @@ export function mountOAuthRoutes(
       days: grant.days,
       ends_at: new Date(at + grant.days * DAY_MS).toISOString(),
       client_id: grant.clientId,
+      // An MCP client's sign-in: where the person's browser returns.
+      ...(grant.code ? { returns_to: redirectHostOf(grant) } : {}),
       requested_from: grant.requestedFrom,
       requested_at: grant.requestedAt,
       expires_at: grant.expiresAt,
@@ -976,15 +1164,24 @@ export function mountOAuthRoutes(
   const denyRoute = async (req: IncomingMessage, res: ServerResponse) => {
     const action = await consentAction(req, res, "own-page");
     if (!action) return;
-    const { grant } = action;
+    const { grant, issuer } = action;
     if (grant.status === "pending") {
       writeDeviceGrant(dataDir, { ...grant, status: "denied" });
       stopRenownPoll(grant.id);
       logger.info(
-        'Host session @id "@label": device grant denied',
+        'Host session @id "@label": grant denied',
         shortHostSessionId(grant.sessionId),
         grant.label,
       );
+    }
+    // An MCP client's sign-in: the browser goes back to it with the answer.
+    if (fromForm(req) && grant.code) {
+      dropGrant(grant);
+      redirectCode(res, grant.code, issuer, {
+        error: "access_denied",
+        error_description: "The person denied the request.",
+      });
+      return;
     }
     if (fromForm(req)) {
       send(
@@ -1078,6 +1275,370 @@ export function mountOAuthRoutes(
     send(res, 303, "", { location, "cache-control": "no-store" });
   };
 
+  // ------------------------------------------- the authorization code grant
+
+  /** Sends the browser back to the client (RFC 6749 4.1.2), naming the issuer (RFC 9207). */
+  const redirectCode = (
+    res: ServerResponse,
+    request: Pick<CodeGrantRequest, "redirectUri" | "state">,
+    issuer: string,
+    params: Record<string, string>,
+  ) => {
+    send(res, 302, "", {
+      location: withQuery(request.redirectUri, {
+        ...params,
+        state: request.state,
+        iss: issuer,
+      }),
+      "cache-control": "no-store",
+      "referrer-policy": "no-referrer",
+    });
+  };
+
+  /** A page saying why the request cannot go back to its client. */
+  const authorizePage = (res: ServerResponse, status: number, why: string) =>
+    send(res, status, messagePage("Cannot sign in", why), pageHeaders([]));
+
+  /** Where a code grant's page checks back: approved, it goes on to the client. */
+  const continueUrlOf = (issuer: string, grant: DeviceGrant, at: number) =>
+    withQuery(oauthEndpoints(issuer).authorizeContinue, {
+      user_code: formatUserCode(grant.userCode),
+      nonce: grantNonce(grant, at),
+    });
+
+  const codeConsentPage = (
+    res: ServerResponse,
+    issuer: string,
+    grant: DeviceGrant,
+    notice?: string,
+  ) => {
+    const at = now();
+    send(
+      res,
+      200,
+      consentPage({
+        issuer,
+        hostDid: options.hostDid(),
+        grant,
+        nonce: grantNonce(grant, at),
+        endsAt: at + grant.days * DAY_MS,
+        renownAction: oauthEndpoints(issuer).deviceRenown,
+        denyAction: oauthEndpoints(issuer).deviceDeny,
+        continueUrl: continueUrlOf(issuer, grant, at),
+        ...(notice ? { notice } : {}),
+      }),
+      pageHeaders([renownOrigin]),
+    );
+  };
+
+  /**
+   * `authorize` (RFC 6749 4.1.1): a registered client's request, with PKCE
+   * S256 and a resource on this host, starts a grant on the device grant's
+   * object and shows its consent page. An unknown client or redirect URI is
+   * answered here; every other refusal goes back to the client.
+   */
+  const authorize = (req: IncomingMessage, res: ServerResponse) => {
+    const issuer = issuerFor(req, res);
+    if (!issuer) return;
+    const query = queryOf(req);
+    const client = readOAuthClient(dataDir, query.get("client_id"), now());
+    if (!client) {
+      authorizePage(
+        res,
+        400,
+        "This app is not registered here, or its registration expired: let it register again.",
+      );
+      return;
+    }
+    const asked = query.get("redirect_uri");
+    const redirectUri =
+      asked ??
+      (client.redirectUris.length === 1 ? client.redirectUris[0] : undefined);
+    if (!redirectUri || !client.redirectUris.includes(redirectUri)) {
+      authorizePage(
+        res,
+        400,
+        "The app asked to return somewhere it did not register: nothing was sent to it.",
+      );
+      return;
+    }
+    const state = query.get("state") ?? undefined;
+    const fail = (error: string, description: string) =>
+      redirectCode(res, { redirectUri, state }, issuer, {
+        error,
+        error_description: description,
+      });
+    if (query.get("response_type") !== "code") {
+      fail(
+        "unsupported_response_type",
+        "This host answers response_type=code only.",
+      );
+      return;
+    }
+    const useless = options.sessionsUseless?.();
+    if (useless) {
+      fail("access_denied", useless);
+      return;
+    }
+    const challenge = query.get("code_challenge");
+    if (!challenge) {
+      fail(
+        "invalid_request",
+        "PKCE is required: send code_challenge with code_challenge_method=S256.",
+      );
+      return;
+    }
+    if (query.get("code_challenge_method") !== "S256") {
+      fail("invalid_request", "code_challenge_method: S256 only.");
+      return;
+    }
+    if (!/^[A-Za-z0-9_-]{43}$/.test(challenge)) {
+      fail("invalid_request", "code_challenge is no S256 challenge.");
+      return;
+    }
+    const scope = query.get("scope");
+    if (
+      scope &&
+      scope.split(" ").some((s) => s !== "" && s !== HOST_SESSION_SCOPE)
+    ) {
+      fail("invalid_scope", `This host grants "${HOST_SESSION_SCOPE}" only.`);
+      return;
+    }
+    const resources = query.getAll("resource");
+    const refusal =
+      resources.length > 1
+        ? "Name one resource."
+        : resources[0] !== undefined
+          ? resourceRefusal(resources[0], issuer)
+          : undefined;
+    if (refusal) {
+      fail("invalid_target", refusal);
+      return;
+    }
+    const days = daysOf(query.get("ph_days") ?? undefined);
+    if (days === undefined) {
+      fail("invalid_request", `ph_days: a whole number from 1 to ${maxDays}.`);
+      return;
+    }
+    const from = clientOf(req);
+    if (startsLimited(from)) {
+      fail(
+        "temporarily_unavailable",
+        "Too many sign-ins from this address: wait a minute.",
+      );
+      return;
+    }
+    const asLabel = (value: string | undefined) => {
+      const label = value?.slice(0, LABEL_MAX).trim();
+      return label && validLabel(label) ? label : undefined;
+    };
+    const label =
+      asLabel(query.get("ph_label") ?? undefined) ??
+      asLabel(client.clientName) ??
+      DEFAULT_CODE_LABEL;
+    const started = startGrant({
+      client: from,
+      label,
+      days,
+      clientId: client.clientName
+        ? `${client.clientName} (${client.clientId})`
+        : client.clientId,
+      grant: "code",
+      code: {
+        clientId: client.clientId,
+        redirectUri,
+        codeChallenge: challenge,
+        ...(state !== undefined ? { state } : {}),
+        ...(resources[0] !== undefined ? { resource: resources[0] } : {}),
+      },
+    });
+    if (!started.ok) {
+      fail("temporarily_unavailable", started.description);
+      return;
+    }
+    codeConsentPage(res, issuer, started.grant);
+  };
+
+  /**
+   * Where a code grant's consent page checks back: once the grant is
+   * approved its code is issued, once, and the browser goes to the client
+   * with it; denied or expired, with the error; else the page again.
+   */
+  const authorizeContinue = (req: IncomingMessage, res: ServerResponse) => {
+    const issuer = issuerFor(req, res);
+    if (!issuer) return;
+    const query = queryOf(req);
+    const grant = grantByCode(req, res, query.get("user_code"), true);
+    if (!grant) return;
+    if (!grant.code || !grantNonceHolds(grant, query.get("nonce"), now())) {
+      authorizePage(
+        res,
+        403,
+        "This page has expired: sign in again from the app.",
+      );
+      return;
+    }
+    if (grant.code.issuedAt) {
+      send(
+        res,
+        200,
+        messagePage(
+          "Signed in",
+          "The app was sent its code. You can close this page.",
+          "done",
+        ),
+        pageHeaders([]),
+      );
+      return;
+    }
+    if (grant.status === "denied") {
+      dropGrant(grant);
+      redirectCode(res, grant.code, issuer, {
+        error: "access_denied",
+        error_description: "The person denied the request.",
+      });
+      return;
+    }
+    if (grant.status === "pending") {
+      codeConsentPage(
+        res,
+        issuer,
+        grant,
+        "Not approved yet: approve it with Renown or `ph token approve`; this page checks again by itself.",
+      );
+      return;
+    }
+    // Approved: whoever takes the grant issues its code, once.
+    const taken = takeDeviceGrant(dataDir, grant.id);
+    if (!taken?.code) {
+      send(
+        res,
+        200,
+        messagePage(
+          "Signed in",
+          "The app was sent its code. You can close this page.",
+          "done",
+        ),
+        pageHeaders([]),
+      );
+      return;
+    }
+    const code = newDeviceCode();
+    const at = now();
+    writeDeviceGrant(dataDir, {
+      ...taken,
+      id: grantIdOf(code),
+      expiresAt: new Date(at + AUTHORIZATION_CODE_TTL_MS).toISOString(),
+      code: { ...taken.code, issuedAt: new Date(at).toISOString() },
+    });
+    logger.info(
+      'Host session @id "@label": authorization code issued to @client',
+      shortHostSessionId(taken.sessionId),
+      taken.label,
+      taken.clientId,
+    );
+    redirectCode(res, taken.code, issuer, { code });
+  };
+
+  /** Dynamic client registration (RFC 7591): public clients, loopback or https redirects. */
+  const register = async (req: IncomingMessage, res: ServerResponse) => {
+    const issuer = issuerFor(req, res);
+    if (!issuer) return;
+    const from = clientOf(req);
+    if (registrationsLimited(from)) {
+      oauthError(
+        res,
+        "temporarily_unavailable",
+        "Too many registrations from this address: wait a minute.",
+        429,
+      );
+      return;
+    }
+    const metadata = await paramsOf(req);
+    const uris = metadata.redirect_uris;
+    if (!Array.isArray(uris) || uris.length === 0) {
+      oauthError(res, "invalid_redirect_uri", "redirect_uris is required.");
+      return;
+    }
+    if (uris.length > MAX_REDIRECT_URIS) {
+      oauthError(
+        res,
+        "invalid_client_metadata",
+        `At most ${MAX_REDIRECT_URIS} redirect URIs.`,
+      );
+      return;
+    }
+    for (const uri of uris) {
+      const refused = redirectUriRefusal(uri);
+      if (refused) {
+        oauthError(res, "invalid_redirect_uri", `${refused}.`);
+        return;
+      }
+    }
+    const method = metadata.token_endpoint_auth_method;
+    if (method !== undefined && method !== "none") {
+      oauthError(
+        res,
+        "invalid_client_metadata",
+        'Public clients only: token_endpoint_auth_method "none".',
+      );
+      return;
+    }
+    const listed = (value: unknown, needed: string) =>
+      value === undefined ||
+      (Array.isArray(value) && (value as unknown[]).includes(needed));
+    if (
+      !listed(metadata.grant_types, "authorization_code") ||
+      !listed(metadata.response_types, "code")
+    ) {
+      oauthError(
+        res,
+        "invalid_client_metadata",
+        "This host registers clients of the authorization code grant (response_type code).",
+      );
+      return;
+    }
+    const at = now();
+    const clients = listOAuthClients(dataDir, at);
+    if (
+      clients.length >= MAX_CLIENTS ||
+      clients.filter((client) => client.registeredFrom === from).length >=
+        CLIENTS_PER_ADDRESS
+    ) {
+      oauthError(
+        res,
+        "temporarily_unavailable",
+        "This host keeps no more registrations from this address: try again later.",
+        429,
+      );
+      return;
+    }
+    const name = clientNameOf(metadata.client_name);
+    const client: OAuthClient = newOAuthClient({
+      ...(name ? { clientName: name } : {}),
+      redirectUris: uris as string[],
+      registeredFrom: from,
+      now: at,
+    });
+    writeOAuthClient(dataDir, client);
+    logger.info(
+      'OAuth client @client "@name" registered from @from',
+      client.clientId,
+      name ?? "",
+      from,
+    );
+    json(res, 201, {
+      client_id: client.clientId,
+      client_id_issued_at: Math.floor(at / 1000),
+      ...(name ? { client_name: name } : {}),
+      redirect_uris: client.redirectUris,
+      token_endpoint_auth_method: "none",
+      grant_types: ["authorization_code"],
+      response_types: ["code"],
+      scope: HOST_SESSION_SCOPE,
+    });
+  };
+
   const sessionView = (session: HostSessionFile) => ({
     id: session.id,
     label: session.credential?.credentialSubject.app ?? session.label,
@@ -1153,6 +1714,25 @@ export function mountOAuthRoutes(
       path: "device/renown",
       auth: "public",
       handler: guarded(renownRoute),
+    }),
+    // The authorization code grant, for MCP clients.
+    scope.nodeRoute({
+      method: "GET",
+      path: "authorize",
+      auth: "public",
+      handler: guarded(authorize),
+    }),
+    scope.nodeRoute({
+      method: "GET",
+      path: "authorize/continue",
+      auth: "public",
+      handler: guarded(authorizeContinue),
+    }),
+    scope.nodeRoute({
+      method: "POST",
+      path: "register",
+      auth: "public",
+      handler: guarded(register),
     }),
     // A person's own sessions: a bearer they signed themselves.
     scope.nodeRoute({

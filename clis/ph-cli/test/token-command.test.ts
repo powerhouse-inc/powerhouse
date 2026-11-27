@@ -274,6 +274,39 @@ describe("ph token approve", () => {
     );
   });
 
+  it("approves an MCP client's sign-in, saying where the browser returns", async () => {
+    const sb = await host();
+    const registered = (await (
+      await fetch(`${sb.url}/oauth/register`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          client_name: "Claude Code",
+          redirect_uris: ["http://127.0.0.1:65003/callback"],
+        }),
+      })
+    ).json()) as { client_id: string };
+    const authorize = new URL(`${sb.url}/oauth/authorize`);
+    for (const [name, value] of Object.entries({
+      response_type: "code",
+      client_id: registered.client_id,
+      redirect_uri: "http://127.0.0.1:65003/callback",
+      code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+      code_challenge_method: "S256",
+    })) {
+      authorize.searchParams.set(name, value);
+    }
+    const page = await (await fetch(authorize)).text();
+    const code = /ph token approve ([A-Z]{4}-[A-Z]{4})/.exec(page)![1]!;
+    expect(await runTokenApprove({ code, url: sb.url, yes: true }, io())).toBe(
+      0,
+    );
+    const shown = err.join("\n");
+    expect(shown).toContain('Session   "Claude Code"');
+    expect(shown).toContain("Returns to 127.0.0.1:65003");
+    expect(shown).toContain("Approved");
+  });
+
   it("says when a code is unknown, and when nobody can be asked", async () => {
     const sb = await host();
     expect(
