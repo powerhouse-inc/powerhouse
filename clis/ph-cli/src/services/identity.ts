@@ -13,7 +13,10 @@ import {
   readLogin,
   readPseudonym,
 } from "@powerhousedao/shared/clis/identity";
-import { createOwnerOnlyFile } from "@powerhousedao/shared/clis/owner-only";
+import {
+  createOwnerOnlyFile,
+  NotOwnerOnlyError,
+} from "@powerhousedao/shared/clis/owner-only";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -290,16 +293,19 @@ export function runIdentityNew(
     "",
   ].join("\n");
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const { created, restricted } = createOwnerOnlyFile(file, text);
-  if (!created) {
-    io.err(`${file} exists: nothing was written. Name a new file.`);
-    return 1;
-  }
-  if (!restricted) {
-    fs.rmSync(file, { force: true });
+  let created: boolean;
+  try {
+    // The key is written only into a file already restricted to the user.
+    ({ created } = createOwnerOnlyFile(file, text, { onlyIfRestricted: true }));
+  } catch (error) {
+    if (!(error instanceof NotOwnerOnlyError)) throw error;
     io.err(
       `Could not limit ${file} to your user, so the key is not kept there: nothing was written.`,
     );
+    return 1;
+  }
+  if (!created) {
+    io.err(`${file} exists: nothing was written. Name a new file.`);
     return 1;
   }
   if (args.json) {

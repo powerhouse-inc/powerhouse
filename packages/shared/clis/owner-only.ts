@@ -44,8 +44,13 @@ const userName = () => currentUser().name;
  */
 export function restrictFileToOwner(file: string): boolean {
   if (process.platform !== "win32") {
-    fs.chmodSync(file, 0o600);
-    return true;
+    try {
+      fs.chmodSync(file, 0o600);
+      return true;
+    } catch {
+      // A file system without modes (exFAT, a network share).
+      return false;
+    }
   }
   try {
     run("icacls.exe", [file, "/inheritance:r", "/grant:r", `*${userSid()}:F`]);
@@ -65,14 +70,61 @@ export function restrictFileToOwner(file: string): boolean {
   }
 }
 
+/** The secret was not written: its file could not be made the user's alone. */
+export class NotOwnerOnlyError extends Error {
+  constructor(readonly file: string) {
+    super(
+      `Could not limit ${file} to your user, so nothing was written there.`,
+    );
+    this.name = "NotOwnerOnlyError";
+  }
+}
+
+export type OwnerOnlyOptions = {
+  /**
+   * Write the text only once the empty file is the user's alone; else
+   * remove it, write nothing and throw {@link NotOwnerOnlyError}. For a
+   * secret that must not reach a medium that cannot be restricted.
+   */
+  onlyIfRestricted?: boolean;
+};
+
+/**
+ * Creates `file` (it must not exist: a link planted in its place makes this
+ * throw instead of writing through it), restricts it while it is empty, then
+ * writes `text` through the handle that created it.
+ */
+function createRestricted(
+  file: string,
+  text: string,
+  o: OwnerOnlyOptions,
+): boolean {
+  const fd = fs.openSync(file, "wx", 0o600);
+  let restricted = false;
+  try {
+    restricted = restrictFileToOwner(file);
+    if (restricted || !o.onlyIfRestricted) fs.writeSync(fd, text);
+  } finally {
+    fs.closeSync(fd);
+  }
+  if (!restricted && o.onlyIfRestricted) {
+    fs.rmSync(file, { force: true });
+    throw new NotOwnerOnlyError(file);
+  }
+  return restricted;
+}
+
 /** A file beside `file` that is the user's alone before it holds `text`. */
-function ownerOnlyDraft(file: string, text: string) {
+function ownerOnlyDraft(file: string, text: string, o: OwnerOnlyOptions) {
   const draft = `${file}.${process.pid}.tmp`;
+  // A draft a crashed run of this pid left; created afresh below.
   fs.rmSync(draft, { force: true });
-  fs.writeFileSync(draft, "", { mode: 0o600 });
-  const restricted = restrictFileToOwner(draft);
-  fs.writeFileSync(draft, text);
-  return { draft, restricted };
+  try {
+    return { draft, restricted: createRestricted(draft, text, o) };
+  } catch (error) {
+    if (error instanceof NotOwnerOnlyError) throw new NotOwnerOnlyError(file);
+    throw error;
+  }
 }
 
 /**
@@ -80,8 +132,12 @@ function ownerOnlyDraft(file: string, text: string) {
  * before it holds the text, so `file` is never seen empty or open to others.
  * Returns what {@link restrictFileToOwner} did.
  */
-export function writeOwnerOnlyFile(file: string, text: string): boolean {
-  const { draft, restricted } = ownerOnlyDraft(file, text);
+export function writeOwnerOnlyFile(
+  file: string,
+  text: string,
+  o: OwnerOnlyOptions = {},
+): boolean {
+  const { draft, restricted } = ownerOnlyDraft(file, text, o);
   try {
     fs.renameSync(draft, file);
   } catch {
@@ -95,13 +151,16 @@ export function writeOwnerOnlyFile(file: string, text: string): boolean {
 /**
  * Writes `file` as {@link writeOwnerOnlyFile} does, but only when there is
  * none: of two processes that race, one creates it and the other gets
- * `created: false` and reads the winner's.
+ * `created: false` and reads the winner's. With `onlyIfRestricted`, a file
+ * that cannot be made the user's alone is never given the text
+ * ({@link NotOwnerOnlyError}).
  */
 export function createOwnerOnlyFile(
   file: string,
   text: string,
+  o: OwnerOnlyOptions = {},
 ): { created: boolean; restricted: boolean } {
-  const { draft, restricted } = ownerOnlyDraft(file, text);
+  const { draft, restricted } = ownerOnlyDraft(file, text, o);
   try {
     fs.linkSync(draft, file);
     return { created: true, restricted };
@@ -110,19 +169,14 @@ export function createOwnerOnlyFile(
       return { created: false, restricted };
     }
     // A file system without hard links.
-    let fd: number;
     try {
-      fd = fs.openSync(file, "wx", 0o600);
+      return { created: true, restricted: createRestricted(file, text, o) };
     } catch (opening) {
       if ((opening as NodeJS.ErrnoException).code === "EEXIST") {
         return { created: false, restricted };
       }
       throw opening;
     }
-    fs.closeSync(fd);
-    const kept = restrictFileToOwner(file);
-    fs.writeFileSync(file, text);
-    return { created: true, restricted: kept };
   } finally {
     fs.rmSync(draft, { force: true });
   }

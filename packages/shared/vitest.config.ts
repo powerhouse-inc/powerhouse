@@ -38,6 +38,7 @@ export default defineConfig({
       "clis/project-env.test.ts",
       "clis/ph-dir.test.ts",
       "clis/owner-only.test.ts",
+      "clis/owner-only-unrestricted.test.ts",
       "clis/identity.test.ts",
       "clis/credential-records.test.ts",
       "clis/sessions.test.ts",
