@@ -48,13 +48,15 @@ function isInternal(address: string): boolean {
 /**
  * The requesting client's address. With `trustProxy`, a hop list of only
  * internal addresses (a deployment on a private network) names its farthest.
+ * The header is read only from an internal peer: a caller that reaches the
+ * host from outside wrote any header it sends itself.
  */
 export function clientAddress(
   req: Pick<IncomingMessage, "headers" | "socket">,
   trustProxy: boolean,
 ): string {
   const socket = normalized(req.socket.remoteAddress) ?? "unknown";
-  if (!trustProxy) return socket;
+  if (!trustProxy || !isInternal(socket)) return socket;
   const header = req.headers["x-forwarded-for"];
   const hops = (Array.isArray(header) ? header.join(",") : (header ?? ""))
     .split(",")

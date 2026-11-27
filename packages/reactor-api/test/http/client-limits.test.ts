@@ -36,6 +36,18 @@ describe("clientAddress", () => {
     // No header: the socket's.
     expect(clientAddress(request("10.0.0.1"), true)).toBe("10.0.0.1");
   });
+
+  it("ignores the header from a peer outside the deployment, even with a trusted proxy", () => {
+    expect(
+      clientAddress(request("198.51.100.4", "203.0.113.7, 10.0.0.2"), true),
+    ).toBe("198.51.100.4");
+    expect(clientAddress(request("::ffff:198.51.100.4", "1.2.3.4"), true)).toBe(
+      "198.51.100.4",
+    );
+    expect(clientAddress(request("127.0.0.1", "203.0.113.7"), true)).toBe(
+      "203.0.113.7",
+    );
+  });
 });
 
 describe("perMinuteLimit", () => {
