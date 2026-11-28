@@ -1,3 +1,13 @@
+## 6.3.0-dev.14 (2026-11-28)
+
+### 🚀 Features
+
+- **reactor-api,connect:** warn in development about legacy document models and legacy subgraphs ([ca53b49cf0](https://github.com/powerhouse-inc/powerhouse/commit/ca53b49cf0))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.3.0-dev.13 (2026-11-27)
 
 ### 🚀 Features

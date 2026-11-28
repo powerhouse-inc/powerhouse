@@ -1,3 +1,22 @@
+## 6.3.0-dev.14 (2026-11-28)
+
+### 🚀 Features
+
+- **devtools:** let a panel show a mark beside its problem count ([130df66ec6](https://github.com/powerhouse-inc/powerhouse/commit/130df66ec6))
+- **devtools:** mark legacy document models and subgraphs ([471b1ec4d9](https://github.com/powerhouse-inc/powerhouse/commit/471b1ec4d9))
+- **devtools:** mark legacy document models and subgraphs ([#3419](https://github.com/powerhouse-inc/powerhouse/pull/3419))
+- **reactor-api,connect:** warn in development about legacy document models and legacy subgraphs ([ca53b49cf0](https://github.com/powerhouse-inc/powerhouse/commit/ca53b49cf0))
+- **reactor-api,connect:** warn in development about legacy document models and legacy subgraphs ([#3418](https://github.com/powerhouse-inc/powerhouse/pull/3418))
+
+### 🩹 Fixes
+
+- **devtools:** keep the box shadow of popups in a shadow root ([6d9769ceba](https://github.com/powerhouse-inc/powerhouse/commit/6d9769ceba))
+- **ph-cli:** ph build does not read a binary a workspace package names as a script ([7ca7924539](https://github.com/powerhouse-inc/powerhouse/commit/7ca7924539))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.3.0-dev.13 (2026-11-27)
 
 ### 🚀 Features
